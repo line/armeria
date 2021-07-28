@@ -68,19 +68,11 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public boolean isOpen() {
-        if (upstream.isOpen()) {
-            final StreamMessage<T> fallbackStream = this.fallbackStream;
-            if (fallbackStream == null) {
-                return true;
-            }
-            return fallbackStream.isOpen();
-        } else {
-            final StreamMessage<T> fallbackStream = this.fallbackStream;
-            if (fallbackStream == null) {
-                return false;
-            }
+        final StreamMessage<T> fallbackStream = this.fallbackStream;
+        if (fallbackStream != null) {
             return fallbackStream.isOpen();
         }
+        return upstream.isOpen();
     }
 
     @Override

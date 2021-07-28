@@ -44,6 +44,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -61,6 +62,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.HttpFileResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.HttpResult;
@@ -147,7 +149,8 @@ public final class AnnotatedService implements HttpService {
         if (exceptionHandlers.isEmpty()) {
             exceptionHandler = null;
         } else {
-            exceptionHandler = new CompositeExceptionHandlerFunction(exceptionHandlers);
+            exceptionHandler = new CompositeExceptionHandlerFunction(object.getClass().getSimpleName(),
+                                                                     method.getName(), exceptionHandlers);
         }
 
         responseConverter = responseConverter(
@@ -276,7 +279,16 @@ public final class AnnotatedService implements HttpService {
         final HttpResponse response = HttpResponse.from(serve0(ctx, req));
         if (exceptionHandler == null) {
             // If an error occurs, the default ExceptionHandler will handle the error.
-            return response;
+            if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
+                logger.isWarnEnabled()) {
+                return response.mapError(cause -> {
+                    logger.warn("{} Exception raised by method '{}' in '{}':",
+                                ctx, methodName(), object.getClass().getSimpleName(), Exceptions.peel(cause));
+                    return cause;
+                });
+            } else {
+                return response;
+            }
         } else {
             return response.recover(cause -> {
                 try (SafeCloseable ignored = ctx.push()) {
@@ -440,15 +452,25 @@ public final class AnnotatedService implements HttpService {
      */
     private static final class CompositeExceptionHandlerFunction implements ExceptionHandlerFunction {
 
+        private final String className;
+        private final String methodName;
         private final List<ExceptionHandlerFunction> functions;
 
-        CompositeExceptionHandlerFunction(List<ExceptionHandlerFunction> functions) {
+        CompositeExceptionHandlerFunction(String className, String methodName,
+                                          List<ExceptionHandlerFunction> functions) {
+            this.className = className;
+            this.methodName = methodName;
             this.functions = ImmutableList.copyOf(functions);
         }
 
         @Override
         public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             final Throwable peeledCause = Exceptions.peel(cause);
+            if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
+                logger.isWarnEnabled()) {
+                logger.warn("{} Exception raised by method '{}' in '{}':",
+                            ctx, methodName, className, peeledCause);
+            }
 
             for (final ExceptionHandlerFunction func : functions) {
                 try {

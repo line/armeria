@@ -97,7 +97,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
         }
 
         if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
-            logger.warn("{} Unhandled exception from an service:", context, cause);
+            logger.warn("{} Unhandled exception from a service:", context, cause);
         }
 
         return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, cause));
