@@ -34,23 +34,52 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
- * Captures the {@link ServiceRequestContext}s.
+ * Captures the {@code ServiceRequestContext}s.
+ *
+ * <p>Example:
  * <pre>{@code
  * class ServiceRequestContextCaptorTest {
- *   static final ServiceRequestContextCaptor captor = new ServiceRequestContextCaptor();
+ *     @RegisterExtension
+ *     static final ServerExtension server = new ServerExtension() {
+ *         @Override
+ *         protected void configure(ServerBuilder sb) throws Exception {
+ *             sb.service("/hello", (ctx, req) -> HttpResponse.of(200));
+ *         }
+ *     };
+ *     @Test
+ *     void test() {
+ *         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
+ *         client.get("/hello").aggregate().join();
+ *         assertThat(captor.size()).isEqualTo(1);
+ *     }
+ * }
+ * }</pre>
  *
- *   @RegisterExtension
- *   static final ServerExtension server = new ServerExtension() {
- *       @Override
- *       protected void configure(ServerBuilder sb) throws Exception {
- *           sb.service("/hello", (ctx, req) -> HttpResponse.of(200));
- *           sb.decorator(captor.decorator());
- *       }
- *   };
- *   @BeforeEach
- *   void clearCaptor() {
- *       captor.clear();
- *   }
+ * <p>Example: use {@code ServiceRequestContextCaptor} manually
+ * <pre>{@code
+ * class ServiceRequestContextCaptorTest {
+ *     static final ServiceRequestContextCaptor captor = new ServiceRequestContextCaptor();
+ *     static final Server server = Server.builder()
+ *                                        .decorator(captor.decorator())
+ *                                        .service("/hello", (ctx, req) -> HttpResponse.of(200))
+ *                                        .build();
+ *
+ *     @BeforeAll
+ *     static void beforeClass() {
+ *         server.start().join();
+ *     }
+ *
+ *     @AfterAll
+ *     static void afterClass() {
+ *         server.stop().join();
+ *     }
+ *
+ *     @Test
+ *     void test() {
+ *         final WebClient client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort()).build();
+ *         client.get("/hello").aggregate().join();
+ *         assertThat(captor.size()).isEqualTo(1);
+ *     }
  * }
  * }</pre>
  */

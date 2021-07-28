@@ -19,7 +19,6 @@ package com.linecorp.armeria.testing.junit5.server;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.fail;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -29,25 +28,19 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 class ServiceRequestContextCaptorTest {
-    static final ServiceRequestContextCaptor captor = new ServiceRequestContextCaptor();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service("/hello", (ctx, req) -> HttpResponse.of(200));
-            sb.decorator(captor.decorator());
         }
     };
-
-    @BeforeEach
-    void clearCaptor() {
-        captor.clear();
-    }
 
     @Test
     void shouldCaptureContexts() {
         final WebClient client = WebClient.of(server.httpUri());
+        final ServiceRequestContextCaptor captor = server.requestContextCaptor();
         client.get("/hello").aggregate().join();
         assertThat(captor.size()).isEqualTo(1);
 
@@ -65,6 +58,7 @@ class ServiceRequestContextCaptorTest {
     @Test
     void shouldClear() {
         final WebClient client = WebClient.of(server.httpUri());
+        final ServiceRequestContextCaptor captor = server.requestContextCaptor();
         client.get("/hello").aggregate().join();
         assertThat(captor.size()).isEqualTo(1);
 
