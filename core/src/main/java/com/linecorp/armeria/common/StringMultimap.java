@@ -472,12 +472,12 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean containsInt(IN_NAME name, int value) {
-        return contains(name, String.valueOf(value));
+        return contains(name, StringUtil.toString(value));
     }
 
     @Override
     public final boolean containsLong(IN_NAME name, long value) {
-        return contains(name, String.valueOf(value));
+        return contains(name, StringUtil.toString(value));
     }
 
     @Override
@@ -552,7 +552,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     final String getAndRemove(IN_NAME name) {
         requireNonNull(name, "name");
         final int h = hashName(name);
-        return remove0(h, index(h), name, true);
+        return removeAndNotify(h, index(h), name, true);
     }
 
     final String getAndRemove(IN_NAME name, String defaultValue) {
@@ -629,25 +629,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         requireNonNull(value, "value");
         final int h = hashName(normalizedName);
         final int i = index(h);
-        add0(h, i, normalizedName, value, true);
+        addAndNotify(h, i, normalizedName, value, true);
     }
 
     final void add(IN_NAME name, Iterable<String> values) {
-        add(name, values, true);
-    }
-
-    final void add(IN_NAME name, Iterable<String> values, boolean notifyChange) {
-        final NAME normalizedName = normalizeName(name);
-        requireNonNull(values, "values");
-        final int h = hashName(normalizedName);
-        final int i = index(h);
-        for (String v : values) {
-            requireNonNullElement(values, v);
-            add0(h, i, normalizedName, v, false);
-        }
-        if (notifyChange) {
-            onChange(normalizedName);
-        }
+        addAndNotify(name, values, true);
     }
 
     final void add(IN_NAME name, String... values) {
@@ -657,7 +643,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int i = index(h);
         for (String v : values) {
             requireNonNullElement(values, v);
-            add0(h, i, normalizedName, v, false);
+            addAndNotify(h, i, normalizedName, v, false);
         }
         onChange(normalizedName);
     }
@@ -669,6 +655,38 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
         if (!addFast(entries)) {
             addSlow(entries);
+        }
+    }
+
+    /**
+     * Only Adds the specified {@code name} and {@code values}, and do not notify the changes via
+     * {@link #onChange(CharSequence)}.
+     */
+    final void addOnly(IN_NAME name, Iterable<String> values) {
+        addAndNotify(name, values, false);
+    }
+
+    private void addAndNotify(IN_NAME name, Iterable<String> values, boolean notifyChange) {
+        final NAME normalizedName = normalizeName(name);
+        requireNonNull(values, "values");
+        final int h = hashName(normalizedName);
+        final int i = index(h);
+        for (String v : values) {
+            requireNonNullElement(values, v);
+            addAndNotify(h, i, normalizedName, v, false);
+        }
+        if (notifyChange) {
+            onChange(normalizedName);
+        }
+    }
+
+    private void addAndNotify(int h, int i, NAME name, String value, boolean notifyChange) {
+        validateValue(value);
+        // Update the hash table.
+        entries[i] = new Entry(h, name, value, entries[i]);
+        ++size;
+        if (notifyChange) {
+            onChange(name);
         }
     }
 
@@ -706,11 +724,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     final void addInt(IN_NAME name, int value) {
-        add(name, String.valueOf(value));
+        add(name, StringUtil.toString(value));
     }
 
     final void addLong(IN_NAME name, long value) {
-        add(name, String.valueOf(value));
+        add(name, StringUtil.toString(value));
     }
 
     final void addFloat(IN_NAME name, float value) {
@@ -726,16 +744,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     final void set(IN_NAME name, String value) {
-        set(name, value, true);
-    }
-
-    final void set(IN_NAME name, String value, boolean notifyChange) {
-        final NAME normalizedName = normalizeName(name);
-        requireNonNull(value, "value");
-        final int h = hashName(normalizedName);
-        final int i = index(h);
-        remove0(h, i, normalizedName, notifyChange);
-        add0(h, i, normalizedName, value, false);
+        setAndNotify(name, value, true);
     }
 
     final void set(IN_NAME name, Iterable<String> values) {
@@ -745,10 +754,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int h = hashName(normalizedName);
         final int i = index(h);
 
-        remove0(h, i, normalizedName, true);
+        removeAndNotify(h, i, normalizedName, true);
         for (String v : values) {
             requireNonNullElement(values, v);
-            add0(h, i, normalizedName, v, false);
+            addAndNotify(h, i, normalizedName, v, false);
         }
     }
 
@@ -759,10 +768,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int h = hashName(normalizedName);
         final int i = index(h);
 
-        remove0(h, i, normalizedName, true);
+        removeAndNotify(h, i, normalizedName, true);
         for (String v : values) {
             requireNonNullElement(values, v);
-            add0(h, i, normalizedName, v, false);
+            addAndNotify(h, i, normalizedName, v, false);
         }
     }
 
@@ -781,6 +790,23 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
+    /**
+     * Only sets the specified {@code name} and {@code value}, and do not notify the change via
+     * {@link #onChange(CharSequence)}.
+     */
+    final void setOnly(IN_NAME name, String value) {
+        setAndNotify(name, value, false);
+    }
+
+    private void setAndNotify(IN_NAME name, String value, boolean notifyChange) {
+        final NAME normalizedName = normalizeName(name);
+        requireNonNull(value, "value");
+        final int h = hashName(normalizedName);
+        final int i = index(h);
+        removeAndNotify(h, i, normalizedName, notifyChange);
+        addAndNotify(h, i, normalizedName, value, false);
+    }
+
     final StringMultimap<IN_NAME, NAME> setIfAbsent(
             Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
         requireNonNull(entries, "entries");
@@ -793,9 +819,13 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     /**
      * Invoked when a value associated with the specified {@code name} is added or removed.
-     * If all values are cleared, {@code null} is passed.
      */
-    void onChange(@Nullable NAME name) {}
+    void onChange(NAME name) {}
+
+    /**
+     * Invoked when all values are cleared.
+     */
+    void onClear() {}
 
     private boolean setIfAbsentFast(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries,
                                     Set<NAME> existingNames) {
@@ -814,7 +844,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             assert key != null;
             assert value != null;
             if (!existingNames.contains(key)) {
-                add0(e.hash, index(e.hash), key, value, true);
+                addAndNotify(e.hash, index(e.hash), key, value, true);
             }
             e = e.after;
         }
@@ -845,10 +875,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int h = hashName(normalizedName);
         final int i = index(h);
 
-        remove0(h, i, normalizedName, true);
+        removeAndNotify(h, i, normalizedName, true);
         for (Object v : values) {
             requireNonNullElement(values, v);
-            add0(h, i, normalizedName, fromObject(v), false);
+            addAndNotify(h, i, normalizedName, fromObject(v), false);
         }
     }
 
@@ -859,10 +889,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int h = hashName(normalizedName);
         final int i = index(h);
 
-        remove0(h, i, normalizedName, true);
+        removeAndNotify(h, i, normalizedName, true);
         for (Object v : values) {
             requireNonNullElement(values, v);
-            add0(h, i, normalizedName, fromObject(v), false);
+            addAndNotify(h, i, normalizedName, fromObject(v), false);
         }
     }
 
@@ -886,7 +916,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     final void setLong(IN_NAME name, long value) {
-        set(name, String.valueOf(value));
+        set(name, StringUtil.toString(value));
     }
 
     final void setFloat(IN_NAME name, float value) {
@@ -904,14 +934,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     final boolean remove(IN_NAME name) {
         requireNonNull(name, "name");
         final int h = hashName(name);
-        return remove0(h, index(h), name, true) != null;
+        return removeAndNotify(h, index(h), name, true) != null;
     }
 
     final void clear() {
         Arrays.fill(entries, null);
         secondGroupHead = firstGroupHead.before = firstGroupHead.after = firstGroupHead;
         size = 0;
-        onChange(null);
+        onClear();
     }
 
     private static void requireNonNullElement(Object values, @Nullable Object e) {
@@ -922,16 +952,6 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     private int index(int hash) {
         return hash & hashMask;
-    }
-
-    private void add0(int h, int i, NAME name, String value, boolean notifyChange) {
-        validateValue(value);
-        // Update the hash table.
-        entries[i] = new Entry(h, name, value, entries[i]);
-        ++size;
-        if (notifyChange) {
-            onChange(name);
-        }
     }
 
     private boolean addFast(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
@@ -947,7 +967,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             final String value = e.value;
             assert key != null;
             assert value != null;
-            add0(e.hash, index(e.hash), key, value, true);
+            addAndNotify(e.hash, index(e.hash), key, value, true);
             e = e.after;
         }
 
@@ -974,7 +994,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
      * @return the first value inserted, or {@code null} if there is no such entry.
      */
     @Nullable
-    private String remove0(int h, int i, IN_NAME name, boolean notifyChange) {
+    private String removeAndNotify(int h, int i, IN_NAME name, boolean notifyChange) {
         Entry e = entries[i];
         if (e == null) {
             return null;

@@ -42,12 +42,10 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.Map;
-import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.Function;
 
@@ -123,13 +121,16 @@ class HttpHeadersBase
             return;
         }
 
-        if (name == null) {
-            // Invalidate all cached values
-            cache.clear();
+        cache.remove(name);
+    }
+
+    @Override
+    void onClear() {
+        if (cache == null || cache.isEmpty()) {
             return;
         }
-
-        cache.remove(name);
+        // Invalidate all cached values
+        cache.clear();
     }
 
     @Override
@@ -215,7 +216,8 @@ class HttpHeadersBase
      * Adds the specified {@code cookies} with {@link HttpHeaderNames#COOKIE}.
      */
     final void cookie(Iterable<? extends Cookie> cookies) {
-        addCookies(cookies, HttpHeaderNames.COOKIE, Cookie::toCookieHeader);
+        //noinspection unchecked
+        addCookies((Iterable<Cookie>) cookies, HttpHeaderNames.COOKIE, Cookie::toCookieHeader);
     }
 
     Cookies cookie() {
@@ -226,7 +228,8 @@ class HttpHeadersBase
      * Adds the specified {@code setCookies} with {@link HttpHeaderNames#SET_COOKIE}.
      */
     final void setCookie(Iterable<? extends Cookie> setCookie) {
-        addCookies(setCookie, HttpHeaderNames.SET_COOKIE, Cookie::toSetCookieHeaders);
+        //noinspection unchecked
+        addCookies((Iterable<Cookie>) setCookie, HttpHeaderNames.SET_COOKIE, Cookie::toSetCookieHeaders);
     }
 
     Cookies setCookie() {
@@ -235,12 +238,14 @@ class HttpHeadersBase
 
     private Cookies getCookie(AsciiString cookieHeaderName, Function<List<String>, Cookies> cookiesParser) {
         @SuppressWarnings("unchecked")
-        final Set<Cookie> cookies = (Set<Cookie>) cache.get(cookieHeaderName);
+        final Iterable<Cookie> cookies = (Iterable<Cookie>) cache.get(cookieHeaderName);
         if (cookies == null) {
             // Cache miss. Check the container values.
             final List<String> cookiesString = getAll(cookieHeaderName);
             if (cookiesString.isEmpty()) {
-                return Cookies.of();
+                final Cookies emptyCookies = Cookies.of();
+                cache.put(cookieHeaderName, emptyCookies);
+                return emptyCookies;
             } else {
                 final Cookies parsedCookies = cookiesParser.apply(cookiesString);
                 cache.put(cookieHeaderName, parsedCookies);
@@ -251,39 +256,44 @@ class HttpHeadersBase
         if (cookies instanceof Cookies) {
             return (Cookies) cookies;
         } else {
-            final Cookies immutableCookie = Cookies.of(cookies);
+            final Cookies immutableCookies = Cookies.of(cookies);
             // Make the cached cookies immutable.
-            cache.put(cookieHeaderName, immutableCookie);
-            return immutableCookie;
+            cache.put(cookieHeaderName, immutableCookies);
+            return immutableCookies;
         }
     }
 
-    private void addCookies(Iterable<? extends Cookie> newCookies, AsciiString cookieHeaderName,
+    private void addCookies(Iterable<Cookie> newCookies, AsciiString cookieHeaderName,
                             Function<Iterable<? extends Cookie>, Object> toCookiesString) {
         @SuppressWarnings("unchecked")
-        Set<Cookie> cachedCookies = (Set<Cookie>) cache.get(cookieHeaderName);
+        Iterable<Cookie> cachedCookies = (Iterable<Cookie>) cache.get(cookieHeaderName);
         if (cachedCookies == null) {
             if (newCookies instanceof Cookies) {
-                //noinspection unchecked
-                cachedCookies = (Set<Cookie>) newCookies;
+                cachedCookies = newCookies;
             } else {
-                cachedCookies = new LinkedHashSet<>(4);
+                final ArrayList<Cookie> copied = new ArrayList<>(4);
                 for (Cookie cookie : newCookies) {
-                    cachedCookies.add(cookie);
+                    copied.add(cookie);
                 }
+                cachedCookies = copied;
             }
         } else {
+            // Append 'newCookies' to 'cachedCookies'
             if (cachedCookies instanceof Cookies) {
                 // Make cached Cookies mutable
-                cachedCookies = new LinkedHashSet<>(cachedCookies);
+                cachedCookies = new ArrayList<>((Collection<Cookie>) cachedCookies);
             }
-            assert cachedCookies instanceof LinkedHashSet;
+            assert cachedCookies instanceof ArrayList;
+            final ArrayList<Cookie> cookieList = (ArrayList<Cookie>) cachedCookies;
             for (Cookie cookie : newCookies) {
-                cachedCookies.add(cookie);
+                if (!cookieList.contains(cookie)) {
+                    // Add only a non-duplicate Cookie.
+                    cookieList.add(cookie);
+                }
             }
         }
-        // Cache mutable cookies for efficiency. The mutable cookies will be changed into (immutable) Cookies
-        // when cookie() is called.
+        // Cache mutable cookies for efficiency.
+        // The mutable cookies will be changed into (immutable) Cookies when cookie() is called.
         cache.put(cookieHeaderName, cachedCookies);
 
         if (HttpHeaderNames.COOKIE.equals(cookieHeaderName)) {
@@ -291,13 +301,13 @@ class HttpHeadersBase
             final Object cookiesString = toCookiesString.apply(cachedCookies);
             assert cookiesString instanceof String;
             assert cookieHeaderName.equals(HttpHeaderNames.COOKIE);
-            set(cookieHeaderName, (String) cookiesString, false);
+            setOnly(cookieHeaderName, (String) cookiesString);
         } else if (HttpHeaderNames.SET_COOKIE.equals(cookieHeaderName)) {
             // Only stringify new cookies
             final Object cookiesString = toCookiesString.apply(newCookies);
             assert cookiesString instanceof Iterable;
             //noinspection unchecked
-            add(cookieHeaderName, (Iterable<String>) cookiesString, false);
+            addOnly(cookieHeaderName, (Iterable<String>) cookiesString);
         } else {
             throw new Error(); // Should never reach here.
         }
@@ -377,7 +387,7 @@ class HttpHeadersBase
     final void method(HttpMethod method) {
         requireNonNull(method, "method");
         cache.put(HttpHeaderNames.METHOD, method);
-        set(HttpHeaderNames.METHOD, method.name(), false);
+        setOnly(HttpHeaderNames.METHOD, method.name());
     }
 
     @Nullable
@@ -432,19 +442,14 @@ class HttpHeadersBase
     final void status(HttpStatus status) {
         requireNonNull(status, "status");
         cache.put(HttpHeaderNames.STATUS, status);
-        set(HttpHeaderNames.STATUS, status.codeAsText(), false);
+        setOnly(HttpHeaderNames.STATUS, status.codeAsText());
     }
 
     final void contentLength(long contentLength) {
         checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
         cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
-        final String contentLengthString;
-        if (contentLength <= 1000) {
-            contentLengthString = StringUtil.toString((int) contentLength);
-        } else {
-            contentLengthString = Long.toString(contentLength);
-        }
-        set(HttpHeaderNames.CONTENT_LENGTH, contentLengthString, false);
+        final String contentLengthString = StringUtil.toString(contentLength);
+        setOnly(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
     }
 
     @Override
@@ -460,6 +465,7 @@ class HttpHeadersBase
             cache.put(HttpHeaderNames.CONTENT_LENGTH, parsed);
             return parsed;
         } else {
+            cache.put(HttpHeaderNames.CONTENT_LENGTH, -1);
             return -1;
         }
     }
@@ -490,7 +496,7 @@ class HttpHeadersBase
     final void contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
         cache.put(HttpHeaderNames.CONTENT_TYPE, contentType);
-        set(HttpHeaderNames.CONTENT_TYPE, contentType.toString(), false);
+        setOnly(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
     }
 
     @Override
