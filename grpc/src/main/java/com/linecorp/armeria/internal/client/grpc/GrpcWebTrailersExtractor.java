@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.parseGrpcWebTrailers;
 import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 
 import java.io.IOException;
@@ -44,6 +42,7 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
@@ -157,13 +156,13 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
             if (message.type() >> 7 == 1) {
                 final ByteBuf buf;
                 try {
-                    buf = messageBuf(message, ctx.alloc());
+                    buf = InternalGrpcWebUtil.messageBuf(message, ctx.alloc());
                 } catch (IOException e) {
                     // Ignore silently
                     return;
                 }
                 try {
-                    final HttpHeaders trailers = parseGrpcWebTrailers(buf);
+                    final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                     if (trailers == null) {
                         return;
                     }

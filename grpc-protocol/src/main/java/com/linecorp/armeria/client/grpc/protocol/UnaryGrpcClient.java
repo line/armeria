@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.client.grpc.protocol;
 
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -39,6 +43,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -46,7 +51,9 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -60,7 +67,10 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  */
 @UnstableApi
 public final class UnaryGrpcClient {
+    private static final Set<SerializationFormat> SUPPORTED_SERIALIZATION_FORMATS =
+            UnaryGrpcSerializationFormats.values();
 
+    private final SerializationFormat serializationFormat;
     private final WebClient webClient;
 
     /**
@@ -72,11 +82,24 @@ public final class UnaryGrpcClient {
     // cannot currently implement this without rethinking / refactoring core and punt for now since this is an
     // advanced API.
     public UnaryGrpcClient(WebClient webClient) {
+        this(webClient, UnaryGrpcSerializationFormats.PROTO);
+    }
+
+    /**
+     * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient} and {@link SerializationFormat}.
+     */
+    public UnaryGrpcClient(WebClient webClient, SerializationFormat serializationFormat) {
+        if (!SUPPORTED_SERIALIZATION_FORMATS.contains(serializationFormat)) {
+            throw new IllegalArgumentException("serializationFormat : " + serializationFormat +
+                                               " (expected: one of " + SUPPORTED_SERIALIZATION_FORMATS + ')');
+        }
+        this.serializationFormat = serializationFormat;
         this.webClient = Clients.newDerivedClient(
                 webClient,
-                ClientOptions.DECORATION.newValue(
-                        ClientDecoration.of(GrpcFramingDecorator::new)
-                ));
+                ClientOptions.DECORATION.newValue(ClientDecoration
+                                                          .of((delegate, ctx, req) -> new GrpcFramingDecorator(
+                                                                  delegate, serializationFormat)
+                                                                  .execute(ctx, req))));
     }
 
     /**
@@ -90,9 +113,8 @@ public final class UnaryGrpcClient {
      */
     public CompletableFuture<byte[]> execute(String uri, byte[] payload) {
         final HttpRequest request = HttpRequest.of(
-                RequestHeaders.of(HttpMethod.POST, uri,
-                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto",
-                                  HttpHeaderNames.TE, HttpHeaderValues.TRAILERS),
+                RequestHeaders.builder(HttpMethod.POST, uri).contentType(serializationFormat.mediaType())
+                              .addObject(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS).build(),
                 HttpData.wrap(payload));
         return webClient.execute(request).aggregate()
                         .thenApply(msg -> {
@@ -126,13 +148,17 @@ public final class UnaryGrpcClient {
     }
 
     private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
+        private final SerializationFormat serializationFormat;
 
-        private GrpcFramingDecorator(HttpClient delegate) {
+        private GrpcFramingDecorator(HttpClient delegate, SerializationFormat serializationFormat) {
             super(delegate);
+            // Validated in the UnaryGrpcClient ctor.
+            this.serializationFormat = serializationFormat;
         }
 
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
+            final boolean isGrpcWebText = UnaryGrpcSerializationFormats.isGrpcWebText(serializationFormat);
             return HttpResponse.from(
                     req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                        .thenCompose(
@@ -140,7 +166,7 @@ public final class UnaryGrpcClient {
                                    final ByteBuf buf = msg.content().byteBuf();
                                    final HttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                                           ctx.alloc(), Integer.MAX_VALUE, false)) {
+                                           ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText)) {
                                        framed = framer.writePayload(buf);
                                    }
 
@@ -162,27 +188,62 @@ public final class UnaryGrpcClient {
 
                            final ArmeriaMessageDeframer deframer =
                                    new ArmeriaMessageDeframer(Integer.MAX_VALUE);
-                           msg.toHttpResponse().decode(deframer, ctx.alloc())
-                              .subscribe(singleSubscriber(msg, responseFuture), ctx.eventLoop());
+                           msg.toHttpResponse().decode(deframer, ctx.alloc(),
+                                                       byteBufConverter(ctx.alloc(), isGrpcWebText))
+                              .subscribe(singleSubscriber(ctx, msg, serializationFormat, responseFuture),
+                                         ctx.eventLoop());
                            return responseFuture;
                        }), ctx.eventLoop());
         }
 
         private static Subscriber<DeframedMessage> singleSubscriber(
-                AggregatedHttpResponse msg, CompletableFuture<HttpResponse> responseFuture) {
+                ClientRequestContext ctx, AggregatedHttpResponse msg, SerializationFormat serializationFormat,
+                CompletableFuture<HttpResponse> responseFuture) {
 
             return new Subscriber<DeframedMessage>() {
+                private HttpData content = HttpData.empty();
+                @Nullable
+                private HttpHeaders trailers;
+
                 @Override
                 public void onSubscribe(Subscription s) {
-                    s.request(1);
+                    // At least 2 requests are required for receiving trailers.
+                    s.request(2);
+                }
+
+                private boolean isTrailers(DeframedMessage message) {
+                   return message.type() >> 7 == 1;
                 }
 
                 @Override
-                public void onNext(DeframedMessage unframed) {
-                    final ByteBuf buf = unframed.buf();
+                public void onNext(DeframedMessage message) {
+                    if (UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat) && isTrailers(message)) {
+                        final ByteBuf buf;
+                        try {
+                            buf = InternalGrpcWebUtil.messageBuf(message, ctx.alloc());
+                        } catch (Throwable t) {
+                            responseFuture.completeExceptionally(t);
+                            return;
+                        }
+                        try {
+                            trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
+                            if (trailers == null) {
+                                // Malformed trailers.
+                                responseFuture.completeExceptionally(
+                                        new ArmeriaStatusException(StatusCodes.INTERNAL,
+                                                                   serializationFormat.uriText() +
+                                                                   " trailers malformed: " +
+                                                                   buf.toString(StandardCharsets.UTF_8)));
+                            }
+                        } finally {
+                            buf.release();
+                        }
+                        return;
+                    }
+                    final ByteBuf buf = message.buf();
                     // Compression not supported.
                     assert buf != null;
-                    responseFuture.complete(HttpResponse.of(msg.headers(), HttpData.wrap(buf), msg.trailers()));
+                    content = HttpData.wrap(buf);
                 }
 
                 @Override
@@ -192,10 +253,13 @@ public final class UnaryGrpcClient {
 
                 @Override
                 public void onComplete() {
-                    if (!responseFuture.isDone()) {
-                        responseFuture.complete(
-                                HttpResponse.of(msg.headers(), HttpData.empty(), msg.trailers()));
+                    if (responseFuture.isDone()) {
+                        return;
                     }
+                    if (trailers == null) {
+                        trailers = msg.trailers();
+                    }
+                    responseFuture.complete(HttpResponse.of(msg.headers(), content, trailers));
                 }
             };
         }
