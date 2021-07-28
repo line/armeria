@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * A {@link CancellationException} raised when a response is cancelled by the user.
@@ -29,7 +30,8 @@ public final class ResponseCancellationException extends CancellationException {
     private static final ResponseCancellationException INSTANCE = new ResponseCancellationException(false);
 
     /**
-     * Returns a singleton {@link ResponseCancellationException}.
+     * Returns a singleton {@link ResponseCancellationException} or newly-created exception depending on
+     * the result of {@link Sampler#isSampled(Object)} of {@link Flags#verboseExceptionSampler()}.
      */
     public static ResponseCancellationException get() {
         return Flags.verboseExceptionSampler().isSampled(ResponseCancellationException.class) ?

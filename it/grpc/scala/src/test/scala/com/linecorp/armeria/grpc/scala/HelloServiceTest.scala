@@ -93,7 +93,7 @@ object HelloServiceTest {
           .builder()
           .addService(HelloServiceGrpc.bindService(new HelloServiceImpl, ExecutionContext.global))
           .exceptionMapping {
-            case (e: AuthError, _) =>
+            case (_, e: AuthError, _) =>
               Status.UNAUTHENTICATED.withDescription(e.getMessage).withCause(e)
             case _ => null
           }

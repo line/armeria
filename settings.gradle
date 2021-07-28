@@ -114,6 +114,8 @@ includeWithFlags ':examples:dropwizard-example',                   'java'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:graphql-example',                      'java'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
+includeWithFlags ':examples:graphql-kotlin-example',               'java', 'kotlin'
+project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria',                      'java', 'scala_2.13'
 project(':examples:graphql-sangria').projectDir = file('examples/graphql-sangria')
 includeWithFlags ':examples:grpc-example',                         'java'
