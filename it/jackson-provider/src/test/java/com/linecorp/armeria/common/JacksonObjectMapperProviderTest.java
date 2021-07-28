@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.internal.server.JacksonUtil;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 class JacksonObjectMapperProviderTest {
 

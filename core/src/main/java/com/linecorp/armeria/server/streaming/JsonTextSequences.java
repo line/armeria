@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.server.JacksonUtil;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * A utility class which helps to create a <a href="https://datatracker.ietf.org/doc/rfc7464/">JavaScript Object
