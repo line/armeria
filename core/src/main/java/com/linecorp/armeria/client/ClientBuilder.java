@@ -256,7 +256,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ClientBuilder redirectConfig(RedirectConfig redirectConfig) {
-        return (ClientBuilder) super.redirectConfig(redirectConfig);
+    public ClientBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (ClientBuilder) super.followRedirects(redirectConfig);
     }
 }

@@ -494,12 +494,7 @@ public final class DefaultClientRequestContext
                 if (!isAbsoluteUri(newPath)) {
                     return newDerivedContext(id, req, rpcReq, newHeaders, sessionProtocol(), endpoint, newPath);
                 }
-                final URI uri;
-                try {
-                    uri = URI.create(req.path());
-                } catch (Throwable t) {
-                    throw new IllegalArgumentException("failed to parse a request URI: " + req.path(), t);
-                }
+                final URI uri = URI.create(req.path());
                 final Scheme scheme = Scheme.tryParse(uri.getScheme());
                 if (scheme == null) {
                     throw new IllegalArgumentException("failed to parse a scheme: " + uri.getScheme());

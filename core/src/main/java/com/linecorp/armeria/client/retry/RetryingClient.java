@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 
@@ -258,7 +257,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
         if (returnedRes.isComplete()) {
             returnedRes.whenComplete().handle((result, cause) -> {
-                final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
+                final Throwable abortCause;
+                if (cause != null) {
+                    abortCause = cause;
+                } else {
+                    abortCause = AbortedStreamException.get();
+                }
                 handleException(ctx, rootReqDuplicator, future, abortCause, initialAttempt);
                 return null;
             });

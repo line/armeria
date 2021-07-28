@@ -387,7 +387,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public EurekaEndpointGroupBuilder redirectConfig(RedirectConfig redirectConfig) {
-        return (EurekaEndpointGroupBuilder) super.redirectConfig(redirectConfig);
+    public EurekaEndpointGroupBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (EurekaEndpointGroupBuilder) super.followRedirects(redirectConfig);
     }
 }

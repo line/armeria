@@ -211,7 +211,7 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public WebClientBuilder redirectConfig(RedirectConfig redirectConfig) {
-        return (WebClientBuilder) super.redirectConfig(redirectConfig);
+    public WebClientBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (WebClientBuilder) super.followRedirects(redirectConfig);
     }
 }

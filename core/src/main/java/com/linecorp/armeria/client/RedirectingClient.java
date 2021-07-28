@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.client.DefaultWebClient.pathWithQuery;
 import static com.linecorp.armeria.client.RedirectConfigBuilder.allowSameDomain;
@@ -85,7 +84,12 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
         if (redirectCtx.responseWhenComplete().isDone()) {
             redirectCtx.responseWhenComplete().handle((result, cause) -> {
-                final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
+                final Throwable abortCause;
+                if (cause != null) {
+                    abortCause = cause;
+                } else {
+                    abortCause = AbortedStreamException.get();
+                }
                 handleException(ctx, reqDuplicator, responseFuture, abortCause, initialAttempt);
                 return null;
             });
@@ -165,6 +169,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             final Multimap<HttpMethod, String> redirectPaths = redirectCtx.redirectPaths();
             assert redirectPaths != null;
             if (redirectPaths.size() > redirectConfig.maxRedirects()) {
+                final CycleRedirectsException exception = redirectLoopsException(redirectCtx);
+                abortResponse(response, derivedCtx, exception);
+                handleException(ctx, newReqDuplicator, responseFuture, exception, false);
                 logger.info("Stop redirection because the number of redirection exceeds the limit: {}",
                              redirectConfig.maxRedirects());
                 endRedirect(ctx, newReqDuplicator, responseFuture, response);

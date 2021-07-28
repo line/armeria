@@ -348,7 +348,7 @@ public class AbstractClientOptionsBuilder {
      * Sets the {@link RedirectConfig} to enable
      * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
      */
-    public AbstractClientOptionsBuilder redirectConfig(RedirectConfig redirectConfig) {
+    public AbstractClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {
         return option(REDIRECT_CONFIG, requireNonNull(redirectConfig, "redirectConfig"));
     }
 

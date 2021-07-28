@@ -93,9 +93,9 @@ class RedirectingClientTest {
 
     private static AggregatedHttpResponse sendRequest(int maxRedirects) {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .redirectConfig(RedirectConfig.builder()
-                                                                        .maxRedirects(maxRedirects)
-                                                                        .build())
+                                          .followRedirects(RedirectConfig.builder()
+                                                                         .maxRedirects(maxRedirects)
+                                                                         .build())
                                           .build();
         return client.get("/foo").aggregate().join();
     }
@@ -139,7 +139,7 @@ class RedirectingClientTest {
 
             client = WebClient.builder(server.httpUri())
                               .factory(factory)
-                              .redirectConfig(RedirectConfig.builder().allowDomains("foo.com").build())
+                              .followRedirects(RedirectConfig.builder().allowDomains("foo.com").build())
                               .build();
 
             join = client.get("/anotherDomain").aggregate().join();

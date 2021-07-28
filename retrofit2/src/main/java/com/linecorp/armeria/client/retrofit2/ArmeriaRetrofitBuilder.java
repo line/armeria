@@ -417,7 +417,7 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ArmeriaRetrofitBuilder redirectConfig(RedirectConfig redirectConfig) {
-        return (ArmeriaRetrofitBuilder) super.redirectConfig(redirectConfig);
+    public ArmeriaRetrofitBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (ArmeriaRetrofitBuilder) super.followRedirects(redirectConfig);
     }
 }
