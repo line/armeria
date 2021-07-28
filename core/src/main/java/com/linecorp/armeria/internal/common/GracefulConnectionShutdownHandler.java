@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -49,11 +47,6 @@ public abstract class GracefulConnectionShutdownHandler {
     private ScheduledFuture<?> drainFuture;
 
     protected GracefulConnectionShutdownHandler(long drainDurationMicros) {
-        setDrainDurationMicros(drainDurationMicros);
-    }
-
-    private void setDrainDurationMicros(long drainDurationMicros) {
-        checkArgument(drainDurationMicros >= 0, "count: %s (expected: >= 0", drainDurationMicros);
         this.drainDurationMicros = drainDurationMicros;
     }
 
@@ -125,8 +118,8 @@ public abstract class GracefulConnectionShutdownHandler {
     public void handleInitiateConnectionShutdown(ChannelHandlerContext ctx, InitiateConnectionShutdown event) {
         // If the given duration is negative - fallback to the default duration set in the constructor.
         if (event.hasCustomDrainDuration()) {
-            // This value will be used during the graceful connection shutdown start.
-            setDrainDurationMicros(event.drainDurationMicros());
+            // This value will be used schedule or update the graceful connection shutdown drain duration.
+            drainDurationMicros = event.drainDurationMicros();
         }
         if (promise == null) {
             // Shutdown not started yet, close the channel to start.

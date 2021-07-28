@@ -584,7 +584,7 @@ public final class ServerBuilder {
      * is always {@code 0}.
      * </p>
      *
-     * @param durationMicros the drain duration. {@code 0} or negative value disables the drain.
+     * @param durationMicros the drain duration. {@code 0} disables the drain.
      */
     public ServerBuilder connectionDrainDurationMicros(long durationMicros) {
         checkArgument(connectionDrainDurationMicros >= 0,

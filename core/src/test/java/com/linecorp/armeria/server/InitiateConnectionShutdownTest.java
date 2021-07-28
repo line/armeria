@@ -184,12 +184,11 @@ public class InitiateConnectionShutdownTest {
     })
     void initiateConnectionShutdownWithoutDrainHttp2(String path) throws Exception {
         final AtomicBoolean finished = new AtomicBoolean();
-        clientChannel.eventLoop().execute(() -> {
-            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
-            final Http2Headers headers = getHttp2Headers(path);
-            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
-            http2Client.flush(ctx);
-        });
+        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
+                invocation -> {
+                    finished.set(true);
+                    return 0;
+                });
         doAnswer((Answer<Void>) invocation -> {
             // Retain buffer for comparison in tests.
             final ByteBuf buf = invocation.getArgument(3);
@@ -197,11 +196,12 @@ public class InitiateConnectionShutdownTest {
             return null;
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                                              any(ByteBuf.class));
-        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
-                invocation -> {
-                    finished.set(true);
-                    return 0;
-                });
+        clientChannel.eventLoop().execute(() -> {
+            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
+            final Http2Headers headers = getHttp2Headers(path);
+            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
+            http2Client.flush(ctx);
+        });
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class),
@@ -221,12 +221,11 @@ public class InitiateConnectionShutdownTest {
     })
     void initiateConnectionShutdownWithDrainHttp2(String path) throws Exception {
         final AtomicBoolean finished = new AtomicBoolean();
-        clientChannel.eventLoop().execute(() -> {
-            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
-            final Http2Headers headers = getHttp2Headers(path);
-            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
-            http2Client.flush(ctx);
-        });
+        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
+                invocation -> {
+                    finished.set(true);
+                    return 0;
+                });
         doAnswer((Answer<Void>) invocation -> {
             // Retain buffer for comparison in tests.
             final ByteBuf buf = invocation.getArgument(3);
@@ -234,11 +233,12 @@ public class InitiateConnectionShutdownTest {
             return null;
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                                              any(ByteBuf.class));
-        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
-                invocation -> {
-                    finished.set(true);
-                    return 0;
-                });
+        clientChannel.eventLoop().execute(() -> {
+            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
+            final Http2Headers headers = getHttp2Headers(path);
+            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
+            http2Client.flush(ctx);
+        });
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
@@ -256,12 +256,11 @@ public class InitiateConnectionShutdownTest {
     })
     void initiateConnectionShutdownCloseBeforeDrainEndHttp2(String path) throws Exception {
         final AtomicBoolean finished = new AtomicBoolean();
-        clientChannel.eventLoop().execute(() -> {
-            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
-            final Http2Headers headers = getHttp2Headers(path);
-            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
-            http2Client.flush(ctx);
-        });
+        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
+                invocation -> {
+                    finished.set(true);
+                    return 0;
+                });
         doAnswer((Answer<Void>) invocation -> {
             // Retain buffer for comparison in tests.
             final ByteBuf buf = invocation.getArgument(3);
@@ -269,11 +268,12 @@ public class InitiateConnectionShutdownTest {
             return null;
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                                              any(ByteBuf.class));
-        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
-                invocation -> {
-                    finished.set(true);
-                    return 0;
-                });
+        clientChannel.eventLoop().execute(() -> {
+            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
+            final Http2Headers headers = getHttp2Headers(path);
+            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
+            http2Client.flush(ctx);
+        });
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
