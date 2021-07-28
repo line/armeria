@@ -683,7 +683,7 @@ public final class ServerConfig {
 
         boolean hasPorts = false;
         for (final ServerPort p : ports) {
-            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols()));
+            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols(), p.portGroup()));
             buf.append(", ");
             hasPorts = true;
         }

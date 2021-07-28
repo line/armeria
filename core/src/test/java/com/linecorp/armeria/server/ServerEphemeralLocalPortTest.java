@@ -43,6 +43,16 @@ class ServerEphemeralLocalPortTest {
     };
 
     @RegisterExtension
+    static final ServerExtension serverBuiltWithTwoLocalPorts = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.localPort(0, SessionProtocol.HTTP);
+            sb.localPort(0, SessionProtocol.HTTP);
+            sb.service("/", (ctx, req) -> HttpResponse.of(200));
+        }
+    };
+
+    @RegisterExtension
     static final ServerExtension serverBuiltWithoutLocalPort = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
@@ -63,14 +73,40 @@ class ServerEphemeralLocalPortTest {
         // Must bound to both IPv4 and IPv6 loopback addresses.
         assertThat(ports).hasSize(2);
 
-        // Must be loopback addresses and be marked as 'ephemeral local' internally.
+        // Must be loopback addresses and belong to a port group.
         ports.forEach(p -> {
             assertThat(p.localAddress().getAddress().isLoopbackAddress()).isTrue();
-            assertThat(p.isEphemeralLocalPort()).isTrue();
+            assertThat(p.portGroup()).isNotZero();
         });
 
         // Must bound at the same port number.
         assertThat(ports.stream().mapToInt(p -> p.localAddress().getPort()).distinct()).hasSize(1);
+
+        // Must belong to the same port group.
+        assertThat(ports.stream().mapToLong(ServerPort::portGroup).distinct()).hasSize(1);
+    }
+
+    /**
+     * Similar to {@link #builtWithoutLocalPort()} but we bind twice this time.
+     */
+    @Test
+    void builtWithTwoLocalPorts() {
+        final Collection<ServerPort> ports = serverBuiltWithTwoLocalPorts.server().activePorts().values();
+
+        // Each `localPort(0)` must bound to both IPv4 and IPv6 loopback addresses.
+        assertThat(ports).hasSize(4);
+
+        // Must be loopback addresses and belong to a port group.
+        ports.forEach(p -> {
+            assertThat(p.localAddress().getAddress().isLoopbackAddress()).isTrue();
+            assertThat(p.portGroup()).isNotZero();
+        });
+
+        // Each `localPort(0)` must bound at the same port number.
+        assertThat(ports.stream().mapToInt(p -> p.localAddress().getPort()).distinct()).hasSize(2);
+
+        // The ports created by each `localPort(0)` must belong to the same port group.
+        assertThat(ports.stream().mapToLong(ServerPort::portGroup).distinct()).hasSize(2);
     }
 
     /**
@@ -84,10 +120,10 @@ class ServerEphemeralLocalPortTest {
         // Must bound to both IPv4 and IPv6 loopback addresses.
         assertThat(ports).hasSize(2);
 
-        // Must be loopback addresses but not be marked as 'ephemeral local' internally.
+        // Must be loopback addresses and not belong to any port group.
         ports.forEach(p -> {
             assertThat(p.localAddress().getAddress().isLoopbackAddress()).isTrue();
-            assertThat(p.isEphemeralLocalPort()).isFalse();
+            assertThat(p.portGroup()).isZero();
         });
 
         // Must bound at two different port numbers because we didn't use `localPort()`.

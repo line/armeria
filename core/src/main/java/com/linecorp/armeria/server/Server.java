@@ -714,7 +714,7 @@ public final class Server implements ListenableAsyncCloseable {
             if (f.isSuccess()) {
                 final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
                 final ServerPort actualPort =
-                        new ServerPort(localAddress, port.protocols(), port.isEphemeralLocalPort());
+                        new ServerPort(localAddress, port.protocols(), port.portGroup());
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -767,13 +767,14 @@ public final class Server implements ListenableAsyncCloseable {
             final ServerPort next = it.next();
             final ServerPort actualNext;
 
-            // Try to use the same port number if a user specified two loopback addresses with ephemeral ports.
+            // Try to use the same port number if the port belongs to a group.
             // See: https://github.com/line/armeria/issues/3725
-            if (next.isEphemeralLocalPort()) {
+            final long portGroup = next.portGroup();
+            if (portGroup != 0) {
                 int previousPort = 0;
                 synchronized (activePorts) {
                     for (ServerPort activePort : activePorts.values()) {
-                        if (activePort.isEphemeralLocalPort()) {
+                        if (activePort.portGroup() == portGroup) {
                             previousPort = activePort.localAddress().getPort();
                             break;
                         }
@@ -784,7 +785,7 @@ public final class Server implements ListenableAsyncCloseable {
                     // Use the previously bound ephemeral local port.
                     actualNext = new ServerPort(
                             new InetSocketAddress(next.localAddress().getAddress(), previousPort),
-                            next.protocols(), true);
+                            next.protocols(), portGroup);
                 } else {
                     // `next` is the first ephemeral local port.
                     actualNext = next;
