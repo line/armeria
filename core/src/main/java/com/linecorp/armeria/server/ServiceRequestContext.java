@@ -556,13 +556,14 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * <p>
      * If graceful shutdown is already triggered and the given connection drain duration is smaller than
-     * the wait time before the connection drain end - reschedules the drain end to happen faster.
+     * the wait time before the connection drain end, it reschedules the drain end to happen faster.
      * Otherwise, drain will end as it was previously scheduled.
      * </p>
      *
      * <p>
      * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
-     * is always {@code 0}.
+     * is always {@code 0}, which means the connection will be closed immediately
+     * at the end of the current response.
      * </p>
      *
      * <p>

@@ -77,7 +77,7 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AsciiString;
 
-public class InitiateConnectionShutdownTest {
+class InitiateConnectionShutdownTest {
 
     private static final int STREAM_ID = 3;
     private static final int PADDING = 0;
