@@ -42,7 +42,8 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
     }
 
     /**
-     * Unwraps this {@link BlockingTaskExecutor} and returns the {@link ScheduledExecutorService} being decorated.
+     * Unwraps this {@link BlockingTaskExecutor} and returns the
+     * {@link ScheduledExecutorService} being decorated.
      */
     default ScheduledExecutorService unwrap() {
         return this;
