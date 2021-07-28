@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.testing.ServerRuleDelegate;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -59,8 +60,8 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
         delegate = new ServerRuleDelegate(autoStart) {
             @Override
             public void configure(ServerBuilder sb) throws Exception {
-                sb.decorator(contextCaptor.decorator(ServerExtension.this::shouldCapture));
                 ServerExtension.this.configure(sb);
+                sb.decorator(contextCaptor.decorator(ServerExtension.this::shouldCapture));
             }
         };
     }
@@ -304,6 +305,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      * This method returns {@code true} by default. Override it to capture the contexts
      * selectively.
      */
+    @UnstableApi
     protected boolean shouldCapture(ServiceRequestContext ctx) {
         return true;
     }
