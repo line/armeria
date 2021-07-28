@@ -40,6 +40,8 @@ import io.netty.handler.codec.compression.Brotli;
  */
 final class HttpEncoders {
 
+    private static final Encoder.Parameters BROTLI_PARAMETERS = new Encoder.Parameters().setQuality(4);
+
     @Nullable
     static HttpEncodingType getWrapperForRequest(HttpRequest request) {
         final String acceptEncoding = request.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
@@ -65,7 +67,7 @@ final class HttpEncoders {
                     // We use 4 as the default level because it would save more bytes
                     // than GZIP's default setting and compress data faster.
                     // See: https://blogs.akamai.com/2016/02/understanding-brotlis-potential.html
-                    return new BrotliOutputStream(out, new Encoder.Parameters().setQuality(4));
+                    return new BrotliOutputStream(out, BROTLI_PARAMETERS);
                 } catch (IOException e) {
                     throw new IllegalStateException(
                             "Error writing brotli header. This should not happen with byte arrays.", e);
