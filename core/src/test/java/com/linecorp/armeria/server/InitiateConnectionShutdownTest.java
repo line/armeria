@@ -317,5 +317,6 @@ class InitiateConnectionShutdownTest {
                         .extracting(Header::getValue).containsExactly("close");
             }
         }
+        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
     }
 }
