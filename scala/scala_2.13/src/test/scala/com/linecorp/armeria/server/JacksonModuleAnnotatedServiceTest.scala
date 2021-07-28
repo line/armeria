@@ -17,9 +17,10 @@
 package com.linecorp.armeria.server
 
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.common.{HttpStatus, MediaType}
 import com.linecorp.armeria.server.annotation.{Post, ProducesJson}
 import munit.FunSuite
+import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
 
 class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
 
@@ -27,17 +28,44 @@ class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
     _.annotatedService(new ServiceWithCaseClass, Array.emptyObjectArray: _*)
   }
 
-  test("should encode and decode case class from and to JSON") {
-    val client = WebClient.of(server.httpUri())
-    val json = """{"x":10,"y":"hello"}"""
-    val response = client
-      .prepare()
-      .post("/echo")
-      .content(MediaType.JSON, json)
-      .execute()
-      .aggregate()
-      .join()
-    assertEquals(response.contentUtf8(), json)
+  List("/echo", "/echo-option").foreach { path =>
+    test(s"$path - should encode and decode case class from and to JSON") {
+      val client = WebClient.of(server.httpUri())
+      val json = """{"x":10,"y":"hello"}"""
+      val response = client
+        .prepare()
+        .post(path)
+        .content(MediaType.JSON, json)
+        .execute()
+        .aggregate()
+        .join()
+      assertEquals(response.contentUtf8(), json)
+    }
+  }
+
+  List("/echo", "/echo-option").foreach { path =>
+    test(s"$path - should return 404 Bad Request for null values with non-Option value") {
+      val client = WebClient.of(server.httpUri())
+      val json = """{"x":10}"""
+      val response = client
+        .prepare()
+        .post(path)
+        .content(MediaType.JSON, json)
+        .execute()
+        .aggregate()
+        .join()
+      if (path == "/echo") {
+        // should fail to decode null value to a String
+        assertEquals(response.status(), HttpStatus.BAD_REQUEST)
+      } else {
+        assertThatJson(response.contentUtf8()).isEqualTo("""
+          {
+            "x" : 10,
+            "y" : null
+          }
+          """)
+      }
+    }
   }
 }
 
@@ -48,6 +76,14 @@ class ServiceWithCaseClass {
   def echo(foo: Foo): Foo = {
     foo
   }
+
+  @ProducesJson
+  @Post("/echo-option")
+  def echo(foo: FooWithOption): FooWithOption = {
+    foo
+  }
 }
 
 case class Foo(x: Int, y: String)
+
+case class FooWithOption(x: Int, y: Option[String])

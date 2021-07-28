@@ -427,7 +427,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(Object content) {
         return ofJson(HttpStatus.OK, content);
@@ -438,7 +438,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(HttpStatus status, Object content) {
         requireNonNull(status, "status");
@@ -454,7 +454,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
      *                                  if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(MediaType contentType, Object content) {
         requireNonNull(contentType, "contentType");
@@ -471,7 +471,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(ResponseHeaders headers, Object content) {
         requireNonNull(headers, "headers");

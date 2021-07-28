@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.internal.server.JacksonUtil;
 
-class JacksonModuleProviderTest {
+class JacksonObjectMapperProviderTest {
 
     @Test
     void overrideDefaultJacksonModules() {

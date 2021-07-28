@@ -20,43 +20,65 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.JacksonModuleProvider;
+import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 
 public final class JacksonUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(JacksonUtil.class);
+
+    private static final List<JacksonObjectMapperProvider> providers =
+            ImmutableList.copyOf(ServiceLoader.load(JacksonObjectMapperProvider.class));
 
     private static boolean noticed;
 
     private static final ObjectMapper INSTANCE = newDefaultObjectMapper();
 
     public static ObjectMapper newDefaultObjectMapper() {
-        final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
-        final ServiceLoader<JacksonModuleProvider> providers = ServiceLoader.load(JacksonModuleProvider.class);
-        if (Iterables.isEmpty(providers)) {
+        if (providers.isEmpty()) {
+            // Create the default ObjectMapper with the modules provided by SPI.
+            final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
             jsonMapperBuilder.findAndAddModules();
-        } else {
-            for (JacksonModuleProvider provider : providers) {
-                final List<Module> modules = provider.modules();
-                requireNonNull(modules, "provider.modules() returned null");
-                jsonMapperBuilder.addModules(modules);
+            final ObjectMapper mapper = jsonMapperBuilder.build();
+            final Set<Object> registeredModuleIds = mapper.getRegisteredModuleIds();
+            for (Object registeredModuleId : registeredModuleIds) {
+                if ("com.fasterxml.jackson.module.scala.DefaultScalaModule".equals(registeredModuleId)) {
+                    // Disallow a null value for non-Option fields. Option[A] is commonly preferred.
+                    mapper.enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES);
+                }
             }
+            if (!noticed) {
+                logger.debug("Available Jackson Modules: {}", registeredModuleIds);
+                noticed = true;
+            }
+            return mapper;
         }
-        final JsonMapper mapper = jsonMapperBuilder.build();
+
+        // Use a custom ObjectMapper provided via SPI.
+        final JacksonObjectMapperProvider provider = providers.get(0);
         if (!noticed) {
-            logger.debug("Available Jackson Modules: {}", mapper.getRegisteredModuleIds());
+            if (providers.size() > 1) {
+                logger.warn("Found more than one {}. The first provider found is used among {}",
+                            JacksonObjectMapperProvider.class.getSimpleName(), providers);
+            } else {
+                logger.info("Using {} as a {}",
+                            provider.getClass().getSimpleName(),
+                            JacksonObjectMapperProvider.class.getSimpleName());
+            }
             noticed = true;
         }
+        final ObjectMapper mapper = provider.newObjectMapper();
+        requireNonNull(mapper, "provider.modules() returned null");
         return mapper;
     }
 
