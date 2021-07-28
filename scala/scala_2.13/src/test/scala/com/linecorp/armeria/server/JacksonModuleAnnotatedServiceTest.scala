@@ -55,7 +55,7 @@ class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
         .aggregate()
         .join()
       if (path == "/echo") {
-        // should fail to decode null value to a String
+        // Should fail to decode a null value to a String
         assertEquals(response.status(), HttpStatus.BAD_REQUEST)
       } else {
         assertThatJson(response.contentUtf8()).isEqualTo("""

@@ -53,7 +53,7 @@ public final class JacksonUtil {
             final Set<Object> registeredModuleIds = mapper.getRegisteredModuleIds();
             for (Object registeredModuleId : registeredModuleIds) {
                 if ("com.fasterxml.jackson.module.scala.DefaultScalaModule".equals(registeredModuleId)) {
-                    // Disallow a null value for non-Option fields. Option[A] is commonly preferred.
+                    // Disallow null values for non-Option fields. Option[A] is commonly preferred.
                     mapper.enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES);
                 }
             }
