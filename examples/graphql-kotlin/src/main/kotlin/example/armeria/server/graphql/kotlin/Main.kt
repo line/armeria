@@ -33,7 +33,8 @@ private fun newServer(port: Int): Server {
 }
 
 fun configureService(sb: ServerBuilder) {
-    //  TODO: GraphQLSchema instance cannot be injected at this time.
+    // TODO: GraphQLSchema instance cannot be injected at this time.
+    //       https://github.com/line/armeria/issues/3708
     //        It is also mandatory to have at least one file for the schema.
     sb.service("/graphql", GraphqlService.builder().configureGraphql({
         it.schema(toSchema(
