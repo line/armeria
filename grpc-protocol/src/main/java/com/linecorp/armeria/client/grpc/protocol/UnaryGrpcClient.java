@@ -87,6 +87,8 @@ public final class UnaryGrpcClient {
 
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient} and {@link SerializationFormat}.
+     * The specified {@link SerializationFormat} should be one of {@link UnaryGrpcSerializationFormats#PROTO},
+     * {@link UnaryGrpcSerializationFormats#PROTO_WEB}, or {@link UnaryGrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public UnaryGrpcClient(WebClient webClient, SerializationFormat serializationFormat) {
         if (!SUPPORTED_SERIALIZATION_FORMATS.contains(serializationFormat)) {
@@ -97,7 +99,7 @@ public final class UnaryGrpcClient {
         this.webClient = Clients.newDerivedClient(
                 webClient,
                 ClientOptions.DECORATION.newValue(ClientDecoration.of(
-                        delegate -> new GrpcGrameDecorator(delegate, serializationFormat)));
+                        delegate -> new GrpcFramingDecorator(delegate, serializationFormat))));
     }
 
     /**
@@ -112,7 +114,7 @@ public final class UnaryGrpcClient {
     public CompletableFuture<byte[]> execute(String uri, byte[] payload) {
         final HttpRequest request = HttpRequest.of(
                 RequestHeaders.builder(HttpMethod.POST, uri).contentType(serializationFormat.mediaType())
-                              .add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS).build(),
+                              .add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString()).build(),
                 HttpData.wrap(payload));
         return webClient.execute(request).aggregate()
                         .thenApply(msg -> {
@@ -147,16 +149,17 @@ public final class UnaryGrpcClient {
 
     private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
         private final SerializationFormat serializationFormat;
+        private final boolean isGrpcWebText;
 
         private GrpcFramingDecorator(HttpClient delegate, SerializationFormat serializationFormat) {
             super(delegate);
             // Validated in the UnaryGrpcClient ctor.
             this.serializationFormat = serializationFormat;
+            isGrpcWebText = UnaryGrpcSerializationFormats.isGrpcWebText(serializationFormat);
         }
 
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-            final boolean isGrpcWebText = UnaryGrpcSerializationFormats.isGrpcWebText(serializationFormat);
             return HttpResponse.from(
                     req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                        .thenCompose(
@@ -209,13 +212,9 @@ public final class UnaryGrpcClient {
                     s.request(2);
                 }
 
-                private boolean isTrailers(DeframedMessage message) {
-                   return message.type() >> 7 == 1;
-                }
-
                 @Override
                 public void onNext(DeframedMessage message) {
-                    if (UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat) && isTrailers(message)) {
+                    if (UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.isTrailer()) {
                         final ByteBuf buf;
                         try {
                             buf = InternalGrpcWebUtil.messageBuf(message, ctx.alloc());

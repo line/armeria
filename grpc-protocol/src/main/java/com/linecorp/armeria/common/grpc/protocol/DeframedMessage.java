@@ -94,6 +94,13 @@ public final class DeframedMessage {
         return type;
     }
 
+    /**
+     * Returns true if message is trailer.
+     */
+    public boolean isTrailer() {
+        return type >> 7 == 1;
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {

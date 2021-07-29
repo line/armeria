@@ -153,7 +153,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
 
         @Override
         public void onNext(DeframedMessage message) {
-            if (message.type() >> 7 == 1) {
+            if (message.isTrailer()) {
                 final ByteBuf buf;
                 try {
                     buf = InternalGrpcWebUtil.messageBuf(message, ctx.alloc());

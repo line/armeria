@@ -380,7 +380,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void onNext(DeframedMessage message) {
-        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
+        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.isTrailer()) {
             final ByteBuf buf;
             try {
                 buf = messageBuf(message, ctx.alloc());
