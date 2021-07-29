@@ -100,7 +100,8 @@ public final class BraveService extends SimpleDecoratingHttpService {
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
 
-        if (!span.isNoop() && ctx instanceof DefaultServiceRequestContext) {
+        if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() &&
+            ctx instanceof DefaultServiceRequestContext) {
             final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
             defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),

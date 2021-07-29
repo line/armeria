@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 import com.linecorp.armeria.server.brave.BraveService;
 
@@ -123,12 +124,15 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     };
 
     private final List<Pattern> nonRequestThreadPatterns;
+    private final boolean scopeDecoratorAdded;
 
-    RequestContextCurrentTraceContext(
-            CurrentTraceContext.Builder builder, List<Pattern> nonRequestThreadPatterns) {
+
+    RequestContextCurrentTraceContext(Builder builder, List<Pattern> nonRequestThreadPatterns,
+                                      boolean scopeDecoratorAdded) {
         super(builder);
 
         this.nonRequestThreadPatterns = nonRequestThreadPatterns;
+        this.scopeDecoratorAdded = scopeDecoratorAdded;
     }
 
     @Override
@@ -173,6 +177,16 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     @Override
     public Scope decorateScope(TraceContext context, Scope scope) {
         return super.decorateScope(context, scope);
+    }
+
+    /**
+     * Returns whether this {@link RequestContextCurrentTraceContext} is built with {@link ScopeDecorator}s.
+     *
+     * @see RequestContextCurrentTraceContextBuilder#addScopeDecorator(ScopeDecorator)
+     */
+    @UnstableApi
+    public boolean scopeDecoratorAdded() {
+        return scopeDecoratorAdded;
     }
 
     private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
