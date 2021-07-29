@@ -85,20 +85,6 @@ class InitiateConnectionShutdownTest {
     private static final ByteBuf DEBUG_DATA = Unpooled.unreleasableBuffer(
             Unpooled.copiedBuffer("app-requested", StandardCharsets.UTF_8));
     private static final AtomicBoolean connectionClosed = new AtomicBoolean();
-
-    @Mock
-    private Http2FrameListener clientListener;
-
-    private Http2ConnectionHandler http2Client;
-    private Channel clientChannel;
-
-    private static Http2Headers getHttp2Headers(String path) {
-        return new DefaultHttp2Headers(false)
-                .method(new AsciiString("GET"))
-                .scheme(new AsciiString("http"))
-                .path(new AsciiString(path));
-    }
-
     @RegisterExtension
     static final ServerExtension goAwayServer = new ServerExtension() {
         @Override
@@ -140,9 +126,44 @@ class InitiateConnectionShutdownTest {
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!");
                 }
             });
-            sb.idleTimeoutMillis(100);
+            sb.idleTimeoutMillis(500);
         }
     };
+    @Mock
+    private Http2FrameListener clientListener;
+    private Http2ConnectionHandler http2Client;
+    private Channel clientChannel;
+
+    private static Http2Headers getHttp2Headers(String path) {
+        return new DefaultHttp2Headers(false)
+                .method(new AsciiString("GET"))
+                .scheme(new AsciiString("http"))
+                .path(new AsciiString(path));
+    }
+
+    private void makeHttp2Request(String path) throws Exception {
+        final AtomicBoolean finished = new AtomicBoolean();
+        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
+                invocation -> {
+                    finished.set(true);
+                    return 0;
+                });
+        doAnswer((Answer<Void>) invocation -> {
+            // Retain buffer for comparison in tests.
+            final ByteBuf buf = invocation.getArgument(3);
+            buf.retain();
+            return null;
+        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                                             any(ByteBuf.class));
+        clientChannel.eventLoop().execute(() -> {
+            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
+            final Http2Headers headers = getHttp2Headers(path);
+            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, true, ctx.newPromise());
+            http2Client.flush(ctx);
+        });
+        await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
+        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+    }
 
     @BeforeEach
     void setUp() throws Exception {
@@ -192,27 +213,7 @@ class InitiateConnectionShutdownTest {
             "/goaway_blocking?duration=0",
     })
     void initiateConnectionShutdownWithoutDrainHttp2(String path) throws Exception {
-        final AtomicBoolean finished = new AtomicBoolean();
-        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
-                invocation -> {
-                    finished.set(true);
-                    return 0;
-                });
-        doAnswer((Answer<Void>) invocation -> {
-            // Retain buffer for comparison in tests.
-            final ByteBuf buf = invocation.getArgument(3);
-            buf.retain();
-            return null;
-        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                                             any(ByteBuf.class));
-        clientChannel.eventLoop().execute(() -> {
-            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
-            final Http2Headers headers = getHttp2Headers(path);
-            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
-            http2Client.flush(ctx);
-        });
-        await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
-        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+        makeHttp2Request(path);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class),
                                                              eq(Integer.MAX_VALUE),
@@ -230,27 +231,7 @@ class InitiateConnectionShutdownTest {
             "/goaway_blocking?duration=1",
     })
     void initiateConnectionShutdownWithDrainHttp2(String path) throws Exception {
-        final AtomicBoolean finished = new AtomicBoolean();
-        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
-                invocation -> {
-                    finished.set(true);
-                    return 0;
-                });
-        doAnswer((Answer<Void>) invocation -> {
-            // Retain buffer for comparison in tests.
-            final ByteBuf buf = invocation.getArgument(3);
-            buf.retain();
-            return null;
-        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                                             any(ByteBuf.class));
-        clientChannel.eventLoop().execute(() -> {
-            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
-            final Http2Headers headers = getHttp2Headers(path);
-            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
-            http2Client.flush(ctx);
-        });
-        await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
-        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+        makeHttp2Request(path);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                                                     eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
@@ -266,27 +247,7 @@ class InitiateConnectionShutdownTest {
             "/goaway_blocking?duration=200",
     })
     void initiateConnectionShutdownCloseBeforeDrainEndHttp2(String path) throws Exception {
-        final AtomicBoolean finished = new AtomicBoolean();
-        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
-                invocation -> {
-                    finished.set(true);
-                    return 0;
-                });
-        doAnswer((Answer<Void>) invocation -> {
-            // Retain buffer for comparison in tests.
-            final ByteBuf buf = invocation.getArgument(3);
-            buf.retain();
-            return null;
-        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                                             any(ByteBuf.class));
-        clientChannel.eventLoop().execute(() -> {
-            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
-            final Http2Headers headers = getHttp2Headers(path);
-            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
-            http2Client.flush(ctx);
-        });
-        await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
-        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+        makeHttp2Request(path);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                                                     eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));

@@ -39,7 +39,13 @@ final class Http2ServerConnectionHandlerBuilder
         this.keepAliveTimer = keepAliveTimer;
         this.gracefulShutdownSupport = gracefulShutdownSupport;
         this.scheme = scheme;
-        gracefulShutdownTimeoutMillis(config.idleTimeoutMillis());
+        final long timeout = config.idleTimeoutMillis();
+        if (timeout > 0) {
+            gracefulShutdownTimeoutMillis(timeout);
+        } else {
+            // Timeout disabled.
+            gracefulShutdownTimeoutMillis(-1);
+        }
     }
 
     @Override
