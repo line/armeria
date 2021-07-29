@@ -42,11 +42,10 @@ public abstract class GracefulConnectionShutdownHandler {
     private ChannelPromise promise;
     @Nullable
     private ScheduledFuture<?> drainFuture;
-    
+
     // Drain duration in microseconds used during the graceful connection shutdown start.
     private long drainDurationMicros;
     private boolean canCallOnDrainStart = true;
-
 
     protected GracefulConnectionShutdownHandler(long drainDurationMicros) {
         this.drainDurationMicros = drainDurationMicros;
