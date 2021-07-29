@@ -90,16 +90,14 @@ public final class UnaryGrpcClient {
      */
     public UnaryGrpcClient(WebClient webClient, SerializationFormat serializationFormat) {
         if (!SUPPORTED_SERIALIZATION_FORMATS.contains(serializationFormat)) {
-            throw new IllegalArgumentException("serializationFormat : " + serializationFormat +
+            throw new IllegalArgumentException("serializationFormat: " + serializationFormat +
                                                " (expected: one of " + SUPPORTED_SERIALIZATION_FORMATS + ')');
         }
         this.serializationFormat = serializationFormat;
         this.webClient = Clients.newDerivedClient(
                 webClient,
-                ClientOptions.DECORATION.newValue(ClientDecoration
-                                                          .of((delegate, ctx, req) -> new GrpcFramingDecorator(
-                                                                  delegate, serializationFormat)
-                                                                  .execute(ctx, req))));
+                ClientOptions.DECORATION.newValue(ClientDecoration.of(
+                        delegate -> new GrpcGrameDecorator(delegate, serializationFormat)));
     }
 
     /**
@@ -114,7 +112,7 @@ public final class UnaryGrpcClient {
     public CompletableFuture<byte[]> execute(String uri, byte[] payload) {
         final HttpRequest request = HttpRequest.of(
                 RequestHeaders.builder(HttpMethod.POST, uri).contentType(serializationFormat.mediaType())
-                              .addObject(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS).build(),
+                              .add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS).build(),
                 HttpData.wrap(payload));
         return webClient.execute(request).aggregate()
                         .thenApply(msg -> {
