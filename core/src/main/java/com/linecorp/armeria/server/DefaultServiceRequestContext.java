@@ -441,7 +441,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown() {
-        return initiateConnectionShutdown(InitiateConnectionShutdown.DEFAULT);
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of());
     }
 
     private CompletableFuture<Void> initiateConnectionShutdown(InitiateConnectionShutdown event) {

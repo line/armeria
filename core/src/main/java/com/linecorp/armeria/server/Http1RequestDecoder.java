@@ -375,6 +375,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // to have a "Connection: close" header and connection to be closed after the next response.
             destroyKeepAliveHandler();
             writer.initiateConnectionShutdown();
+            return;
         }
 
         ctx.fireUserEventTriggered(evt);

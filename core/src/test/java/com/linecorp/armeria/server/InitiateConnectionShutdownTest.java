@@ -217,8 +217,8 @@ class InitiateConnectionShutdownTest {
 
     @ParameterizedTest
     @CsvSource({
-            "/goaway_async?duration=200",
-            "/goaway_blocking?duration=200",
+            "/goaway_async?duration=500",
+            "/goaway_blocking?duration=500",
     })
     void initiateConnectionShutdownCloseBeforeDrainEndHttp2(String path) throws Exception {
         makeHttp2Request(path);
@@ -227,6 +227,8 @@ class InitiateConnectionShutdownTest {
                                                     eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
         inOrder.verify(clientListener).onDataRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
                                                   any(ByteBuf.class), anyInt(), eq(true));
+        inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
+                                                    eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
     }
 
     @ParameterizedTest
@@ -235,12 +237,12 @@ class InitiateConnectionShutdownTest {
             "/goaway_async?duration=-1",
             "/goaway_async?duration=0",
             "/goaway_async?duration=1",
-            "/goaway_async?duration=100",
+            "/goaway_async?duration=500",
             "/goaway_blocking",
             "/goaway_blocking?duration=-1",
             "/goaway_blocking?duration=0",
             "/goaway_async?duration=1",
-            "/goaway_async?duration=100",
+            "/goaway_async?duration=500",
     })
     void initiateConnectionShutdownHttp1(String path) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -261,12 +263,12 @@ class InitiateConnectionShutdownTest {
             "/goaway_async?duration=-1",
             "/goaway_async?duration=0",
             "/goaway_async?duration=1",
-            "/goaway_async?duration=100",
+            "/goaway_async?duration=500",
             "/goaway_blocking",
             "/goaway_blocking?duration=-1",
             "/goaway_blocking?duration=0",
             "/goaway_async?duration=1",
-            "/goaway_async?duration=100",
+            "/goaway_async?duration=500",
     })
     void initiateConnectionShutdownHttp1NoopKeepAliveHandler(String path) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -296,7 +298,7 @@ class InitiateConnectionShutdownTest {
             // the response.
             return HttpResponse.delayed(
                     HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
-                    Duration.ofMillis(10));
+                    Duration.ofMillis(200));
         }
 
         @Blocking
@@ -313,7 +315,7 @@ class InitiateConnectionShutdownTest {
             future.thenAccept(f -> connectionClosed.set(true));
             // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
             // the response.
-            Thread.sleep(10);
+            Thread.sleep(200);
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!");
         }
     }

@@ -17,25 +17,21 @@
 package com.linecorp.armeria.internal.common;
 
 /**
- * Event used to initiate graceful connection shutdown using user-facing APIs.
+ * Event used to initiate graceful connection shutdown.
  */
 public final class InitiateConnectionShutdown {
-    /**
-     * Singleton instance that's used to initiate connection shutdown with fallback to the currently configured
-     * drain duration.
-     */
-    public static final InitiateConnectionShutdown DEFAULT = new InitiateConnectionShutdown();
-    public static final InitiateConnectionShutdown NO_DRAIN = new InitiateConnectionShutdown(0);
-    private final long drainDurationMicros;
+    private static final InitiateConnectionShutdown DEFAULT = new InitiateConnectionShutdown();
+    private static final InitiateConnectionShutdown NO_DRAIN = new InitiateConnectionShutdown(0);
 
-    private InitiateConnectionShutdown() {
-        // Negative value means that drain duration wasn't provided by the caller.
-        // Falls back to the currently configured drain duration.
-        drainDurationMicros = -1;
+    /**
+     * Returns {@link InitiateConnectionShutdown} event that uses the currently configured drain duration.
+     */
+    public static InitiateConnectionShutdown of() {
+        return DEFAULT;
     }
 
     /**
-     * Creates {@link InitiateConnectionShutdown} event with custom drain duration in microseconds.
+     * Returns {@link InitiateConnectionShutdown} event with custom drain duration in microseconds.
      * Negative values are a valid input - negative duration may be passed as a result of the time arithmetics,
      * in that case drain duration will be set to 0.
      */
@@ -46,6 +42,14 @@ public final class InitiateConnectionShutdown {
             return NO_DRAIN;
         }
         return new InitiateConnectionShutdown(drainDurationMicros);
+    }
+
+    private final long drainDurationMicros;
+
+    private InitiateConnectionShutdown() {
+        // Negative value means that drain duration wasn't provided by the caller.
+        // Falls back to the currently configured drain duration.
+        drainDurationMicros = -1;
     }
 
     private InitiateConnectionShutdown(long drainDurationMicros) {
