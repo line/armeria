@@ -71,8 +71,11 @@ public class AbortedStreamMessage<T> implements StreamMessage<T>, Subscription {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+            if (executor.inEventLoop()) {
+                abortLateSubscriber(subscriber);
+            } else {
+                executor.execute(() -> abortLateSubscriber(subscriber));
+            }
             return;
         }
 
@@ -87,6 +90,11 @@ public class AbortedStreamMessage<T> implements StreamMessage<T>, Subscription {
         subscriber.onSubscribe(this);
         subscriber.onError(cause);
         completionFuture.completeExceptionally(cause);
+    }
+
+    private void abortLateSubscriber(Subscriber<? super T> subscriber) {
+        subscriber.onSubscribe(NoopSubscription.get());
+        subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
     }
 
     @Override
