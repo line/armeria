@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.internal.server.tomcat.ArmeriaProcessor;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -81,6 +82,10 @@ public abstract class TomcatService implements HttpService {
     private static final MethodHandle INPUT_BUFFER_CONSTRUCTOR;
     private static final MethodHandle OUTPUT_BUFFER_CONSTRUCTOR;
     static final Class<?> PROTOCOL_HANDLER_CLASS;
+
+    @Nullable
+    private static final MethodHandle ENDPOINT_CONSTRUCTOR;
+    private static final MethodHandle PROCESSOR_CONSTRUCTOR;
 
     static {
         final String prefix = TomcatVersion.class.getPackage().getName() + '.';
@@ -108,6 +113,26 @@ public abstract class TomcatService implements HttpService {
             throw new IllegalStateException(
                     "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
                     "; using a wrong armeria-tomcat JAR?", e);
+        }
+
+        try {
+            final Class<?> processorClass = Class.forName(prefix + "ArmeriaProcessor", true, classLoader);
+            if (TomcatVersion.major() >= 9) {
+                ENDPOINT_CONSTRUCTOR = null;
+                PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                        processorClass,
+                        MethodType.methodType(void.class, Class.forName("org.apache.coyote.Adapter", true, classLoader)));
+            } else {
+                final Class<?> endpointClass = Class.forName(prefix + "ArmeriaEndpoint", true, classLoader);
+                ENDPOINT_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                        endpointClass, MethodType.methodType(void.class));
+                PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                        processorClass, MethodType.methodType(void.class, endpointClass.getSuperclass()));
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(
+                    "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
+                            "; using a wrong armeria-tomcat JAR?", e);
         }
 
         if (TomcatVersion.major() >= 9) {
@@ -356,7 +381,8 @@ public abstract class TomcatService implements HttpService {
                     return null;
                 }
 
-                final Request coyoteReq = convertRequest(ctx, aReq);
+                final ArmeriaProcessor processor = createProcessor(coyoteAdapter);
+                final Request coyoteReq = convertRequest(ctx, aReq, processor.getRequest());
                 if (coyoteReq == null) {
                     if (res.tryWrite(INVALID_AUTHORITY_HEADERS)) {
                         if (res.tryWrite(INVALID_AUTHORITY_DATA)) {
@@ -365,7 +391,7 @@ public abstract class TomcatService implements HttpService {
                     }
                     return null;
                 }
-                final Response coyoteRes = new Response();
+                final Response coyoteRes = coyoteReq.getResponse();
                 coyoteReq.setResponse(coyoteRes);
                 coyoteRes.setRequest(coyoteReq);
 
@@ -423,10 +449,17 @@ public abstract class TomcatService implements HttpService {
         }
     }
 
+    private static ArmeriaProcessor createProcessor(Adapter coyoteAdapter) throws Throwable {
+        if (ENDPOINT_CONSTRUCTOR == null) {
+            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke(coyoteAdapter);
+        } else {
+            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke(ENDPOINT_CONSTRUCTOR.invoke());
+        }
+    }
+
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req) throws Throwable {
+    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req, Request coyoteReq) throws Throwable {
         final String mappedPath = ctx.mappedPath();
-        final Request coyoteReq = new Request();
 
         coyoteReq.scheme().setString(req.scheme());
 
