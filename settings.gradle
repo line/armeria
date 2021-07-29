@@ -116,8 +116,8 @@ includeWithFlags ':examples:graphql-example',                      'java'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
 includeWithFlags ':examples:graphql-kotlin-example',               'java', 'kotlin'
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
-includeWithFlags ':examples:graphql-sangria',                      'java', 'scala_2.13'
-project(':examples:graphql-sangria').projectDir = file('examples/graphql-sangria')
+includeWithFlags ':examples:graphql-sangria-example',              'java', 'scala_2.13'
+project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
 includeWithFlags ':examples:grpc-example',                         'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java', 'kotlin-grpc', 'kotlin'
