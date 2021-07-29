@@ -126,8 +126,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     private final List<Pattern> nonRequestThreadPatterns;
     private final boolean scopeDecoratorAdded;
 
-    RequestContextCurrentTraceContext(Builder builder, List<Pattern> nonRequestThreadPatterns,
-                                      boolean scopeDecoratorAdded) {
+    RequestContextCurrentTraceContext(CurrentTraceContext.Builder builder,
+                                      List<Pattern> nonRequestThreadPatterns, boolean scopeDecoratorAdded) {
         super(builder);
 
         this.nonRequestThreadPatterns = nonRequestThreadPatterns;
