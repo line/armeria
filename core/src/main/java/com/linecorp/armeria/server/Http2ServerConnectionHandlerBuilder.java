@@ -39,13 +39,9 @@ final class Http2ServerConnectionHandlerBuilder
         this.keepAliveTimer = keepAliveTimer;
         this.gracefulShutdownSupport = gracefulShutdownSupport;
         this.scheme = scheme;
-        final long timeout = config.idleTimeoutMillis();
-        if (timeout > 0) {
-            gracefulShutdownTimeoutMillis(timeout);
-        } else {
-            // Timeout disabled.
-            gracefulShutdownTimeoutMillis(-1);
-        }
+        // Disable graceful shutdown timeout in a super class. Server-side HTTP/2 graceful shutdown is
+        // handled by Armeria's HTTP/2 server handler.
+        gracefulShutdownTimeoutMillis(-1);
     }
 
     @Override

@@ -80,55 +80,29 @@ import io.netty.util.AsciiString;
 
 class InitiateConnectionShutdownTest {
 
+    @RegisterExtension
+    static final ServerExtension goAwayServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.annotatedService(new AnnotatedTestService());
+        }
+    };
+    @RegisterExtension
+    static final ServerExtension goAwayServerNoopKeepAliveHandler = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.annotatedService(new AnnotatedTestService());
+            sb.idleTimeoutMillis(0);
+            sb.requestTimeoutMillis(0);
+            sb.maxConnectionAgeMillis(0);
+            sb.maxNumRequestsPerConnection(0);
+        }
+    };
     private static final int STREAM_ID = 3;
     private static final int PADDING = 0;
     private static final ByteBuf DEBUG_DATA = Unpooled.unreleasableBuffer(
             Unpooled.copiedBuffer("app-requested", StandardCharsets.UTF_8));
     private static final AtomicBoolean connectionClosed = new AtomicBoolean();
-    @RegisterExtension
-    static final ServerExtension goAwayServer = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService(new Object() {
-                @Get("/goaway_async")
-                public HttpResponse goAway(
-                        ServiceRequestContext ctx, @Param("duration") Optional<Long> durationMillis) {
-                    final CompletableFuture<Void> future;
-                    if (durationMillis.isPresent()) {
-                        future = ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
-                    } else {
-                        future = ctx.initiateConnectionShutdown();
-                    }
-                    future.thenAccept(f -> connectionClosed.set(true));
-                    // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
-                    // the response.
-                    return HttpResponse.delayed(
-                            HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
-                            Duration.ofMillis(10));
-                }
-
-                @Blocking
-                @Get("/goaway_blocking")
-                public HttpResponse goAwayBlocking(ServiceRequestContext ctx,
-                                                   @Param("duration") Optional<Long> durationMillis)
-                        throws InterruptedException {
-                    final CompletableFuture<Void> future;
-                    if (durationMillis.isPresent()) {
-                        future = ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
-                    } else {
-                        future = ctx.initiateConnectionShutdown();
-                    }
-                    future.thenAccept(f -> connectionClosed.set(true));
-                    // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
-                    // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
-                    // the response.
-                    Thread.sleep(10);
-                    return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!");
-                }
-            });
-            sb.idleTimeoutMillis(500);
-        }
-    };
     @Mock
     private Http2FrameListener clientListener;
     private Http2ConnectionHandler http2Client;
@@ -279,5 +253,68 @@ class InitiateConnectionShutdownTest {
             }
         }
         await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/goaway_async",
+            "/goaway_async?duration=-1",
+            "/goaway_async?duration=0",
+            "/goaway_async?duration=1",
+            "/goaway_async?duration=100",
+            "/goaway_blocking",
+            "/goaway_blocking?duration=-1",
+            "/goaway_blocking?duration=0",
+            "/goaway_async?duration=1",
+            "/goaway_async?duration=100",
+    })
+    void initiateConnectionShutdownHttp1NoopKeepAliveHandler(String path) throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final HttpUriRequest req = new HttpGet(goAwayServerNoopKeepAliveHandler.httpUri() + path);
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.containsHeader("Connection")).isTrue();
+                assertThat(res.getHeaders("Connection"))
+                        .extracting(Header::getValue).containsExactly("close");
+            }
+        }
+        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+    }
+
+    private static class AnnotatedTestService {
+        @Get("/goaway_async")
+        public HttpResponse goAway(
+                ServiceRequestContext ctx, @Param("duration") Optional<Long> durationMillis) {
+            final CompletableFuture<Void> future;
+            if (durationMillis.isPresent()) {
+                future = ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
+            } else {
+                future = ctx.initiateConnectionShutdown();
+            }
+            future.thenAccept(f -> connectionClosed.set(true));
+            // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
+            // the response.
+            return HttpResponse.delayed(
+                    HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
+                    Duration.ofMillis(10));
+        }
+
+        @Blocking
+        @Get("/goaway_blocking")
+        public HttpResponse goAwayBlocking(ServiceRequestContext ctx,
+                                           @Param("duration") Optional<Long> durationMillis)
+                throws InterruptedException {
+            final CompletableFuture<Void> future;
+            if (durationMillis.isPresent()) {
+                future = ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
+            } else {
+                future = ctx.initiateConnectionShutdown();
+            }
+            future.thenAccept(f -> connectionClosed.set(true));
+            // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
+            // the response.
+            Thread.sleep(10);
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!");
+        }
     }
 }

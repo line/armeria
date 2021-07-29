@@ -25,6 +25,7 @@ public final class InitiateConnectionShutdown {
      * drain duration.
      */
     public static final InitiateConnectionShutdown DEFAULT = new InitiateConnectionShutdown();
+    public static final InitiateConnectionShutdown NO_DRAIN = new InitiateConnectionShutdown(0);
     private final long drainDurationMicros;
 
     private InitiateConnectionShutdown() {
@@ -34,13 +35,21 @@ public final class InitiateConnectionShutdown {
     }
 
     /**
-     * Creates event with custom drain duration in microseconds.
-     * Negative values are valid input - negative duration may be passed as a result of the time arithmetics,
+     * Creates {@link InitiateConnectionShutdown} event with custom drain duration in microseconds.
+     * Negative values are a valid input - negative duration may be passed as a result of the time arithmetics,
      * in that case drain duration will be set to 0.
      */
-    public InitiateConnectionShutdown(long drainDurationMicros) {
+    public static InitiateConnectionShutdown of(long drainDurationMicros) {
         // Clamp drain duration to 0. Negative values are used internally to fallback to the currently
         // configured drain duration.
+        if (drainDurationMicros <= 0) {
+            return NO_DRAIN;
+        }
+        return new InitiateConnectionShutdown(drainDurationMicros);
+    }
+
+    private InitiateConnectionShutdown(long drainDurationMicros) {
+        // Negative values are reserved for the default constructor.
         this.drainDurationMicros = Math.max(drainDurationMicros, 0);
     }
 

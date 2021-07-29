@@ -430,7 +430,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
-        return initiateConnectionShutdown(new InitiateConnectionShutdown(drainDurationMicros));
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of(drainDurationMicros));
     }
 
     @Override

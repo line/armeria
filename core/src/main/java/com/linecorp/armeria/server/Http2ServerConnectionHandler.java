@@ -68,15 +68,6 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
-
-        // Setup post build options
-        final long timeout = idleTimeoutMillis;
-        if (timeout > 0) {
-            gracefulShutdownTimeoutMillis(timeout);
-        } else {
-            // Timeout disabled
-            gracefulShutdownTimeoutMillis(-1);
-        }
     }
 
     @Override
