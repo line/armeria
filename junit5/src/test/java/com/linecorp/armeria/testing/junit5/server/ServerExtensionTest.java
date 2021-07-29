@@ -17,7 +17,6 @@
 package com.linecorp.armeria.testing.junit5.server;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.fail;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -37,17 +36,13 @@ class ServerExtensionTest {
     };
 
     @Test
-    void requestContextCaptor() {
+    void requestContextCaptor() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         client.get("/hello").aggregate().join();
 
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
         assertThat(captor.size()).isEqualTo(1);
 
-        try {
-            assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello");
-        } catch (InterruptedException e) {
-            fail("Should not fail");
-        }
+        assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello");
     }
 }

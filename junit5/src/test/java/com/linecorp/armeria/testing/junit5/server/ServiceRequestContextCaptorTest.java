@@ -17,7 +17,6 @@
 package com.linecorp.armeria.testing.junit5.server;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.fail;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -38,7 +37,7 @@ class ServiceRequestContextCaptorTest {
     };
 
     @Test
-    void shouldCaptureContexts() {
+    void shouldCaptureContexts() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
         client.get("/hello").aggregate().join();
@@ -47,16 +46,12 @@ class ServiceRequestContextCaptorTest {
         client.get("/hello2").aggregate().join();
         assertThat(captor.size()).isEqualTo(2);
 
-        try {
-            assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello");
-            assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello2");
-        } catch (InterruptedException e) {
-            fail("Should not fail");
-        }
+        assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello");
+        assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello2");
     }
 
     @Test
-    void shouldClear() {
+    void shouldClear() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
         client.get("/hello").aggregate().join();
@@ -67,10 +62,6 @@ class ServiceRequestContextCaptorTest {
         client.get("/hello2").aggregate().join();
         assertThat(captor.size()).isEqualTo(1);
 
-        try {
-            assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello2");
-        } catch (InterruptedException e) {
-            fail("Should not fail");
-        }
+        assertThat(captor.take().request().uri().getPath()).isEqualTo("/hello2");
     }
 }

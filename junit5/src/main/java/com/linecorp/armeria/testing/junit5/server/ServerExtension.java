@@ -61,7 +61,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
             @Override
             public void configure(ServerBuilder sb) throws Exception {
                 ServerExtension.this.configure(sb);
-                sb.decorator(contextCaptor.decorator(ServerExtension.this::shouldCapture));
+                sb.decorator(contextCaptor.newDecorator(ServerExtension.this::shouldCapture));
             }
         };
     }

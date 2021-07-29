@@ -46,6 +46,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  *             sb.service("/hello", (ctx, req) -> HttpResponse.of(200));
  *         }
  *     };
+ *
  *     @Test
  *     void test() {
  *         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
@@ -60,7 +61,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * class ServiceRequestContextCaptorTest {
  *     static final ServiceRequestContextCaptor captor = new ServiceRequestContextCaptor();
  *     static final Server server = Server.builder()
- *                                        .decorator(captor.decorator())
+ *                                        .decorator(captor.newDecorator())
  *                                        .service("/hello", (ctx, req) -> HttpResponse.of(200))
  *                                        .build();
  *
@@ -80,6 +81,11 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  *         client.get("/hello").aggregate().join();
  *         assertThat(captor.size()).isEqualTo(1);
  *     }
+ *
+ *     @AfterEach
+ *     void tearDown() {
+ *         captor.clear();
+ *     }
  * }
  * }</pre>
  */
@@ -93,7 +99,7 @@ public final class ServiceRequestContextCaptor {
     /**
      * Creates a new decorator to capture the {@link ServiceRequestContext}s.
      */
-    public Function<? super HttpService, ? extends HttpService> decorator() {
+    public Function<? super HttpService, ? extends HttpService> newDecorator() {
         return delegate -> new SimpleDecoratingHttpService(delegate) {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -108,7 +114,7 @@ public final class ServiceRequestContextCaptor {
      * satisfying the given predicate {@code filter}.
      */
     public Function<? super HttpService, ? extends HttpService>
-    decorator(Predicate<? super ServiceRequestContext> filter) {
+    newDecorator(Predicate<? super ServiceRequestContext> filter) {
         requireNonNull(filter, "filter");
         return delegate -> new SimpleDecoratingHttpService(delegate) {
             @Override
