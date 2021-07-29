@@ -219,18 +219,17 @@ public final class UnaryGrpcClient {
                         try {
                             buf = InternalGrpcWebUtil.messageBuf(message, ctx.alloc());
                         } catch (Throwable t) {
-                            responseFuture.completeExceptionally(t);
+                            onError(t);
                             return;
                         }
                         try {
                             trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                             if (trailers == null) {
                                 // Malformed trailers.
-                                responseFuture.completeExceptionally(
-                                        new ArmeriaStatusException(StatusCodes.INTERNAL,
-                                                                   serializationFormat.uriText() +
-                                                                   " trailers malformed: " +
-                                                                   buf.toString(StandardCharsets.UTF_8)));
+                                onError(new ArmeriaStatusException(
+                                        StatusCodes.INTERNAL,
+                                        serializationFormat.uriText() + " trailers malformed: " + buf
+                                                .toString(StandardCharsets.UTF_8)));
                             }
                         } finally {
                             buf.release();
@@ -245,6 +244,7 @@ public final class UnaryGrpcClient {
 
                 @Override
                 public void onError(Throwable t) {
+                    content.close();
                     responseFuture.completeExceptionally(t);
                 }
 
