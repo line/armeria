@@ -165,9 +165,9 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
                         callback.accept(null, cause);
                     }
                 }
-            return null;
-        });
-    }
+                return null;
+            });
+        }
     }
 
     @Override

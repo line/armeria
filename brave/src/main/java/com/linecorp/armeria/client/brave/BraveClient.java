@@ -133,7 +133,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
-        if (!span.isNoop() && currentTraceContext != null && ctx instanceof DefaultClientRequestContext) {
+        if (currentTraceContext != null && currentTraceContext.scopeDecoratorAdded() &&
+            !span.isNoop() && ctx instanceof DefaultClientRequestContext) {
             final DefaultClientRequestContext defaultCtx = (DefaultClientRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
             defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
