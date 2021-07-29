@@ -30,6 +30,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -216,18 +217,21 @@ class ServerMaxConnectionAgeTest {
     @CsvSource({ "H2C", "H2" })
     @ParameterizedTest
     void http2MaxConnectionAge(SessionProtocol protocol) throws InterruptedException {
-        final int concurrency = 200;
         try (ClientFactory factory = newClientFactory(false)) {
+            final long timeMillisBeforeConnection = System.currentTimeMillis();
             final WebClient client = newWebClient(factory, server.uri(protocol));
 
             // Make sure that a connection is opened.
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             assertThat(opened).hasValue(1);
+            assertThat(closed).hasValue(0);
 
             final Supplier<HttpResponse> execute = () -> client.get("/");
-
-            await().untilAsserted(() -> {
-                final List<HttpResponse> responses = IntStream.range(0, concurrency)
+            final long pollDelayMillis =
+                    timeMillisBeforeConnection + MAX_CONNECTION_AGE - System.currentTimeMillis();
+            assertThat(pollDelayMillis).isGreaterThan(0);
+            await().pollDelay(pollDelayMillis, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+                final List<HttpResponse> responses = IntStream.range(0, 200)
                                                               .mapToObj(unused -> execute.get())
                                                               .collect(toImmutableList());
                 Throwable cause = null;
