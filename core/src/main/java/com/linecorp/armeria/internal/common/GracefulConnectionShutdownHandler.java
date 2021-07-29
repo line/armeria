@@ -40,11 +40,13 @@ public abstract class GracefulConnectionShutdownHandler {
 
     @Nullable
     private ChannelPromise promise;
+    @Nullable
+    private ScheduledFuture<?> drainFuture;
+    
     // Drain duration in microseconds used during the graceful connection shutdown start.
     private long drainDurationMicros;
     private boolean canCallOnDrainStart = true;
-    @Nullable
-    private ScheduledFuture<?> drainFuture;
+
 
     protected GracefulConnectionShutdownHandler(long drainDurationMicros) {
         this.drainDurationMicros = drainDurationMicros;
@@ -54,12 +56,12 @@ public abstract class GracefulConnectionShutdownHandler {
      * Code executed on the connection drain start. Executed at most once.
      * Not executed if the drain duration is {@code 0}.
      */
-    public abstract void onDrainStart(ChannelHandlerContext ctx);
+    protected abstract void onDrainStart(ChannelHandlerContext ctx);
 
     /**
      * Code executed on the connection drain end. Executed at most once.
      */
-    public abstract void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    protected abstract void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     public void start(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (this.promise == null) {

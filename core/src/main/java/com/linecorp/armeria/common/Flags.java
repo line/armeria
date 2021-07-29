@@ -957,7 +957,7 @@ public final class Flags {
      * </p>
      *
      * <p>
-     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain period millis
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain period microseconds
      * is always {@code 0}.
      * </p>
      *
