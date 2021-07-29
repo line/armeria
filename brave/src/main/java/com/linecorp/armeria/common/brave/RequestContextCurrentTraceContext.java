@@ -173,6 +173,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     }
 
+    @UnstableApi
     @Override
     public Scope decorateScope(TraceContext context, Scope scope) {
         // If a `Scope` is decorated, `ScopeDecorator`s populate some contexts as such as MDC, which are stored
