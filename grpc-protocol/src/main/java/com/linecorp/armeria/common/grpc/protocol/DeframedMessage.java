@@ -88,13 +88,6 @@ public final class DeframedMessage {
     }
 
     /**
-     * Returns the type.
-     */
-    public int type() {
-        return type;
-    }
-
-    /**
      * Returns true if message is trailer.
      */
     public boolean isTrailer() {

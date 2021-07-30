@@ -87,8 +87,8 @@ public final class UnaryGrpcClient {
 
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient} and {@link SerializationFormat}.
-     * The specified {@link SerializationFormat} should be one of {@link UnaryGrpcSerializationFormats#PROTO},
-     * {@link UnaryGrpcSerializationFormats#PROTO_WEB}, or {@link UnaryGrpcSerializationFormats#PROTO_WEB_TEXT}.
+     * The specified {@link SerializationFormat} should be one of {@code UnaryGrpcSerializationFormats#PROTO},
+     * {@code UnaryGrpcSerializationFormats#PROTO_WEB}, or {@code UnaryGrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public UnaryGrpcClient(WebClient webClient, SerializationFormat serializationFormat) {
         if (!SUPPORTED_SERIALIZATION_FORMATS.contains(serializationFormat)) {
