@@ -205,6 +205,7 @@ public final class UnaryGrpcClient {
                 private HttpData content = HttpData.empty();
                 @Nullable
                 private HttpHeaders trailers;
+                private int processedMessages;
 
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -234,12 +235,20 @@ public final class UnaryGrpcClient {
                         } finally {
                             buf.release();
                         }
+                        processedMessages++;
+                        return;
+                    }
+                    if (processedMessages > 0) {
+                        onError(new ArmeriaStatusException(StatusCodes.INTERNAL,
+                                                           "received more than one data message, " +
+                                                           "UnaryGrpcClient does not support streaming"));
                         return;
                     }
                     final ByteBuf buf = message.buf();
                     // Compression not supported.
                     assert buf != null;
                     content = HttpData.wrap(buf);
+                    processedMessages++;
                 }
 
                 @Override

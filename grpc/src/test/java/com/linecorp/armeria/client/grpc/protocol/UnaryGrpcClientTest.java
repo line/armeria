@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -55,38 +57,6 @@ import io.grpc.stub.StreamObserver;
 
 class UnaryGrpcClientTest {
 
-    private static class TestService extends TestServiceImplBase {
-
-        @Override
-        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            final SimpleResponse response = SimpleResponse.newBuilder()
-                                                          .setPayload(request.getPayload())
-                                                          .build();
-            final String payload = request.getPayload().getBody().toStringUtf8();
-            if ("peanuts".equals(payload)) {
-                responseObserver.onError(
-                        new StatusException(Status.UNAVAILABLE.withDescription("we don't sell peanuts"))
-                );
-            } else if ("ice cream".equals(payload)) {
-                responseObserver.onNext(response); // Note: we error after the response, so trailers
-                responseObserver.onError(
-                        new StatusException(Status.UNAVAILABLE.withDescription("no more ice cream"))
-                );
-            } else {
-                responseObserver.onNext(response);
-                responseObserver.onCompleted();
-            }
-        }
-    }
-
-    private static SimpleRequest buildRequest(String payload) {
-        return SimpleRequest.newBuilder()
-                            .setPayload(Payload.newBuilder()
-                                               .setBody(ByteString.copyFromUtf8(payload))
-                                               .build())
-                            .build();
-    }
-
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -98,15 +68,23 @@ class UnaryGrpcClientTest {
         }
     };
 
-    private static class GrpcSerializationFormatArgumentsProvider implements ArgumentsProvider {
-        @Override
-        public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
-            return UnaryGrpcSerializationFormats.values().stream().map(Arguments::of);
-        }
+    private static SimpleRequest buildRequest(String payload) {
+        return SimpleRequest.newBuilder()
+                            .setPayload(Payload.newBuilder()
+                                               .setBody(ByteString.copyFromUtf8(payload))
+                                               .build())
+                            .build();
     }
 
     @ParameterizedTest
-    @ArgumentsSource(GrpcSerializationFormatArgumentsProvider.class)
+    @ArgumentsSource(UnsupportedGrpcSerializationFormatArgumentsProvider.class)
+    void unsupportedSerializationFormat(SerializationFormat serializationFormat) {
+        assertThrows(IllegalArgumentException.class,
+                     () -> new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat));
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void normal(SerializationFormat serializationFormat) throws Exception {
         final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
         final SimpleRequest request = buildRequest("hello");
@@ -128,7 +106,7 @@ class UnaryGrpcClientTest {
 
     /** This shows we can handle status that happens in headers. */
     @ParameterizedTest
-    @ArgumentsSource(GrpcSerializationFormatArgumentsProvider.class)
+    @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void statusException(SerializationFormat serializationFormat) {
         final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
         final SimpleRequest request = buildRequest("peanuts");
@@ -142,7 +120,7 @@ class UnaryGrpcClientTest {
 
     /** This shows we can handle status that happens in trailers. */
     @ParameterizedTest
-    @ArgumentsSource(GrpcSerializationFormatArgumentsProvider.class)
+    @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void lateStatusException(SerializationFormat serializationFormat) {
         final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
         final SimpleRequest request = buildRequest("ice cream");
@@ -155,7 +133,7 @@ class UnaryGrpcClientTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(GrpcSerializationFormatArgumentsProvider.class)
+    @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void invalidPayload(SerializationFormat serializationFormat) {
         final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
         assertThatThrownBy(
@@ -163,5 +141,70 @@ class UnaryGrpcClientTest {
                                      "foobarbreak".getBytes(StandardCharsets.UTF_8)).join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ArmeriaStatusException.class);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(GrpcWebUnaryGrpcSerializationFormatArgumentsProvider.class)
+    void errorHandlingForGrpcWeb(SerializationFormat serializationFormat) {
+        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
+        final SimpleRequest request = buildRequest("two ice creams");
+        assertThatThrownBy(
+                () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                                     request.toByteArray()).join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ArmeriaStatusException.class)
+                .hasMessageContaining(
+                        "received more than one data message, UnaryGrpcClient does not support streaming");
+    }
+
+    private static class TestService extends TestServiceImplBase {
+
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            final SimpleResponse response = SimpleResponse.newBuilder()
+                                                          .setPayload(request.getPayload())
+                                                          .build();
+            final String payload = request.getPayload().getBody().toStringUtf8();
+            if ("peanuts".equals(payload)) {
+                responseObserver.onError(
+                        new StatusException(Status.UNAVAILABLE.withDescription("we don't sell peanuts"))
+                );
+            } else if ("ice cream".equals(payload)) {
+                responseObserver.onNext(response); // Note: we error after the response, so trailers
+                responseObserver.onError(
+                        new StatusException(Status.UNAVAILABLE.withDescription("no more ice cream"))
+                );
+            } else if ("two ice creams".equals(payload)) {
+                responseObserver.onNext(response);
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            } else {
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
+        }
+    }
+
+    private static class UnaryGrpcSerializationFormatArgumentsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
+            return UnaryGrpcSerializationFormats.values().stream().map(Arguments::of);
+        }
+    }
+
+    private static class GrpcWebUnaryGrpcSerializationFormatArgumentsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
+            return UnaryGrpcSerializationFormats.values().stream().filter(
+                    f -> UnaryGrpcSerializationFormats.isGrpcWeb(f)).map(Arguments::of);
+        }
+    }
+
+    private static class UnsupportedGrpcSerializationFormatArgumentsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
+            return GrpcSerializationFormats.values().stream().filter(
+                    s -> !UnaryGrpcSerializationFormats.values().contains(s)).map(Arguments::of);
+        }
     }
 }
