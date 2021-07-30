@@ -62,7 +62,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.internal.server.tomcat.ArmeriaProcessor;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -116,12 +115,12 @@ public abstract class TomcatService implements HttpService {
         }
 
         try {
-            final Class<?> processorClass = Class.forName(prefix + "ArmeriaProcessor", true, classLoader);
+            final Class<?> processorClass = ArmeriaProcessor.class;
             if (TomcatVersion.major() >= 9) {
                 ENDPOINT_CONSTRUCTOR = null;
                 PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
                         processorClass,
-                        MethodType.methodType(void.class, Class.forName("org.apache.coyote.Adapter", true, classLoader)));
+                        MethodType.methodType(void.class, Adapter.class));
             } else {
                 final Class<?> endpointClass = Class.forName(prefix + "ArmeriaEndpoint", true, classLoader);
                 ENDPOINT_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
@@ -458,7 +457,8 @@ public abstract class TomcatService implements HttpService {
     }
 
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req, Request coyoteReq) throws Throwable {
+    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req,
+                                   Request coyoteReq) throws Throwable {
         final String mappedPath = ctx.mappedPath();
 
         coyoteReq.scheme().setString(req.scheme());

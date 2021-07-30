@@ -14,22 +14,30 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.tomcat;
+package com.linecorp.armeria.server.tomcat;
 
 import java.io.IOException;
 
 import org.apache.coyote.AbstractProcessor;
+import org.apache.coyote.ActionHook;
 import org.apache.coyote.ContinueResponseTiming;
 import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 
 /**
- * TBD.
+ * Provides a fake Processor to provide {@link ActionHook} to request/response.
  */
-public final class ArmeriaProcessor extends AbstractProcessor {
-    public ArmeriaProcessor(AbstractEndpoint<?> endpoint) {
+final class ArmeriaProcessor extends AbstractProcessor {
+
+    private static final Log log = LogFactory.getLog(ArmeriaProcessor.class);
+
+    /**
+     * Create a new instance.
+     */
+    ArmeriaProcessor(AbstractEndpoint<?> endpoint) {
         super(endpoint);
     }
 
@@ -90,7 +98,7 @@ public final class ArmeriaProcessor extends AbstractProcessor {
 
     @Override
     protected Log getLog() {
-        return null;
+        return log;
     }
 
     @Override

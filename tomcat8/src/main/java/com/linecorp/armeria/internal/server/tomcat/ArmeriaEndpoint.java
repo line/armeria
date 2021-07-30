@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SSLHostConfig;
 import org.apache.tomcat.util.net.SocketEvent;
@@ -27,9 +28,12 @@ import org.apache.tomcat.util.net.SocketProcessorBase;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 
 /**
- * TBD.
+ * A fake {@link AbstractEndpoint}.
  */
 public final class ArmeriaEndpoint extends AbstractEndpoint {
+
+    private static final Log log = LogFactory.getLog(ArmeriaEndpoint.class);
+
     @Override
     protected void createSSLContext(SSLHostConfig sslHostConfig) throws Exception {}
 
@@ -72,7 +76,7 @@ public final class ArmeriaEndpoint extends AbstractEndpoint {
 
     @Override
     protected Log getLog() {
-        return null;
+        return log;
     }
 
     @Override
