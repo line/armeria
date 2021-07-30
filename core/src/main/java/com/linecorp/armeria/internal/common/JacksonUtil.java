@@ -41,8 +41,8 @@ public final class JacksonUtil {
             // Use a custom ObjectMapper provided via SPI.
             provider = providers.get(0);
             if (providers.size() > 1) {
-                logger.warn("Found more than one {}. The first provider found will be used among {}",
-                            JacksonObjectMapperProvider.class.getSimpleName(), providers);
+                logger.warn("Found {} {}s. The first provider found will be used among {}",
+                            providers.size(), JacksonObjectMapperProvider.class.getSimpleName(), providers);
             } else {
                 logger.info("Using {} as a {}",
                             provider.getClass().getSimpleName(),
