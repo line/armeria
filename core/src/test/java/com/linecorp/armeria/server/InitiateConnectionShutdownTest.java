@@ -87,6 +87,7 @@ class InitiateConnectionShutdownTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService(new AnnotatedTestService());
+            sb.connectionDrainDurationMicros(0);
         }
     };
     @RegisterExtension
@@ -98,6 +99,7 @@ class InitiateConnectionShutdownTest {
             sb.requestTimeoutMillis(0);
             sb.maxConnectionAgeMillis(0);
             sb.maxNumRequestsPerConnection(0);
+            sb.connectionDrainDurationMicros(0);
         }
     };
     private static final int STREAM_ID = 3;

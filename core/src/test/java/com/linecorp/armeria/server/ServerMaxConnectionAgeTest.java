@@ -62,6 +62,7 @@ class ServerMaxConnectionAgeTest {
             sb.tlsSelfSigned();
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
+            sb.connectionDrainDuration(Duration.ofMillis(10));
             sb.maxConnectionAgeMillis(MAX_CONNECTION_AGE);
             meterRegistry = new SimpleMeterRegistry();
             sb.meterRegistry(meterRegistry);
@@ -83,6 +84,7 @@ class ServerMaxConnectionAgeTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
+            sb.connectionDrainDuration(Duration.ofMillis(10));
             sb.service("/", (ctx, req) ->
                     HttpResponse.delayed(HttpResponse.of(OK), Duration.ofMillis(100)));
         }

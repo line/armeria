@@ -288,7 +288,7 @@ public final class Flags {
                     DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 0; // Disabled
+    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 1000000; // 1 second
     private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
             getLong("defaultServerConnectionDrainDurationMicros",
                     DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
