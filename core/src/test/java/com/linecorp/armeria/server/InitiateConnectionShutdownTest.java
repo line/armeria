@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.http.Header;
@@ -40,6 +41,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -107,6 +109,7 @@ class InitiateConnectionShutdownTest {
     private Http2FrameListener clientListener;
     private Http2ConnectionHandler http2Client;
     private Channel clientChannel;
+    private Cleaner cleaner;
 
     private static Http2Headers getHttp2Headers(String path) {
         return new DefaultHttp2Headers(false)
@@ -126,6 +129,8 @@ class InitiateConnectionShutdownTest {
             // Retain buffer for comparison in tests.
             final ByteBuf buf = invocation.getArgument(3);
             buf.retain();
+            // Cleanup after test finish.
+            cleaner.add(buf::release);
             return null;
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                                              any(ByteBuf.class));
@@ -141,6 +146,7 @@ class InitiateConnectionShutdownTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        cleaner = new Cleaner();
         connectionClosed.set(false);
         final AtomicBoolean clientSetupFinished = new AtomicBoolean();
         final Bootstrap clientBootstrap = new Bootstrap();
@@ -175,6 +181,11 @@ class InitiateConnectionShutdownTest {
         clientChannel = channelFuture.channel();
         await().timeout(Duration.ofSeconds(5)).untilTrue(clientSetupFinished);
         http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        cleaner.close();
     }
 
     @ParameterizedTest
@@ -317,6 +328,21 @@ class InitiateConnectionShutdownTest {
             // the response.
             Thread.sleep(200);
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!");
+        }
+    }
+
+    private static class Cleaner implements AutoCloseable {
+        private final LinkedBlockingDeque<Runnable> runnables = new LinkedBlockingDeque<>();
+
+        void add(Runnable runnable) {
+            runnables.push(runnable);
+        }
+
+        @Override
+        public void close() throws Exception {
+            while (!runnables.isEmpty()) {
+                runnables.pop().run();
+            }
         }
     }
 }
