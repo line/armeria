@@ -140,7 +140,7 @@ What if there is no such post to delete? We can check if the blog exists before 
     @Override
     public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
       if (cause instanceof IllegalArgumentException) {
-        ㄴㅇ  String message = cause.getMessage();
+          String message = cause.getMessage();
           ObjectNode objectNode = mapper.createObjectNode();
           objectNode.put("error", message);
           return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, objectNode);

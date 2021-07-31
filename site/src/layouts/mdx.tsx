@@ -190,10 +190,11 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     ) {
       /* eslint-disable no-param-reassign */
       mdxNode.isBookmark = false;
-      if (mdxNode.parent.name === 'index') mdxNode.href = `/${props.prefix}`;
-      else if (typeof mdxNode.parent.relativeDirectory === 'undefined')
+      if (mdxNode.parent.name === 'index') {
+        mdxNode.href = `/${props.prefix}`;
+      } else if (typeof mdxNode.parent.relativeDirectory === 'undefined') {
         mdxNode.href = `/${props.prefix}/${mdxNode.parent.name}`;
-      else {
+      } else {
         mdxNode.href = `/${props.prefix}/${mdxNode.parent.relativeDirectory}/${mdxNode.parent.name}`;
       }
       /* eslint-enable no-param-reassign */
