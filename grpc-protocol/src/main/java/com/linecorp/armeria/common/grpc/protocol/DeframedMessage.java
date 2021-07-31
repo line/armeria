@@ -88,7 +88,7 @@ public final class DeframedMessage {
     }
 
     /**
-     * Returns true if message is trailer.
+     * Returns {@code true} if this message is trailer.
      */
     public boolean isTrailer() {
         return type >> 7 == 1;
