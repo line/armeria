@@ -240,7 +240,7 @@ public final class UnaryGrpcClient {
                     }
                     if (processedMessages > 0) {
                         onError(new ArmeriaStatusException(StatusCodes.INTERNAL,
-                                                           "received more than one data message, " +
+                                                           "received more than one data message; " +
                                                            "UnaryGrpcClient does not support streaming."));
                         return;
                     }

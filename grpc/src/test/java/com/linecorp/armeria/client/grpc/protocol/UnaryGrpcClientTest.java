@@ -154,7 +154,7 @@ class UnaryGrpcClientTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ArmeriaStatusException.class)
                 .hasMessageContaining(
-                        "received more than one data message, UnaryGrpcClient does not support streaming");
+                        "received more than one data message; UnaryGrpcClient does not support streaming.");
     }
 
     private static class TestService extends TestServiceImplBase {
