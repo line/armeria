@@ -182,7 +182,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   }, []);
 
   // Create a map of page name and MDX node pair, while adding the 'href' property.
-  const nameToMdxNode: { [name: string]: any } = {};
+  const pathToMdxNode: { [name: string]: any } = {};
   props.candidateMdxNodes.forEach((mdxNode: any) => {
     if (
       mdxNode.parent.sourceInstanceName === props.prefix &&
@@ -190,15 +190,26 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     ) {
       /* eslint-disable no-param-reassign */
       mdxNode.isBookmark = false;
-      if (mdxNode.parent.name === 'index') {
-        mdxNode.href = `/${props.prefix}`;
-      } else if (typeof mdxNode.parent.relativeDirectory === 'undefined') {
-        mdxNode.href = `/${props.prefix}/${mdxNode.parent.name}`;
+      if (
+        typeof mdxNode.parent.relativeDirectory === 'undefined' ||
+        mdxNode.parent.relativeDirectory === ''
+      ) {
+        mdxNode.path = mdxNode.parent.name;
       } else {
-        mdxNode.href = `/${props.prefix}/${mdxNode.parent.relativeDirectory}/${mdxNode.parent.name}`;
+        mdxNode.path = `${mdxNode.parent.relativeDirectory}/${mdxNode.parent.name}`;
+      }
+
+      if (mdxNode.path.endsWith('/index')) {
+        mdxNode.path = mdxNode.path.substring(0, mdxNode.path.length - 6);
+      }
+
+      if (mdxNode.path === 'index') {
+        mdxNode.href = `/${props.prefix}`;
+      } else {
+        mdxNode.href = `/${props.prefix}/${mdxNode.path}`;
       }
       /* eslint-enable no-param-reassign */
-      nameToMdxNode[mdxNode.parent.name] = mdxNode;
+      pathToMdxNode[mdxNode.path] = mdxNode;
     }
   });
 
@@ -207,12 +218,12 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   const groupToMdxNodes: { [group: string]: any[] } = {};
   let prevMdxNode: any;
   Object.entries(props.index).forEach(
-    ([groupName, mdxNodeNamesOrBookmarks]) => {
-      if (Array.isArray(mdxNodeNamesOrBookmarks)) {
-        const mdxNodeNames = mdxNodeNamesOrBookmarks;
-        for (let i = 0; i < mdxNodeNames.length; i += 1) {
-          const mdxNodeName = mdxNodeNames[i];
-          const mdxNode = nameToMdxNode[mdxNodeName];
+    ([groupName, mdxNodePathsOrBookmarks]) => {
+      if (Array.isArray(mdxNodePathsOrBookmarks)) {
+        const mdxNodePaths = mdxNodePathsOrBookmarks;
+        for (let i = 0; i < mdxNodePaths.length; i += 1) {
+          const mdxNodePath = mdxNodePaths[i];
+          const mdxNode = pathToMdxNode[mdxNodePath];
           if (!mdxNode) {
             continue;
           }
@@ -221,8 +232,8 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
           if (prevMdxNode) {
             // Note: Do not refer to 'prevMdxNode' or 'mdxNode' directly here,
             //       to avoid creating cyclic references.
-            mdxNode.prevNodeName = prevMdxNode.parent.name;
-            prevMdxNode.nextNodeName = mdxNodeName;
+            mdxNode.prevNodePath = prevMdxNode.path;
+            prevMdxNode.nextNodePath = mdxNodePath;
           }
           prevMdxNode = mdxNode;
 
@@ -235,7 +246,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
           }
         }
       } else {
-        const bookmarks = mdxNodeNamesOrBookmarks;
+        const bookmarks = mdxNodePathsOrBookmarks;
         Object.entries(bookmarks).forEach(([bookmarkTitle, bookmarkUrl]) => {
           // Not really an MDX node, but we fake it.
           const mdxNode = {
@@ -285,18 +296,18 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   if (props.pageContext.hrefs?.prev) {
     prevLabel = props.pageContext.hrefs.prev.label;
     prevHref = props.pageContext.hrefs.prev.href;
-  } else if (currentMdxNode?.prevNodeName) {
+  } else if (currentMdxNode?.prevNodePath) {
     prevLabel =
-      nameToMdxNode[currentMdxNode.prevNodeName].tableOfContents.items[0].title;
-    prevHref = nameToMdxNode[currentMdxNode.prevNodeName].href;
+      pathToMdxNode[currentMdxNode.prevNodePath].tableOfContents.items[0].title;
+    prevHref = pathToMdxNode[currentMdxNode.prevNodePath].href;
   }
   if (props.pageContext.hrefs?.next) {
     nextLabel = props.pageContext.hrefs.next.label;
     nextHref = props.pageContext.hrefs.next.href;
-  } else if (currentMdxNode?.nextNodeName) {
+  } else if (currentMdxNode?.nextNodePath) {
     nextLabel =
-      nameToMdxNode[currentMdxNode.nextNodeName].tableOfContents.items[0].title;
-    nextHref = nameToMdxNode[currentMdxNode.nextNodeName].href;
+      pathToMdxNode[currentMdxNode.nextNodePath].tableOfContents.items[0].title;
+    nextHref = pathToMdxNode[currentMdxNode.nextNodePath].href;
   }
 
   function findCurrentMdxNode(): any {
@@ -304,26 +315,26 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     const prefix = `/${props.prefix}`;
     const prefixPos = path.indexOf(prefix);
 
-    const fallbackPageName = 'index';
-    let pageName: string | undefined;
+    const fallbackPagePath = 'index';
+    let mdxPath: string | undefined;
     if (prefixPos < 0) {
-      pageName = fallbackPageName;
+      mdxPath = fallbackPagePath;
     } else {
       const pathWithoutPrefix = path.substring(prefixPos + prefix.length);
       if (pathWithoutPrefix === '' || pathWithoutPrefix === '/') {
-        pageName = fallbackPageName;
+        mdxPath = fallbackPagePath;
       } else {
-        pageName = pathWithoutPrefix.substring(1);
-        if (pageName.endsWith('/')) {
-          pageName = pageName.substring(0, pageName.length - 1);
+        mdxPath = pathWithoutPrefix.substring(1);
+        if (mdxPath.endsWith('/')) {
+          mdxPath = mdxPath.substring(0, mdxPath.length - 1);
         }
       }
     }
 
     for (let i = 0; i < mdxNodes.length; i += 1) {
-      const e = mdxNodes[i];
-      if (pageName === e.parent.name) {
-        return e;
+      const mdxNode = mdxNodes[i];
+      if (mdxPath === mdxNode.path) {
+        return mdxNode;
       }
     }
 
@@ -350,7 +361,9 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
           return groupedMdxNodes.flatMap((mdxNode) => {
             return mdxNode.tableOfContents.items.map(
               (tocItem: any, i: number) => {
-                const href = `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`;
+                const href = mdxNode.href
+                  ? `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`
+                  : null;
                 const menuName = getMenuName(mdxNode, tocItem);
                 return (
                   <li
@@ -361,15 +374,23 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
                         : ''
                     }`}
                   >
-                    {href.includes('://') ? (
-                      <OutboundLink href={href} title={tocItem.title}>
-                        {tocItem.title}
-                      </OutboundLink>
-                    ) : (
-                      <Link to={href} title={menuName}>
-                        {menuName}
-                      </Link>
-                    )}
+                    {(() => {
+                      if (href) {
+                        if (href.includes('://')) {
+                          return (
+                            <OutboundLink href={href} title={tocItem.title}>
+                              {tocItem.title}
+                            </OutboundLink>
+                          );
+                        }
+                        return (
+                          <Link to={href} title={menuName}>
+                            {menuName}
+                          </Link>
+                        );
+                      }
+                      return <>{menuName}</>;
+                    })()}
                   </li>
                 );
               },

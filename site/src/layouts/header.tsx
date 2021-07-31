@@ -137,7 +137,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
               className={styles.sidebarDrawer}
               width={320}
               visible={sidebarOpen}
-              closeIcon={<CloseCircleOutlined />}
+              closeIcon={
+                <CloseCircleOutlined className={styles.sidebarCloseIcon} />
+              }
               onClose={closeSidebar}
             >
               <nav>
