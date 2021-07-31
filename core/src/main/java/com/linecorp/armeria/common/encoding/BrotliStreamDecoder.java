@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,13 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.encoding;
+package com.linecorp.armeria.common.encoding;
+
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.compression.BrotliDecoder;
 
 /**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
+ * A {@link StreamDecoder} that decompresses data encoded with the brotli format ('br').
  */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE,
-    BROTLI
+final class BrotliStreamDecoder extends AbstractStreamDecoder {
+    BrotliStreamDecoder(BrotliDecoder brotliDecoder, ByteBufAllocator alloc) {
+        super(brotliDecoder, alloc);
+    }
 }
