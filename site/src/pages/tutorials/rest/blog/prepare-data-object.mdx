@@ -1,0 +1,91 @@
+---
+menuTitle: "Prepare a data object"
+order: 2
+type: step
+tags:
+  - rest
+  - request
+  - request-converter
+level: basic
+---
+
+# Preparing a data object
+
+Before we get into writing a blog service, first prepare a data object to contain blog post information. This object is used also in handling requests and sending responses.
+
+If you want a quick start, skip this step and copy off the [BlogPost.java](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogPost.java) of the sample service code.
+
+<TutorialSteps current={2} />
+
+## What you need
+
+No preparation is required for this step.
+
+## 1. Define blog post data
+
+Our blog service needs a container for blog post information.
+Let's define a `BlogPost` class containing the following information.
+
+```java
+package example.armeria.server.blog;
+
+public final class BlogPost {
+  private final int id;           // The post ID
+  private final String title;     // The post title
+  private final String content;   // The post content
+  private final long createdAt;   // The time post is created at
+  private final long modifiedAt;  // The time post is modified at
+}
+```
+
+## 2. Add constructors
+
+You need to create a blog post instance when you create or update blog posts. Let's add constructors in the `BlogPost` class.
+
+```java filename=BlogPost.java
+BlogPost(int id, String title, String content) {
+  this(id, title, content, System.currentTimeMillis());
+}
+
+BlogPost(int id, String title, String content, long createdAt) {
+  this(id, title, content, createdAt, createdAt);
+}
+
+BlogPost(int id, String title, String content, long createdAt, long modifiedAt) {
+  this.id = id;
+  this.title = title;
+  this.content = content;
+  this.createdAt = createdAt;
+  this.modifiedAt = modifiedAt;
+}
+```
+
+## 3. Add getters
+
+Add the following block of code in the blog service.
+
+```java
+public final class BlogPost {
+  ...
+
+  public int getId() { return id; }
+
+  public String getTitle() { return title; }
+
+  public String getContent() { return content; }
+
+  public long getCreatedAt() { return createdAt; }
+
+  public long getModifiedAt() { return modifiedAt; }
+}
+```
+
+## What's next?
+
+In this step, we've implemented a data object specifying and containing blog post objects.
+
+Next, at [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server), we'll write and 
+add an 
+empty service to the server we created earlier.
+
+<TutorialSteps current={2} />

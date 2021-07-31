@@ -22,7 +22,7 @@ const { Paragraph } = Typography;
 
 const selectableKeysAndRegexes = {
   news: /\/news(\/|$)/,
-  guides: /\/guides(\/|$)/,
+  tutorials: /\/tutorials(\/|$)/,
   docs: /\/docs(\/|$)/,
   community: /\/community(\/|$)/,
   home: /.?/,
@@ -105,6 +105,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
             <Menu.Item key="news">
               <Link to="/news">News</Link>
             </Menu.Item>
+            <Menu.Item key="tutorials">
+              <Link to="/tutorials">Tutorials</Link>
+            </Menu.Item>
             <Menu.Item key="docs">
               <Link to="/docs">Documentation</Link>
             </Menu.Item>
@@ -134,7 +137,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
               className={styles.sidebarDrawer}
               width={320}
               visible={sidebarOpen}
-              closeIcon={<CloseCircleOutlined />}
+              closeIcon={
+                <CloseCircleOutlined className={styles.sidebarCloseIcon} />
+              }
               onClose={closeSidebar}
             >
               <nav>
@@ -144,6 +149,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
                   </Menu.Item>
                   <Menu.Item key="news">
                     <Link to="/news">News</Link>
+                  </Menu.Item>
+                  <Menu.Item key="tutorials">
+                    <Link to="/tutorials">Tutorials</Link>
                   </Menu.Item>
                   <Menu.Item key="docs">
                     <Link to="/docs">Documentation</Link>
