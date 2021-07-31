@@ -43,11 +43,9 @@ enum DefaultJacksonObjectMapperProvider implements JacksonObjectMapperProvider {
         jsonMapperBuilder.findAndAddModules();
         final ObjectMapper mapper = jsonMapperBuilder.build();
         final Set<Object> registeredModuleIds = mapper.getRegisteredModuleIds();
-        for (Object moduleId : registeredModuleIds) {
-            if ("com.fasterxml.jackson.module.scala.DefaultScalaModule".equals(moduleId)) {
-                // Disallow null values for non-Option fields. Option[A] is commonly preferred.
-                mapper.enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES);
-            }
+        if (registeredModuleIds.contains("com.fasterxml.jackson.module.scala.DefaultScalaModule")) {
+            // Disallow null values for non-Option fields. Option[A] is commonly preferred.
+            mapper.enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES);
         }
 
         if (!noticed) {
