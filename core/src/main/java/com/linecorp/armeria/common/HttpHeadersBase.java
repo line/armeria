@@ -301,13 +301,13 @@ class HttpHeadersBase
             final Object cookiesString = toCookiesString.apply(cachedCookies);
             assert cookiesString instanceof String;
             assert cookieHeaderName.equals(HttpHeaderNames.COOKIE);
-            setOnly(cookieHeaderName, (String) cookiesString);
+            setWithoutNotifying(cookieHeaderName, (String) cookiesString);
         } else if (HttpHeaderNames.SET_COOKIE.equals(cookieHeaderName)) {
             // Only stringify new cookies
             final Object cookiesString = toCookiesString.apply(newCookies);
             assert cookiesString instanceof Iterable;
             //noinspection unchecked
-            addOnly(cookieHeaderName, (Iterable<String>) cookiesString);
+            addWithoutNotifying(cookieHeaderName, (Iterable<String>) cookiesString);
         } else {
             throw new Error(); // Should never reach here.
         }
@@ -387,7 +387,7 @@ class HttpHeadersBase
     final void method(HttpMethod method) {
         requireNonNull(method, "method");
         cache.put(HttpHeaderNames.METHOD, method);
-        setOnly(HttpHeaderNames.METHOD, method.name());
+        setWithoutNotifying(HttpHeaderNames.METHOD, method.name());
     }
 
     @Nullable
@@ -442,14 +442,14 @@ class HttpHeadersBase
     final void status(HttpStatus status) {
         requireNonNull(status, "status");
         cache.put(HttpHeaderNames.STATUS, status);
-        setOnly(HttpHeaderNames.STATUS, status.codeAsText());
+        setWithoutNotifying(HttpHeaderNames.STATUS, status.codeAsText());
     }
 
     final void contentLength(long contentLength) {
         checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
         cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
         final String contentLengthString = StringUtil.toString(contentLength);
-        setOnly(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
+        setWithoutNotifying(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
     }
 
     @Override
@@ -496,7 +496,7 @@ class HttpHeadersBase
     final void contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
         cache.put(HttpHeaderNames.CONTENT_TYPE, contentType);
-        setOnly(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+        setWithoutNotifying(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
     }
 
     @Override

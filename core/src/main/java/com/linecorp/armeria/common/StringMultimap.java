@@ -659,10 +659,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     /**
-     * Only Adds the specified {@code name} and {@code values}, and do not notify the changes via
+     * Only adds the specified {@code name} and {@code values}, and do not notify the changes via
      * {@link #onChange(CharSequence)}.
      */
-    final void addOnly(IN_NAME name, Iterable<String> values) {
+    final void addWithoutNotifying(IN_NAME name, Iterable<String> values) {
         addAndNotify(name, values, false);
     }
 
@@ -794,7 +794,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
      * Only sets the specified {@code name} and {@code value}, and do not notify the change via
      * {@link #onChange(CharSequence)}.
      */
-    final void setOnly(IN_NAME name, String value) {
+    final void setWithoutNotifying(IN_NAME name, String value) {
         setAndNotify(name, value, false);
     }
 
