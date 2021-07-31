@@ -3,7 +3,7 @@
     "index",
     "setup"
   ],
-  "References": {
+  "Useful links": {
     "Tutorials": "/tutorials",
     "Community articles": "/community/articles",
     "API documentation": "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/index.html",

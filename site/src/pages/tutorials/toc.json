@@ -1,6 +1,6 @@
 {
   "root": ["index"],
-  "References": {
+  "Useful links": {
     "User manual": "/docs",
     "API documentation": "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/index.html",
     "Release notes": "/release-notes"
