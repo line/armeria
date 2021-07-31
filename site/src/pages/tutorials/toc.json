@@ -1,14 +1,14 @@
 {
   "root": ["index"],
   "REST service": [
-    "tutorial-blog-rest-intro",
-    "tutorial-blog-rest-create-server",
-    "tutorial-blog-rest-prepare-data-object",
-    "tutorial-blog-rest-add-services-to-server",
-    "tutorial-blog-rest-create",
-    "tutorial-blog-rest-read",
-    "tutorial-blog-rest-update",
-    "tutorial-blog-rest-delete"
+    "intro",
+    "create-server",
+    "prepare-data-object",
+    "add-services-to-server",
+    "implement-create",
+    "implement-read",
+    "implement-update",
+    "implement-delete"
   ],
   "gRPC service":{
     "Coming soon": "#"

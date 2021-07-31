@@ -19,14 +19,14 @@ posts. By completing this step, you'll learn to map your service with the HTTP G
 
 You must have the following files ready for retrieving a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
 
-- Main.java from [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server)
-- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/tutorial-blog-rest-prepare-data-object)
-- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/tutorial-blog-rest-add-services-to-server)
+- Main.java from [Step 1. Create a server](/tutorials/rest/blog/create-server)
+- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object)
+- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server)
 
 <Warning>
 
 To test retrieving a blog post, you need to have blog posts created, which requires you to have the creation method 
-implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/tutorial-blog-rest-create) for 
+implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implenment-create) for 
 instructions.
 
 </Warning>
@@ -225,7 +225,7 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 
 Let's test retrieving a single and multiple posts.
 
-1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server) by running the 
+1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the 
    `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
 2. Create a couple of blog posts to test retrieving a blog post and get the ID value returned. Enter the cURL commands below.
 
@@ -305,13 +305,13 @@ Let's test retrieving a single and multiple posts.
     </TabPane>
     </Tabs>
 
-You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/tutorial-blog-rest-add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 
 ## Next step
 
 In this step, we've implemented methods for a READ operation and used Armeria's annotations; <type://@Get>, <type://@ProducesJson>, <type://@Param>, and <type://@Default>.
 
-Next, at [Step 6. Implement UPDATE](/tutorials/rest/blog/tutorial-blog-rest-update), we'll implement an UPDATE operation to modify existing blog posts.
+Next, at [Step 6. Implement UPDATE](/tutorials/rest/blog/implenment-update), we'll implement an UPDATE operation to modify existing blog posts.
 
 <TutorialSteps current={5} />

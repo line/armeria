@@ -22,13 +22,13 @@ In this step, we'll write a method for deleting a blog post. By completing this 
 
 You must have the following files ready for deleting a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
 
-- Main.java from [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server)
-- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/tutorial-blog-rest-prepare-data-object)
-- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/tutorial-blog-rest-add-services-to-server)
+- Main.java from [Step 1. Create a server](/tutorials/rest/blog/create-server)
+- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object)
+- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server)
 
 <Warning>
 
-To test deleting a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/tutorial-blog-rest-create) for instructions.
+To test deleting a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implenment-create) for instructions.
 
 </Warning>
 
@@ -202,7 +202,7 @@ public final class BlogService {
 
 Let's test deleting a blog post.
 
-1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
+1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
 2. Create a couple of blog posts to test deleting a blog post and get the ID value returned. Enter the cURL commands below.
 
   ```bash
@@ -242,7 +242,7 @@ Let's test deleting a blog post.
   ```bash
   {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
   ```
-You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/tutorial-blog-rest-add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 ## Next step
 
