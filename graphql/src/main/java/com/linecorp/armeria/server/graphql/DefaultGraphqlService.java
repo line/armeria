@@ -62,6 +62,11 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
             builder.variables(variables);
         }
 
+        final Map<String, Object> extensions = req.extensions();
+        if (!extensions.isEmpty()) {
+            builder.extensions(extensions);
+        }
+
         final String operationName = req.operationName();
         if (operationName != null) {
             builder.operationName(operationName);

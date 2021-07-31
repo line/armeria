@@ -31,11 +31,14 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
     private final String operationName;
 
     private final Map<String, Object> variables;
+    private final Map<String, Object> extensions;
 
-    DefaultGraphqlRequest(String query, @Nullable String operationName, Map<String, Object> variables) {
+    DefaultGraphqlRequest(String query, @Nullable String operationName,
+                          Map<String, Object> variables, Map<String, Object> extensions) {
         this.query = query;
         this.operationName = operationName;
         this.variables = variables;
+        this.extensions = extensions;
     }
 
     @Override
@@ -54,6 +57,11 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
     }
 
     @Override
+    public Map<String, Object> extensions() {
+        return extensions;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -65,12 +73,12 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
         final DefaultGraphqlRequest that = (DefaultGraphqlRequest) o;
 
         return query.equals(that.query) && Objects.equals(operationName, that.operationName) &&
-               variables.equals(that.variables);
+               variables.equals(that.variables) && extensions.equals(that.extensions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(query, operationName, variables);
+        return Objects.hash(query, operationName, variables, extensions);
     }
 
     @Override
@@ -80,6 +88,7 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
                           .add("query", query)
                           .add("operationName", operationName)
                           .add("variables", variables)
+                          .add("extensions", extensions)
                           .toString();
     }
 }

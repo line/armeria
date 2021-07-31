@@ -37,19 +37,20 @@ public interface GraphqlRequest {
      * Returns a newly-created {@link GraphqlRequest} with the specified {@code query}.
      */
     static GraphqlRequest of(String query) {
-        return of(query, null, ImmutableMap.of());
+        return of(query, null, ImmutableMap.of(), ImmutableMap.of());
     }
 
     /**
      * Returns a newly-created {@link GraphqlRequest} with the specified {@code query}, {@code operationName}
      * and {@code variables}.
      */
-    static GraphqlRequest of(String query, @Nullable String operationName, Map<String, Object> variables) {
+    static GraphqlRequest of(String query, @Nullable String operationName,
+                             Map<String, Object> variables, Map<String, Object> extensions) {
         requireNonNull(query, "query");
         checkArgument(!query.isEmpty(), "query is empty");
         requireNonNull(variables, "variables");
 
-        return new DefaultGraphqlRequest(query, operationName, variables);
+        return new DefaultGraphqlRequest(query, operationName, variables, extensions);
     }
 
     /**
@@ -70,4 +71,12 @@ public interface GraphqlRequest {
      * of the {@link #query()}. If not specified, an empty {@link Map} is returned.
      */
     Map<String, Object> variables();
+
+    /**
+     * Returns the
+     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#request-parameters">extensions</a>
+     * of the {@link #query()}. This entry is reserved for implementors to extend the protocol.
+     * If not specified, an empty {@link Map} is returned.
+     */
+    Map<String, Object> extensions();
 }

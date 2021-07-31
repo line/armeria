@@ -60,8 +60,9 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         }
         final String operationName = queryString.get("operationName");
         final Map<String, Object> variables = toVariableMap(queryString.get("variables"));
+        final Map<String, Object> extensions = toVariableMap(queryString.get("extensions"));
 
-        return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables));
+        return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions));
     }
 
     @Override
@@ -85,10 +86,11 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
                 }
                 final Map<String, Object> variables = toVariableMap(requestMap.get("variables"));
+                final Map<String, Object> extensions = toVariableMap(requestMap.get("extensions"));
                 final String operationName = (String) requestMap.get("operationName");
 
                 try {
-                    return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables));
+                    return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions));
                 } catch (Exception ex) {
                     return HttpResponse.ofFailure(ex);
                 }
