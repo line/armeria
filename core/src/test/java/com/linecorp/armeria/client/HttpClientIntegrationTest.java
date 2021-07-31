@@ -468,6 +468,21 @@ class HttpClientIntegrationTest {
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(response.contentUtf8()).isEqualTo(
+                "some content to compress more content to compress");
+    }
+
+    @Test
+    void httpDecoding_gzip() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .factory(clientFactory)
+                                          .decorator(DecodingClient.newDecorator(
+                                                  StreamDecoderFactory.gzip()))
+                                          .build();
+
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
         assertThat(response.contentUtf8()).isEqualTo(
                 "some content to compress more content to compress");

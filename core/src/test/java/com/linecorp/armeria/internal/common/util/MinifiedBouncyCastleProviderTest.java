@@ -24,14 +24,14 @@ import org.junit.jupiter.api.Test;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
-class BouncyCastleKeyFactoryProviderTest {
+class MinifiedBouncyCastleProviderTest {
 
     /**
      * Tests if a SSLeay PKCS#5 private key is accepted.
      */
     @Test
     void pkcs5() {
-        BouncyCastleKeyFactoryProvider.call(this::loadPkcs5);
+        MinifiedBouncyCastleProvider.call(this::loadPkcs5);
     }
 
     /**
@@ -39,7 +39,7 @@ class BouncyCastleKeyFactoryProviderTest {
      */
     @Test
     void pkcs8() {
-        BouncyCastleKeyFactoryProvider.call(this::loadPkcs8);
+        MinifiedBouncyCastleProvider.call(this::loadPkcs8);
     }
 
     /**
@@ -52,8 +52,8 @@ class BouncyCastleKeyFactoryProviderTest {
 
         Security.addProvider(new BouncyCastleProvider());
         try {
-            BouncyCastleKeyFactoryProvider.call(this::loadPkcs5);
-            BouncyCastleKeyFactoryProvider.call(this::loadPkcs8);
+            MinifiedBouncyCastleProvider.call(this::loadPkcs5);
+            MinifiedBouncyCastleProvider.call(this::loadPkcs8);
         } finally {
             Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
         }
@@ -61,7 +61,7 @@ class BouncyCastleKeyFactoryProviderTest {
 
     @Test
     void nestedInvocation() {
-        BouncyCastleKeyFactoryProvider.call(() -> BouncyCastleKeyFactoryProvider.call(this::loadPkcs5));
+        MinifiedBouncyCastleProvider.call(() -> MinifiedBouncyCastleProvider.call(this::loadPkcs5));
     }
 
     private void loadPkcs5() {

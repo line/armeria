@@ -63,7 +63,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        final SubscriptionImpl subscription = new SubscriptionImpl(this, subscriber, executor, options, null);
+        final SubscriptionImpl subscription = new SubscriptionImpl(this, subscriber, executor, options);
         final SubscriptionImpl actualSubscription = subscribe(subscription);
         if (actualSubscription != subscription) {
             // Failed to subscribe.
@@ -155,22 +155,17 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         private final boolean withPooledObjects;
         private final boolean notifyCancellation;
 
-        @Nullable
-        private final CompletableFuture<?> collectingFuture;
-
         private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
         SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber,
-                         EventExecutor executor, SubscriptionOption[] options,
-                         @Nullable CompletableFuture<?> collectingFuture) {
+                         EventExecutor executor, SubscriptionOption[] options) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
             this.options = options;
             withPooledObjects = containsWithPooledObjects(options);
             notifyCancellation = containsNotifyCancellation(options);
-            this.collectingFuture = collectingFuture;
         }
 
         Subscriber<Object> subscriber() {
@@ -199,10 +194,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             return withPooledObjects;
         }
 
-        boolean notifyCancellation() {
-            return notifyCancellation;
-        }
-
         boolean cancelRequested() {
             return cancelRequested;
         }
@@ -229,15 +220,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         // majority of cases.
         boolean needsDirectInvocation() {
             return executor.inEventLoop();
-        }
-
-        @Nullable
-        CompletableFuture<?> collectingFuture() {
-            return collectingFuture;
-        }
-
-        boolean isCollecting() {
-            return collectingFuture != null;
         }
 
         @Override
@@ -284,10 +266,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                 try {
                     if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
-                    }
-                    final CompletableFuture<?> collectingFuture = subscription.collectingFuture();
-                    if (collectingFuture != null) {
-                        collectingFuture.completeExceptionally(cause);
                     }
                     completionFuture.completeExceptionally(cause);
                 } catch (Throwable t) {

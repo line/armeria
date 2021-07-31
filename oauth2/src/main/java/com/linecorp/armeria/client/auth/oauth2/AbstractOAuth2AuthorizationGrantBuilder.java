@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.Executor;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -49,13 +49,10 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
 
     @Nullable
-    private Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier;
+    private Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
 
     @Nullable
-    private Consumer<? super GrantedOAuth2AccessToken> tokenConsumer;
-
-    @Nullable
-    private Executor executor;
+    private Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -161,45 +158,44 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     }
 
     /**
-     * A {@link Supplier} to load Access Token from, to be able to restore the previous session. OPTIONAL.
+     * An optional {@link Supplier} to acquire an access token before requesting it to the authorization server.
+     * If the provided {@link GrantedOAuth2AccessToken} is valid, the client doesn't request a new token.
+     *
+     * <p>This is supposed to be used with {@link #newTokenConsumer(Consumer)} and gets executed
+     * in the following cases:
+     * <ul>
+     *     <li>Before the first attempt to acquire an access token.</li>
+     *     <li>Before a subsequent attempt after token issue or refresh failure.</li>
+     * </ul>
+     * @see #newTokenConsumer(Consumer)
      */
     @SuppressWarnings("unchecked")
-    public final T tokenPersistencySupplier(Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier) {
-        this.tokenSupplier = requireNonNull(tokenSupplier, "tokenSupplier");
+    public final T fallbackTokenProvider(
+            Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider) {
+        this.fallbackTokenProvider = requireNonNull(fallbackTokenProvider, "fallbackTokenProvider");
         return (T) this;
     }
 
     @Nullable
-    final Supplier<? extends GrantedOAuth2AccessToken> tokenPersistencySupplier() {
-        return tokenSupplier;
+    final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider() {
+        return fallbackTokenProvider;
     }
 
     /**
-     * A {@link Consumer} to store Access Token to, to be able restore the previous session. OPTIONAL.
+     * An optional hook which gets executed whenever a new token is issued.
+     *
+     * <p>This can be used in combination with {@link #fallbackTokenProvider(Supplier)} to store a newly issued
+     * access token which will then be retrieved by invoking the fallback token provider.
      */
     @SuppressWarnings("unchecked")
-    public final T tokenPersistencyConsumer(Consumer<? super GrantedOAuth2AccessToken> tokenConsumer) {
-        this.tokenConsumer = requireNonNull(tokenConsumer, "tokenConsumer");
+    public final T newTokenConsumer(Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
+        this.newTokenConsumer = requireNonNull(newTokenConsumer, "newTokenConsumer");
         return (T) this;
     }
 
     @Nullable
-    final Consumer<? super GrantedOAuth2AccessToken> tokenPersistencyConsumer() {
-        return tokenConsumer;
-    }
-
-    /**
-     * An optional {@link Executor} that facilitates asynchronous access token obtain and refresh operations.
-     */
-    @SuppressWarnings("unchecked")
-    public final T executor(Executor executor) {
-        this.executor = requireNonNull(executor, "executor");
-        return (T) this;
-    }
-
-    @Nullable
-    final Executor executor() {
-        return executor;
+    final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer() {
+        return newTokenConsumer;
     }
 
     abstract AbstractAccessTokenRequest buildObtainRequest(

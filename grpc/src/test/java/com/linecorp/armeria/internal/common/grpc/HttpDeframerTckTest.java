@@ -28,10 +28,13 @@ import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
@@ -46,11 +49,12 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
     private static final HttpData DATA =
             HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
 
+    private final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+    private final List<ByteBuf> byteBufs = new ArrayList<>();
+
     public HttpDeframerTckTest() {
         super(new TestEnvironment(200));
     }
-
-    private final List<ByteBuf> byteBufs = new ArrayList<>();
 
     @AfterTest
     void afterTest() {
@@ -68,7 +72,7 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
         final StreamMessage<HttpData> source = StreamMessage.of(data);
 
         final HttpStreamDeframer deframer =
-                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener,
+                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, noopListener,
                                        null, -1);
         final StreamMessage<DeframedMessage> deframed =
                 new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
@@ -81,7 +85,7 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
         final StreamMessage<HttpData> source =
                 new PublisherBasedStreamMessage<>(Flux.error(new RuntimeException()));
         final HttpStreamDeframer deframer =
-                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener,
+                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, noopListener,
                                        null, -1);
         return new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
     }

@@ -104,6 +104,20 @@ class DecodingClientTest {
     }
 
     @Test
+    void httpBrotliDecodingTest() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(DecodingClient.newDecorator(
+                                                  com.linecorp.armeria.common.encoding.StreamDecoderFactory
+                                                          .brotli()))
+                                          .build();
+
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
+    }
+
+    @Test
     void httpGzipDecodingTestWithOldDecoder() throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(DecodingClient.newDecorator(StreamDecoderFactory.gzip()))

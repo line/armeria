@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * A {@link RuntimeException} raised when a server sent an
@@ -30,7 +31,8 @@ public final class GoAwayReceivedException extends RuntimeException {
     private static final GoAwayReceivedException INSTANCE = new GoAwayReceivedException(false);
 
     /**
-     * Returns a singleton {@link GoAwayReceivedException}.
+     * Returns a singleton {@link GoAwayReceivedException} or newly-created exception depending on
+     * the result of {@link Sampler#isSampled(Object)} of {@link Flags#verboseExceptionSampler()}.
      */
     public static GoAwayReceivedException get() {
         return Flags.verboseExceptionSampler().isSampled(GoAwayReceivedException.class) ?

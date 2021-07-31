@@ -16,7 +16,6 @@
 package com.linecorp.armeria.internal.consul;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
@@ -49,9 +48,17 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * A helper class for testing with an embedded Consul.
+ * Unfortunately, an embedded Consul frequently fails to start in CI environment.
+ * See https://github.com/line/armeria/issues/3514 for details.
+ * Selectively disable Consul tests to suppress the stressful flakiness.
+ */
+@FlakyTest
 public abstract class ConsulTestBase {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulTestBase.class);
@@ -80,11 +87,6 @@ public abstract class ConsulTestBase {
 
     @BeforeAll
     static void start() throws Throwable {
-        // An embedded Consul frequently fails to start in CI environment.
-        // See https://github.com/line/armeria/issues/3514 for details.
-        // Selectively disable Consul tests to suppress the stressful flakiness.
-        assumeThat(System.getenv("FLAKY_TESTS")).isNotEqualTo("false");
-
         // Initialize Consul embedded server for testing
         // This EmbeddedConsul tested with Consul version above 1.4.0
         final ConsulStarterBuilder builder =

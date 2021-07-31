@@ -19,16 +19,16 @@ jobs:
       fail-fast: false
       matrix:
         on: [ self-hosted, macos-latest, windows-latest ]
-        java: [ 15 ]
+        java: [ 16 ]
         include:
           - java: 8
             on: self-hosted
           - java: 11
             on: self-hosted
-          - java: 14
+          - java: 15
             on: self-hosted
             leak: true
-          - java: 15
+          - java: 16
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
             on: macos-latest
@@ -38,7 +38,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - id: setup-jre
-      if: ${{ matrix.java != 15 }}
+      if: ${{ matrix.java != 16 }}
       name: Set up JRE ${{ matrix.java }}
       uses: actions/setup-java@v2
       with:
@@ -46,25 +46,24 @@ jobs:
         java-version: ${{ matrix.java }}
         java-package: jre
 
-    - id: setup-jdk-15
-      name: Set up JDK 15
+    - id: setup-jdk-16
+      name: Set up JDK 16
       uses: actions/setup-java@v2
       with:
         distribution: 'adopt'
-        java-version: '15'
+        java-version: '16'
 
-    - name: Cache
+    - if: ${{ matrix.on != 'self-hosted' }}
+      name: Restore the cache
       uses: actions/cache@v2
       with:
         path: |
-          ~/.gradle/wrapper/dists
-          ~/.gradle/caches/jars-3
-          ~/.gradle/caches/modules-2
-          ~/.gradle/caches/package-lists
-          ~/.gradle/caches/embedded-consul
-        key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          ~/.gradle/wrapper
+          ~/.gradle/caches
+        key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
         restore-keys: |
-          ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
+          build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
+          build-${{ matrix.java }}-${{ runner.os }}-
 
     - name: Build with Gradle
       run: |
@@ -74,19 +73,21 @@ jobs:
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PnoLint \
-        -PbuildJdkVersion=15 \
+        -PflakyTests=false \
+        -PbuildJdkVersion=16 \
         -PtestJavaVersion=${{ matrix.java }} \
-        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-16.outputs.path }},${{ steps.setup-jre.outputs.path }}
       shell: bash
-      env:
-        FLAKY_TESTS: false
 
-    - name: Cleanup Gradle Cache
+    - name: Clean up the cache
       # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
       # Restoring these files from a GitHub Actions cache might cause problems for future builds.
       run: |
-        rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-        rm -f ~/.gradle/caches/modules-2/gc.properties || true
+        rm -fr ~/.gradle/caches/[0-9]* || true
+        rm -fr ~/.gradle/caches/journal-* || true
+        rm -fr ~/.gradle/caches/transforms-* || true
+        rm -f ~/.gradle/caches/*/*.lock || true
+        rm -f ~/.gradle/caches/*/gc.properties || true
       shell: bash
 
     - name: Dump stuck threads
@@ -94,16 +95,16 @@ jobs:
       run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
       shell: bash
 
-    - name: Upload coverage to Codecov
+    - name: Upload the coverage report to Codecov
       if: ${{ matrix.coverage }}
       uses: codecov/codecov-action@v1
 
-    - name: Collecting the test reports
+    - name: Collect the test reports
       if: failure()
       run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
       shell: bash
 
-    - name: Upload Artifact
+    - name: Upload the artifacts
       if: failure()
       uses: actions/upload-artifact@v2
       with:
@@ -117,33 +118,24 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-15
-        name: Set up JDK 15
+      - id: setup-jdk-16
+        name: Set up JDK 16
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '15'
+          java-version: '16'
 
-      - name: Restore Gradle Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper/dists
-            ~/.gradle/caches/jars-3
-            ~/.gradle/caches/modules-2
-            ~/.gradle/caches/package-lists
-          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
-
-      - name: Linting
+      - name: Run the linters
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel lint
 
-      - name: Cleanup Gradle Cache
+      - name: Clean up the cache
         run: |
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+          rm -fr ~/.gradle/caches/[0-9]* || true
+          rm -fr ~/.gradle/caches/journal-* || true
+          rm -fr ~/.gradle/caches/transforms-* || true
+          rm -f ~/.gradle/caches/*/*.lock || true
+          rm -f ~/.gradle/caches/*/gc.properties || true
         shell: bash
 
   site:
@@ -157,33 +149,24 @@ jobs:
           sudo yum -y install cargo && cargo install svgbob_cli
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - id: setup-jdk-15
-        name: Set up JDK 15
+      - id: setup-jdk-16
+        name: Set up JDK 16
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '15'
+          java-version: '16'
 
-      - name: Restore Gradle Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper/dists
-            ~/.gradle/caches/jars-3
-            ~/.gradle/caches/modules-2
-            ~/.gradle/caches/package-lists
-          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
-
-      - name: Building site
+      - name: Build the site
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel site
 
-      - name: Cleanup Gradle Cache
+      - name: Clean up the cache
         run: |
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+          rm -fr ~/.gradle/caches/[0-9]* || true
+          rm -fr ~/.gradle/caches/journal-* || true
+          rm -fr ~/.gradle/caches/transforms-* || true
+          rm -f ~/.gradle/caches/*/*.lock || true
+          rm -f ~/.gradle/caches/*/gc.properties || true
         shell: bash
 
   flaky-tests:
@@ -192,33 +175,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-15
-        name: Set up JDK 15
+      - id: setup-jdk-16
+        name: Set up JDK 16
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '15'
+          java-version: '16'
 
-      - name: Restore Gradle Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper/dists
-            ~/.gradle/caches/jars-3
-            ~/.gradle/caches/modules-2
-            ~/.gradle/caches/package-lists
-          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
-
-      - name: Run Flaky tests
+      - name: Run flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PnoWeb -PnoLint \
-          :consul:build \
-          :zookeeper3:build
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel build -PnoWeb -PnoLint -PflakyTests=true
 
-      - name: Cleanup Gradle Cache
+      - name: Clean up the cache
         run: |
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+          rm -fr ~/.gradle/caches/[0-9]* || true
+          rm -fr ~/.gradle/caches/journal-* || true
+          rm -fr ~/.gradle/caches/transforms-* || true
+          rm -f ~/.gradle/caches/*/*.lock || true
+          rm -f ~/.gradle/caches/*/gc.properties || true
         shell: bash

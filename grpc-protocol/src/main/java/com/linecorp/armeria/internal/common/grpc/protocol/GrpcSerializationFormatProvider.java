@@ -14,7 +14,7 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.internal.common.grpc;
+package com.linecorp.armeria.internal.common.grpc.protocol;
 
 import static com.linecorp.armeria.common.MediaType.create;
 

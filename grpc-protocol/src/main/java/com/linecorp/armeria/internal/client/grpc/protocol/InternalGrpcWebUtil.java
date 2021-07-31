@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client.grpc;
+package com.linecorp.armeria.internal.client.grpc.protocol;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -40,9 +40,11 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import io.micrometer.core.instrument.internal.TimedScheduledExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
@@ -169,10 +171,8 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        blockingTaskExecutor =
-                ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                               "blockingTaskExecutor", "armeria");
-        this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
+        this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
+
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
@@ -253,6 +253,25 @@ public final class ServerConfig {
         this.requestIdGenerator = castRequestIdGenerator;
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
         this.sslContexts = sslContexts;
+    }
+
+    private static ScheduledExecutorService monitorBlockingTaskExecutor(ScheduledExecutorService executor,
+                                                                        MeterRegistry meterRegistry) {
+        final ScheduledExecutorService unwrappedExecutor;
+        if (executor instanceof BlockingTaskExecutor) {
+            unwrappedExecutor = ((BlockingTaskExecutor) executor).unwrap();
+        } else {
+            unwrappedExecutor = executor;
+        }
+
+        new ExecutorServiceMetrics(
+                unwrappedExecutor,
+                "blockingTaskExecutor", "armeria", ImmutableList.of())
+                .bindTo(meterRegistry);
+        executor = new TimedScheduledExecutorService(meterRegistry, executor,
+                                                     "blockingTaskExecutor", "armeria.",
+                                                     ImmutableList.of());
+        return UnstoppableScheduledExecutorService.from(executor);
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -683,7 +702,7 @@ public final class ServerConfig {
 
         boolean hasPorts = false;
         for (final ServerPort p : ports) {
-            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols()));
+            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols(), p.portGroup()));
             buf.append(", ");
             hasPorts = true;
         }
