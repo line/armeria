@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.server.sangria
 
-import com.linecorp.armeria.common.HttpStatus
+import com.linecorp.armeria.common.{HttpMethod, HttpStatus}
 import com.linecorp.armeria.server.ServerBuilder
+import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.server.sangria.GraphqlTestUtil.executeQuery
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
@@ -33,23 +34,25 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
         .deferredResolver(DeferredResolver.fetchers(SchemaDefinition.characters))
         .build()
     )
+    server.decorator(LoggingService.newDecorator())
   }
 
   // Forked from https://github.com/sangria-graphql/sangria-playground/blob/24e36833bd3b784db57dc57cf5523c504e97f8ff/test/SchemaSpec.scala
 
-  test("correctly identify R2-D2 as the hero of the Star Wars Saga") {
-    val query =
-      """
+  List(HttpMethod.GET, HttpMethod.POST).foreach { method =>
+    test(s"correctly identify R2-D2 as the hero of the Star Wars Saga - $method") {
+      val query =
+        """
         query HeroNameQuery {
           hero {
             name
           }
         }
         """
-    val response = executeQuery(client, query = query)
+      val response = executeQuery(client, method = method, query = query)
 
-    assertEquals(response.headers().status(), HttpStatus.OK)
-    assertThatJson(response.contentUtf8()).isEqualTo("""
+      assertEquals(response.headers().status(), HttpStatus.OK)
+      assertThatJson(response.contentUtf8()).isEqualTo("""
          {
            "data": {
              "hero": {
@@ -58,11 +61,11 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
            }
          }
         """)
-  }
+    }
 
-  test("allow to fetch Han Solo using his ID provided through variables") {
-    val query =
-      """
+    test(s"allow to fetch Han Solo using his ID provided through variables - $method") {
+      val query =
+        """
          query FetchSomeIDQuery($humanId: String!) {
            human(id: $humanId) {
              name
@@ -74,11 +77,10 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
          }
        """
 
-    val response = executeQuery(client, query = query, variables = Map("humanId" -> "1002"))
-    assertEquals(response.headers().status(), HttpStatus.OK)
-
-    assertThatJson(response.contentUtf8())
-      .isEqualTo("""
+      val response = executeQuery(client, method, query = query, variables = Map("humanId" -> "1002"))
+      assertEquals(response.headers().status(), HttpStatus.OK)
+      assertThatJson(response.contentUtf8())
+        .isEqualTo("""
          {
            "data": {
              "human": {
@@ -101,5 +103,6 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
            }
          }
         """)
+    }
   }
 }

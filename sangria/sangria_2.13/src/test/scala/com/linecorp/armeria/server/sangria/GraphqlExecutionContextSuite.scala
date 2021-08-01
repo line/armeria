@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.sangria
 
+import com.linecorp.armeria.common.HttpMethod
 import com.linecorp.armeria.server.sangria.GraphqlTestUtil.executeQuery
 import com.linecorp.armeria.server.{ServerBuilder, ServiceRequestContext}
 import munit.FunSuite
@@ -38,11 +39,12 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
           .build())
   }
 
-  List("/graphql-eventloop", "/graphql-blocking").foreach { path =>
-    {
-      test(s"a graphql resolver should be executed in $path") {
-        val query1 =
-          """
+  for {
+    method <- List(HttpMethod.GET, HttpMethod.POST)
+    path <- List("/graphql-eventloop", "/graphql-blocking")
+  } test(s"a graphql resolver should be executed in $method $path") {
+    val query1 =
+      """
           query GetProductById {
             product(id: "1") {
               id
@@ -51,9 +53,9 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
           }
           """
 
-        val response1 = executeQuery(client, path = path, query = query1)
-        println(response1.contentUtf8())
-        assertThatJson(response1.contentUtf8()).isEqualTo("""
+    val response1 = executeQuery(client, method = method, path = path, query = query1)
+    println(response1.contentUtf8())
+    assertThatJson(response1.contentUtf8()).isEqualTo("""
           {
             "data": {
               "product": {
@@ -64,8 +66,8 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
            }
           """)
 
-        val query2 =
-          """
+    val query2 =
+      """
           query GetProductById {
             products {
               id
@@ -74,8 +76,8 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
           }
           """
 
-        val response2 = executeQuery(client, path = path, query = query2)
-        assertThatJson(response2.contentUtf8()).isEqualTo("""
+    val response2 = executeQuery(client, method = method, path = path, query = query2)
+    assertThatJson(response2.contentUtf8()).isEqualTo("""
         {
           "data": {
             "products": [
@@ -91,8 +93,6 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
           }
         }
         """)
-      }
-    }
   }
 
   object Products {

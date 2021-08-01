@@ -17,8 +17,10 @@
 package com.linecorp.armeria.server.sangria
 
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.{AggregatedHttpResponse, MediaType}
+import com.linecorp.armeria.common.{AggregatedHttpResponse, HttpMethod, MediaType, QueryParams}
 import com.linecorp.armeria.internal.server.JacksonUtil
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 object GraphqlTestUtil {
 
@@ -26,22 +28,32 @@ object GraphqlTestUtil {
 
   def executeQuery(
       client: WebClient,
+      method: HttpMethod,
       path: String = "/graphql",
       query: String,
       variables: Map[String, Any] = Map.empty): AggregatedHttpResponse = {
-    val graphql =
-      if (variables.isEmpty) {
-        mapper.writeValueAsString(Map("query" -> query))
-      } else {
-        mapper.writeValueAsString(Map("query" -> query, "variables" -> variables))
-      }
+    if (method == HttpMethod.GET) {
+      val graphql = QueryParams
+        .builder()
+        .add("query", query)
+        .add("variables", mapper.writeValueAsString(variables))
+        .build()
+      client.get(path, graphql).aggregate().join()
+    } else {
+      val graphql =
+        if (variables.isEmpty) {
+          mapper.writeValueAsString(Map("query" -> query))
+        } else {
+          mapper.writeValueAsString(Map("query" -> query, "variables" -> variables))
+        }
 
-    client
-      .prepare()
-      .post(path)
-      .content(MediaType.JSON, graphql)
-      .execute()
-      .aggregate()
-      .join()
+      client
+        .prepare()
+        .post(path)
+        .content(MediaType.JSON, graphql)
+        .execute()
+        .aggregate()
+        .join()
+    }
   }
 }
