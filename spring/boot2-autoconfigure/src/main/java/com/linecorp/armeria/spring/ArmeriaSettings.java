@@ -26,12 +26,11 @@ import org.springframework.validation.annotation.Validated;
 import com.codahale.metrics.json.MetricsModule;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -330,137 +329,131 @@ public class ArmeriaSettings {
     private Compression compression;
 
     /**
-     * The number of threads for {@link EventLoopGroup} that the {@link Server} uses. If {@code 0}, the
-     * {@link Server} uses the common worker group using {@link CommonPools#workerGroup()}.
-     * The default is {@code 0}.
+     * The number of threads for {@link EventLoopGroup} that the {@link Server} uses.
      */
     @Nullable
     private Integer workerGroup;
 
     /**
-     * The number of threads dedicated to the execution of blocking tasks or invocations. If {@code 0}, the
-     * {@link Server} uses the common blocking task executor using {@link CommonPools#blockingTaskExecutor()}.
-     * The default is {@code 0}.
+     * The number of threads dedicated to the execution of blocking tasks or invocations.
      */
     @Nullable
     private Integer blockingTaskExecutor;
 
     /**
      * The maximum allowed number of open connections.
-     * The default is {@code com.linecorp.armeria.maxNumConnections} flag. Please refer to
-     * {@link Flags#maxNumConnections()}.
      */
     @Nullable
     private Integer maxNumConnections;
 
     /**
-     * @see ServerBuilder#idleTimeoutMillis(long)
+     * The idle timeout of a connection for keep-alive.
      */
     @Nullable
     private Long idleTimeoutMillis;
 
     /**
-     * @see ServerBuilder#pingIntervalMillis(long)
+     * The interval of the HTTP/2 PING frame.
      */
     @Nullable
     private Long pingIntervalMillis;
 
     /**
-     * @see ServerBuilder#maxConnectionAgeMillis(long)
+     * The maximum allowed age of a connection for keep-alive.
      */
     @Nullable
     private Long maxConnectionAgeMillis;
 
     /**
-     * @see ServerBuilder#maxNumRequestsPerConnection(int)
+     * The maximum allowed number of requests that can be served through one connection.
      */
     @Nullable
     private Integer maxNumRequestsPerConnection;
 
     /**
-     * @see ServerBuilder#http2InitialConnectionWindowSize(int)
+     * The initial connection-level HTTP/2 flow control window size.
      */
     @Nullable
     private Integer http2InitialConnectionWindowSize;
 
     /**
-     * @see ServerBuilder#http2InitialStreamWindowSize(int)
+     * The initial stream-level HTTP/2 flow control window size.
      */
     @Nullable
     private Integer http2InitialStreamWindowSize;
 
     /**
-     * @see ServerBuilder#http2MaxStreamsPerConnection(long)
+     * The maximum number of concurrent streams per HTTP/2 connection.
      */
     @Nullable
     private Long http2MaxStreamsPerConnection;
 
     /**
-     * @see ServerBuilder#http2MaxFrameSize(int)
+     * The maximum size of HTTP/2 frame that can be received.
      */
     @Nullable
     private Integer http2MaxFrameSize;
 
     /**
-     * @see ServerBuilder#http2MaxHeaderListSize(long)
+     * The maximum size of headers that can be received.
      */
     @Nullable
     private Long http2MaxHeaderListSize;
 
     /**
-     * @see ServerBuilder#http1MaxInitialLineLength(int)
+     * The maximum length of an HTTP/1 response initial line.
      */
     @Nullable
     private Integer http1MaxInitialLineLength;
 
     /**
-     * @see ServerBuilder#http1MaxHeaderSize(int)
+     * The maximum length of all headers in an HTTP/1 response.
      */
     @Nullable
     private Integer http1MaxHeaderSize;
 
     /**
-     * @see ServerBuilder#http1MaxChunkSize(int)
+     * The maximum length of each chunk in an HTTP/1 response content.
      */
     @Nullable
     private Integer http1MaxChunkSize;
 
     /**
-     * @see ServerBuilder#accessLogFormat(String)
+     * The format of the {@link Server}'s access log.
      */
     @Nullable
     private String accessLogFormat;
 
     /**
-     * @see ServerBuilder#accessLogger(String)
+     * The default access logger name for all {@link VirtualHost}s.
      */
     @Nullable
     private String accessLogger;
 
     /**
-     * @see ServerBuilder#disableServerHeader
+     * Whether the response header not to include default {@code "Server"} header.
      */
     private boolean disableServerHeader;
 
     /**
-     * @see ServerBuilder#disableDateHeader
+     * Whether the response header not to include default {@code "Date"} header.
      */
     private boolean disableDateHeader;
 
     /**
-     * @see ServerBuilder#requestTimeoutMillis(long)
+     * The timeout of a request.
      */
     @Nullable
     private Long requestTimeoutMillis;
 
     /**
-     * @see ServerBuilder#maxRequestLength(long)
+     * The maximum allowed length of the content decoded at the session layer.
      */
     @Nullable
     private Long maxRequestLength;
 
     /**
-     * @see ServerBuilder#verboseResponses(boolean)
+     * Whether the verbose response mode is enabled.
      */
     @Nullable
     private Boolean verboseResponses;
@@ -614,198 +607,330 @@ public class ArmeriaSettings {
         this.compression = compression;
     }
 
+    /**
+     * Returns the number of threads for {@link EventLoopGroup} that the {@link Server} uses.
+     */
     @Nullable
     public Integer getWorkerGroup() {
         return workerGroup;
     }
 
+    /**
+     * Sets the number of threads for {@link EventLoopGroup} that the {@link Server} uses.
+     */
     public void setWorkerGroup(@Nullable Integer workerGroup) {
         this.workerGroup = workerGroup;
     }
 
+    /**
+     * Returns the number of threads dedicated to the execution of blocking tasks or invocations.
+     */
     @Nullable
     public Integer getBlockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 
+    /**
+     * Sets the number of threads dedicated to the execution of blocking tasks or invocations.
+     */
     public void setBlockingTaskExecutor(@Nullable Integer blockingTaskExecutor) {
         this.blockingTaskExecutor = blockingTaskExecutor;
     }
 
+    /**
+     * Returns the maximum allowed number of open connections.
+     */
     @Nullable
     public Integer getMaxNumConnections() {
         return maxNumConnections;
     }
 
+    /**
+     * Sets the maximum allowed number of open connections.
+     */
     public void setMaxNumConnections(@Nullable Integer maxNumConnections) {
         this.maxNumConnections = maxNumConnections;
     }
 
+    /**
+     * Returns the idle timeout of a connection for keep-alive.
+     */
     @Nullable
     public Long getIdleTimeoutMillis() {
         return idleTimeoutMillis;
     }
 
+    /**
+     * Sets the idle timeout of a connection for keep-alive.
+     */
     public void setIdleTimeoutMillis(@Nullable Long idleTimeoutMillis) {
         this.idleTimeoutMillis = idleTimeoutMillis;
     }
 
+    /**
+     * Returns the interval of the HTTP/2 PING frame.
+     */
     @Nullable
     public Long getPingIntervalMillis() {
         return pingIntervalMillis;
     }
 
+    /**
+     * Sets the interval of the HTTP/2 PING frame.
+     */
     public void setPingIntervalMillis(@Nullable Long pingIntervalMillis) {
         this.pingIntervalMillis = pingIntervalMillis;
     }
 
+    /**
+     * Returns the maximum allowed age of a connection for keep-alive.
+     */
     @Nullable
     public Long getMaxConnectionAgeMillis() {
         return maxConnectionAgeMillis;
     }
 
+    /**
+     * Sets the maximum allowed age of a connection for keep-alive.
+     */
     public void setMaxConnectionAgeMillis(@Nullable Long maxConnectionAgeMillis) {
         this.maxConnectionAgeMillis = maxConnectionAgeMillis;
     }
 
+    /**
+     * Returns the maximum allowed number of requests that can be served through one connection.
+     */
     @Nullable
     public Integer getMaxNumRequestsPerConnection() {
         return maxNumRequestsPerConnection;
     }
 
+    /**
+     * Sets the maximum allowed number of requests that can be served through one connection.
+     */
     public void setMaxNumRequestsPerConnection(@Nullable Integer maxNumRequestsPerConnection) {
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
     }
 
+    /**
+     * Returns the initial connection-level HTTP/2 flow control window size.
+     */
     @Nullable
     public Integer getHttp2InitialConnectionWindowSize() {
         return http2InitialConnectionWindowSize;
     }
 
+    /**
+     * Sets the initial connection-level HTTP/2 flow control window size.
+     */
     public void setHttp2InitialConnectionWindowSize(@Nullable Integer http2InitialConnectionWindowSize) {
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
     }
 
+    /**
+     * Returns the initial stream-level HTTP/2 flow control window size.
+     */
     @Nullable
     public Integer getHttp2InitialStreamWindowSize() {
         return http2InitialStreamWindowSize;
     }
 
+    /**
+     * Sets the initial stream-level HTTP/2 flow control window size.
+     */
     public void setHttp2InitialStreamWindowSize(@Nullable Integer http2InitialStreamWindowSize) {
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
     }
 
+    /**
+     * Returns the maximum number of concurrent streams per HTTP/2 connection.
+     */
     @Nullable
     public Long getHttp2MaxStreamsPerConnection() {
         return http2MaxStreamsPerConnection;
     }
 
+    /**
+     * Sets the maximum number of concurrent streams per HTTP/2 connection.
+     */
     public void setHttp2MaxStreamsPerConnection(@Nullable Long http2MaxStreamsPerConnection) {
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
     }
 
+    /**
+     * Returns the maximum size of HTTP/2 frame that can be received.
+     */
     @Nullable
     public Integer getHttp2MaxFrameSize() {
         return http2MaxFrameSize;
     }
 
+    /**
+     * Sets the maximum size of HTTP/2 frame that can be received.
+     */
     public void setHttp2MaxFrameSize(@Nullable Integer http2MaxFrameSize) {
         this.http2MaxFrameSize = http2MaxFrameSize;
     }
 
+    /**
+     * Returns the maximum size of headers that can be received.
+     */
     @Nullable
     public Long getHttp2MaxHeaderListSize() {
         return http2MaxHeaderListSize;
     }
 
+    /**
+     * Sets the maximum size of headers that can be received.
+     */
     public void setHttp2MaxHeaderListSize(@Nullable Long http2MaxHeaderListSize) {
         this.http2MaxHeaderListSize = http2MaxHeaderListSize;
     }
 
+    /**
+     * Returns the maximum length of an HTTP/1 response initial line.
+     */
     @Nullable
     public Integer getHttp1MaxInitialLineLength() {
         return http1MaxInitialLineLength;
     }
 
+    /**
+     * Sets the maximum length of an HTTP/1 response initial line.
+     */
     public void setHttp1MaxInitialLineLength(@Nullable Integer http1MaxInitialLineLength) {
         this.http1MaxInitialLineLength = http1MaxInitialLineLength;
     }
 
+    /**
+     * Returns the maximum length of all headers in an HTTP/1 response.
+     */
     @Nullable
     public Integer getHttp1MaxHeaderSize() {
         return http1MaxHeaderSize;
     }
 
+    /**
+     * Sets the maximum length of all headers in an HTTP/1 response.
+     */
     public void setHttp1MaxHeaderSize(@Nullable Integer http1MaxHeaderSize) {
         this.http1MaxHeaderSize = http1MaxHeaderSize;
     }
 
+    /**
+     * Returns the maximum length of each chunk in an HTTP/1 response content.
+     */
     @Nullable
     public Integer getHttp1MaxChunkSize() {
         return http1MaxChunkSize;
     }
 
+    /**
+     * Sets the maximum length of each chunk in an HTTP/1 response content.
+     */
     public void setHttp1MaxChunkSize(@Nullable Integer http1MaxChunkSize) {
         this.http1MaxChunkSize = http1MaxChunkSize;
     }
 
+    /**
+     * Returns the format of the {@link Server}'s access log.
+     */
     @Nullable
     public String getAccessLogFormat() {
         return accessLogFormat;
     }
 
+    /**
+     * Sets the format of the {@link Server}'s access log.
+     */
     public void setAccessLogFormat(@Nullable String accessLogFormat) {
         this.accessLogFormat = accessLogFormat;
     }
 
+    /**
+     * Returns the default access logger name for all {@link VirtualHost}s.
+     */
     @Nullable
     public String getAccessLogger() {
         return accessLogger;
     }
 
+    /**
+     * Sets the default access logger name for all {@link VirtualHost}s.
+     */
     public void setAccessLogger(@Nullable String accessLogger) {
         this.accessLogger = accessLogger;
     }
 
+    /**
+     * Returns whether the response header not to include default {@code "Server"} header.
+     */
     public boolean isDisableServerHeader() {
         return disableServerHeader;
     }
 
+    /**
+     * Sets whether the response header not to include default {@code "Server"} header.
+     */
     public void setDisableServerHeader(boolean disableServerHeader) {
         this.disableServerHeader = disableServerHeader;
     }
 
+    /**
+     * Returns whether the response header not to include default {@code "Date"} header.
+     */
     public boolean isDisableDateHeader() {
         return disableDateHeader;
     }
 
+    /**
+     * Sets whether the response header not to include default {@code "Date"} header.
+     */
     public void setDisableDateHeader(boolean disableDateHeader) {
         this.disableDateHeader = disableDateHeader;
     }
 
+    /**
+     * Returns the timeout of a request.
+     */
     @Nullable
     public Long getRequestTimeoutMillis() {
         return requestTimeoutMillis;
     }
 
+    /**
+     * Sets the timeout of a request.
+     */
     public void setRequestTimeoutMillis(@Nullable Long requestTimeoutMillis) {
         this.requestTimeoutMillis = requestTimeoutMillis;
     }
 
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     */
     @Nullable
     public Long getMaxRequestLength() {
         return maxRequestLength;
     }
 
+    /**
+     * Sets the maximum allowed length of the content decoded at the session layer.
+     */
     public void setMaxRequestLength(@Nullable Long maxRequestLength) {
         this.maxRequestLength = maxRequestLength;
     }
 
+    /**
+     * Returns whether the verbose response mode is enabled.
+     */
     @Nullable
     public Boolean getVerboseResponses() {
         return verboseResponses;
     }
 
+    /**
+     * Sets whether the verbose response mode is enabled.
+     */
     public void setVerboseResponses(@Nullable Boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
     }
