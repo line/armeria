@@ -21,9 +21,8 @@ const { Header } = Layout;
 const { Paragraph } = Typography;
 
 const selectableKeysAndRegexes = {
-  news: /\/news(\/|$)/,
-  tutorials: /\/tutorials(\/|$)/,
-  docs: /\/docs(\/|$)/,
+  news: /\/(news|release-notes)(\/|$)/,
+  docs: /\/(docs|tutorials)(\/|$)/,
   community: /\/community(\/|$)/,
   home: /.?/,
 };
@@ -105,9 +104,6 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
             <Menu.Item key="news">
               <Link to="/news">News</Link>
             </Menu.Item>
-            <Menu.Item key="tutorials">
-              <Link to="/tutorials">Tutorials</Link>
-            </Menu.Item>
             <Menu.Item key="docs">
               <Link to="/docs">Documentation</Link>
             </Menu.Item>
@@ -149,9 +145,6 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
                   </Menu.Item>
                   <Menu.Item key="news">
                     <Link to="/news">News</Link>
-                  </Menu.Item>
-                  <Menu.Item key="tutorials">
-                    <Link to="/tutorials">Tutorials</Link>
                   </Menu.Item>
                   <Menu.Item key="docs">
                     <Link to="/docs">Documentation</Link>
