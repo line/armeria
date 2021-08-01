@@ -196,7 +196,7 @@ class UnaryGrpcClientTest {
         @Override
         public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
             return UnaryGrpcSerializationFormats.values().stream().filter(
-                    f -> UnaryGrpcSerializationFormats.isGrpcWeb(f)).map(Arguments::of);
+                    UnaryGrpcSerializationFormats::isGrpcWeb).map(Arguments::of);
         }
     }
 
