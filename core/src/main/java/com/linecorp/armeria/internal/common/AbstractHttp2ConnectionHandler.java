@@ -74,7 +74,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     private boolean closing;
     private boolean handlingConnectionError;
 
-    // Debug data that will be sent in the GOAWAY frame.
+    /** Debug data that will be sent in the GOAWAY frame. */
     private ByteBuf goAwayDebugData = Unpooled.EMPTY_BUFFER;
 
     /**
@@ -156,7 +156,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     }
 
     /**
-     * Send a {@code GO_AWAY} frame to initiate connection shutdown. No-op if channel isn't active.
+     * Sends a {@code GO_AWAY} frame to initiate connection shutdown. No-op if channel isn't active.
      * Does <strong>not</strong> flush immediately, this is the responsibility of the caller.
      */
     @Override

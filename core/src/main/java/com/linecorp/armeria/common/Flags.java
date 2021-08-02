@@ -288,7 +288,7 @@ public final class Flags {
                     DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 1000000; // 1 second
+    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = TimeUnit.SECONDS.toMicros(1);
     private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
             getLong("defaultServerConnectionDrainDurationMicros",
                     DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
@@ -958,7 +958,8 @@ public final class Flags {
      *
      * <p>
      * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain period microseconds
-     * is always {@code 0}.
+     * is always {@code 0}, which means the connection will be closed immediately as soon as
+     * the current in-progress request is handled.
      * </p>
      *
      * @see ServerBuilder#connectionDrainDuration(Duration)

@@ -144,8 +144,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         gracefulConnectionShutdownHandler.start(ctx, promise);
     }
 
-    private class Http2GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
-        protected Http2GracefulConnectionShutdownHandler(long drainDurationMicros) {
+    private final class Http2GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
+        Http2GracefulConnectionShutdownHandler(long drainDurationMicros) {
             super(drainDurationMicros);
         }
 

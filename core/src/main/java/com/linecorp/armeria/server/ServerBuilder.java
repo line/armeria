@@ -581,7 +581,8 @@ public final class ServerBuilder {
      *
      * <p>
      * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
-     * is always {@code 0}.
+     * is always {@code 0}, which means the connection will be closed immediately as soon as
+     * the current in-progress request is handled.
      * </p>
      *
      * @param durationMicros the drain duration. {@code 0} disables the drain.
