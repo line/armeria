@@ -324,8 +324,9 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
 
-        final ResponseHeaders headers = ResponseHeaders.of(status,
-                                                           HttpHeaderNames.CONTENT_TYPE, mediaType);
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
+                                                       .contentType(mediaType)
+                                                       .build();
         return of(headers, content, trailers);
     }
 

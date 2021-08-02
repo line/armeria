@@ -35,6 +35,13 @@ com.auth0:
     javadocs:
     - https://www.javadoc.io/doc/com.auth0/java-jwt/3.16.0/
 
+# This is only used for examples/graphql-kotlin
+com.expediagroup:
+  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '4.1.1' }
+  graphql-kotlin-client-jackson: { version: *GRAPHQL_KOTLIN_VERSION }
+  graphql-kotlin-client-serialization: { version: *GRAPHQL_KOTLIN_VERSION }
+  graphql-kotlin-schema-generator: { version: *GRAPHQL_KOTLIN_VERSION }
+
 com.fasterxml.jackson.core:
   jackson-annotations:
     javadocs:
@@ -297,8 +304,13 @@ io.zipkin.brave:
     - https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/
 
 it.unimi.dsi:
-  fastutil-core:
+  fastutil:
     version: &FAST_UTIL_VERSION '8.5.4'
+    relocations:
+      - from: it.unimi.dsi.fastutil
+        to: com.linecorp.armeria.internal.shaded.fastutil
+  fastutil-core:
+    version: *FAST_UTIL_VERSION
     relocations:
       - from: it.unimi.dsi.fastutil
         to: com.linecorp.armeria.internal.shaded.fastutil

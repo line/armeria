@@ -57,6 +57,9 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.aayushatharva.brotli4j.decoder.Decoder;
+import com.aayushatharva.brotli4j.decoder.DecoderJNI.Status;
+import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 
@@ -611,6 +614,25 @@ class HttpServerTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
         assertThat(res.contentUtf8()).isEqualTo("Armeria is awesome!");
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ClientAndProtocolProvider.class)
+    void testStrings_acceptEncodingBrotli(WebClient client) throws Exception {
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "br");
+        final CompletableFuture<AggregatedHttpResponse> f = client.execute(req).aggregate();
+
+        final AggregatedHttpResponse res = f.get();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(res.headers().get(HttpHeaderNames.VARY)).isEqualTo("accept-encoding");
+
+        final DirectDecompress decoded = Decoder.decompress(res.content().array());
+
+        assertThat(decoded.getResultStatus()).isEqualTo(Status.DONE);
+        assertThat(new String(decoded.getDecompressedData())).isEqualTo("Armeria is awesome!");
     }
 
     @ParameterizedTest

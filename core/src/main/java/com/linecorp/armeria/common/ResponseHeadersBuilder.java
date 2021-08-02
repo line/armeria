@@ -67,6 +67,9 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder endOfStream(boolean endOfStream);
 
     @Override
+    ResponseHeadersBuilder contentLength(long contentLength);
+
+    @Override
     ResponseHeadersBuilder contentType(MediaType contentType);
 
     @Override

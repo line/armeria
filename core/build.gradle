@@ -139,6 +139,12 @@ dependencies {
 
     // Jetty, for testing interoperability with other servers.
     testImplementation 'org.eclipse.jetty:jetty-webapp'
+
+    // Brotli
+    implementation "com.aayushatharva.brotli4j:brotli4j:1.5.0"
+    optionalImplementation "com.aayushatharva.brotli4j:native-linux-x86_64:1.5.0"
+    optionalImplementation "com.aayushatharva.brotli4j:native-osx-x86_64:1.5.0"
+    optionalImplementation "com.aayushatharva.brotli4j:native-windows-x86_64:1.5.0"
 }
 
 if (!rootProject.hasProperty('noWeb')) {

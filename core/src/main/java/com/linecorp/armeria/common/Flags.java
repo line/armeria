@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -1352,7 +1353,7 @@ public final class Flags {
     }
 
     private static int getInt(String name, int defaultValue, IntPredicate validator) {
-        return Integer.parseInt(getNormalized(name, String.valueOf(defaultValue), value -> {
+        return Integer.parseInt(getNormalized(name, StringUtil.toString(defaultValue), value -> {
             try {
                 return validator.test(Integer.parseInt(value));
             } catch (Exception e) {
@@ -1363,7 +1364,7 @@ public final class Flags {
     }
 
     private static long getLong(String name, long defaultValue, LongPredicate validator) {
-        return Long.parseLong(getNormalized(name, String.valueOf(defaultValue), value -> {
+        return Long.parseLong(getNormalized(name, StringUtil.toString(defaultValue), value -> {
             try {
                 return validator.test(Long.parseLong(value));
             } catch (Exception e) {

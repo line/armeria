@@ -166,7 +166,9 @@ public final class TransportTypeProvider {
                 initializeMethod.setAccessible(true);
                 initializeMethod.invoke(null, NetUtil.isIpV4StackPreferred());
             } catch (Throwable cause) {
-                if (Exceptions.peel(cause) instanceof UnsatisfiedLinkError) {
+                final Throwable peeledCause = Exceptions.peel(cause);
+                if (peeledCause instanceof UnsatisfiedLinkError ||
+                    peeledCause instanceof ClassNotFoundException) {
                     // Failed to load a native library, which is fine.
                 } else {
                     logger.debug("Failed to force-initialize '" + ChannelUtil.channelPackageName() +

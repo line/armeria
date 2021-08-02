@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -135,7 +134,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
                     () -> resFuture.completeExceptionally(
-                            UnprocessedRequestException.of(RequestTimeoutException.get())),
+                            UnprocessedRequestException.of(ConcurrencyLimitTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
             currentTask.set(timeoutFuture);
         }

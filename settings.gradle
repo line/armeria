@@ -107,6 +107,8 @@ includeWithFlags ':examples:dropwizard-example',                   'java'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:graphql-example',                      'java'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
+includeWithFlags ':examples:graphql-kotlin-example',               'java', 'kotlin'
+project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:grpc-example',                         'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java', 'kotlin-grpc', 'kotlin'
