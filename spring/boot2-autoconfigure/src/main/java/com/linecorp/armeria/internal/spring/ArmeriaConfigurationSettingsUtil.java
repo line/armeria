@@ -56,16 +56,8 @@ public final class ArmeriaConfigurationSettingsUtil {
         configureIfNonNull(settings.getAccessLogFormat(), server::accessLogFormat);
         configureIfNonNull(settings.getAccessLogger(), server::accessLogger);
 
-        if (settings.isDisableServerHeader()) {
-            server.disableServerHeader();
-        }
-        if (settings.isDisableDateHeader()) {
-            server.disableDateHeader();
-        }
-
         configureIfNonNull(settings.getRequestTimeoutMillis(), server::requestTimeoutMillis);
         configureIfNonNull(settings.getMaxRequestLength(), server::maxRequestLength);
-
         configureIfNonNull(settings.getVerboseResponses(), server::verboseResponses);
     }
 

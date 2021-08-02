@@ -431,16 +431,6 @@ public class ArmeriaSettings {
     private String accessLogger;
 
     /**
-     * Whether the response header not to include default {@code "Server"} header.
-     */
-    private boolean disableServerHeader;
-
-    /**
-     * Whether the response header not to include default {@code "Date"} header.
-     */
-    private boolean disableDateHeader;
-
-    /**
      * The timeout of a request.
      */
     @Nullable
@@ -860,34 +850,6 @@ public class ArmeriaSettings {
      */
     public void setAccessLogger(@Nullable String accessLogger) {
         this.accessLogger = accessLogger;
-    }
-
-    /**
-     * Returns whether the response header not to include default {@code "Server"} header.
-     */
-    public boolean isDisableServerHeader() {
-        return disableServerHeader;
-    }
-
-    /**
-     * Sets whether the response header not to include default {@code "Server"} header.
-     */
-    public void setDisableServerHeader(boolean disableServerHeader) {
-        this.disableServerHeader = disableServerHeader;
-    }
-
-    /**
-     * Returns whether the response header not to include default {@code "Date"} header.
-     */
-    public boolean isDisableDateHeader() {
-        return disableDateHeader;
-    }
-
-    /**
-     * Sets whether the response header not to include default {@code "Date"} header.
-     */
-    public void setDisableDateHeader(boolean disableDateHeader) {
-        this.disableDateHeader = disableDateHeader;
     }
 
     /**
