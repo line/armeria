@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.grpc.protocol;
 
 import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -27,6 +26,8 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientOptions;
@@ -73,6 +74,7 @@ public final class UnaryGrpcClient {
 
     private final SerializationFormat serializationFormat;
     private final WebClient webClient;
+    private static final Logger logger = LoggerFactory.getLogger(UnaryGrpcClient.class);
 
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
@@ -193,131 +195,135 @@ public final class UnaryGrpcClient {
                                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                                final ArmeriaMessageDeframer deframer =
                                        new ArmeriaMessageDeframer(Integer.MAX_VALUE);
-                               msg.toHttpResponse().decode(deframer, ctx.alloc(),
-                                                           byteBufConverter(ctx.alloc(), isGrpcWebText))
-                                  .subscribe(singleSubscriber(ctx, msg, serializationFormat, responseFuture),
+                               msg.toHttpResponse()
+                                  .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
+                                  .subscribe(new DeframedMessageSubscriber(
+                                                     msg, serializationFormat, responseFuture),
                                              ctx.eventLoop());
                                return responseFuture;
                            }
                        }), ctx.eventLoop());
         }
+    }
 
-        private static Subscriber<DeframedMessage> singleSubscriber(
-                ClientRequestContext ctx, AggregatedHttpResponse msg, SerializationFormat serializationFormat,
-                CompletableFuture<HttpResponse> responseFuture) {
+    private static final class DeframedMessageSubscriber implements Subscriber<DeframedMessage> {
+        private final AggregatedHttpResponse response;
+        private final SerializationFormat serializationFormat;
+        private final CompletableFuture<HttpResponse> responseFuture;
+        private final boolean isGrpcWeb;
 
-            return new Subscriber<DeframedMessage>() {
-                private HttpData content = HttpData.empty();
-                @Nullable
-                private HttpHeaders trailers;
-                @Nullable
-                private Subscription subscription;
-                private boolean terminated;
-                private int processedMessages;
+        private HttpData content = HttpData.empty();
+        @Nullable
+        private HttpHeaders trailers;
+        @Nullable
+        private Subscription subscription;
+        private boolean completed;
+        private int processedMessages;
 
-                @Override
-                public void onSubscribe(Subscription s) {
-                    if (subscription != null) {
-                        s.cancel();
-                        return;
-                    }
-                    subscription = s;
-                    // At least 2 requests are required for receiving trailers.
-                    s.request(2);
+        private DeframedMessageSubscriber(AggregatedHttpResponse response,
+                                          SerializationFormat serializationFormat,
+                                          CompletableFuture<HttpResponse> responseFuture) {
+            this.response = response;
+            this.serializationFormat = serializationFormat;
+            this.responseFuture = responseFuture;
+            isGrpcWeb = UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat);
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            if (subscription != null) {
+                logger.error("onSubscribe was called multiple times");
+                s.cancel();
+                return;
+            }
+            subscription = s;
+            // At least 2 requests are required for receiving trailers.
+            s.request(2);
+        }
+
+        @Override
+        public void onNext(DeframedMessage message) {
+            try {
+                if (completed) {
+                    return;
                 }
+                process(message);
+            } finally {
+                // It's a final consumer of the message and is responsible for closing it.
+                message.close();
+            }
+        }
 
-                @Override
-                public void onNext(DeframedMessage message) {
-                    try {
-                        if (terminated) {
-                            return;
-                        }
-                        process(message);
-                    } finally {
-                        message.close();
-                    }
-                }
+        @Override
+        public void onError(Throwable t) {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            completeExceptionally(t);
+        }
 
-                @Override
-                public void onError(Throwable t) {
-                    if (terminated) {
-                        return;
-                    }
-                    terminated = true;
-                    completeExceptionally(t);
-                }
+        @Override
+        public void onComplete() {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            if (trailers == null) {
+                trailers = response.trailers();
+            }
+            responseFuture.complete(HttpResponse.of(response.headers(), content, trailers));
+        }
 
-                @Override
-                public void onComplete() {
-                    if (terminated) {
-                        return;
-                    }
-                    terminated = true;
-                    if (trailers == null) {
-                        trailers = msg.trailers();
-                    }
-                    responseFuture.complete(HttpResponse.of(msg.headers(), content, trailers));
+        private void process(DeframedMessage message) {
+            final ByteBuf buf = message.buf();
+            if (buf == null) {
+                cancel(new ArmeriaStatusException(StatusCodes.INTERNAL,
+                                                  "received compressed message; " +
+                                                  "UnaryGrpcClient does not support compression."));
+                return;
+            }
+            if (isGrpcWeb && message.isTrailer()) {
+                trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
+                if (trailers == null) {
+                    // Malformed trailers.
+                    cancel(new ArmeriaStatusException(
+                            StatusCodes.INTERNAL,
+                            String.format("%s trailers malformed: %s",
+                                          serializationFormat.uriText(),
+                                          buf.toString(StandardCharsets.UTF_8))));
                 }
+                processedMessages++;
+                return;
+            }
+            if (processedMessages > 0) {
+                cancel(new ArmeriaStatusException(StatusCodes.INTERNAL,
+                                                  "received more than one data message; " +
+                                                  "UnaryGrpcClient does not support streaming."));
+                return;
+            }
+            // Retain the buffer after DeframedMessage is closed to use in the response.
+            buf.retain();
+            content = HttpData.wrap(buf);
+            processedMessages++;
+        }
 
-                private void process(DeframedMessage message) {
-                    if (UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.isTrailer()) {
-                        final ByteBuf buf;
-                        try {
-                            buf = InternalGrpcWebUtil.messageBuf(message, ctx.alloc());
-                        } catch (IOException t) {
-                            cancel(t);
-                            return;
-                        }
-                        if (buf == message.buf()) {
-                            // Buffer will be finally cleaned up by the DeframedMessage.close.
-                            buf.retain();
-                        }
-                        try {
-                            trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
-                            if (trailers == null) {
-                                // Malformed trailers.
-                                cancel(new ArmeriaStatusException(
-                                        StatusCodes.INTERNAL,
-                                        String.format("%s trailers malformed: %s",
-                                                      serializationFormat.uriText(),
-                                                      buf.toString(StandardCharsets.UTF_8))));
-                            }
-                        } finally {
-                            buf.release();
-                        }
-                        processedMessages++;
-                        return;
-                    }
-                    if (processedMessages > 0) {
-                        cancel(new ArmeriaStatusException(StatusCodes.INTERNAL,
-                                                          "received more than one data message; " +
-                                                          "UnaryGrpcClient does not support streaming."));
-                        return;
-                    }
-                    final ByteBuf buf = message.buf();
-                    // Compression not supported.
-                    assert buf != null;
-                    content = HttpData.wrap(buf);
-                    buf.retain();
-                    processedMessages++;
-                }
+        private void cancel(Throwable t) {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            if (subscription == null) {
+                logger.error("subscriber has no active subscription");
+            } else {
+                subscription.cancel();
+            }
+            completeExceptionally(t);
+        }
 
-                private void cancel(Throwable t) {
-                    if (terminated) {
-                        return;
-                    }
-                    terminated = true;
-                    if (subscription != null) {
-                        subscription.cancel();
-                    }
-                    completeExceptionally(t);
-                }
-
-                private void completeExceptionally(Throwable t) {
-                    content.close();
-                    responseFuture.completeExceptionally(t);
-                }
-            };
+        private void completeExceptionally(Throwable t) {
+            content.close();
+            responseFuture.completeExceptionally(t);
         }
     }
 }
