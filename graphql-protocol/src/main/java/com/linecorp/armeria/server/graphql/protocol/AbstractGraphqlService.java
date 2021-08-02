@@ -24,7 +24,6 @@ import javax.annotation.Nullable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
@@ -51,7 +50,6 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
      * `scala.Map` if a `jackson-module-scala` module is registered.
      */
     private static final ObjectMapper mapper = new ObjectMapper();
-    private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};

@@ -123,7 +123,7 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
     /**
      * Returns the parsed <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept</a>
      * header or an empty {@link List} if there is no such header.
-     * The returned the {@link MediaType}s will be sorted according to client preference.
+     * The returned {@link MediaType}s will be sorted according to client preference.
      */
     List<MediaType> accept();
 }
