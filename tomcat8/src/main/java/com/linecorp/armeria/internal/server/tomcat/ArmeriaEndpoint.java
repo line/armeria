@@ -39,6 +39,7 @@ public final class ArmeriaEndpoint extends AbstractEndpoint {
 
     @Override
     protected InetSocketAddress getLocalAddress() throws IOException {
+        // Doesn't seem to be used.
         return null;
     }
 
@@ -71,6 +72,7 @@ public final class ArmeriaEndpoint extends AbstractEndpoint {
 
     @Override
     protected Acceptor createAcceptor() {
+        // Doesn't seem to be used.
         return null;
     }
 

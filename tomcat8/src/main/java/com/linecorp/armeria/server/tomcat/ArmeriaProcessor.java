@@ -55,7 +55,7 @@ final class ArmeriaProcessor extends AbstractProcessor {
 
     @Override
     protected int available(boolean doRead) {
-        return 0;
+        return getRequest().getInputBuffer().available();
     }
 
     @Override
@@ -87,12 +87,14 @@ final class ArmeriaProcessor extends AbstractProcessor {
 
     @Override
     protected AbstractEndpoint.Handler.SocketState dispatchEndRequest() throws IOException {
+        // Doesn't seem to be used.
         return null;
     }
 
     @Override
     protected AbstractEndpoint.Handler.SocketState service(SocketWrapperBase<?> socketWrapper)
             throws IOException {
+        // Doesn't seem to be used.
         return null;
     }
 
