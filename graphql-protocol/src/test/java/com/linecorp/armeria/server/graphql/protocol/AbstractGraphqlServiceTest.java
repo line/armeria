@@ -108,7 +108,6 @@ class AbstractGraphqlServiceTest {
                 .isEqualTo(ImmutableMap.of("abc", 2, "def", "B"));
     }
 
-
     private static class MediaTypeProvider implements ArgumentsProvider {
 
         @Override
