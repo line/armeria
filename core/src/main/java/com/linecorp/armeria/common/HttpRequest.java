@@ -233,7 +233,7 @@ public interface HttpRequest extends Request, HttpMessage {
 
         // `content` is not empty.
         headers = headers.toBuilder()
-                         .setInt(CONTENT_LENGTH, contentLength)
+                         .contentLength(contentLength)
                          .build();
 
         if (trailers.isEmpty()) {

@@ -423,7 +423,7 @@ public abstract class AbstractHttpRequestBuilder {
         if (content == null || content.isEmpty()) {
             requestHeadersBuilder.remove(CONTENT_LENGTH);
         } else {
-            requestHeadersBuilder.setInt(CONTENT_LENGTH, content.length());
+            requestHeadersBuilder.contentLength(content.length());
         }
         return requestHeadersBuilder.build();
     }

@@ -539,8 +539,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         respond(ctx, reqCtx,
-                ResponseHeaders.builder(status)
-                               .addObject(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
+                ResponseHeaders.builder(status).contentType(ERROR_CONTENT_TYPE),
                 resContent, cause);
     }
 
@@ -632,7 +631,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (req.method() == HttpMethod.HEAD || headers.status().isContentAlwaysEmpty()) {
             return;
         }
-        headers.setInt(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+        headers.contentLength(contentLength);
     }
 
     @Override
