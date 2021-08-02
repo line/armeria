@@ -231,4 +231,40 @@ class HttpHeaderCachedValuesTest {
         assertThat(headers.cookies()).isSameAs(cookies4);
         assertThat(headers.getAll(HttpHeaderNames.SET_COOKIE)).isEqualTo(Cookie.toSetCookieHeaders(cookies4));
     }
+
+    @Test
+    void accept() {
+        // Initialize with the shortcut method
+        final RequestHeadersBuilder builder = RequestHeaders.builder(HttpMethod.GET, "/foo");
+        final MediaType foo = MediaType.PLAIN_TEXT;
+        builder.accept(foo);
+        assertThat(builder.accept()).containsExactly(foo);
+
+        // Mutate with the non-shortcut method
+        final MediaType bar = MediaType.JSON;
+        final MediaType baz = MediaType.PROTOBUF;
+        final List<MediaType> accepts = ImmutableList.of(bar, baz);
+        builder.addObject(HttpHeaderNames.ACCEPT, accepts);
+        // Make sure that the cached value is invalidated
+        assertThat(builder.accept()).hasSize(3);
+        final List<MediaType> accepts3 = builder.accept();
+        assertThat(accepts3.get(0)).isEqualTo(foo);
+        assertThat(accepts3.get(1)).isEqualTo(bar);
+        assertThat(accepts3.get(2)).isEqualTo(baz);
+
+        assertThat(builder.getAll(HttpHeaderNames.ACCEPT))
+                .containsExactly(foo.toString(), bar.toString(), baz.toString());
+
+        // Mutate with the shortcut method
+        final MediaType qux = MediaType.FORM_DATA;
+        builder.accept(qux);
+        // Make sure that the container value is updated
+        assertThat(builder.getAll(HttpHeaderNames.ACCEPT))
+                .containsExactly(foo.toString(), bar.toString(), baz.toString(), qux.toString());
+        final List<MediaType> accepts4 = builder.accept();
+        assertThat(ImmutableList.copyOf(accepts4).get(3)).isSameAs(qux);
+
+        final RequestHeaders headers = builder.build();
+        assertThat(headers.accept()).isSameAs(accepts4);
+    }
 }

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -199,18 +200,16 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
      */
     @Nullable
     private static MediaType produceType(RequestHeaders headers) {
-        // TODO(ikhoon): Add 'HttpHeaders.accept()' once https://github.com/line/armeria/pull/3714 is merged.
-        final String acceptHeaders = headers.get(HttpHeaderNames.ACCEPT);
-        if (acceptHeaders == null) {
+        final List<MediaType>  acceptTypes = headers.accept();
+        if (acceptTypes.isEmpty()) {
             // If there is no Accept header in the request, the response MUST include
             // a Content-Type: application/graphql+json header
             return MediaType.GRAPHQL_JSON;
         }
 
-        for (String accept : ACCEPT_SPLITTER.split(acceptHeaders)) {
-            final MediaType mediaType = MediaType.parse(accept);
-            if (mediaType.is(MediaType.GRAPHQL_JSON) || mediaType.is(MediaType.JSON)) {
-                return mediaType;
+        for (MediaType accept : acceptTypes) {
+            if (accept.is(MediaType.GRAPHQL_JSON) || accept.is(MediaType.JSON)) {
+                return accept;
             }
         }
 

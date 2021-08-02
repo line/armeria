@@ -51,7 +51,10 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.math.IntMath;
 
 import com.linecorp.armeria.internal.common.util.StringUtil;
@@ -65,6 +68,7 @@ class HttpHeadersBase
         extends StringMultimap</* IN_NAME */ CharSequence, /* NAME */ AsciiString>
         implements HttpHeaderGetters {
 
+    private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
     private static final BitSet PROHIBITED_VALUE_CHARS;
     private static final String[] PROHIBITED_VALUE_CHAR_NAMES;
     private static final char LAST_PROHIBITED_VALUE_CHAR;
@@ -327,16 +331,16 @@ class HttpHeadersBase
 
     @Nullable
     List<LanguageRange> acceptLanguages() {
-        final List<String> acceptHeaders = getAll(HttpHeaderNames.ACCEPT_LANGUAGE);
-        if (acceptHeaders.isEmpty()) {
+        final List<String> acceptLanguageHeaders = getAll(HttpHeaderNames.ACCEPT_LANGUAGE);
+        if (acceptLanguageHeaders.isEmpty()) {
             // TODO(ikhoon): Return an empty list if no accept-language exists in Armeria 2.0
             return null;
         }
 
         try {
             final List<LanguageRange> acceptLanguages = new ArrayList<>(4);
-            for (String acceptHeader : acceptHeaders) {
-                acceptLanguages.addAll(LanguageRange.parse(acceptHeader));
+            for (String acceptLanguage : acceptLanguageHeaders) {
+                acceptLanguages.addAll(LanguageRange.parse(acceptLanguage));
             }
             acceptLanguages.sort(comparingDouble(LanguageRange::getWeight).reversed());
 
@@ -468,6 +472,99 @@ class HttpHeadersBase
             cache.put(HttpHeaderNames.CONTENT_LENGTH, -1);
             return -1;
         }
+    }
+
+    List<MediaType> accept() {
+        @SuppressWarnings("unchecked")
+        final List<MediaType> cached = (List<MediaType>) cache.get(HttpHeaderNames.ACCEPT);
+        if (cached != null) {
+            if (cached instanceof ImmutableList) {
+                return cached;
+            } else {
+                // Should return an immutable list.
+                final List<MediaType> immutableCache = ImmutableList.copyOf(cached);
+                cache.put(HttpHeaderNames.ACCEPT, immutableCache);
+                return immutableCache;
+            }
+        }
+
+        final List<String> acceptHeaders = getAll(HttpHeaderNames.ACCEPT);
+        if (acceptHeaders.isEmpty()) {
+            cache.put(HttpHeaderNames.ACCEPT, ImmutableList.of());
+            return ImmutableList.of();
+        }
+
+        // Cache miss. Parse Accept headers and store it to cache.
+        final List<MediaType> acceptTypes = new ArrayList<>(4);
+        for (final String acceptHeader : acceptHeaders) {
+            for (String accept : ACCEPT_SPLITTER.split(acceptHeader)) {
+                try {
+                    acceptTypes.add(MediaType.parse(accept));
+                } catch (IllegalArgumentException ignored) {
+                    // Ignore a malformed MediaType.
+                }
+            }
+        }
+
+        if (acceptTypes.size() > 1) {
+            acceptTypes.sort(HttpHeadersBase::compareMediaType);
+        }
+        final List<MediaType> parsed = ImmutableList.copyOf(acceptTypes);
+        cache.put(HttpHeaderNames.ACCEPT, parsed);
+        return parsed;
+    }
+
+    final void accept(Iterable<MediaType> newAcceptTypes) {
+        requireNonNull(newAcceptTypes, "contentTypes");
+        final int size = Iterables.size(newAcceptTypes);
+        checkArgument(size > 0, "contentTypes is empty");
+
+        @SuppressWarnings("unchecked")
+        List<MediaType> cachedAcceptTypes = (List<MediaType>) cache.get(HttpHeaderNames.ACCEPT);
+        if (cachedAcceptTypes == null) {
+            // Set new Accept headers
+            final List<MediaType> copied = new ArrayList<>(size + 2);
+            for (MediaType mediaType : newAcceptTypes) {
+                copied.add(mediaType);
+            }
+            cachedAcceptTypes = copied;
+        } else {
+            if (cachedAcceptTypes instanceof ImmutableList) {
+                // Make cached MediaTypes mutable
+                cachedAcceptTypes = new ArrayList<>(cachedAcceptTypes);
+            }
+
+            assert cachedAcceptTypes instanceof ArrayList;
+            final ArrayList<MediaType> mediaTypeList = (ArrayList<MediaType>) cachedAcceptTypes;
+            // Merge old AcceptTypes with new one.
+            for (MediaType newAcceptType : newAcceptTypes) {
+                mediaTypeList.add(newAcceptType);
+            }
+        }
+
+        if (cachedAcceptTypes.size() > 1) {
+            cachedAcceptTypes.sort(HttpHeadersBase::compareMediaType);
+        }
+
+        cache.put(HttpHeaderNames.ACCEPT, cachedAcceptTypes);
+        addObjectWithoutNotifying(HttpHeaderNames.ACCEPT, newAcceptTypes);
+    }
+
+    @VisibleForTesting
+    static int compareMediaType(MediaType m1, MediaType m2) {
+        // The order should be "q=1.0, q=0.5".
+        // To ensure descending order, we pass the q values of m2 and m1 respectively.
+        final int qCompare = Float.compare(m2.qualityFactor(), m1.qualityFactor());
+        if (qCompare != 0) {
+            return qCompare;
+        }
+        // The order should be "application/*, */*".
+        final int wildcardCompare = Integer.compare(m1.numWildcards(), m2.numWildcards());
+        if (wildcardCompare != 0) {
+            return wildcardCompare;
+        }
+        // Preserve the original order.
+        return 0;
     }
 
     @Nullable

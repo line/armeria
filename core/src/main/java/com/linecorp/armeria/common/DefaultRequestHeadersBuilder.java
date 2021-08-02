@@ -26,6 +26,7 @@ import java.util.Locale.LanguageRange;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -169,5 +170,26 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     public RequestHeadersBuilder cookies(Cookie... cookies) {
         requireNonNull(cookies, "cookie");
         return cookies(ImmutableSet.copyOf(cookies));
+    }
+
+    @Override
+    public List<MediaType> accept() {
+        final HttpHeadersBase getters = getters();
+        if (getters == null) {
+            return ImmutableList.of();
+        }
+        return getters.accept();
+    }
+
+    @Override
+    public RequestHeadersBuilder accept(MediaType... mediaTypes) {
+        requireNonNull(mediaTypes, "mediaTypes");
+        return accept(ImmutableList.copyOf(mediaTypes));
+    }
+
+    @Override
+    public RequestHeadersBuilder accept(Iterable<MediaType> mediaTypes) {
+        setters().accept(mediaTypes);
+        return this;
     }
 }
