@@ -13,14 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.client.redirect;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
+import java.net.URI;
+import java.util.Set;
 import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -33,7 +37,7 @@ public final class RedirectConfig {
     private static final RedirectConfig defaultRedirectConfig = builder().build();
 
     private static final RedirectConfig disabledRedirectConfig = new RedirectConfig(
-            (ctx, path) -> false, -1);
+            null, (ctx, path) -> false, -1);
 
     /**
      * Returns the default {@link RedirectConfig}.
@@ -56,35 +60,49 @@ public final class RedirectConfig {
         return new RedirectConfigBuilder();
     }
 
+    @Nullable
+    private final Set<SessionProtocol> allowedProtocols;
+    @Nullable
+    private final BiPredicate<ClientRequestContext, String> domainFilter;
     private final int maxRedirects;
-    @Nullable
-    private final BiPredicate<ClientRequestContext, String> predicate;
 
-    RedirectConfig(@Nullable BiPredicate<ClientRequestContext, String> predicate, int maxRedirects) {
+    RedirectConfig(@Nullable Set<SessionProtocol> allowedProtocols,
+                   @Nullable BiPredicate<ClientRequestContext, String> domainFilter, int maxRedirects) {
+        this.allowedProtocols = allowedProtocols;
+        this.domainFilter = domainFilter;
         this.maxRedirects = maxRedirects;
-        this.predicate = predicate;
     }
 
     /**
-     * Returns the maximum number of automatic redirection that the client executes.
-     */
-    int maxRedirects() {
-        return maxRedirects;
-    }
-
-    /**
-     * Returns {@link BiPredicate} that tells whether the request can be redirected to the specified
-     * domain or not.
+     * Returns the allowed {@link SessionProtocol}s.
      */
     @Nullable
-    BiPredicate<ClientRequestContext, String> domainFilter() {
-        return predicate;
+    public Set<SessionProtocol> allowedProtocols() {
+        return allowedProtocols;
+    }
+
+    /**
+     * Returns the {@link BiPredicate} that filters using {@linkplain URI#getHost() host component} of a
+     * redirection URI.
+     */
+    @Nullable
+    public BiPredicate<ClientRequestContext, String> domainFilter() {
+        return domainFilter;
+    }
+
+    /**
+     * Returns the maximum limit number of redirects.
+     */
+    public int maxRedirects() {
+        return maxRedirects;
     }
 
     @Override
     public String toString() {
-        return toStringHelper(this).add("maxRedirects", maxRedirects)
-                                   .add("predicate", predicate)
+        return toStringHelper(this).omitNullValues()
+                                   .add("allowedProtocols", allowedProtocols)
+                                   .add("predicate", domainFilter)
+                                   .add("maxRedirects", maxRedirects)
                                    .toString();
     }
 }

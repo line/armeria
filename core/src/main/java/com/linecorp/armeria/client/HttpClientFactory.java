@@ -17,6 +17,8 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.client.redirect.RedirectConfigBuilder.allowAllDomains;
+import static com.linecorp.armeria.client.redirect.RedirectConfigBuilder.allowSameDomain;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -27,6 +29,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -37,10 +40,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
@@ -69,6 +75,9 @@ import reactor.core.scheduler.NonBlocking;
 final class HttpClientFactory implements ClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClientFactory.class);
+
+    private static final Set<SessionProtocol> httpAndHttps =
+            Sets.immutableEnumSet(SessionProtocol.HTTP, SessionProtocol.HTTPS);
 
     private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
@@ -298,8 +307,7 @@ final class HttpClientFactory implements ClientFactory {
             if (redirectConfig == RedirectConfig.disabled()) {
                 delegate0 = delegate;
             } else {
-                delegate0 = new RedirectingClient(delegate, redirectConfig,
-                                                  !Clients.isUndefinedUri(params.uri()));
+                delegate0 = redirectingClient(params, delegate, redirectConfig);
             }
             return new DefaultWebClient(params, delegate0, meterRegistry);
         } else {
@@ -392,5 +400,50 @@ final class HttpClientFactory implements ClientFactory {
                                      e -> new HttpChannelPool(this, eventLoop,
                                                               sslCtxHttp1Or2, sslCtxHttp1Only,
                                                               connectionPoolListener()));
+    }
+
+    private static HttpClient redirectingClient(ClientBuilderParams params, HttpClient delegate,
+                                                RedirectConfig redirectConfig) {
+        final boolean undefinedUri = Clients.isUndefinedUri(params.uri());
+        final Set<SessionProtocol> allowedProtocols =
+                allowedProtocols(undefinedUri, redirectConfig.allowedProtocols(),
+                                 params.scheme().sessionProtocol());
+        final BiPredicate<ClientRequestContext, String> domainFilter =
+                domainFilter(undefinedUri, redirectConfig.domainFilter());
+        return new RedirectingClient(delegate, allowedProtocols, domainFilter,
+                                     redirectConfig.maxRedirects());
+    }
+
+    private static Set<SessionProtocol> allowedProtocols(boolean undefinedUri,
+                                                         @Nullable Set<SessionProtocol> allowedProtocols,
+                                                         SessionProtocol usedProtocol) {
+        if (undefinedUri) {
+            if (allowedProtocols != null) {
+                return allowedProtocols;
+            }
+            return httpAndHttps;
+        }
+        final ImmutableSet.Builder<SessionProtocol> builder = ImmutableSet.builderWithExpectedSize(2);
+        if (allowedProtocols != null) {
+            builder.addAll(allowedProtocols);
+        }
+        if (SessionProtocol.isHttp(usedProtocol)) {
+            builder.add(SessionProtocol.HTTP);
+        } else if (SessionProtocol.isHttps(usedProtocol)) {
+            builder.add(SessionProtocol.HTTPS);
+        }
+        return builder.build();
+    }
+
+    private static BiPredicate<ClientRequestContext, String> domainFilter(
+            boolean undefinedUri,
+            @Nullable BiPredicate<ClientRequestContext, String> domainFilter) {
+        if (domainFilter != null) {
+            return domainFilter;
+        }
+        if (undefinedUri) {
+            return allowAllDomains;
+        }
+        return allowSameDomain;
     }
 }

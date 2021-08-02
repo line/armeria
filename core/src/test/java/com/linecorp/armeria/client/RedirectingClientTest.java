@@ -15,24 +15,38 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.redirect.RedirectConfig;
+import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
+import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
+import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RedirectingClientTest {
+
+    private static final AtomicInteger requestCounter = new AtomicInteger();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -40,17 +54,30 @@ class RedirectingClientTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.tlsSelfSigned();
             sb.http(0);
+            sb.http(0);
             sb.https(0);
             sb.service("/foo", (ctx, req) -> HttpResponse.ofRedirect("/fooRedirect1"))
               .service("/fooRedirect1", (ctx, req) -> HttpResponse.ofRedirect("/fooRedirect2"))
-              .service("/fooRedirect2", (ctx, req) -> HttpResponse.of("fooRedirection2"));
+              .service("/fooRedirect2", (ctx, req) -> HttpResponse.of(200));
 
-            sb.service("/https", (ctx, req) -> HttpResponse.ofRedirect(
-                    "https://127.0.0.1:" + server.httpsPort() + "/httpsRedirect"))
-              .service("/httpsRedirect", (ctx, req) -> {
-                  assertThat(ctx.sessionProtocol()).isSameAs(SessionProtocol.H2);
-                  return HttpResponse.of("httpsRedirection");
-              });
+            sb.service("/protocolChange", (ctx, req) -> {
+                if (requestCounter.getAndIncrement() > 0) {
+                    assertThat(ctx.sessionProtocol()).isSameAs(SessionProtocol.H2);
+                    return HttpResponse.of(200);
+                } else {
+                    return HttpResponse.ofRedirect(
+                            "https://127.0.0.1:" + server.httpsPort() + "/protocolChange");
+                }
+            });
+
+            sb.service("/portChange", (ctx, req) -> {
+                if (requestCounter.getAndIncrement() > 0) {
+                    return HttpResponse.of(200);
+                } else {
+                    return HttpResponse.ofRedirect(
+                            "http://127.0.0.1:" + otherHttpPort(ctx) + "/portChange");
+                }
+            });
 
             sb.service("/seeOther", (ctx, req) -> HttpResponse.from(
                     req.aggregate().thenApply(aggregatedReq -> {
@@ -59,16 +86,15 @@ class RedirectingClientTest {
                     })))
               .service("/seeOtherRedirect", (ctx, req) -> {
                   assertThat(ctx.method()).isSameAs(HttpMethod.GET);
-                  return HttpResponse.of("seeOtherRedirection");
+                  return HttpResponse.of(200);
               });
 
             sb.service("/anotherDomain", (ctx, req) -> HttpResponse.ofRedirect(
                     "http://foo.com:" + server.httpPort() + "/anotherDomainRedirect"));
-            sb.virtualHost("foo.com").service("/anotherDomainRedirect",
-                                              (ctx, req) -> HttpResponse.of("anotherDomainRedirection"));
+            sb.virtualHost("foo.com").service("/anotherDomainRedirect", (ctx, req) -> HttpResponse.of(200));
 
             sb.service("/removeDotSegments/foo", (ctx, req) -> HttpResponse.ofRedirect("./bar"))
-              .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of("removeDotSegmentsRedirection"));
+              .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of(200));
 
             sb.service("/loop", (ctx, req) -> HttpResponse.ofRedirect("loop1"))
               .service("/loop1", (ctx, req) -> HttpResponse.ofRedirect("loop2"))
@@ -76,19 +102,41 @@ class RedirectingClientTest {
 
             sb.service("/differentHttpMethod", (ctx, req) -> {
                 if (ctx.method() == HttpMethod.GET) {
-                    return HttpResponse.of("differentHttpMethod");
+                    return HttpResponse.of(200);
                 } else {
                     assertThat(ctx.method()).isSameAs(HttpMethod.POST);
                     return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/differentHttpMethod");
                 }
             });
         }
+
+        private int otherHttpPort(ServiceRequestContext ctx) {
+            final Optional<ServerPort> serverPort =
+                    server.server().activePorts().values()
+                          .stream().filter(ServerPort::hasHttp)
+                          .filter(port -> port.localAddress().getPort() !=
+                                          ((InetSocketAddress) ctx.localAddress()).getPort())
+                          .findFirst();
+            assert serverPort.isPresent();
+            return serverPort.get().localAddress().getPort();
+        }
     };
+
+    @BeforeEach
+    void setUp() {
+        requestCounter.set(0);
+    }
 
     @Test
     void redirect_successWithRetry() {
         final AggregatedHttpResponse res = sendRequest(2);
-        assertThat(res.contentUtf8()).isEqualTo("fooRedirection2");
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+    }
+
+    @Test
+    void redirect_failExceedingTotalAttempts() {
+        assertThatThrownBy(() -> sendRequest(1)).hasCauseInstanceOf(TooManyRedirectsException.class)
+                                                .hasMessageContaining("maxRedirects: 1");
     }
 
     private static AggregatedHttpResponse sendRequest(int maxRedirects) {
@@ -101,20 +149,53 @@ class RedirectingClientTest {
     }
 
     @Test
-    void redirect_failExceedingTotalAttempts() {
-        final AggregatedHttpResponse res = sendRequest(1);
-        assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/fooRedirect2");
-    }
-
-    @Test
-    void httpsRedirect() {
+    void protocolChange() {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(ClientFactory.insecure())
                                           .followRedirects()
                                           .build();
-        final AggregatedHttpResponse join = client.get("/https").aggregate().join();
-        assertThat(join.contentUtf8()).isEqualTo("httpsRedirection");
+        assertThatThrownBy(() -> client.get("/protocolChange").aggregate().join())
+                .hasCauseInstanceOf(UnexpectedProtocolRedirectException.class)
+                .hasMessageContaining("redirectProtocol: https (expected: [http])");
+
+        requestCounter.set(0);
+        final WebClient client1 = WebClient.builder(server.httpUri())
+                                           .factory(ClientFactory.insecure())
+                                           .followRedirects(RedirectConfig.builder()
+                                                                          .allowProtocols(SessionProtocol.HTTPS)
+                                                                          .build())
+                                           .build();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client1.get("/protocolChange").aggregate().join().status()).isSameAs(HttpStatus.OK);
+
+            final ClientRequestContext ctx = captor.get();
+            final List<SessionProtocol> protocols = ctx.log().whenComplete().join().children().stream()
+                                                       .map(log -> log.ensureComplete().sessionProtocol())
+                                                       .distinct()
+                                                       .collect(toImmutableList());
+            // H2C and H2, which are Actual protocols, are set
+            assertThat(protocols).containsExactly(SessionProtocol.H2C, SessionProtocol.H2);
+        }
+    }
+
+    @Test
+    void portChange() {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .followRedirects()
+                                          .build();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.get("/portChange").aggregate().join().status()).isSameAs(HttpStatus.OK);
+
+            final ClientRequestContext ctx = captor.get();
+            final List<Integer> remotePorts =
+                    ctx.log().whenComplete().join().children().stream()
+                       .map(log -> ((InetSocketAddress) log.ensureComplete()
+                                                           .channel().remoteAddress())
+                               .getPort())
+                       .distinct()
+                       .collect(toImmutableList());
+            assertThat(remotePorts).hasSize(2);
+        }
     }
 
     @Test
@@ -122,28 +203,27 @@ class RedirectingClientTest {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .followRedirects()
                                           .build();
-        final AggregatedHttpResponse join = client.post("/seeOther", "hello!").aggregate().join();
-        assertThat(join.contentUtf8()).isEqualTo("seeOtherRedirection");
+        final AggregatedHttpResponse res = client.post("/seeOther", "hello!").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
     }
 
     @Test
     void webClientCreatedWithBaseUri_doesNotAllowRedirectionToOtherDomain() {
         try (ClientFactory factory = localhostAccessingClientFactory()) {
-            WebClient client = WebClient.builder(server.httpUri())
-                                        .factory(factory)
-                                        .followRedirects()
-                                        .build();
-            AggregatedHttpResponse join = client.get("/anotherDomain").aggregate().join();
-            assertThat(join.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-            assertThat(join.headers().get(HttpHeaderNames.LOCATION)).contains("/anotherDomainRedirect");
+            final WebClient client = WebClient.builder(server.httpUri())
+                                              .factory(factory)
+                                              .followRedirects()
+                                              .build();
+            assertThatThrownBy(() -> client.get("/anotherDomain").aggregate().join())
+                    .hasCauseInstanceOf(UnexpectedDomainRedirectException.class)
+                    .hasMessageContaining("foo.com is not allowed to redirect.");
 
-            client = WebClient.builder(server.httpUri())
-                              .factory(factory)
-                              .followRedirects(RedirectConfig.builder().allowDomains("foo.com").build())
-                              .build();
-
-            join = client.get("/anotherDomain").aggregate().join();
-            assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
+            final WebClient client1 = WebClient.builder(server.httpUri())
+                                               .factory(factory)
+                                               .followRedirects(
+                                                       RedirectConfig.builder().allowDomains("foo.com").build())
+                                               .build();
+            assertThat(client1.get("/anotherDomain").aggregate().join().status()).isSameAs(HttpStatus.OK);
         }
     }
 
@@ -154,10 +234,10 @@ class RedirectingClientTest {
                                               .factory(factory)
                                               .followRedirects()
                                               .build();
-            final AggregatedHttpResponse join = client.get(server.httpUri() + "/anotherDomain")
-                                                      .aggregate()
-                                                      .join();
-            assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
+            final AggregatedHttpResponse res = client.get(server.httpUri() + "/anotherDomain")
+                                                     .aggregate()
+                                                     .join();
+            assertThat(res.status()).isSameAs(HttpStatus.OK);
         }
     }
 
@@ -169,27 +249,27 @@ class RedirectingClientTest {
                                           .factory(ClientFactory.insecure())
                                           .followRedirects()
                                           .build();
-        final AggregatedHttpResponse join = client.get("/removeDotSegments/foo").aggregate().join();
-        assertThat(join.contentUtf8()).isEqualTo("removeDotSegmentsRedirection");
+        final AggregatedHttpResponse res = client.get("/removeDotSegments/foo").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
     }
 
     @Test
-    void redirectLoopsException() {
+    void cyclicRedirectsException() {
         final WebClient client = Clients.builder(server.httpUri())
                                         .followRedirects()
                                         .build(WebClient.class);
         assertThatThrownBy(() -> client.get("/loop").aggregate().join()).hasMessageContainingAll(
-                "The initial request path: /loop, redirect paths:", "/loop1", "/loop2");
+                "The original URI:", "/loop", "redirect URIs:", "/loop1", "/loop2");
     }
 
     @Test
-    void notRedirectLoopsWhenHttpMethodDiffers() {
+    void notCyclicRedirectsWhenHttpMethodDiffers() {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .followRedirects()
                                           .build();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            assertThat(client.post("/differentHttpMethod", HttpData.empty()).aggregate().join().contentUtf8())
-                    .isEqualTo("differentHttpMethod");
+            assertThat(client.post("/differentHttpMethod", HttpData.empty()).aggregate().join().status())
+                    .isSameAs(HttpStatus.OK);
             assertThat(captor.get().log().whenComplete().join().children().size()).isEqualTo(2);
         }
     }

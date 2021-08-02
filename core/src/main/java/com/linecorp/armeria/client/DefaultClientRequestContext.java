@@ -495,10 +495,7 @@ public final class DefaultClientRequestContext
                     return newDerivedContext(id, req, rpcReq, newHeaders, sessionProtocol(), endpoint, newPath);
                 }
                 final URI uri = URI.create(req.path());
-                final Scheme scheme = Scheme.tryParse(uri.getScheme());
-                if (scheme == null) {
-                    throw new IllegalArgumentException("failed to parse a scheme: " + uri.getScheme());
-                }
+                final Scheme scheme = Scheme.parse(uri.getScheme());
                 final SessionProtocol protocol = scheme.sessionProtocol();
                 final Endpoint newEndpoint = Endpoint.parse(uri.getAuthority());
                 final String rawQuery = uri.getRawQuery();

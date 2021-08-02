@@ -16,22 +16,23 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.linecorp.armeria.client.DefaultWebClient.pathWithQuery;
-import static com.linecorp.armeria.client.RedirectConfigBuilder.allowSameDomain;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 
 import java.net.URI;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.HashMultimap;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 
+import com.linecorp.armeria.client.redirect.CyclicRedirectsException;
+import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
+import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
+import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -42,22 +43,28 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+
+import io.netty.util.NetUtil;
 
 final class RedirectingClient extends SimpleDecoratingHttpClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(RedirectingClient.class);
+    private final Set<SessionProtocol> allowedProtocols;
+    private final BiPredicate<ClientRequestContext, String> domainFilter;
+    private final int maxRedirects;
 
-    private final RedirectConfig redirectConfig;
-    private final boolean withBaseUri;
-
-    RedirectingClient(HttpClient delegate, RedirectConfig redirectConfig, boolean withBaseUri) {
+    RedirectingClient(HttpClient delegate, Set<SessionProtocol> allowedProtocols,
+                      BiPredicate<ClientRequestContext, String> domainFilter, int maxRedirects) {
         super(delegate);
-        this.redirectConfig = redirectConfig;
-        this.withBaseUri = withBaseUri;
+        this.allowedProtocols = allowedProtocols;
+        this.domainFilter = domainFilter;
+        this.maxRedirects = maxRedirects;
     }
 
     @Override
@@ -65,7 +72,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
         final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
-        final RedirectContext redirectCtx = new RedirectContext(req, res, responseFuture);
+        final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
         execute0(ctx, redirectCtx, reqDuplicator, true);
         return res;
     }
@@ -135,46 +142,40 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             try {
                 redirectUri = URI.create(requestHeaders.path()).resolve(location);
                 if (redirectUri.isAbsolute()) {
-                    final BiPredicate<ClientRequestContext, String> domainFilter =
-                            redirectConfig.domainFilter();
-                    if (domainFilter != null) {
-                        if (!domainFilter.test(ctx, redirectUri.getHost())) {
-                            logger.info("Stop redirection because the domain is not allowed to redirect: {}",
-                                        redirectUri.getHost());
-                            endRedirect(ctx, reqDuplicator, responseFuture, response);
-                            return;
-                        }
-                    } else if (withBaseUri && !allowSameDomain.test(ctx, redirectUri.getHost())) {
-                        logger.info("Stop redirection because the domain is not allowed to redirect: {}",
-                                    redirectUri.getHost());
-                        endRedirect(ctx, reqDuplicator, responseFuture, response);
+                    final SessionProtocol redirectProtocol = Scheme.parse(redirectUri.getScheme())
+                                                                   .sessionProtocol();
+                    if (!allowedProtocols.contains(redirectProtocol)) {
+                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                                        UnexpectedProtocolRedirectException.of(
+                                                redirectProtocol, allowedProtocols));
+                        return;
+                    }
+
+                    if (!domainFilter.test(ctx, redirectUri.getHost())) {
+                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                                        UnexpectedDomainRedirectException.of(redirectUri.getHost()));
                         return;
                     }
                 }
             } catch (Throwable t) {
-                abortResponse(response, derivedCtx, t);
-                handleException(ctx, reqDuplicator, responseFuture, t, false);
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
                 return;
             }
 
             final HttpRequestDuplicator newReqDuplicator =
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri.toString());
-            if (isRedirectLoops(ctx, redirectCtx, redirectUri, newReqDuplicator.headers())) {
-                final CycleRedirectsException exception = redirectLoopsException(redirectCtx);
-                abortResponse(response, derivedCtx, exception);
-                handleException(ctx, newReqDuplicator, responseFuture, exception, false);
+            if (isCyclicRedirects(ctx, redirectCtx, redirectUri, newReqDuplicator.headers())) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                                CyclicRedirectsException.of(redirectCtx.originalUri(),
+                                                            redirectCtx.redirectUris().values()));
                 return;
             }
 
-            final Multimap<HttpMethod, String> redirectPaths = redirectCtx.redirectPaths();
-            assert redirectPaths != null;
-            if (redirectPaths.size() > redirectConfig.maxRedirects()) {
-                final CycleRedirectsException exception = redirectLoopsException(redirectCtx);
-                abortResponse(response, derivedCtx, exception);
-                handleException(ctx, newReqDuplicator, responseFuture, exception, false);
-                logger.info("Stop redirection because the number of redirection exceeds the limit: {}",
-                             redirectConfig.maxRedirects());
-                endRedirect(ctx, newReqDuplicator, responseFuture, response);
+            final Multimap<HttpMethod, String> redirectUris = redirectCtx.redirectUris();
+            if (redirectUris.size() > maxRedirects) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
+                                response, TooManyRedirectsException.of(maxRedirects,
+                                                                       redirectUris.values()));
                 return;
             }
 
@@ -203,51 +204,31 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
     }
 
-    private static boolean isRedirectLoops(ClientRequestContext ctx, RedirectContext redirectCtx, URI newUri,
-                                           RequestHeaders newHeaders) {
-        final String newPath = pathWithQuery(newUri, newUri.getRawQuery());
-        final HttpRequest originalRequest = redirectCtx.request();
-        if (originalRequest.path().equals(newPath) && originalRequest.method() == newHeaders.method()) {
-            final String newHost = newUri.getHost();
-            final Endpoint endpoint = ctx.endpoint();
-            // endpoint is not null because we already received the response.
-            assert endpoint != null;
-            if (newHost == null || newHost.equals(endpoint.host())) {
-                return true;
-            }
-        }
-        return !redirectCtx.addRedirectPath(newUri.toString(), newHeaders.method());
-    }
-
-    private static CycleRedirectsException redirectLoopsException(RedirectContext redirectCtx) {
-        final String originalPath = redirectCtx.request.path();
-        final Multimap<HttpMethod, String> redirectPaths = redirectCtx.redirectPaths();
-        final CycleRedirectsException exception;
-        if (redirectPaths == null) {
-            exception = new CycleRedirectsException(originalPath);
-        } else {
-            exception = new CycleRedirectsException(originalPath, redirectPaths.values());
-        }
-        return exception;
-    }
-
-    private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator reqDuplicator,
-                                        CompletableFuture<HttpResponse> future, Throwable cause,
-                                        boolean endRequestLog) {
-        future.completeExceptionally(cause);
-        reqDuplicator.abort(cause);
-        if (endRequestLog) {
-            ctx.logBuilder().endRequest(cause);
-        }
-        ctx.logBuilder().endResponse(cause);
-    }
-
     private static void endRedirect(ClientRequestContext ctx, HttpRequestDuplicator reqDuplicator,
                                     CompletableFuture<HttpResponse> responseFuture,
                                     HttpResponse response) {
         ctx.logBuilder().endResponseWithLastChild();
         responseFuture.complete(response);
         reqDuplicator.close();
+    }
+
+    private static void handleException(ClientRequestContext ctx, ClientRequestContext derivedCtx,
+                                        HttpRequestDuplicator reqDuplicator,
+                                        CompletableFuture<HttpResponse> future, HttpResponse originalRes,
+                                        Throwable cause) {
+        abortResponse(originalRes, derivedCtx, cause);
+        handleException(ctx, reqDuplicator, future, cause, false);
+    }
+
+    private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator reqDuplicator,
+                                        CompletableFuture<HttpResponse> future, Throwable cause,
+                                        boolean initialAttempt) {
+        future.completeExceptionally(cause);
+        reqDuplicator.abort(cause);
+        if (initialAttempt) {
+            ctx.logBuilder().endRequest(cause);
+        }
+        ctx.logBuilder().endResponse(cause);
     }
 
     private static void abortResponse(HttpResponse originalRes, ClientRequestContext derivedCtx,
@@ -264,19 +245,103 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
     }
 
-    private static class RedirectContext {
+    private static boolean isCyclicRedirects(ClientRequestContext ctx, RedirectContext redirectCtx, URI newUri,
+                                             RequestHeaders newHeaders) {
+        // Build the full uri so we don't consider the situation, which session protocol or port is changed,
+        // as a cyclic redirects.
+        final String newFullUri;
+        if (newUri.isAbsolute()) {
+            newFullUri = newUri.toString();
+        } else {
+            newFullUri = buildUri(ctx, newHeaders);
+        }
+
+        final boolean added = redirectCtx.addRedirectUri(newHeaders.method(), newFullUri);
+        if (!added) {
+            return true;
+        }
+
+        return redirectCtx.originalUri().equals(newFullUri) &&
+               redirectCtx.request().method() == newHeaders.method();
+    }
+
+    private static String buildUri(ClientRequestContext ctx, RequestHeaders headers) {
+        final String originalUri;
+        try (TemporaryThreadLocals threadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder sb = threadLocals.stringBuilder();
+            if (SessionProtocol.isHttp(ctx.sessionProtocol())) {
+                sb.append(SessionProtocol.HTTP.uriText());
+            } else {
+                sb.append(SessionProtocol.HTTPS.uriText());
+            }
+            sb.append("://");
+            String authority = headers.authority();
+            final Endpoint endpoint = ctx.endpoint();
+            assert endpoint != null;
+            if (authority == null) {
+                authority = endpoint.authority();
+            }
+            setAuthorityAndPort(ctx, endpoint, sb, authority);
+            sb.append(headers.path());
+            originalUri = sb.toString();
+        }
+        return originalUri;
+    }
+
+    private static void setAuthorityAndPort(ClientRequestContext ctx, Endpoint endpoint, StringBuilder sb,
+                                            String authority) {
+        // Add port number as well so that we don't raise a CyclicRedirectsException when the port is
+        // different.
+
+        if (authority.charAt(0) == '[') {
+            final int closingBracketPos = authority.lastIndexOf(']');
+            if (closingBracketPos < 0) {
+                // Should never reach here because we already validate the authority.
+                throw new IllegalStateException("Invalid authority: " + authority);
+            }
+            sb.append(authority);
+            if (authority.indexOf(':', closingBracketPos) < 0) {
+                // The authority does not have port number so we add it.
+                addPort(ctx, endpoint, sb);
+            }
+            return;
+        }
+
+        if (NetUtil.isValidIpV6Address(authority)) {
+            sb.append('[');
+            sb.append(authority);
+            sb.append(']');
+            addPort(ctx, endpoint, sb);
+            return;
+        }
+
+        sb.append(authority);
+        if (authority.lastIndexOf(':') < 0) {
+            addPort(ctx, endpoint, sb);
+        }
+    }
+
+    private static void addPort(ClientRequestContext ctx, Endpoint endpoint, StringBuilder sb) {
+        sb.append(':');
+        sb.append(endpoint.port(ctx.sessionProtocol().defaultPort()));
+    }
+
+    @VisibleForTesting
+    static class RedirectContext {
 
         private final HttpRequest request;
         private final CompletableFuture<Void> responseWhenComplete;
         private final CompletableFuture<HttpResponse> responseFuture;
-        @Nullable
-        private Multimap<HttpMethod, String> redirectPaths;
+        private final Multimap<HttpMethod, String> redirectUris = LinkedListMultimap.create();
+        private final String originalUri;
 
-        RedirectContext(HttpRequest request, HttpResponse response,
-                        CompletableFuture<HttpResponse> responseFuture) {
+        RedirectContext(ClientRequestContext ctx, HttpRequest request,
+                        HttpResponse response, CompletableFuture<HttpResponse> responseFuture) {
             this.request = request;
             responseWhenComplete = response.whenComplete();
             this.responseFuture = responseFuture;
+
+            originalUri = buildUri(ctx, request.headers());
         }
 
         HttpRequest request() {
@@ -291,16 +356,16 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return responseFuture;
         }
 
-        boolean addRedirectPath(String redirectPath, HttpMethod method) {
-            if (redirectPaths == null) {
-                redirectPaths = HashMultimap.create();
-            }
-            return redirectPaths.put(method, redirectPath);
+        String originalUri() {
+            return originalUri;
         }
 
-        @Nullable
-        Multimap<HttpMethod, String> redirectPaths() {
-            return redirectPaths;
+        boolean addRedirectUri(HttpMethod method, String redirectUri) {
+            return redirectUris.put(method, redirectUri);
+        }
+
+        Multimap<HttpMethod, String> redirectUris() {
+            return redirectUris;
         }
     }
 }

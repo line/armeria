@@ -13,28 +13,34 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.client.redirect;
 
-import com.google.common.base.Joiner;
+import static java.util.Objects.requireNonNull;
+
+import java.net.URI;
 
 import com.linecorp.armeria.common.Flags;
 
 /**
- * An exception indicating that a client detected cyclical redirections.
- * See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">cyclical redirections</a>
- * for more information.
+ * An exception indicating that the {@linkplain URI#getHost() host component} of the redirection URI
+ * is not allowed to redirect.
+ *
+ * @see RedirectConfigBuilder#allowDomains(Iterable)
  */
-public final class CycleRedirectsException extends RuntimeException {
-    private static final long serialVersionUID = -2969770339558298361L;
+public final class UnexpectedDomainRedirectException extends RuntimeException {
 
-    private static final Joiner joiner = Joiner.on(';');
+    private static final long serialVersionUID = 3127736510630287566L;
 
-    CycleRedirectsException(String originalPath) {
-        super("The request path: " + originalPath);
+    /**
+     * Returns a new {@link UnexpectedDomainRedirectException}.
+     */
+    public static UnexpectedDomainRedirectException of(String domain) {
+        requireNonNull(domain, "domain");
+        return new UnexpectedDomainRedirectException(domain);
     }
 
-    CycleRedirectsException(String originalPath, Iterable<String> paths) {
-        super("The initial request path: " + originalPath + ", redirect paths: " + joiner.join(paths));
+    private UnexpectedDomainRedirectException(String domain) {
+        super(domain + " is not allowed to redirect.");
     }
 
     @Override
