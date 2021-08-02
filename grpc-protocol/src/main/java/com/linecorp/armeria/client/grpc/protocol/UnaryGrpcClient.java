@@ -160,9 +160,51 @@ public final class UnaryGrpcClient {
             isGrpcWebText = UnaryGrpcSerializationFormats.isGrpcWebText(serializationFormat);
         }
 
+        @Override
+        public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
+            return HttpResponse.from(
+                    req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
+                       .thenCompose(
+                               msg -> {
+                                   try (HttpData content = msg.content()) {
+                                       final ByteBuf buf = content.byteBuf();
+                                       final HttpData framed;
+                                       try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
+                                               ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText)) {
+                                           framed = framer.writePayload(buf);
+                                       }
+
+                                       try {
+                                           return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
+                                                          .aggregateWithPooledObjects(ctx.eventLoop(),
+                                                                                      ctx.alloc());
+                                       } catch (Exception e) {
+                                           throw new ArmeriaStatusException(StatusCodes.INTERNAL,
+                                                                            "Error executing request.");
+                                       }
+                                   }
+                               })
+                       .thenCompose(msg -> {
+                           try (HttpData content = msg.content()) {
+                               if (!msg.status().equals(HttpStatus.OK) || content.isEmpty()) {
+                                   // Nothing to deframe.
+                                   return CompletableFuture.completedFuture(msg.toHttpResponse());
+                               }
+
+                               final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                               final ArmeriaMessageDeframer deframer =
+                                       new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+                               msg.toHttpResponse().decode(deframer, ctx.alloc(),
+                                                           byteBufConverter(ctx.alloc(), isGrpcWebText))
+                                  .subscribe(singleSubscriber(ctx, msg, serializationFormat, responseFuture),
+                                             ctx.eventLoop(), CANCELLATION_OPTION);
+                               return responseFuture;
+                           }
+                       }), ctx.eventLoop());
+        }
+
         private static Subscriber<DeframedMessage> singleSubscriber(
-                ClientRequestContext ctx, AggregatedHttpResponse msg,
-                SerializationFormat serializationFormat,
+                ClientRequestContext ctx, AggregatedHttpResponse msg, SerializationFormat serializationFormat,
                 CompletableFuture<HttpResponse> responseFuture) {
 
             return new Subscriber<DeframedMessage>() {
@@ -265,49 +307,6 @@ public final class UnaryGrpcClient {
                     }
                 }
             };
-        }
-
-        @Override
-        public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(
-                    req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
-                       .thenCompose(
-                               msg -> {
-                                   try (HttpData content = msg.content()) {
-                                       final ByteBuf buf = content.byteBuf();
-                                       final HttpData framed;
-                                       try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                                               ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText)) {
-                                           framed = framer.writePayload(buf);
-                                       }
-
-                                       try {
-                                           return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
-                                                          .aggregateWithPooledObjects(ctx.eventLoop(),
-                                                                                      ctx.alloc());
-                                       } catch (Exception e) {
-                                           throw new ArmeriaStatusException(StatusCodes.INTERNAL,
-                                                                            "Error executing request.");
-                                       }
-                                   }
-                               })
-                       .thenCompose(msg -> {
-                           try (HttpData content = msg.content()) {
-                               if (!msg.status().equals(HttpStatus.OK) || content.isEmpty()) {
-                                   // Nothing to deframe.
-                                   return CompletableFuture.completedFuture(msg.toHttpResponse());
-                               }
-
-                               final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                               final ArmeriaMessageDeframer deframer =
-                                       new ArmeriaMessageDeframer(Integer.MAX_VALUE);
-                               msg.toHttpResponse().decode(deframer, ctx.alloc(),
-                                                           byteBufConverter(ctx.alloc(), isGrpcWebText))
-                                  .subscribe(singleSubscriber(ctx, msg, serializationFormat, responseFuture),
-                                             ctx.eventLoop(), CANCELLATION_OPTION);
-                               return responseFuture;
-                           }
-                       }), ctx.eventLoop());
         }
     }
 }
