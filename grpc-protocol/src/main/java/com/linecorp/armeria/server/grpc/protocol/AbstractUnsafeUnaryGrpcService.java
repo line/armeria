@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -125,6 +126,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                     final HttpHeadersBuilder trailersBuilder = HttpHeaders.builder();
                     GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
                     final HttpHeaders trailers = trailersBuilder.build();
+                    GrpcWebTrailers.set(ctx, trailers);
                     final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                             ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText);
                     final HttpData content = framer.writePayload(responseMessage);
@@ -138,17 +140,19 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                     return HttpResponse.of(responseHeaders, content, trailers);
                 }).exceptionally(t -> {
                     // Send Trailers-Only → HTTP-Status Content-Type Trailers.
-                    final ResponseHeadersBuilder trailers = ResponseHeaders
+                    final ResponseHeadersBuilder trailersBuilder = ResponseHeaders
                             .builder(HttpStatus.OK).contentType(serializationFormat.mediaType());
                     if (t instanceof ArmeriaStatusException) {
                         final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
                         GrpcTrailersUtil.addStatusMessageToTrailers(
-                                trailers, statusException.getCode(), statusException.getMessage());
+                                trailersBuilder, statusException.getCode(), statusException.getMessage());
                     } else {
                         GrpcTrailersUtil.addStatusMessageToTrailers(
-                                trailers, StatusCodes.INTERNAL, t.getMessage());
+                                trailersBuilder, StatusCodes.INTERNAL, t.getMessage());
                     }
-                    return HttpResponse.of(trailers.build());
+                    final ResponseHeaders trailers = trailersBuilder.build();
+                    GrpcWebTrailers.set(ctx, trailers);
+                    return HttpResponse.of(trailers);
                 });
 
         return HttpResponse.from(responseFuture);

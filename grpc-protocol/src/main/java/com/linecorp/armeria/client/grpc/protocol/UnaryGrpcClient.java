@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
@@ -181,6 +182,12 @@ public final class UnaryGrpcClient {
                                })
                        .thenCompose(msg -> {
                            if (!msg.status().equals(HttpStatus.OK) || msg.content().isEmpty()) {
+                               // Status can either be in the headers or trailers depending on error.
+                               if (msg.headers().get(GrpcHeaderNames.GRPC_STATUS) != null) {
+                                   GrpcWebTrailers.set(ctx, msg.headers());
+                               } else {
+                                   GrpcWebTrailers.set(ctx, msg.trailers());
+                               }
                                // Nothing to deframe.
                                return CompletableFuture.completedFuture(msg.toHttpResponse());
                            }
@@ -265,6 +272,7 @@ public final class UnaryGrpcClient {
                     if (trailers == null) {
                         trailers = msg.trailers();
                     }
+                    GrpcWebTrailers.set(ctx, trailers);
                     responseFuture.complete(HttpResponse.of(msg.headers(), content, trailers));
                 }
             };
