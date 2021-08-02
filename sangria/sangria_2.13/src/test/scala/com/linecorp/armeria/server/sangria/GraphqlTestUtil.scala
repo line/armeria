@@ -38,7 +38,7 @@ object GraphqlTestUtil {
         .add("query", query)
         .add("variables", mapper.writeValueAsString(variables))
         .build()
-      client.get(s"path?${graphql.toQueryString()}").aggregate().join()
+      client.get(s"$path?${graphql.toQueryString()}").aggregate().join()
     } else {
       val graphql =
         if (variables.isEmpty) {
