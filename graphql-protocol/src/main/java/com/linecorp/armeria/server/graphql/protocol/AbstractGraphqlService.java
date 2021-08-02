@@ -78,7 +78,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             extensions = toMap(queryString.get("extensions"));
         } catch (JsonProcessingException ex) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                   "failed to parse a GraphQL query: " + ctx.query());
+                                   "Failed to parse a GraphQL query: " + ctx.query());
         }
 
         return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions,
@@ -105,7 +105,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     requestMap = parseJsonString(body);
                 } catch (JsonProcessingException ex) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                           "failed to parse a JSON document: " + body);
+                                           "Failed to parse a JSON document: " + body);
                 }
 
                 final String query = (String) requestMap.get("query");

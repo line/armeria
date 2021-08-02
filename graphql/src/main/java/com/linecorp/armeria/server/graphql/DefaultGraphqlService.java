@@ -65,8 +65,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final MediaType produceType = req.produceType();
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
-                                   "Only application/graphql+json and application/json compatible media types" +
-                                   " are acceptable");
+                                   "Only application/graphql+json and application/json compatible " +
+                                   "media types are acceptable");
         }
 
         final ExecutionInput.Builder builder = ExecutionInput.newExecutionInput(req.query());

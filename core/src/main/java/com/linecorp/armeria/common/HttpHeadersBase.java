@@ -515,9 +515,9 @@ class HttpHeadersBase
     }
 
     final void accept(Iterable<MediaType> newAcceptTypes) {
-        requireNonNull(newAcceptTypes, "contentTypes");
+        requireNonNull(newAcceptTypes, "newAcceptTypes");
         final int size = Iterables.size(newAcceptTypes);
-        checkArgument(size > 0, "contentTypes is empty");
+        checkArgument(size > 0, "newAcceptTypes is empty");
 
         @SuppressWarnings("unchecked")
         List<MediaType> cachedAcceptTypes = (List<MediaType>) cache.get(HttpHeaderNames.ACCEPT);
