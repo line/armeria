@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 import com.linecorp.armeria.server.graphql.protocol.GraphqlRequest;
@@ -124,9 +123,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                         executionResult.getData().toString());
             final ExecutionResult error =
                     newExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
-            final ResponseHeaders headers =
-                    ResponseHeaders.builder(HttpStatus.NOT_IMPLEMENTED).contentType(produceType).build();
-            return HttpResponse.ofJson(headers, error.toSpecification());
+            return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, produceType, error.toSpecification());
         }
         return HttpResponse.ofJson(produceType, executionResult.toSpecification());
     }

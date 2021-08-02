@@ -45,13 +45,13 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
   } test(s"a graphql resolver should be executed in $method $path") {
     val query1 =
       """
-          query GetProductById {
-            product(id: "1") {
-              id
-              name
-            }
-          }
-          """
+      query GetProductById {
+        product(id: "1") {
+          id
+          name
+        }
+      }
+      """
 
     val response1 = executeQuery(client, method = method, path = path, query = query1)
     println(response1.contentUtf8())
@@ -68,13 +68,13 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
 
     val query2 =
       """
-          query GetProductById {
-            products {
-              id
-              name
-            }
-          }
-          """
+      query GetProductById {
+        products {
+          id
+          name
+        }
+      }
+      """
 
     val response2 = executeQuery(client, method = method, path = path, query = query2)
     assertThatJson(response2.contentUtf8()).isEqualTo("""

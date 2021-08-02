@@ -45,7 +45,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 class AbstractGraphqlServiceTest {
 
-    TestGraphqlService testGraphqlService;
+    private TestGraphqlService testGraphqlService;
 
     @BeforeEach
     void setUp() {
