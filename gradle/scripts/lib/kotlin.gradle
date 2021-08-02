@@ -38,4 +38,15 @@ configure(projectsWithFlags('kotlin')) {
             project.ext.getLintTask().dependsOn(tasks.ktlintCheck)
         }
     }
+
+    // A workaround for runtime JAR files in the classpath should have the same version.
+    // See: https://stackoverflow.com/questions/42569445/warning-kotlin-runtime-jar-files-in-the-classpath-should-have-the-same-version
+    configurations.all {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            def requested = details.requested
+            if (requested.group == 'org.jetbrains.kotlin' && requested.name == 'kotlin-reflect') {
+                details.useVersion managedVersions['org.jetbrains.kotlin:kotlin-reflect']
+            }
+        }
+    }
 }

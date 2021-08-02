@@ -498,7 +498,8 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: '1.5.10' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.10' }
+  kotlin-reflect: { version: *KOTLIN_VERSION }
 
 org.jetbrains.kotlinx:
   kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.5.0' }
