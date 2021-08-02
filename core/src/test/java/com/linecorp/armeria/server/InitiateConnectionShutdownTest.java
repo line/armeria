@@ -26,7 +26,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -122,11 +121,10 @@ class InitiateConnectionShutdownTest {
 
     private void makeHttp2Request(String path) throws Exception {
         final AtomicBoolean finished = new AtomicBoolean();
-        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
-                invocation -> {
-                    finished.set(true);
-                    return 0;
-                });
+        doAnswer((Answer<Integer>) invocation -> {
+            finished.set(true);
+            return 0;
+        }).when(clientListener).onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean());
         doAnswer((Answer<Void>) invocation -> {
             // Retain buffer for comparison in tests.
             final ByteBuf buf = invocation.getArgument(3);
@@ -142,8 +140,8 @@ class InitiateConnectionShutdownTest {
             http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, true, ctx.newPromise());
             http2Client.flush(ctx);
         });
-        await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
-        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+        await().untilTrue(finished);
+        await().untilTrue(connectionClosed);
     }
 
     @BeforeEach
@@ -267,7 +265,7 @@ class InitiateConnectionShutdownTest {
                         .extracting(Header::getValue).containsExactly("close");
             }
         }
-        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+        await().untilTrue(connectionClosed);
     }
 
     @ParameterizedTest
@@ -293,7 +291,7 @@ class InitiateConnectionShutdownTest {
                         .extracting(Header::getValue).containsExactly("close");
             }
         }
-        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
+        await().untilTrue(connectionClosed);
     }
 
     private static class AnnotatedTestService {
