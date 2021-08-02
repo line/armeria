@@ -219,8 +219,9 @@ public final class RequestContextUtil {
     }
 
     /**
-     * Invokes {@link RequestContext#hook()} and returns {@link SafeCloseable} which
-     * pops the current {@link RequestContext} in the storage and pushes back the specified {@code toRestore}.
+     * Invokes {@link DefaultServiceRequestContext#hook()} or {@link DefaultClientRequestContext#hook()} and
+     * returns {@link SafeCloseable} which pops the current {@link RequestContext} in the storage and pushes
+     * back the specified {@code toRestore}.
      */
     public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");

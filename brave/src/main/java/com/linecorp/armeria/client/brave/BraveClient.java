@@ -139,8 +139,11 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         if (scopeDecoratorAdded && !span.isNoop() && ctx instanceof DefaultClientRequestContext) {
             final DefaultClientRequestContext defaultCtx = (DefaultClientRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
-            defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
-                                                                    CLIENT_REQUEST_DECORATING_SCOPE)::close);
+            defaultCtx.hook(() -> {
+                final Scope scope = currentTraceContext.decorateScope(span.context(),
+                                                                      CLIENT_REQUEST_DECORATING_SCOPE);
+                return scope::close;
+            });
         }
 
         maybeAddTagsToSpan(ctx, braveReq, span);

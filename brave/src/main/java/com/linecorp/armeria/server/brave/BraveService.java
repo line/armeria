@@ -104,8 +104,11 @@ public final class BraveService extends SimpleDecoratingHttpService {
             ctx instanceof DefaultServiceRequestContext) {
             final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
-            defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
-                                                                    SERVICE_REQUEST_DECORATING_SCOPE)::close);
+            defaultCtx.hook(() -> {
+                final Scope scope = currentTraceContext.decorateScope(span.context(),
+                                                                      SERVICE_REQUEST_DECORATING_SCOPE);
+                return scope::close;
+            });
         }
 
         maybeAddTagsToSpan(ctx, braveReq, span);

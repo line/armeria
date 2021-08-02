@@ -32,7 +32,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,8 +45,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -55,7 +52,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
@@ -81,11 +77,6 @@ public final class DefaultServiceRequestContext
     private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, Supplier>
-            contextHookUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultServiceRequestContext.class, Supplier.class, "contextHook");
 
     private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
@@ -113,8 +104,6 @@ public final class DefaultServiceRequestContext
     private volatile HttpHeaders additionalResponseHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseTrailersUpdater`
     private volatile HttpHeaders additionalResponseTrailers;
-    @Nullable // Updated via `contextHookUpdater`
-    private volatile Supplier<SafeCloseable> contextHook;
 
     @Nullable
     private String strVal;
@@ -282,51 +271,6 @@ public final class DefaultServiceRequestContext
     @Override
     public ByteBufAllocator alloc() {
         return ch.alloc();
-    }
-
-    /**
-     * Adds a hook which is invoked whenever this {@link DefaultServiceRequestContext} is pushed to the
-     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by {@code contextHook} will be called
-     * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
-     * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
-     *
-     * <p>Note that this operation is highly performance-sensitive operation, and thus
-     * it's not a good idea to run a time-consuming task.
-     */
-    @UnstableApi
-    public void hook(Supplier<? extends SafeCloseable> contextHook) {
-        requireNonNull(contextHook, "contextHook");
-        for (;;) {
-            final Supplier<? extends SafeCloseable> oldContextHook = this.contextHook;
-
-            final Supplier<? extends SafeCloseable> newContextHook;
-            if (oldContextHook == null) {
-                newContextHook = contextHook;
-            } else {
-                newContextHook = () -> {
-                    final SafeCloseable oldHook = oldContextHook.get();
-                    final SafeCloseable newHook = contextHook.get();
-                    return () -> {
-                        oldHook.close();
-                        newHook.close();
-                    };
-                };
-            }
-
-            if (contextHookUpdater.compareAndSet(this, oldContextHook, newContextHook)) {
-                break;
-            }
-        }
-    }
-
-    /**
-     * Returns the hook which is invoked whenever this {@link DefaultServiceRequestContext} is pushed to the
-     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
-     * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
-     */
-    @UnstableApi
-    public Supplier<SafeCloseable> hook() {
-        return contextHook;
     }
 
     @Nullable
