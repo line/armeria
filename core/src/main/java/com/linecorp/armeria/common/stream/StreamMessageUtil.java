@@ -53,8 +53,6 @@ final class StreamMessageUtil {
             return;
         }
 
-        PooledObjects.close(obj);
-
         if (obj instanceof SafeCloseable) {
             ((SafeCloseable) obj).close();
         }
