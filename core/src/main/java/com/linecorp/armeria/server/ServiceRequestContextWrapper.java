@@ -226,11 +226,6 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration) {
-        return delegate().initiateConnectionShutdown(drainDuration);
-    }
-
-    @Override
     public CompletableFuture<Void> initiateConnectionShutdown() {
         return delegate().initiateConnectionShutdown();
     }

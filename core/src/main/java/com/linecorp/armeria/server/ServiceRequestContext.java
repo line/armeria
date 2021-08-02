@@ -17,6 +17,7 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -581,7 +583,10 @@ public interface ServiceRequestContext extends RequestContext {
      * @see #initiateConnectionShutdown(long)
      */
     @UnstableApi
-    CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration);
+    default CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration) {
+        requireNonNull(drainDuration, "drainDuration");
+        return initiateConnectionShutdown(TimeUnit.NANOSECONDS.toMicros(drainDuration.toNanos()));
+    }
 
     /**
      * Initiates connection shutdown without overriding current configuration of the drain duration and returns
@@ -591,7 +596,5 @@ public interface ServiceRequestContext extends RequestContext {
      * @see #initiateConnectionShutdown(Duration)
      */
     @UnstableApi
-    default CompletableFuture<Void> initiateConnectionShutdown() {
-        return initiateConnectionShutdown(0);
-    }
+    CompletableFuture<Void> initiateConnectionShutdown();
 }

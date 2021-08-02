@@ -54,7 +54,8 @@ public final class InitiateConnectionShutdown {
 
     private InitiateConnectionShutdown(long drainDurationMicros) {
         // Negative values are reserved for the default constructor.
-        this.drainDurationMicros = Math.max(drainDurationMicros, 0);
+        assert drainDurationMicros >= 0;
+        this.drainDurationMicros = drainDurationMicros;
     }
 
     public long drainDurationMicros() {

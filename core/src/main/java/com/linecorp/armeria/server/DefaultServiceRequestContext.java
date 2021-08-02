@@ -434,12 +434,6 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration) {
-        requireNonNull(drainDuration, "drainDuration");
-        return initiateConnectionShutdown(TimeUnit.NANOSECONDS.toMicros(drainDuration.toNanos()));
-    }
-
-    @Override
     public CompletableFuture<Void> initiateConnectionShutdown() {
         return initiateConnectionShutdown(InitiateConnectionShutdown.of());
     }
