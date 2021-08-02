@@ -288,10 +288,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
+            final Throwable cause = event.cause;
             if (state == State.CLEANUP) {
-                cleanupCause = event.cause;
+                cleanupCause = cause;
             }
-            cleanupObjects(event.cause);
+            cleanupObjects(cause);
         }
     }
 

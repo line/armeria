@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.grpc.protocol;
 
 import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_OPTION;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -186,7 +185,7 @@ public final class UnaryGrpcClient {
                                })
                        .thenCompose(msg -> {
                            try (HttpData content = msg.content()) {
-                               if (!msg.status().equals(HttpStatus.OK) || content.isEmpty()) {
+                               if (msg.status() != HttpStatus.OK || content.isEmpty()) {
                                    // Nothing to deframe.
                                    return CompletableFuture.completedFuture(msg.toHttpResponse());
                                }
@@ -197,7 +196,7 @@ public final class UnaryGrpcClient {
                                msg.toHttpResponse().decode(deframer, ctx.alloc(),
                                                            byteBufConverter(ctx.alloc(), isGrpcWebText))
                                   .subscribe(singleSubscriber(ctx, msg, serializationFormat, responseFuture),
-                                             ctx.eventLoop(), CANCELLATION_OPTION);
+                                             ctx.eventLoop());
                                return responseFuture;
                            }
                        }), ctx.eventLoop());
@@ -213,8 +212,7 @@ public final class UnaryGrpcClient {
                 private HttpHeaders trailers;
                 @Nullable
                 private Subscription subscription;
-                @Nullable
-                private Throwable cause;
+                private boolean terminated;
                 private int processedMessages;
 
                 @Override
@@ -231,10 +229,34 @@ public final class UnaryGrpcClient {
                 @Override
                 public void onNext(DeframedMessage message) {
                     try {
+                        if (terminated) {
+                            return;
+                        }
                         process(message);
                     } finally {
                         message.close();
                     }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    if (terminated) {
+                        return;
+                    }
+                    terminated = true;
+                    completeExceptionally(t);
+                }
+
+                @Override
+                public void onComplete() {
+                    if (terminated) {
+                        return;
+                    }
+                    terminated = true;
+                    if (trailers == null) {
+                        trailers = msg.trailers();
+                    }
+                    responseFuture.complete(HttpResponse.of(msg.headers(), content, trailers));
                 }
 
                 private void process(DeframedMessage message) {
@@ -256,8 +278,9 @@ public final class UnaryGrpcClient {
                                 // Malformed trailers.
                                 cancel(new ArmeriaStatusException(
                                         StatusCodes.INTERNAL,
-                                        serializationFormat.uriText() + " trailers malformed: " + buf
-                                                .toString(StandardCharsets.UTF_8)));
+                                        String.format("%s trailers malformed: %s",
+                                                      serializationFormat.uriText(),
+                                                      buf.toString(StandardCharsets.UTF_8))));
                             }
                         } finally {
                             buf.release();
@@ -279,32 +302,20 @@ public final class UnaryGrpcClient {
                     processedMessages++;
                 }
 
-                @Override
-                public void onError(Throwable t) {
-                    setCause(t);
-                    content.close();
-                    responseFuture.completeExceptionally(cause);
-                }
-
-                @Override
-                public void onComplete() {
-                    if (trailers == null) {
-                        trailers = msg.trailers();
-                    }
-                    responseFuture.complete(HttpResponse.of(msg.headers(), content, trailers));
-                }
-
-                private void setCause(Throwable t) {
-                    if (cause == null) {
-                        cause = t;
-                    }
-                }
-
                 private void cancel(Throwable t) {
-                    setCause(t);
+                    if (terminated) {
+                        return;
+                    }
+                    terminated = true;
                     if (subscription != null) {
                         subscription.cancel();
                     }
+                    completeExceptionally(t);
+                }
+
+                private void completeExceptionally(Throwable t) {
+                    content.close();
+                    responseFuture.completeExceptionally(t);
                 }
             };
         }
