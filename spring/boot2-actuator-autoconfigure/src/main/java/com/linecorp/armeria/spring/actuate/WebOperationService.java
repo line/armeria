@@ -229,7 +229,7 @@ final class WebOperationService implements HttpService {
             final long length = resource.contentLength();
             final ResponseHeadersBuilder headers = ResponseHeaders.builder(status);
             headers.contentType(contentType);
-            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, length);
+            headers.contentLength(length);
             headers.setTimeMillis(HttpHeaderNames.LAST_MODIFIED, resource.lastModified());
             if (filename != null) {
                 headers.set(HttpHeaderNames.CONTENT_DISPOSITION,

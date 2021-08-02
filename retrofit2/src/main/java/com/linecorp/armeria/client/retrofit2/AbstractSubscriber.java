@@ -112,7 +112,7 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
                     headers.forEach(header -> responseBuilder.addHeader(header.getKey().toString(),
                                                                         header.getValue()));
                     contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
-                    contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, NO_CONTENT_LENGTH);
+                    contentLength = headers.contentLength();
                 }
                 break;
             case WAIT_DATA_OR_TRAILERS:

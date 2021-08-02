@@ -21,9 +21,8 @@ const { Header } = Layout;
 const { Paragraph } = Typography;
 
 const selectableKeysAndRegexes = {
-  news: /\/news(\/|$)/,
-  guides: /\/guides(\/|$)/,
-  docs: /\/docs(\/|$)/,
+  news: /\/(news|release-notes)(\/|$)/,
+  docs: /\/(docs|tutorials)(\/|$)/,
   community: /\/community(\/|$)/,
   home: /.?/,
 };
@@ -134,7 +133,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
               className={styles.sidebarDrawer}
               width={320}
               visible={sidebarOpen}
-              closeIcon={<CloseCircleOutlined />}
+              closeIcon={
+                <CloseCircleOutlined className={styles.sidebarCloseIcon} />
+              }
               onClose={closeSidebar}
             >
               <nav>

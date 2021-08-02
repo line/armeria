@@ -65,14 +65,14 @@ public abstract class AbstractAllOrEachExtension
     }
 
     @Override
-    public final void beforeEach(ExtensionContext context) throws Exception {
+    public void beforeEach(ExtensionContext context) throws Exception {
         if (runForEachTest()) {
             before(context);
         }
     }
 
     @Override
-    public final void afterEach(ExtensionContext context) throws Exception {
+    public void afterEach(ExtensionContext context) throws Exception {
         if (runForEachTest()) {
             after(context);
         }

@@ -1,0 +1,253 @@
+---
+menuTitle: "Implement DELETE"
+order: 7
+type: step
+tags:
+  - rest
+  - request
+  - request-converter
+  - exceptions
+  - exception-handling
+  - blocking
+level: basic
+---
+
+# Implementing DELETE operation
+
+In this step, we'll write a method for deleting a blog post. By completing this step, you'll learn to map your service with the HTTP DELETE (<type://@Delete>) method, customize an exception handler, and use a blocking task executor.
+
+<TutorialSteps current={7} />
+
+## What you need
+
+You must have the following files ready for deleting a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+
+- Main.java from [Step 1. Create a server](/tutorials/rest/blog/create-server)
+- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object)
+- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server)
+
+<Warning>
+
+To test deleting a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implenment-create) for instructions.
+
+</Warning>
+
+## 1. Map HTTP method
+
+Let's start [mapping the HTTP DELETE method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+
+1. Declare a service method, `deleteBlogPost()` in the class `BlogService`.
+2. Map this service method with the HTTP DELETE method by adding the <type://@Delete> annotation.
+3. Bind the endpoint `/blogs` to the method.
+
+```java filename=BlogService.java highlight=6
+import com.linecorp.armeria.server.annotation.Delete;
+
+public final class BlogService {
+  ...
+
+  @Delete("/blogs")
+  public void deleteBlogPost(int id) {
+    // Delete a blog post
+  }
+}
+```
+
+## 2. Handle parameters
+
+Let's take the blog post ID (`id`) as a path parameter for identifying the post to delete.
+
+1. Take in the ID value as a path parameter by adding `/blogs/:id` to the <type://@Delete> annotation.
+2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the parameter with <type://@Param>.
+
+  ```java filename=BlogService.java highlight=6-7
+  import com.linecorp.armeria.server.annotation.Param;
+
+  public final class BlogService {
+    ...
+
+    @Delete("/blogs/:id")
+    public void deleteBlogPost(@Param int id) {
+      // Delete a blog post
+    }
+  }
+  ```
+
+## 3. Implement service code
+
+In this step, write the code to delete a blog post, handle an exception, and block the operation.
+
+- [Delete a blog post](#delete-a-blog-post)
+- [Handle exceptions](#handle-exceptions)
+- [Add blocking](#add-blocking)
+
+### Delete a blog post
+
+Deleting a given blog post in this tutorial means removing a blog post from the map, `blogPosts`. However, in real services you would be performing this action on a database.
+
+To delete a blog post, copy line 3 into the `deleteBlogPost()` method.
+
+```java filename=BlogService.Java highlight=3 showlineno=true
+@Delete("/blogs/:id")
+public void deleteBlogPost(@Param int id) {
+  BlogPost removed = blogPosts.remove(id);
+}
+```
+
+### Handle exceptions
+
+What if there is no such post to delete? We can check if the blog exists before attempting to remove the blog post. Here, let's handle it after the attempt.
+
+1. Throw an `IllegalArgumentException` if no blog post exists with a given ID.
+
+  ```java filename=BlogService.java
+  @Delete("/blogs/:id")
+  public void deleteBlogPost(@Param int id) {
+    ...
+
+    if (removed == null) {
+      throw new IllegalArgumentException("The blog post does not exist. id: " + id);
+    }
+  }
+  ```
+
+2. Create an exception handler for the blog service:
+   1. Create a file, BadRequestExceptionHandler.java.
+   2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
+
+   ```java filename=BadRequestExceptionHandler.java
+   package example.armeria.server.blog;
+   
+   import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+   import com.fasterxml.jackson.databind.ObjectMapper;
+   
+   public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
+   private static final ObjectMapper mapper = new ObjectMapper();
+   }
+   ```
+
+3. Implement your own exception handler by overriding the default `handleException()` method. Add a code block for handling the `IllegalArgumentException` thrown. For this tutorial, return a BAD REQUEST as the response.
+
+  ```java filename=BadRequesExceptionHandler.java highlight=11,15,17
+  import com.fasterxml.jackson.databind.node.ObjectNode;
+  import com.linecorp.armeria.common.HttpResponse;
+  import com.linecorp.armeria.common.HttpStatus;
+  import com.linecorp.armeria.server.ServiceRequestContext;
+
+  public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
+    ...
+
+    @Override
+    public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+      if (cause instanceof IllegalArgumentException) {
+          String message = cause.getMessage();
+          ObjectNode objectNode = mapper.createObjectNode();
+          objectNode.put("error", message);
+          return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, objectNode);
+      }
+      return ExceptionHandlerFunction.fallthrough();
+    }
+  }
+  ```
+
+4. Assign the exception handler to the `deleteBlogPost()` method by annotating the `deletePost()` method with the <type://@ExceptionHandler> as follows.
+
+  ```java filename=BlogService.java highlight=2
+  @Delete("/blogs/:id")
+  @ExceptionHandler(BadRequestExceptionHandler.class)
+  public void deleteBlogPost(@Param int id) { ... }
+  ```
+
+### Add blocking
+
+With real services, accessing and operating on a database takes time. We need to hand over such blocking tasks to [blocking task executor](/docs/server-annotated-service#specifying-a-blocking-task-executor) so that the EventLoop isn't blocked. There are a few options to implement this; we'll annotate our service method with the <type://@Blocking>.
+
+```java filename=BlogService.java highlight=6
+import com.linecorp.armeria.server.annotation.Blocking;
+
+public final class BlogService {
+  ...
+
+  @Blocking
+  @Delete("/blogs/:id")
+  @ExceptionHandler(BadRequestExceptionHandler.class)
+  public void deleteBlogPost(@Param int id) { ... }
+}
+```
+
+## 4. Return response
+
+We've already handled returning the not found error in the [exception handling section](#handle-exceptions). Here, we'll return a response for successful deletion.
+
+1. Replace the return type of the `deleteBlogPost()` method from `void` to <type://HttpResponse>.
+2. Return a response using Armeria's <type://HttpResponse>, containing <type://HttpStatus#NO_CONTENT>.
+
+```java filename=BlogService.java highlight=9,11
+import com.linecorp.armeria.common.HttpResponse;
+
+public final class BlogService {
+  ...
+
+  @Blocking
+  @Delete("/blogs/:id")
+  @ExceptionHandler(BadRequestExceptionHandler.class)
+  public HttpResponse deleteBlogPost(@Param int id) {
+    ...
+    return HttpResponse.of(HttpStatus.NO_CONTENT);
+  }
+}
+```
+
+## 5. Test deleting a blog post
+
+Let's test deleting a blog post.
+
+1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
+2. Create a couple of blog posts to test deleting a blog post and get the ID value returned. Enter the cURL commands below.
+
+  ```bash
+  $ curl --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"First post for testing", "content":"Test deletion."}'
+  ```
+
+  ```bash
+  $ curl --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Second post for testing", "content":"Test deleting a post."}'
+  ```
+
+  For each command, you'll get a response similar to the following.
+
+  ```bash
+  {"id":0,"title":"First post for testing","content":"Test deletion.","createdAt":...,"modifiedAt":...}
+
+  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
+  ```
+
+3. Let's delete the second blog with the ID, `0`. Since our service method doesn't return anything, you won't see any response.
+
+  ```bash
+  $ curl --request DELETE 'localhost:8080/blogs/0'
+  ```
+
+4. Let's retrieve the blog post list to see if the post has been deleted successfully.
+
+  ```bash
+  $ curl --request GET 'localhost:8080/blogs'
+  ```
+
+  The response contains only one blog post. We can tell that the blog post with the ID `0` has been removed.
+
+  ```bash
+  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
+  ```
+You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+
+## Next step
+
+In this step, we've written a method for a DELETE operation and used Armeria's annotations; <type://@Delete>, <type://@Param>, <type://@ExceptionHandler> and <type://@Blocking>.
+
+We've come to the end of this tutorial. Next, try adding more service methods to the tutorial or have a go at developing a service of your own.
+
+<TutorialSteps current={7} />

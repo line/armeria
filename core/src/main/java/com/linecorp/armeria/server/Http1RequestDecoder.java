@@ -336,8 +336,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         final ResponseHeaders headers =
                 ResponseHeaders.builder()
                                .status(status.code())
-                               .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
-                               .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                               .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                               .contentLength(data.length())
                                .build();
         writer.writeHeaders(id, 1, headers, false);
         writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
