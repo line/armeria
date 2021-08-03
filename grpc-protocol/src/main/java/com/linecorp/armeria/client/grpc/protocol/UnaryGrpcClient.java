@@ -125,7 +125,7 @@ public final class UnaryGrpcClient {
         return webClient.execute(request).aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT)
                         .thenApply(msg -> {
                             try (HttpData content = msg.content()) {
-                                if (!HttpStatus.OK.equals(msg.status())) {
+                                if (msg.status() != HttpStatus.OK) {
                                     throw new ArmeriaStatusException(
                                             StatusCodes.INTERNAL,
                                             "Non-successful HTTP response code: " + msg.status());
