@@ -54,7 +54,9 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -422,6 +424,32 @@ public final class DefaultServiceRequestContext
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return proxiedAddresses;
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of(drainDurationMicros));
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of());
+    }
+
+    private CompletableFuture<Void> initiateConnectionShutdown(InitiateConnectionShutdown event) {
+        if (!ch.isActive()) {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        ch.closeFuture().addListener(f -> {
+            if (f.cause() == null) {
+                completableFuture.complete(null);
+            } else {
+                completableFuture.completeExceptionally(f.cause());
+            }
+        });
+        ch.pipeline().fireUserEventTriggered(event);
+        return completableFuture;
     }
 
     @Override
