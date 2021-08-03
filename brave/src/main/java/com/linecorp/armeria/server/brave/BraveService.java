@@ -22,7 +22,9 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -36,12 +38,24 @@ import brave.http.HttpServerHandler;
 import brave.http.HttpServerRequest;
 import brave.http.HttpServerResponse;
 import brave.http.HttpTracing;
+import brave.propagation.CurrentTraceContext.Scope;
 
 /**
  * Decorates an {@link HttpService} to trace inbound {@link HttpRequest}s using
  * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
 public final class BraveService extends SimpleDecoratingHttpService {
+
+    private static final Scope SERVICE_REQUEST_DECORATING_SCOPE = new Scope() {
+        @Override
+        public void close() {}
+
+        @Override
+        public String toString() {
+            return "ServiceRequestDecoratingScope";
+        }
+    };
+
     /**
      * Creates a new tracing {@link HttpService} decorator using the specified {@link Tracing} instance.
      */
@@ -64,14 +78,17 @@ public final class BraveService extends SimpleDecoratingHttpService {
 
     private final Tracer tracer;
     private final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
+    private final RequestContextCurrentTraceContext currentTraceContext;
 
     /**
      * Creates a new instance.
      */
     private BraveService(HttpService delegate, HttpTracing httpTracing) {
         super(delegate);
-        tracer = httpTracing.tracing().tracer();
+        final Tracing tracing = httpTracing.tracing();
+        tracer = tracing.tracer();
         handler = HttpServerHandler.create(httpTracing);
+        currentTraceContext = (RequestContextCurrentTraceContext) tracing.currentTraceContext();
     }
 
     @Override
@@ -83,11 +100,27 @@ public final class BraveService extends SimpleDecoratingHttpService {
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
 
-        // For no-op spans, nothing special to do.
+        if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() &&
+            ctx instanceof DefaultServiceRequestContext) {
+            final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
+            // Run the scope decorators when the ctx is pushed to the thread local.
+            defaultCtx.hook(() -> {
+                final Scope scope = currentTraceContext.decorateScope(span.context(),
+                                                                      SERVICE_REQUEST_DECORATING_SCOPE);
+                return scope::close;
+            });
+        }
+
+        maybeAddTagsToSpan(ctx, braveReq, span);
+        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
+            return unwrap().serve(ctx, req);
+        }
+    }
+
+    private void maybeAddTagsToSpan(ServiceRequestContext ctx, HttpServerRequest braveReq, Span span) {
         if (span.isNoop()) {
-            try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-                return unwrap().serve(ctx, req);
-            }
+            // For no-op spans, nothing special to do.
+            return;
         }
 
         ctx.log().whenComplete().thenAccept(log -> {
@@ -108,9 +141,5 @@ public final class BraveService extends SimpleDecoratingHttpService {
                     ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
             handler.handleSend(braveRes, span);
         });
-
-        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-            return unwrap().serve(ctx, req);
-        }
     }
 }

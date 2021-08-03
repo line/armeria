@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableList;
 
 import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Builder;
+import brave.propagation.CurrentTraceContext.ScopeDecorator;
 
 /**
  * A builder of {@link RequestContextCurrentTraceContext} to enable tracing of an Armeria-based application.
@@ -30,6 +32,8 @@ import brave.propagation.CurrentTraceContext;
 public final class RequestContextCurrentTraceContextBuilder extends CurrentTraceContext.Builder {
 
     private final ImmutableList.Builder<Pattern> nonRequestThreadPatterns = ImmutableList.builder();
+
+    private boolean scopeDecoratorAdded;
 
     RequestContextCurrentTraceContextBuilder() {}
 
@@ -60,12 +64,22 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
         return this;
     }
 
+    @Override
+    public Builder addScopeDecorator(ScopeDecorator scopeDecorator) {
+        // a null ScopeDecorator will be checked by the super class.
+        if (scopeDecorator != null && scopeDecorator != ScopeDecorator.NOOP) {
+            scopeDecoratorAdded = true;
+        }
+        return super.addScopeDecorator(scopeDecorator);
+    }
+
     /**
      * Returns a newly-created {@link RequestContextCurrentTraceContext} based on the configuration properties
      * set so far.
      */
     @Override
     public RequestContextCurrentTraceContext build() {
-        return new RequestContextCurrentTraceContext(this, nonRequestThreadPatterns.build());
+        return new RequestContextCurrentTraceContext(this, nonRequestThreadPatterns.build(),
+                                                     scopeDecoratorAdded);
     }
 }
