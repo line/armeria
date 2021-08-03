@@ -70,6 +70,7 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
@@ -1150,7 +1151,11 @@ public final class Flags {
      * to override the default value.
      *
      * @see ExceptionVerbosity
+     *
+     * @deprecated Use {@link LoggingService} or log exceptions using
+     *             {@link ServerBuilder#exceptionHandler(com.linecorp.armeria.server.ExceptionHandler)}.
      */
+    @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
     }
@@ -1326,7 +1331,7 @@ public final class Flags {
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
-        return ExceptionVerbosity.valueOf(mode.toUpperCase());
+        return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {

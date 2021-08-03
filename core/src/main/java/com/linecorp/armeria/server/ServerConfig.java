@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -639,7 +639,7 @@ public final class ServerConfig {
 
     /**
      * Returns the {@link ExceptionHandler} that converts a {@link Throwable} to an
-     * {@link AggregatedHttpResponse}.
+     * {@link HttpResponse}.
      */
     public ExceptionHandler exceptionHandler() {
         return exceptionHandler;
