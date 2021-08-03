@@ -44,9 +44,6 @@ enum DefaultExceptionHandler implements ExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
 
-    private static final HttpStatusException BAD_REQUEST_EXCEPTION =
-            HttpStatusException.of(HttpStatus.BAD_REQUEST);
-
     /**
      * Converts the specified {@link Throwable} to an {@link HttpResponse}.
      *
@@ -76,7 +73,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
                 if (needsToWarn()) {
                     logger.warn("{} Failed processing a request:", context, cause);
                 }
-                return HttpResponse.ofFailure(BAD_REQUEST_EXCEPTION);
+                return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST, cause));
             }
         }
 
