@@ -28,7 +28,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
@@ -289,7 +288,7 @@ public final class Flags {
                     DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = TimeUnit.SECONDS.toMicros(1);
+    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
     private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
             getLong("defaultServerConnectionDrainDurationMicros",
                     DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
@@ -947,7 +946,7 @@ public final class Flags {
      * If the value of this flag is greater than {@code 0}, a connection shutdown will have a drain period
      * when client will be notified about the shutdown, but in flight requests will still be accepted.
      *
-     * <p>The default value of this flag is {@link #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
      * JVM option to override the default value.
      *
