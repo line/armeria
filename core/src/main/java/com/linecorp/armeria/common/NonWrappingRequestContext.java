@@ -22,10 +22,13 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,6 +41,11 @@ import io.netty.util.AttributeKey;
  */
 @UnstableApi
 public abstract class NonWrappingRequestContext implements RequestContext {
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<NonWrappingRequestContext, Supplier>
+            contextHookUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            NonWrappingRequestContext.class, Supplier.class, "contextHook");
 
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs;
@@ -53,6 +61,8 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     private volatile HttpRequest req;
     @Nullable
     private volatile RpcRequest rpcReq;
+    @Nullable // Updated via `contextHookUpdater`
+    private volatile Supplier<SafeCloseable> contextHook;
 
     /**
      * Creates a new instance.
@@ -211,5 +221,50 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @Override
     public final Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         return attrs.ownAttrs();
+    }
+
+    /**
+     * Adds a hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by {@code contextHook} will be called
+     * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
+     *
+     * <p>Note that this operation is highly performance-sensitive operation, and thus
+     * it's not a good idea to run a time-consuming task.
+     */
+    @UnstableApi
+    public void hook(Supplier<? extends SafeCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        for (;;) {
+            final Supplier<? extends SafeCloseable> oldContextHook = this.contextHook;
+            final Supplier<? extends SafeCloseable> newContextHook;
+            if (oldContextHook == null) {
+                newContextHook = contextHook;
+            } else {
+                newContextHook = () -> {
+                    final SafeCloseable oldHook = oldContextHook.get();
+                    final SafeCloseable newHook = contextHook.get();
+                    return () -> {
+                        oldHook.close();
+                        newHook.close();
+                    };
+                };
+            }
+
+            if (contextHookUpdater.compareAndSet(this, oldContextHook, newContextHook)) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * Returns the hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
+     * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     */
+    @UnstableApi
+    @Nullable
+    public Supplier<SafeCloseable> hook() {
+        return contextHook;
     }
 }
