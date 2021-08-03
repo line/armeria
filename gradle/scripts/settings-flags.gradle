@@ -140,7 +140,7 @@ static void afterProjectsWithFlags(Project project, Iterable<?> flags, Closure<S
 
     projects.each { p ->
         p.afterEvaluate {
-            remainingProjects.remove(p);
+            remainingProjects.remove(p)
             if (remainingProjects.isEmpty()) {
                 closure(projects)
             }

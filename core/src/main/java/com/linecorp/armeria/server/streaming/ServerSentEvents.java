@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -80,8 +79,9 @@ public final class ServerSentEvents {
      * A default {@link ResponseHeaders} of Server-Sent Events.
      */
     private static final ResponseHeaders defaultHttpHeaders =
-            ResponseHeaders.of(HttpStatus.OK,
-                               HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM);
+            ResponseHeaders.builder(HttpStatus.OK)
+                           .contentType(MediaType.EVENT_STREAM)
+                           .build();
 
     /**
      * Creates a new Server-Sent Events stream from the specified {@link Publisher}.
@@ -316,7 +316,7 @@ public final class ServerSentEvents {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             return headers.toBuilder()
-                          .add(HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM.toString())
+                          .contentType(MediaType.EVENT_STREAM)
                           .build();
         }
 

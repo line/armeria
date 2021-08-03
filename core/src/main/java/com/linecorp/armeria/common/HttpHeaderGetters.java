@@ -42,6 +42,13 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     boolean isEndOfStream();
 
     /**
+     * Returns the value of the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a> header,
+     * or {@code -1} if this value is not known.
+     */
+    long contentLength();
+
+    /**
      * Returns the parsed {@code "content-type"} header.
      *
      * @return the parsed {@link MediaType} if present and valid, or {@code null} otherwise.

@@ -133,14 +133,13 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
-                onError0(abortCause);
+                onError(abortCause);
             } else if (isEmpty()) {
                 onComplete();
             }
         } catch (Throwable t) {
-            completed = true;
             cleanupObjects(t);
-            onError0(t);
+            onError(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
@@ -297,7 +296,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         if (completed) {
             return;
         }
-        completed = true;
 
         if (cause == null) {
             cause = AbortedStreamException.get();
@@ -306,11 +304,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
         abortCause = cause;
         if (executor == null) {
-            // abortCause will be propagated when subscribed
+            // 'abortCause' will be propagated and 'completed' will be set to true when subscribed
             completionFuture.completeExceptionally(cause);
         } else {
             // Subscribed already
-            onError0(cause);
+            onError(cause);
         }
     }
 }

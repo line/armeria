@@ -44,17 +44,17 @@ public final class Main {
 
     static void configureServices(ServerBuilder sb) {
         final HelloRequest exampleRequest = HelloRequest.newBuilder().setName("Armeria").build();
-            final HttpServiceWithRoutes grpcService =
-                    GrpcService.builder()
-                               .addService(new HelloServiceImpl())
-                               // See https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md
-                               .addService(ProtoReflectionService.newInstance())
-                               .supportedSerializationFormats(GrpcSerializationFormats.values())
-                               .enableUnframedRequests(true)
-                               // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
-                               // methods in the blockingTaskExecutor thread pool.
-                               // .useBlockingTaskExecutor(true)
-                               .build();
+        final HttpServiceWithRoutes grpcService =
+                GrpcService.builder()
+                           .addService(new HelloServiceImpl())
+                           // See https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md
+                           .addService(ProtoReflectionService.newInstance())
+                           .supportedSerializationFormats(GrpcSerializationFormats.values())
+                           .enableUnframedRequests(true)
+                           // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
+                           // methods in the blockingTaskExecutor thread pool.
+                           // .useBlockingTaskExecutor(true)
+                           .build();
         sb.service(grpcService)
           .service("prefix:/prefix", grpcService)
           // You can access the documentation service at http://127.0.0.1:8080/docs.

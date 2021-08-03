@@ -30,13 +30,9 @@
  *
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
-
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -44,7 +40,7 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Allows changing the subscription, tracking requests and item
@@ -60,91 +56,79 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
  *     and when to signal it.
  * </p>
  */
-class SubscriptionArbiter implements Subscription {
+public class SubscriptionArbiter implements Subscription {
 
     // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
 
-    private static final AtomicReferenceFieldUpdater<SubscriptionArbiter, Subscription> newSubscriptionUpdater =
-            AtomicReferenceFieldUpdater
-                    .newUpdater(SubscriptionArbiter.class, Subscription.class, "newSubscription");
-
-    private static final AtomicLongFieldUpdater<SubscriptionArbiter> newRequestedUpdater =
-            AtomicLongFieldUpdater.newUpdater(SubscriptionArbiter.class, "newRequested");
-
-    private static final AtomicLongFieldUpdater<SubscriptionArbiter> newProducedUpdater =
-            AtomicLongFieldUpdater.newUpdater(SubscriptionArbiter.class, "newProduced");
-
-    private static final AtomicIntegerFieldUpdater<SubscriptionArbiter> wipUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(SubscriptionArbiter.class, "wip");
-
+    private final EventExecutor executor;
     /**
      * The new subscription to use.
      */
     @Nullable
-    private volatile Subscription newSubscription;
-
-    /**
-     * Requests accumulated.
-     */
-    private volatile long newRequested;
-
-    /**
-     * Item production count accumulated.
-     */
-    private volatile long newProduced;
+    private Subscription newSubscription;
 
     /**
      * The current subscription to relay requests for.
      */
     @Nullable
-    private volatile Subscription subscription;
+    private Subscription subscription;
+
+    /**
+     * Requests accumulated.
+     */
+    private long newRequested;
+
+    /**
+     * Item production count accumulated.
+     */
+    private long newProduced;
 
     /**
      * The current outstanding request amount.
      */
-    private volatile long requested;
+    private long requested;
 
     /**
      * Used for serialized access.
      */
-    private volatile int wip;
+    private int wip;
+
+    protected SubscriptionArbiter(EventExecutor executor) {
+        this.executor = executor;
+    }
 
     @Override
     public void request(long n) {
-        addRequest(newRequestedUpdater, n);
-        drain();
+        if (executor.inEventLoop()) {
+            request0(n);
+        } else {
+            executor.execute(() -> request0(n));
+        }
     }
 
-    /**
-     * Atomically add the given request amount to the field while capping it at
-     * {@link Long#MAX_VALUE}.
-     * @param n the request amount to add, must be positive (not verified)
-     */
-    private void addRequest(AtomicLongFieldUpdater<SubscriptionArbiter> updater, long n) {
-        for (;;) {
-            final long current = updater.get(this);
-            if (current == Long.MAX_VALUE) {
-                return;
-            }
-            final long updated = LongMath.saturatedAdd(current, n);
-            if (updater.compareAndSet(this, current, updated)) {
-                return;
-            }
-        }
+    private void request0(long n) {
+        newRequested = LongMath.saturatedAdd(newRequested, n);
+        drain();
     }
 
     @Override
     public void cancel() {
-        // Swap newSubscription with NoopSubscription and call cancel() on any previous Subscription held.
-        Subscription subscription = newSubscription;
+        if (executor.inEventLoop()) {
+            doCancel();
+        } else {
+            executor.execute(this::doCancel);
+        }
+    }
+
+    final void doCancel() {
         final NoopSubscription noopSubscription = NoopSubscription.get();
-        if (subscription != noopSubscription) {
-            subscription = newSubscriptionUpdater.getAndSet(this, noopSubscription);
-            if (subscription != noopSubscription) {
-                if (subscription != null) {
-                    subscription.cancel();
-                }
-            }
+        if (newSubscription == null) {
+            newSubscription = noopSubscription;
+        } else if (newSubscription != noopSubscription) {
+            // Swap newSubscription with NoopSubscription and call cancel() on any previous Subscription held.
+            final Subscription oldSubscription = newSubscription;
+            newSubscription = noopSubscription;
+            oldSubscription.cancel();
         }
 
         drain();
@@ -154,19 +138,17 @@ class SubscriptionArbiter implements Subscription {
      * Set the new subscription to resume with.
      * @param subscription the new subscription
      */
-    final void setUpstreamSubscription(Subscription subscription) {
+    public final void setUpstreamSubscription(Subscription subscription) {
         requireNonNull(subscription, "subscription");
-        for (;;) {
-            final Subscription previous = newSubscription;
-            if (previous == NoopSubscription.get()) {
-                // Cancelled already
-                subscription.cancel();
-                return;
-            }
-            if (newSubscriptionUpdater.compareAndSet(this, previous, subscription)) {
-                break;
-            }
+        assert executor.inEventLoop();
+
+        final Subscription previous = newSubscription;
+        if (previous == NoopSubscription.get()) {
+            // Cancelled already
+            subscription.cancel();
+            return;
         }
+        newSubscription = subscription;
 
         drain();
     }
@@ -176,13 +158,14 @@ class SubscriptionArbiter implements Subscription {
      * before switching to the next subscription.
      * @param n the number of items produced, positive
      */
-    final void produced(long n) {
-        addRequest(newProducedUpdater, n);
+    protected final void produced(long n) {
+        assert executor.inEventLoop();
+        newProduced = LongMath.saturatedAdd(newProduced, n);
         drain();
     }
 
-    final void drain() {
-        if (wipUpdater.getAndIncrement(this) != 0) {
+    private void drain() {
+        if (wip++ > 0) {
             return;
         }
 
@@ -190,19 +173,16 @@ class SubscriptionArbiter implements Subscription {
         Subscription requestFrom = null;
 
         do {
-            // Get snapshots from volatile values and initialize them
-            long newReq = newRequested;
-            if (newReq != 0L) {
-                newReq = newRequestedUpdater.getAndSet(this, 0L);
-            }
-            long newProd = newProduced;
-            if (newProd != 0L) {
-                newProd = newProducedUpdater.getAndSet(this, 0L);
-            }
+            // Get snapshots from values and initialize them
+            final long newReq = newRequested;
+            newRequested = 0;
+            final long newProd = newProduced;
+            newProduced = 0;
+
             final Subscription next = newSubscription;
             final boolean isCancelled = next == NoopSubscription.get();
             if (next != null) {
-                newSubscriptionUpdater.compareAndSet(this, next, null);
+                newSubscription = null;
             }
 
             if (isCancelled) {
@@ -235,7 +215,7 @@ class SubscriptionArbiter implements Subscription {
                 }
                 requested = currentRequested;
             }
-        } while (wipUpdater.decrementAndGet(this) != 0);
+        } while (--wip != 0);
 
         // request outside the serialization loop to avoid certain reentrance issues
         if (requestFrom != null && toRequest != 0L) {

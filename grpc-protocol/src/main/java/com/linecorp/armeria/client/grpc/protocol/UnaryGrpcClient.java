@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
@@ -190,6 +191,12 @@ public final class UnaryGrpcClient {
                                })
                        .thenCompose(msg -> {
                            if (msg.status() != HttpStatus.OK || msg.content().isEmpty()) {
+                               // Status can either be in the headers or trailers depending on error.
+                               if (msg.headers().get(GrpcHeaderNames.GRPC_STATUS) != null) {
+                                   GrpcWebTrailers.set(ctx, msg.headers());
+                               } else {
+                                   GrpcWebTrailers.set(ctx, msg.trailers());
+                               }
                                // Nothing to deframe.
                                return CompletableFuture.completedFuture(msg.toHttpResponse());
                            }
@@ -200,7 +207,7 @@ public final class UnaryGrpcClient {
                            msg.toHttpResponse()
                               .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
                               .subscribe(new DeframedMessageSubscriber(
-                                                 msg, serializationFormat, responseFuture),
+                                                 ctx, msg, serializationFormat, responseFuture),
                                          ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
                            return responseFuture;
                        }), ctx.eventLoop());
@@ -208,6 +215,7 @@ public final class UnaryGrpcClient {
     }
 
     private static final class DeframedMessageSubscriber implements Subscriber<DeframedMessage> {
+        private final ClientRequestContext ctx;
         private final AggregatedHttpResponse response;
         private final SerializationFormat serializationFormat;
         private final CompletableFuture<HttpResponse> responseFuture;
@@ -221,9 +229,11 @@ public final class UnaryGrpcClient {
         private boolean completed;
         private int processedMessages;
 
-        private DeframedMessageSubscriber(AggregatedHttpResponse response,
+        private DeframedMessageSubscriber(ClientRequestContext ctx,
+                                          AggregatedHttpResponse response,
                                           SerializationFormat serializationFormat,
                                           CompletableFuture<HttpResponse> responseFuture) {
+            this.ctx = ctx;
             this.response = response;
             this.serializationFormat = serializationFormat;
             this.responseFuture = responseFuture;
@@ -273,6 +283,7 @@ public final class UnaryGrpcClient {
             if (trailers == null) {
                 trailers = response.trailers();
             }
+            GrpcWebTrailers.set(ctx, trailers);
             responseFuture.complete(HttpResponse.of(response.headers(), content, trailers));
         }
 

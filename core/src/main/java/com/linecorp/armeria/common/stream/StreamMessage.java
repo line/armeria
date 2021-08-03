@@ -40,6 +40,8 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -281,9 +283,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     static <T> StreamMessage<T> aborted(Throwable cause) {
         requireNonNull(cause, "cause");
-        final StreamMessage<T> aborted = of();
-        aborted.abort(cause);
-        return aborted;
+        return new AbortedStreamMessage<>(cause);
     }
 
     /**
@@ -565,5 +565,25 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return FuseableStreamMessage.error(this, function);
+    }
+
+    /**
+     * Recovers a failed {@link StreamMessage} and resumes by subscribing to a returned fallback
+     * {@link StreamMessage} when any error occurs.
+     *
+     * <p>Example:<pre>{@code
+     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * stream.write(1);
+     * stream.write(2);
+     * stream.close(new IllegalStateException("Oops..."));
+     * StreamMessage<Integer> resumed = stream.recoverAndResume(cause -> StreamMessage.of(3, 4));
+     *
+     * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
+     * }</pre>
+     */
+    default StreamMessage<T> recoverAndResume(
+            Function<? super Throwable, ? extends StreamMessage<T>> function) {
+        requireNonNull(function, "function");
+        return new RecoverableStreamMessage<>(this, function, /* allowResuming */ true);
     }
 }

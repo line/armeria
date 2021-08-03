@@ -19,12 +19,15 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.GracefulConnectionShutdownHandler;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -35,6 +38,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final Http2RequestDecoder requestDecoder;
 
     private final KeepAliveHandler keepAliveHandler;
+    private final Http2GracefulConnectionShutdownHandler gracefulConnectionShutdownHandler;
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
@@ -58,19 +62,12 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         } else {
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
+        gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler(
+                config.connectionDrainDurationMicros());
 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
-
-        // Setup post build options
-        final long timeout = idleTimeoutMillis;
-        if (timeout > 0) {
-            gracefulShutdownTimeoutMillis(timeout);
-        } else {
-            // Timeout disabled
-            gracefulShutdownTimeoutMillis(-1);
-        }
     }
 
     @Override
@@ -81,7 +78,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
+        cancelScheduledTasks();
         super.channelInactive(ctx);
     }
 
@@ -105,7 +102,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
+        cancelScheduledTasks();
         super.handlerRemoved0(ctx);
     }
 
@@ -118,11 +115,58 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         }
     }
 
-    private void destroyKeepAliveHandler() {
+    private void cancelScheduledTasks() {
+        gracefulConnectionShutdownHandler.cancel();
         keepAliveHandler.destroy();
     }
 
     KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof InitiateConnectionShutdown) {
+            setGoAwayDebugMessage("app-requested");
+            gracefulConnectionShutdownHandler.handleInitiateConnectionShutdown(
+                    ctx, (InitiateConnectionShutdown) evt);
+            return;
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (keepAliveHandler.needToCloseConnection()) {
+            // Connection timed out or exceeded maximum number of requests.
+            setGoAwayDebugMessage("max-age");
+        }
+        gracefulConnectionShutdownHandler.start(ctx, promise);
+    }
+
+    private final class Http2GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
+        Http2GracefulConnectionShutdownHandler(long drainDurationMicros) {
+            super(drainDurationMicros);
+        }
+
+        /**
+         * Send GOAWAY frame with stream ID 2^31-1 to signal clients that shutdown is imminent,
+         * but still accept in flight streams.
+         */
+        @Override
+        public void onDrainStart(ChannelHandlerContext ctx) {
+            goAway(ctx, Integer.MAX_VALUE);
+        }
+
+        /**
+         * Start channel shutdown. Will send final GOAWAY with latest created stream ID.
+         */
+        @Override
+        public void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            Http2ServerConnectionHandler.super.close(ctx, promise);
+            // Cancel scheduled tasks after the call to the super class above to avoid triggering
+            // needsImmediateDisconnection.
+            cancelScheduledTasks();
+        }
     }
 }

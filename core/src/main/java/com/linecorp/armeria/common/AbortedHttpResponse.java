@@ -16,15 +16,10 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.List;
+import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.module.kotlin.KotlinModule;
-import com.google.common.collect.ImmutableList;
-
-public final class CustomJacksonModuleProvider implements JacksonModuleProvider {
-    @Override
-    public List<Module> modules() {
-        return ImmutableList.of(new KotlinModule());
+final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> implements HttpResponse {
+    AbortedHttpResponse(Throwable cause) {
+        super(cause);
     }
 }

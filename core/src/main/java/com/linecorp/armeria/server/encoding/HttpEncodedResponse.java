@@ -205,7 +205,10 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         // We switch to chunked encoding and compress the response if it's reasonably
         // large or the content length is unknown because the compression savings should
         // outweigh the chunked encoding overhead.
-        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, Long.MAX_VALUE);
+        long contentLength = headers.contentLength();
+        if (contentLength == -1) {
+            contentLength = Long.MAX_VALUE;
+        }
         return contentLength >= minBytesToForceChunkedAndEncoding;
     }
 }
