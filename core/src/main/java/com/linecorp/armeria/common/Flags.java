@@ -290,6 +290,12 @@ public final class Flags {
                     DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
+    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
+    private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
+            getLong("defaultServerConnectionDrainDurationMicros",
+                    DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
+                    value -> value >= 0);
+
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getInt("defaultHttp2InitialConnectionWindowSize",
@@ -935,6 +941,34 @@ public final class Flags {
      */
     public static long defaultMaxClientConnectionAgeMillis() {
         return DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS;
+    }
+
+    /**
+     * Returns the default server-side graceful connection shutdown drain duration in microseconds.
+     * If the value of this flag is greater than {@code 0}, a connection shutdown will have a drain period
+     * when client will be notified about the shutdown, but in flight requests will still be accepted.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
+     * JVM option to override the default value.
+     *
+     * <p>
+     * At the beginning of the drain period server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * After the drain period end server stops accepting new requests.
+     * </p>
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain period microseconds
+     * is always {@code 0}, which means the connection will be closed immediately as soon as
+     * the current in-progress request is handled.
+     * </p>
+     *
+     * @see ServerBuilder#connectionDrainDuration(Duration)
+     * @see ServerBuilder#connectionDrainDurationMicros(long)
+     */
+    public static long defaultServerConnectionDrainDurationMicros() {
+        return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
     }
 
     /**

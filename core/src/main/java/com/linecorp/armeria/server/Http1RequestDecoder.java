@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
@@ -128,7 +129,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // Ignored if the stream has already been closed.
             ((HttpRequestWriter) req).close(ClosedSessionException.get());
         }
-
         destroyKeepAliveHandler();
     }
 
@@ -367,6 +367,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
             channelRead(ctx, nettyReq);
             channelReadComplete(ctx);
+            return;
+        }
+        if (evt instanceof InitiateConnectionShutdown) {
+            // HTTP/1 doesn't support draining that signals clients about connection shutdown but still
+            // accepts in flight requests. Simply destroy KeepAliveHandler which causes next response
+            // to have a "Connection: close" header and connection to be closed after the next response.
+            destroyKeepAliveHandler();
+            writer.initiateConnectionShutdown();
             return;
         }
 
