@@ -53,11 +53,13 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
@@ -119,24 +121,25 @@ public final class UnaryGrpcClient {
                 RequestHeaders.builder(HttpMethod.POST, uri).contentType(serializationFormat.mediaType())
                               .add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString()).build(),
                 HttpData.wrap(payload));
-        return webClient.execute(request).aggregate()
+        return webClient.execute(request).aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT)
                         .thenApply(msg -> {
-                            if (!HttpStatus.OK.equals(msg.status())) {
-                                throw new ArmeriaStatusException(
-                                        StatusCodes.INTERNAL,
-                                        "Non-successful HTTP response code: " + msg.status());
-                            }
+                            try (HttpData content = msg.content()) {
+                                if (!HttpStatus.OK.equals(msg.status())) {
+                                    throw new ArmeriaStatusException(
+                                            StatusCodes.INTERNAL,
+                                            "Non-successful HTTP response code: " + msg.status());
+                                }
 
-                            // Status can either be in the headers or trailers depending on error
-                            String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
-                            if (grpcStatus != null) {
-                                checkGrpcStatus(grpcStatus, msg.headers());
-                            } else {
-                                grpcStatus = msg.trailers().get(GrpcHeaderNames.GRPC_STATUS);
-                                checkGrpcStatus(grpcStatus, msg.trailers());
+                                // Status can either be in the headers or trailers depending on error
+                                String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
+                                if (grpcStatus != null) {
+                                    checkGrpcStatus(grpcStatus, msg.headers());
+                                } else {
+                                    grpcStatus = msg.trailers().get(GrpcHeaderNames.GRPC_STATUS);
+                                    checkGrpcStatus(grpcStatus, msg.trailers());
+                                }
+                                return content.array();
                             }
-
-                            return msg.content().array();
                         });
     }
 
@@ -186,22 +189,20 @@ public final class UnaryGrpcClient {
                                    }
                                })
                        .thenCompose(msg -> {
-                           try (HttpData content = msg.content()) {
-                               if (msg.status() != HttpStatus.OK || content.isEmpty()) {
-                                   // Nothing to deframe.
-                                   return CompletableFuture.completedFuture(msg.toHttpResponse());
-                               }
-
-                               final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                               final ArmeriaMessageDeframer deframer =
-                                       new ArmeriaMessageDeframer(Integer.MAX_VALUE);
-                               msg.toHttpResponse()
-                                  .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
-                                  .subscribe(new DeframedMessageSubscriber(
-                                                     msg, serializationFormat, responseFuture),
-                                             ctx.eventLoop());
-                               return responseFuture;
+                           if (msg.status() != HttpStatus.OK || msg.content().isEmpty()) {
+                               // Nothing to deframe.
+                               return CompletableFuture.completedFuture(msg.toHttpResponse());
                            }
+
+                           final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                           final ArmeriaMessageDeframer deframer =
+                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+                           msg.toHttpResponse()
+                              .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
+                              .subscribe(new DeframedMessageSubscriber(
+                                                 msg, serializationFormat, responseFuture),
+                                         ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+                           return responseFuture;
                        }), ctx.eventLoop());
         }
     }
