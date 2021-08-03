@@ -468,7 +468,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
      *                                  if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(HttpStatus status, MediaType contentType, Object content) {
         requireNonNull(status, "status");
