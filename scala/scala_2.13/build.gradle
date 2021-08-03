@@ -1,59 +1,11 @@
-buildscript {
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-    }
-    dependencies {
-        classpath "gradle.plugin.cz.alenkacz:gradle-scalafmt:${managedVersions['cz.alenkacz:gradle-scalafmt']}"
-    }
-}
-
-apply plugin: 'scala'
-apply plugin: 'cz.alenkacz.gradle.scalafmt'
-
 dependencies {
-    implementation 'org.scala-lang:scala-library'
     implementation 'org.scala-lang.modules:scala-java8-compat_2.13'
 
     // Added for supporting Scala types in Jackson{Request,Response}ConverterFunction
     implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.13'
-
-    testImplementation 'org.scalameta:munit_2.13'
 }
 
 project.sourceSets.all { sourceSet ->
     // Add the source directories for Scala 2.13 only.
     sourceSet.scala.srcDir file("src/${sourceSet.name}/scala_2.13")
-}
-
-compileScala.targetCompatibility = 1.8
-ScalaCompileOptions.metaClass.useAnt = false
-
-tasks.withType(ScalaCompile) {
-    scalaCompileOptions.with {
-        // Disable incremental compilation to avoid intermittent compile errors.
-        force = true
-    }
-}
-
-// Run `scalafmt` to automatically format scala code from source sets
-// https://github.com/alenkacz/gradle-scalafmt#tasks
-project.ext.getLintTask().dependsOn tasks.checkScalafmt
-
-task aggregatedScaladocs(
-        type: ScalaDoc,
-        description: 'Generate scaladocs from all child projects',
-        group: 'Documentation') {
-    destinationDir = file("$buildDir/docs/scaladoc")
-    title = "$project.name $version API"
-
-    subprojects.each { proj ->
-        proj.tasks.withType(ScalaDoc).each {
-            source += proj.sourceSets.main.allJava
-            source += proj.sourceSets.main.allScala
-            classpath += proj.sourceSets.main.compileClasspath
-            excludes += scaladoc.excludes
-            includes += scaladoc.includes
-        }
-    }
 }

@@ -112,19 +112,31 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     }
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
      */
     RequestHeadersBuilder cookie(Cookie cookie);
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
      */
     RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies);
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
      */
     RequestHeadersBuilder cookies(Cookie... cookies);
+
+    /**
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept</a>
+     * header.
+     */
+    RequestHeadersBuilder accept(MediaType... mediaTypes);
+
+    /**
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept</a>
+     * header.
+     */
+    RequestHeadersBuilder accept(Iterable<MediaType> mediaTypes);
 
     // Override the return type of the chaining methods in the superclass.
 
