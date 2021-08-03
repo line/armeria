@@ -42,8 +42,8 @@ class RoutingContextTest {
                 "text/html;charset=UTF-8, " +
                 "application/xhtml+xml;charset=utf-8");
         final List<MediaType> acceptTypes = headers.accept();
-        assertThat(acceptTypes).containsExactly(MediaType.XHTML_UTF_8,
-                                                MediaType.HTML_UTF_8,
+        assertThat(acceptTypes).containsExactly(MediaType.HTML_UTF_8,
+                                                MediaType.XHTML_UTF_8,
                                                 MediaType.parse("application/xml;q=0.9"),
                                                 MediaType.parse("*/*;q=0.8"));
     }
