@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.client.grpc;
 import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -171,18 +170,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                     buf.release();
                 }
             } else {
-                final ByteBuf buf = message.buf();
-                if (buf != null) {
-                    buf.release();
-                } else {
-                    try {
-                        final InputStream stream = message.stream();
-                        assert stream != null;
-                        stream.close();
-                    } catch (IOException e) {
-                        // Ignore silently
-                    }
-                }
+                message.close();
             }
         }
 
