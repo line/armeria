@@ -690,18 +690,37 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
-    final void addObject(IN_NAME name, Object value) {
+    private void addObjectAndNotify(NAME normalizedName, Object value, boolean notifyChange) {
         requireNonNull(value, "value");
-        add(name, fromObject(value));
+        final int h = hashName(normalizedName);
+        final int i = index(h);
+        addAndNotify(h, i, normalizedName, fromObject(value), notifyChange);
     }
 
-    final void addObject(IN_NAME name, Iterable<?> values) {
+    private void addObjectAndNotify(IN_NAME name, Iterable<?> values, boolean notifyChange) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
         for (Object v : values) {
             requireNonNullElement(values, v);
-            addObject(normalizedName, v);
+            addObjectAndNotify(normalizedName, v, false);
         }
+        if (notifyChange) {
+            onChange(normalizedName);
+        }
+    }
+
+    final void addObjectWithoutNotifying(IN_NAME name, Iterable<?> values) {
+        addObjectAndNotify(name, values, false);
+    }
+
+    final void addObject(IN_NAME name, Object value) {
+        final NAME normalizedName = normalizeName(name);
+        requireNonNull(value, "value");
+        addObjectAndNotify(normalizedName, fromObject(value), true);
+    }
+
+    final void addObject(IN_NAME name, Iterable<?> values) {
+        addObjectAndNotify(name, values, true);
     }
 
     final void addObject(IN_NAME name, Object... values) {
@@ -709,8 +728,9 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         requireNonNull(values, "values");
         for (Object v : values) {
             requireNonNullElement(values, v);
-            addObject(normalizedName, v);
+            addObjectAndNotify(normalizedName, v, false);
         }
+        onChange(normalizedName);
     }
 
     void addObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {

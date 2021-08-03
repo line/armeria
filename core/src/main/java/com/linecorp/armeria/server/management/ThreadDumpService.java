@@ -21,10 +21,6 @@ import java.lang.management.ThreadInfo;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Streams;
-
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -36,16 +32,10 @@ enum ThreadDumpService implements HttpService {
 
     INSTANCE;
 
-    private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
-
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        boolean acceptJson = false;
-        final String accept = req.headers().get(HttpHeaderNames.ACCEPT);
-        if (accept != null) {
-            acceptJson = Streams.stream(ACCEPT_SPLITTER.split(accept))
-                                .anyMatch(accept0 -> MediaType.JSON.is(MediaType.parse(accept0)));
-        }
+        final boolean acceptJson = req.headers().accept().stream()
+                                      .anyMatch(MediaType.JSON::is);
 
         final ThreadInfo[] threadInfos =
                 ManagementFactory.getThreadMXBean().dumpAllThreads(true, true);

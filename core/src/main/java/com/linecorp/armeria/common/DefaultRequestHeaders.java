@@ -85,6 +85,11 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     }
 
     @Override
+    public List<MediaType> accept() {
+        return super.accept();
+    }
+
+    @Override
     public RequestHeadersBuilder toBuilder() {
         return new DefaultRequestHeadersBuilder(this);
     }

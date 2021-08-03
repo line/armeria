@@ -459,10 +459,23 @@ public interface HttpResponse extends Response, HttpMessage {
      * @see JacksonModuleProvider
      */
     static HttpResponse ofJson(MediaType contentType, Object content) {
+        return ofJson(HttpStatus.OK, contentType, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link HttpStatus}, {@link MediaType} and
+     * {@code content} that is converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
+     *                                  if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(HttpStatus status, MediaType contentType, Object content) {
+        requireNonNull(status, "status");
         requireNonNull(contentType, "contentType");
         checkArgument(contentType.isJson(),
-                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.");
-        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.", contentType);
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
                                                        .contentType(contentType)
                                                        .build();
         return ofJson(headers, content);
