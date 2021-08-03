@@ -49,7 +49,9 @@ enum DefaultJacksonObjectMapperProvider implements JacksonObjectMapperProvider {
         }
 
         if (!noticed) {
-            logger.debug("Available Jackson Modules: {}", registeredModuleIds);
+            if (!registeredModuleIds.isEmpty()) {
+                logger.debug("Available Jackson Modules: {}", registeredModuleIds);
+            }
             noticed = true;
         }
         return mapper;
