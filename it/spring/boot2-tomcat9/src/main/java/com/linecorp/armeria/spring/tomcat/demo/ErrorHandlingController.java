@@ -47,6 +47,11 @@ public class ErrorHandlingController {
         throw new BaseException("exception handler");
     }
 
+    @GetMapping("/global-exception-handler")
+    public void globalExceptionHandler() {
+        throw new GlobalBaseException("global exception handler");
+    }
+
     @ResponseStatus(code = HttpStatus.NOT_FOUND, reason = "custom not found")
     private static class CustomException extends RuntimeException {}
 

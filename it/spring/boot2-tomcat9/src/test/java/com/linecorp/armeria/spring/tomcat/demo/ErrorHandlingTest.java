@@ -51,12 +51,15 @@ public class ErrorHandlingTest {
         final ResponseEntity<String> response =
                 restTemplate.getForEntity(baseUrl(port) + "/error-handling/runtime-exception", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatJson(response.getBody()).node("timestamp").isPresent();
         assertThatJson(response.getBody()).node("status")
                                           .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
         assertThatJson(response.getBody()).node("error")
                                           .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
         assertThatJson(response.getBody()).node("message")
                                           .isEqualTo("runtime exception");
+        assertThatJson(response.getBody()).node("path")
+                                          .isEqualTo("/error-handling/runtime-exception");
     }
 
     @Test
@@ -64,12 +67,15 @@ public class ErrorHandlingTest {
         final ResponseEntity<String> response =
                 restTemplate.getForEntity(baseUrl(port) + "/error-handling/custom-exception", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatJson(response.getBody()).node("timestamp").isPresent();
         assertThatJson(response.getBody()).node("status")
                                           .isEqualTo(HttpStatus.NOT_FOUND.value());
         assertThatJson(response.getBody()).node("error")
                                           .isEqualTo(HttpStatus.NOT_FOUND.getReasonPhrase());
         assertThatJson(response.getBody()).node("message")
                                           .isEqualTo("custom not found");
+        assertThatJson(response.getBody()).node("path")
+                                          .isEqualTo("/error-handling/custom-exception");
     }
 
     @Test
@@ -77,12 +83,27 @@ public class ErrorHandlingTest {
         final ResponseEntity<String> response =
                 restTemplate.getForEntity(baseUrl(port) + "/error-handling/exception-handler", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatJson(response.getBody()).node("timestamp").isAbsent();
         assertThatJson(response.getBody()).node("status")
                                           .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        assertThatJson(response.getBody()).node("error").isAbsent();
         assertThatJson(response.getBody()).node("message")
                                           .isEqualTo("exception handler");
+        assertThatJson(response.getBody()).node("path").isAbsent();
+    }
+
+    @Test
+    public void globalExceptionHandlerShouldReturnCustomFormattedMessage() throws Exception {
+        final ResponseEntity<String> response =
+                restTemplate.getForEntity(baseUrl(port) + "/error-handling/global-exception-handler",
+                                          String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThatJson(response.getBody()).node("timestamp").isAbsent();
+        assertThatJson(response.getBody()).node("status")
+                                          .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
         assertThatJson(response.getBody()).node("error").isAbsent();
+        assertThatJson(response.getBody()).node("message")
+                                          .isEqualTo("global exception handler");
         assertThatJson(response.getBody()).node("path").isAbsent();
     }
 }
