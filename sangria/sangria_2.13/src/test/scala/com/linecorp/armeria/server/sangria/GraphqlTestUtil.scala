@@ -18,9 +18,7 @@ package com.linecorp.armeria.server.sangria
 
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.{AggregatedHttpResponse, HttpMethod, MediaType, QueryParams}
-import com.linecorp.armeria.internal.server.JacksonUtil
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+import com.linecorp.armeria.internal.common.JacksonUtil
 
 object GraphqlTestUtil {
 

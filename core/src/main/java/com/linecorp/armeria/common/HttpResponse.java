@@ -51,9 +51,9 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
-import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -429,7 +429,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(Object content) {
         return ofJson(HttpStatus.OK, content);
@@ -440,7 +440,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(HttpStatus status, Object content) {
         requireNonNull(status, "status");
@@ -456,7 +456,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
      *                                  if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(MediaType contentType, Object content) {
         return ofJson(HttpStatus.OK, contentType, content);
@@ -468,7 +468,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
      *                                  if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(HttpStatus status, MediaType contentType, Object content) {
         requireNonNull(status, "status");
@@ -486,7 +486,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(ResponseHeaders headers, Object content) {
         requireNonNull(headers, "headers");

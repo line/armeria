@@ -17,25 +17,50 @@
 package com.linecorp.armeria.server
 
 import com.linecorp.armeria.client.WebClient
+import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.server.annotation.Post
 import com.linecorp.armeria.server.annotation.ProducesJson
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
-import org.junit.jupiter.api.Test
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class JacksonModuleAnnotatedServiceTest {
 
-    @Test
-    fun shouldEncodeAndDecodeDataClassWithJson() {
+    @CsvSource(value = ["/echo", "/echo-nullable"])
+    @ParameterizedTest
+    fun shouldEncodeAndDecodeDataClassWithJson(path: String) {
         val client = WebClient.of(server.httpUri())
         val json = """{"x": 10, "y":"hello"}"""
         val response = client.prepare()
-            .post("/echo")
+            .post(path)
             .content(MediaType.JSON, json)
             .execute().aggregate().join()
         assertThatJson(response.contentUtf8()).isEqualTo(json)
+    }
+
+    @CsvSource(value = ["/echo", "/echo-nullable"])
+    @ParameterizedTest
+    fun shouldEncodeAndDecodeNullableDataClassWithJson(path: String) {
+        val client = WebClient.of(server.httpUri())
+        val json = """{"x": 10}"""
+        val response = client.prepare()
+            .post(path)
+            .content(MediaType.JSON, json)
+            .execute().aggregate().join()
+        if (path == "/echo") {
+            assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST)
+        } else {
+            assertThatJson(response.contentUtf8()).isEqualTo("""
+              {
+                "x" : 10,
+                "y" : null
+              }
+              """)
+        }
     }
 
     companion object {
@@ -56,6 +81,14 @@ class ServiceWithDataClass {
     fun echo(foo: Foo): Foo {
         return foo
     }
+
+    @ProducesJson
+    @Post("/echo-nullable")
+    fun echo(foo: FooWithNullableType): FooWithNullableType {
+        return foo
+    }
 }
 
 data class Foo(val x: Int, val y: String)
+
+data class FooWithNullableType(val x: Int, val y: String?)

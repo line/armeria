@@ -16,15 +16,21 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.List;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.module.kotlin.KotlinModule;
-import com.google.common.collect.ImmutableList;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
-public final class CustomJacksonModuleProvider implements JacksonModuleProvider {
-    @Override
-    public List<Module> modules() {
-        return ImmutableList.of(new KotlinModule());
-    }
+/**
+ * A Java SPI (Service Provider Interface) for the default
+ * <a href="https://github.com/FasterXML/jackson">Jackson</a> {@link ObjectMapper}.
+ */
+@UnstableApi
+@FunctionalInterface
+public interface JacksonObjectMapperProvider {
+
+    /**
+     * Returns the default Jackson {@link ObjectMapper}s used for serializing and deserializing an object
+     * to and from JSON.
+     */
+    ObjectMapper newObjectMapper();
 }

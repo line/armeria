@@ -70,3 +70,5 @@ data class ExampleQueries(
     @Param @Default
     val limit: Int?
 )
+
+data class ExampleBody(val name: String, val limit: Int?)
