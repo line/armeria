@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc;
+package com.linecorp.armeria.common.grpc.protocol;
+
+import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
@@ -23,16 +25,17 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+
+import io.netty.util.AttributeKey;
 
 /**
  * Retrieves <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a> trailers.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers} instead.
  */
-@Deprecated
 @UnstableApi
 public final class GrpcWebTrailers {
+
+    private static final AttributeKey<HttpHeaders> GRPC_WEB_TRAILERS = AttributeKey.valueOf(
+            GrpcWebTrailers.class, "GRPC_WEB_TRAILERS");
 
     /**
      * Returns the gRPC-Web trailers which was set to the specified {@link RequestContext} using
@@ -66,14 +69,17 @@ public final class GrpcWebTrailers {
      */
     @Nullable
     public static HttpHeaders get(RequestContext ctx) {
-        return com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers.get(ctx);
+        requireNonNull(ctx, "ctx");
+        return ctx.attr(GRPC_WEB_TRAILERS);
     }
 
     /**
      * Sets the specified gRPC-Web trailers to the {@link RequestContext}.
      */
     public static void set(RequestContext ctx, HttpHeaders trailers) {
-        com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers.set(ctx, trailers);
+        requireNonNull(ctx, "ctx");
+        requireNonNull(trailers, "trailers");
+        ctx.setAttr(GRPC_WEB_TRAILERS, trailers);
     }
 
     private GrpcWebTrailers() {}
