@@ -147,11 +147,6 @@ public final class AnnotatedServiceFactory {
     };
 
     /**
-     * A default {@link ExceptionHandlerFunction}.
-     */
-    private static final ExceptionHandlerFunction defaultExceptionHandler = new DefaultExceptionHandler();
-
-    /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
      * <ul>
      *   <li>{@link Options} -> {@link HttpMethod#OPTIONS}
@@ -297,7 +292,7 @@ public final class AnnotatedServiceFactory {
                         .addAll(baseResponseConverters).build();
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
-                        .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
+                        .addAll(baseExceptionHandlers).build();
 
         final ResponseHeadersBuilder defaultHeaders = ResponseHeaders.builder(defaultResponseStatus(method));
 

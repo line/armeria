@@ -53,6 +53,7 @@ import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
+import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -323,8 +324,9 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
 
-        final ResponseHeaders headers = ResponseHeaders.of(status,
-                                                           HttpHeaderNames.CONTENT_TYPE, mediaType);
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
+                                                       .contentType(mediaType)
+                                                       .build();
         return of(headers, content, trailers);
     }
 
@@ -457,10 +459,23 @@ public interface HttpResponse extends Response, HttpMessage {
      * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(MediaType contentType, Object content) {
+        return ofJson(HttpStatus.OK, contentType, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link HttpStatus}, {@link MediaType} and
+     * {@code content} that is converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
+     *                                  if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(HttpStatus status, MediaType contentType, Object content) {
+        requireNonNull(status, "status");
         requireNonNull(contentType, "contentType");
         checkArgument(contentType.isJson(),
-                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.");
-        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.", contentType);
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
                                                        .contentType(contentType)
                                                        .build();
         return ofJson(headers, content);
@@ -540,9 +555,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new failed HTTP response.
      */
     static HttpResponse ofFailure(Throwable cause) {
-        final HttpResponseWriter res = streaming();
-        res.close(cause);
-        return res;
+        return new AbortedHttpResponse(cause);
     }
 
     @Override
@@ -751,5 +764,33 @@ public interface HttpResponse extends Response, HttpMessage {
     default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return of(HttpMessage.super.mapError(function));
+    }
+
+    /**
+     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link HttpResponse}
+     * when any error occurs before a {@link ResponseHeaders} is written.
+     * Note that the failed {@link HttpResponse} cannot be recovered from an error if a {@link ResponseHeaders}
+     * was written already.
+     *
+     * <p>Example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // The failed HttpResponse will be recovered by the fallback function.
+     * HttpResponse recovered = response.recover(cause -> HttpResponse.of("Fallback"));
+     * assert recovered.aggregate().join().contentUtf8().equals("Fallback");
+     *
+     * // As HTTP headers and body were written already before an error occurred,
+     * // the fallback function could not be applied for the failed HttpResponse.
+     * HttpResponseWriter response = HttpResponse.streaming();
+     * response.write(ResponseHeaders.of(HttpStatus.OK));
+     * response.write(HttpData.ofUtf8("Hello"));
+     * response.close(new IllegalStateException("Oops..."));
+     * HttpResponse notRecovered = response.recover(cause -> HttpResponse.of("Fallback"));
+     * // The IllegalStateException will be raised even though a fallback function was added.
+     * notRecovered.aggregate().join();
+     * }</pre>
+     */
+    default HttpResponse recover(Function<? super Throwable, ? extends HttpResponse> function) {
+        requireNonNull(function, "function");
+        return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
     }
 }

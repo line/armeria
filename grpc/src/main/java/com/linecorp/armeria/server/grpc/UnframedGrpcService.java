@@ -31,7 +31,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -306,7 +305,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
                 final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
-                unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
+                unframedHeaders.contentLength(unframedContent.length());
                 res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
             }
 

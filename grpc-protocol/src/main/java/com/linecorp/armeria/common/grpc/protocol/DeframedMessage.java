@@ -88,10 +88,10 @@ public final class DeframedMessage {
     }
 
     /**
-     * Returns the type.
+     * Returns {@code true} if this message is trailer.
      */
-    public int type() {
-        return type;
+    public boolean isTrailer() {
+        return type >> 7 == 1;
     }
 
     @Override

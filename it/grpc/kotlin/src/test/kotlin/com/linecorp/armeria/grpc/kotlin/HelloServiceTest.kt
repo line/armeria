@@ -132,7 +132,7 @@ class HelloServiceTest {
                 .service(
                     GrpcService.builder()
                         .addService(HelloServiceImpl())
-                        .exceptionMapping { throwable, _ ->
+                        .exceptionMapping { _, throwable, _ ->
                             when (throwable) {
                                 is AuthError -> {
                                     Status.UNAUTHENTICATED

@@ -13,17 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+/**
+ * {@link com.linecorp.armeria.server.HttpService} implementations for supporting the GraphQL protocol.
+ * This GraphQL service only handles network layers and cannot parse a GraphQL query. You should parse
+ * the {@link com.linecorp.armeria.server.graphql.protocol.GraphqlRequest#query()} with third party GraphQL
+ * libraries.
+ */
+@UnstableApi
+@NonNullByDefault
+package com.linecorp.armeria.server.graphql.protocol;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-
-final class ExceptionHandlerUtil {
-
-    static final AggregatedHttpResponse internalServerErrorResponse =
-            AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    static final AggregatedHttpResponse serviceUnavailableResponse =
-            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
-
-    private ExceptionHandlerUtil() {}
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

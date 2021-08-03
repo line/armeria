@@ -21,9 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.UncheckedIOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -33,7 +39,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -41,6 +47,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -49,6 +56,12 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 class AbstractUnaryGrpcServiceTest {
+    private static final String METHOD_NAME = "/armeria.grpc.testing.TestService/UnaryCall";
+    private static final String PAYLOAD_BODY = "hello";
+    private static final SimpleRequest REQUEST_MESSAGE = SimpleRequest.newBuilder().setPayload(
+            Payload.newBuilder().setBody(ByteString.copyFromUtf8(PAYLOAD_BODY)).build()).build();
+    private static final SimpleResponse RESPONSE_MESSAGE = SimpleResponse.newBuilder().setPayload(
+            Payload.newBuilder().setBody(ByteString.copyFromUtf8(PAYLOAD_BODY)).build()).build();
 
     // This service only depends on protobuf. Users can use a custom decoder / encoder to avoid even that.
     private static class TestService extends AbstractUnaryGrpcService {
@@ -63,10 +76,8 @@ class AbstractUnaryGrpcServiceTest {
             } catch (InvalidProtocolBufferException e) {
                 throw new UncheckedIOException(e);
             }
-            final SimpleResponse response = SimpleResponse.newBuilder()
-                                                          .setPayload(request.getPayload())
-                                                          .build();
-            return CompletableFuture.completedFuture(response.toByteArray());
+            assertThat(request).isEqualTo(REQUEST_MESSAGE);
+            return CompletableFuture.completedFuture(RESPONSE_MESSAGE.toByteArray());
         }
     }
 
@@ -74,55 +85,67 @@ class AbstractUnaryGrpcServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/armeria.grpc.testing.TestService/UnaryCall", new TestService());
+            sb.service(METHOD_NAME, new TestService());
         }
     };
 
-    @Test
-    void normal_downstream() {
+    private static class UnaryGrpcSerializationFormatArgumentsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
+            return UnaryGrpcSerializationFormats.values().stream().map(Arguments::of);
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
+    void normalDownstream(SerializationFormat serializationFormat) {
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
+                Clients.newClient(server.httpUri(serializationFormat),
                                   TestServiceBlockingStub.class);
-        assertThat(stub.unaryCall(SimpleRequest.newBuilder()
-                                               .setPayload(Payload.newBuilder()
-                                                                  .setBody(
-                                                                          ByteString.copyFromUtf8("hello"))
-                                                                  .build())
-                                               .build()).getPayload().getBody().toStringUtf8())
-                .isEqualTo("hello");
+        final SimpleResponse response = stub.unaryCall(REQUEST_MESSAGE);
+        assertThat(response).isEqualTo(RESPONSE_MESSAGE);
     }
 
     @Test
-    void normal_upstream() {
+    void normalUpstream() {
         final ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
                                                             .usePlaintext()
                                                             .build();
-
         try {
             final TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
-
-            assertThat(stub.unaryCall(SimpleRequest.newBuilder()
-                                                   .setPayload(Payload.newBuilder()
-                                                                      .setBody(
-                                                                              ByteString.copyFromUtf8("hello"))
-                                                                      .build())
-                                                   .build()).getPayload().getBody().toStringUtf8())
-                    .isEqualTo("hello");
+            final SimpleResponse response = stub.unaryCall(REQUEST_MESSAGE);
+            assertThat(response).isEqualTo(RESPONSE_MESSAGE);
         } finally {
             channel.shutdownNow();
         }
     }
 
     @Test
-    void invalidPayload() {
+    void unsupportedMediaType() {
         final WebClient client = WebClient.of(server.httpUri());
 
-        final AggregatedHttpResponse message =
-                client.post("/armeria.grpc.testing.TestService/UnaryCall", "foobarbreak").aggregate().join();
+        final AggregatedHttpResponse response =
+                client.post(METHOD_NAME, "foobarbreak").aggregate().join();
 
+        assertThat(response.headers().get(HttpHeaderNames.STATUS)).isEqualTo(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.codeAsText());
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
+    void invalidPayload(SerializationFormat serializationFormat) {
+        final WebClient client = WebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse message = client.prepare().post(METHOD_NAME).content(
+                serializationFormat.mediaType(), "foobarbreak").execute().aggregate().join();
+
+        // Trailers-Only response.
         assertThat(message.headers().get(HttpHeaderNames.STATUS)).isEqualTo(HttpStatus.OK.codeAsText());
+        assertThat(message.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
+                serializationFormat.mediaType().toString());
         assertThat(message.headers().get(GrpcHeaderNames.GRPC_STATUS))
                 .isEqualTo(Integer.toString(StatusCodes.INTERNAL));
         assertThat(message.headers().get(GrpcHeaderNames.GRPC_MESSAGE)).isNotBlank();
+        assertThat(message.content().isEmpty()).isEqualTo(true);
     }
 }

@@ -98,8 +98,6 @@ public final class DefaultServiceRequestContext
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private ContextAwareScheduledExecutorService blockingTaskExecutor;
-    @Nullable
-    private Runnable requestTimeoutHandler;
     private long maxRequestLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`

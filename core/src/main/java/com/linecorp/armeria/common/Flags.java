@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -69,6 +70,7 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
@@ -1149,7 +1151,11 @@ public final class Flags {
      * to override the default value.
      *
      * @see ExceptionVerbosity
+     *
+     * @deprecated Use {@link LoggingService} or log exceptions using
+     *             {@link ServerBuilder#exceptionHandler(com.linecorp.armeria.server.ExceptionHandler)}.
      */
+    @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
     }
@@ -1325,7 +1331,7 @@ public final class Flags {
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
-        return ExceptionVerbosity.valueOf(mode.toUpperCase());
+        return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {
@@ -1347,7 +1353,7 @@ public final class Flags {
     }
 
     private static int getInt(String name, int defaultValue, IntPredicate validator) {
-        return Integer.parseInt(getNormalized(name, String.valueOf(defaultValue), value -> {
+        return Integer.parseInt(getNormalized(name, StringUtil.toString(defaultValue), value -> {
             try {
                 return validator.test(Integer.parseInt(value));
             } catch (Exception e) {
@@ -1358,7 +1364,7 @@ public final class Flags {
     }
 
     private static long getLong(String name, long defaultValue, LongPredicate validator) {
-        return Long.parseLong(getNormalized(name, String.valueOf(defaultValue), value -> {
+        return Long.parseLong(getNormalized(name, StringUtil.toString(defaultValue), value -> {
             try {
                 return validator.test(Long.parseLong(value));
             } catch (Exception e) {

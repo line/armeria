@@ -157,8 +157,8 @@ public final class ResteasyService<T> implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         final RequestHeaders headers = req.headers();
-        final Long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH);
-        if (contentLength != null && contentLength <= maxRequestBufferSize) {
+        final long contentLength = headers.contentLength();
+        if (contentLength >= -1 && contentLength <= maxRequestBufferSize) {
             // aggregate bounded requests
             return HttpResponse.from(req.aggregate().thenCompose(r -> serveAsync(ctx, r)));
         } else {

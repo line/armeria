@@ -391,7 +391,14 @@ public final class ServerBuilder {
      * }</pre>
      */
     public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
-        return port(new InetSocketAddress(NetUtil.LOCALHOST, port), protocols);
+        final long portGroup = ServerPort.nextPortGroup();
+        port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST4, port), protocols, portGroup));
+
+        if (!NetUtil.isIpV4StackPreferred()) {
+            port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST6, port), protocols, portGroup));
+        }
+
+        return this;
     }
 
     /**
@@ -1673,6 +1680,11 @@ public final class ServerBuilder {
         final Map<ChannelOption<?>, Object> newChildChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
+
+        ExceptionHandler exceptionHandler = this.exceptionHandler;
+        if (exceptionHandler != ExceptionHandler.ofDefault()) {
+            exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
+        }
 
         return new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),

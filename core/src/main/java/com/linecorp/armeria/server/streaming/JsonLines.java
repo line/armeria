@@ -35,7 +35,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -91,8 +90,9 @@ public final class JsonLines {
     /**
      * A default {@link ResponseHeaders} of JSON Lines.
      */
-    private static final ResponseHeaders defaultHttpHeaders =
-            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES);
+    private static final ResponseHeaders defaultHttpHeaders = ResponseHeaders.builder(HttpStatus.OK)
+                                                                             .contentType(MediaType.JSON_LINES)
+                                                                             .build();
 
     /**
      * Returns a newly created JSON Lines response from the specified {@link Publisher}.
@@ -357,7 +357,7 @@ public final class JsonLines {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             return headers.toBuilder()
-                          .add(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES.toString())
+                          .contentType(MediaType.JSON_LINES)
                           .build();
         }
 

@@ -20,11 +20,6 @@ import javax.annotation.Nullable;
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultResponseHeaders extends DefaultHttpHeaders implements ResponseHeaders {
 
-    @Nullable
-    private HttpStatus status;
-    @Nullable
-    private Cookies cookies;
-
     DefaultResponseHeaders(HttpHeadersBase headers) {
         super(headers);
     }
@@ -35,21 +30,12 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
 
     @Override
     public HttpStatus status() {
-        final HttpStatus status = this.status;
-        if (status != null) {
-            return status;
-        }
-
-        return this.status = super.status();
+        return super.status();
     }
 
     @Override
     public Cookies cookies() {
-        final Cookies cookies = this.cookies;
-        if (cookies != null) {
-            return cookies;
-        }
-        return this.cookies = setCookie();
+        return setCookie();
     }
 
     @Override

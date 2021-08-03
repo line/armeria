@@ -46,7 +46,6 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -379,9 +378,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private static boolean validateAcceptHeaders(HttpRequest req, SerializationFormat serializationFormat) {
         // If accept header is present, make sure it is sane. Currently, we do not support accept
         // headers with a different format than the content type header.
-        final List<String> acceptHeaders = req.headers().getAll(HttpHeaderNames.ACCEPT);
-        return acceptHeaders.isEmpty() ||
-               serializationFormat.mediaTypes().matchHeaders(acceptHeaders) != null;
+        final List<MediaType> acceptTypes = req.headers().accept();
+        return acceptTypes.isEmpty() || serializationFormat.mediaTypes().match(acceptTypes) != null;
     }
 
     @Nullable
