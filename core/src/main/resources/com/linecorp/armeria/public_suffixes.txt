@@ -2207,6 +2207,8 @@ edugit.org
 edunet.tn
 ee
 ee.eu.org
+eero-stage.online
+eero.online
 eg
 egersund.no
 egyptian.museum
@@ -3342,6 +3344,9 @@ hk.org
 hkt
 hl.cn
 hl.no
+hlx.live
+hlx.page
+hlx3.page
 hm
 hm.no
 hn

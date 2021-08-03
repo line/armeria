@@ -18,18 +18,29 @@ package com.linecorp.armeria.server.encoding;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nullable;
 
+import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
+import com.aayushatharva.brotli4j.encoder.Encoder;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
+
+import io.netty.handler.codec.compression.Brotli;
 
 /**
  * Support utilities for dealing with HTTP encoding (e.g., gzip).
  */
 final class HttpEncoders {
+
+    private static final Encoder.Parameters BROTLI_PARAMETERS = new Encoder.Parameters().setQuality(4);
 
     @Nullable
     static HttpEncodingType getWrapperForRequest(HttpRequest request) {
@@ -40,7 +51,7 @@ final class HttpEncoders {
         return determineEncoding(acceptEncoding);
     }
 
-    static DeflaterOutputStream getEncodingOutputStream(HttpEncodingType encodingType, OutputStream out) {
+    static OutputStream getEncodingOutputStream(HttpEncodingType encodingType, OutputStream out) {
         switch (encodingType) {
             case GZIP:
                 try {
@@ -51,6 +62,16 @@ final class HttpEncoders {
                 }
             case DEFLATE:
                 return new DeflaterOutputStream(out, true);
+            case BROTLI:
+                try {
+                    // We use 4 as the default level because it would save more bytes
+                    // than GZIP's default setting and compress data faster.
+                    // See: https://blogs.akamai.com/2016/02/understanding-brotlis-potential.html
+                    return new BrotliOutputStream(out, BROTLI_PARAMETERS);
+                } catch (IOException e) {
+                    throw new IllegalStateException(
+                            "Error writing brotli header. This should not happen with byte arrays.", e);
+                }
             default:
                 throw new IllegalArgumentException("Unexpected zlib type, this is a programming bug.");
         }
@@ -61,8 +82,7 @@ final class HttpEncoders {
     @SuppressWarnings("FloatingPointEquality")
     private static HttpEncodingType determineEncoding(String acceptEncoding) {
         float starQ = -1.0f;
-        float gzipQ = -1.0f;
-        float deflateQ = -1.0f;
+        final Map<HttpEncodingType, Float> encodings = new LinkedHashMap<>();
         for (String encoding : acceptEncoding.split(",")) {
             float q = 1.0f;
             final int equalsPos = encoding.indexOf('=');
@@ -76,24 +96,30 @@ final class HttpEncoders {
             }
             if (encoding.contains("*")) {
                 starQ = q;
-            } else if (encoding.contains("gzip") && q > gzipQ) {
-                gzipQ = q;
-            } else if (encoding.contains("deflate") && q > deflateQ) {
-                deflateQ = q;
+            } else if (encoding.contains("br") && Brotli.isAvailable()) {
+                encodings.put(HttpEncodingType.BROTLI, q);
+            } else if (encoding.contains("gzip")) {
+                encodings.put(HttpEncodingType.GZIP, q);
+            } else if (encoding.contains("deflate")) {
+                encodings.put(HttpEncodingType.DEFLATE, q);
             }
         }
-        if (gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (gzipQ >= deflateQ) {
-                return HttpEncodingType.GZIP;
-            } else {
-                return HttpEncodingType.DEFLATE;
+
+        if (!encodings.isEmpty()) {
+            final Entry<HttpEncodingType, Float> entry = Collections.max(encodings.entrySet(),
+                                                                         Entry.comparingByValue());
+            if (entry.getValue() > 0.0f) {
+                return entry.getKey();
             }
         }
         if (starQ > 0.0f) {
-            if (gzipQ == -1.0f) {
+            if (!encodings.containsKey(HttpEncodingType.BROTLI) && Brotli.isAvailable()) {
+                return HttpEncodingType.BROTLI;
+            }
+            if (!encodings.containsKey(HttpEncodingType.GZIP)) {
                 return HttpEncodingType.GZIP;
             }
-            if (deflateQ == -1.0f) {
+            if (!encodings.containsKey(HttpEncodingType.DEFLATE)) {
                 return HttpEncodingType.DEFLATE;
             }
         }

@@ -135,6 +135,9 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder endOfStream(boolean endOfStream);
 
     @Override
+    RequestHeadersBuilder contentLength(long contentLength);
+
+    @Override
     RequestHeadersBuilder contentType(MediaType contentType);
 
     @Override

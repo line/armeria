@@ -35,7 +35,8 @@ import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
  */
 public final class DecodingClientBuilder {
 
-    private List<StreamDecoderFactory> decoderFactories = ImmutableList.of(StreamDecoderFactory.gzip(),
+    private List<StreamDecoderFactory> decoderFactories = ImmutableList.of(StreamDecoderFactory.brotli(),
+                                                                           StreamDecoderFactory.gzip(),
                                                                            StreamDecoderFactory.deflate());
 
     private boolean autoFillAcceptEncoding = true;
@@ -45,8 +46,8 @@ public final class DecodingClientBuilder {
 
     /**
      * Sets the specified {@link StreamDecoderFactory}s.
-     * If not specified, {@link StreamDecoderFactory#gzip()} and {@link StreamDecoderFactory#deflate()} are
-     * used by default.
+     * If not specified, {@link StreamDecoderFactory#gzip()}, {@link StreamDecoderFactory#deflate()} and
+     * {@link StreamDecoderFactory#brotli()} are used by default.
      */
     public DecodingClientBuilder decoderFactories(StreamDecoderFactory... decoderFactories) {
         requireNonNull(decoderFactories, "decoderFactories");
@@ -55,8 +56,8 @@ public final class DecodingClientBuilder {
 
     /**
      * Sets the specified {@link StreamDecoderFactory}s.
-     * If not specified, {@link StreamDecoderFactory#gzip()} and {@link StreamDecoderFactory#deflate()} are
-     * used by default.
+     * If not specified, {@link StreamDecoderFactory#gzip()}, {@link StreamDecoderFactory#deflate()} and
+     * {@link StreamDecoderFactory#brotli()} are used by default.
      */
     public DecodingClientBuilder decoderFactories(Iterable<? extends StreamDecoderFactory> decoderFactories) {
         requireNonNull(decoderFactories, "decoderFactories");
