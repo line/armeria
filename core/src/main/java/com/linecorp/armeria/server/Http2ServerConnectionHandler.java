@@ -162,8 +162,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
          * Start channel shutdown. Will send final GOAWAY with latest created stream ID.
          */
         @Override
-        public void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            Http2ServerConnectionHandler.super.close(ctx, promise);
+        public void onDrainEnd(ChannelHandlerContext ctx) throws Exception {
+            Http2ServerConnectionHandler.super.close(ctx, ctx.newPromise());
             // Cancel scheduled tasks after the call to the super class above to avoid triggering
             // needsImmediateDisconnection.
             cancelScheduledTasks();

@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -38,8 +39,7 @@ import io.netty.channel.EventLoop;
 public abstract class GracefulConnectionShutdownHandler {
     private static final Logger logger = LoggerFactory.getLogger(GracefulConnectionShutdownHandler.class);
 
-    @Nullable
-    private ChannelPromise promise;
+    private boolean started;
     @Nullable
     private ScheduledFuture<?> drainFuture;
 
@@ -60,29 +60,40 @@ public abstract class GracefulConnectionShutdownHandler {
     /**
      * Code executed on the connection drain end. Executed at most once.
      */
-    protected abstract void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    protected abstract void onDrainEnd(ChannelHandlerContext ctx) throws Exception;
 
     public void start(ChannelHandlerContext ctx, ChannelPromise promise) {
-        if (this.promise == null) {
-            this.promise = promise;
-        } else {
-            // Chain promises in case start is called multiple times.
-            this.promise.addListener((ChannelFutureListener) future -> {
-                if (future.cause() != null) {
-                    promise.setFailure(future.cause());
-                } else {
-                    promise.setSuccess();
-                }
-            });
+        final Channel ch = ctx.channel();
+        if (!ch.isActive()) {
+            promise.trySuccess();
+            return;
         }
-        run(ctx, this.promise);
+
+        started = true;
+
+        // Ensure the given promise is fulfilled when the channel is closed.
+        ch.closeFuture().addListener((ChannelFutureListener) future -> {
+            if (future.cause() != null) {
+                promise.tryFailure(future.cause());
+            } else {
+                promise.trySuccess();
+            }
+        });
+
+        run(ctx);
     }
 
-    private void run(ChannelHandlerContext ctx, ChannelPromise promise) {
+    private void run(ChannelHandlerContext ctx) {
         if (drainFuture != null) {
+            final boolean cancelled;
             if (drainFuture.getDelay(TimeUnit.MICROSECONDS) > drainDurationMicros) {
                 // Maybe reschedule below.
-                drainFuture.cancel(false);
+                cancelled = drainFuture.cancel(false);
+            } else {
+                cancelled = false;
+            }
+
+            if (cancelled) {
                 drainFuture = null;
             } else {
                 // Drain is already scheduled to finish earlier.
@@ -93,25 +104,24 @@ public abstract class GracefulConnectionShutdownHandler {
             if (canCallOnDrainStart) {
                 onDrainStart(ctx);
             }
-            drainFuture = ctx.executor().schedule(() -> finish(ctx, promise),
+            drainFuture = ctx.executor().schedule(() -> finish(ctx),
                                                   drainDurationMicros, TimeUnit.MICROSECONDS);
         } else {
-            finish(ctx, promise);
+            finish(ctx);
         }
         canCallOnDrainStart = false;
     }
 
-    private void finish(ChannelHandlerContext ctx, ChannelPromise promise) {
+    private void finish(ChannelHandlerContext ctx) {
         try {
-            onDrainEnd(ctx, promise);
+            onDrainEnd(ctx);
         } catch (Exception e) {
             logger.warn("{} Unexpected exception:", ctx.channel(), e);
         }
     }
 
     public void cancel() {
-        if (drainFuture != null) {
-            drainFuture.cancel(false);
+        if (drainFuture != null && drainFuture.cancel(false)) {
             drainFuture = null;
         }
     }
@@ -119,15 +129,19 @@ public abstract class GracefulConnectionShutdownHandler {
     public void handleInitiateConnectionShutdown(ChannelHandlerContext ctx, InitiateConnectionShutdown event) {
         // If the given duration is negative - fallback to the default duration set in the constructor.
         if (event.hasCustomDrainDuration()) {
-            // This value will be used schedule or update the graceful connection shutdown drain duration.
+            // This value will be used to schedule or update the graceful connection shutdown drain duration.
             drainDurationMicros = event.drainDurationMicros();
         }
-        if (promise == null) {
-            // Shutdown not started yet, close the channel to start.
-            ctx.channel().close();
-            return;
+
+        if (started) {
+            // Maybe reschedule drain end.
+            run(ctx);
+        } else {
+            // Shutdown not started yet, close the channel to trigger start().
+            final Channel ch = ctx.channel();
+            if (ch.isActive()) {
+                ch.close();
+            }
         }
-        // Maybe reschedule drain end.
-        run(ctx, promise);
     }
 }
