@@ -193,3 +193,8 @@ jobs:
           rm -f ~/.gradle/caches/*/*.lock || true
           rm -f ~/.gradle/caches/*/gc.properties || true
         shell: bash
+
+    - name: Dump stuck threads
+      if: always()
+      run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+      shell: bash
