@@ -631,10 +631,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void startRequest(long requestStartTimeNanos, long requestStartTimeMicros) {
-        if (!isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
-            this.requestStartTimeNanos = requestStartTimeNanos;
-            this.requestStartTimeMicros = requestStartTimeMicros;
+        if (isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
+            return;
         }
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
 
         updateFlags(RequestLogProperty.REQUEST_START_TIME);
     }
