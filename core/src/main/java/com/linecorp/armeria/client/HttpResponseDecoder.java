@@ -58,6 +58,7 @@ abstract class HttpResponseDecoder {
 
     private int unfinishedResponses;
     private boolean disconnectWhenFinished;
+    private boolean closing;
 
     HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
         this.channel = channel;
@@ -100,6 +101,11 @@ abstract class HttpResponseDecoder {
 
     @Nullable
     final HttpResponseWrapper removeResponse(int id) {
+        if (closing) {
+            // `unfinishedResponses` will be removed by `failUnfinishedResponses()`
+            return null;
+        }
+
         final HttpResponseWrapper removed = responses.remove(id);
         if (removed != null) {
             unfinishedResponses--;
@@ -122,6 +128,11 @@ abstract class HttpResponseDecoder {
     }
 
     final void failUnfinishedResponses(Throwable cause) {
+        if (closing) {
+            return;
+        }
+        closing = true;
+
         for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
              iterator.hasNext();) {
             final HttpResponseWrapper res = iterator.next();
