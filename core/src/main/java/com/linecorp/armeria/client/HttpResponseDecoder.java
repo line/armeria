@@ -58,7 +58,7 @@ abstract class HttpResponseDecoder {
 
     private int unfinishedResponses;
     private boolean disconnectWhenFinished;
-    private int wip;
+    private boolean closing;
 
     HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
         this.channel = channel;
@@ -101,6 +101,11 @@ abstract class HttpResponseDecoder {
 
     @Nullable
     final HttpResponseWrapper removeResponse(int id) {
+        if (closing) {
+            // `unfinishedResponses` will be removed by `failUnfinishedResponses()`
+            return null;
+        }
+
         final HttpResponseWrapper removed = responses.remove(id);
         if (removed != null) {
             unfinishedResponses--;
@@ -123,21 +128,19 @@ abstract class HttpResponseDecoder {
     }
 
     final void failUnfinishedResponses(Throwable cause) {
-        if (wip++ > 0) {
-            // re-entrance
+        if (closing) {
             return;
         }
+        closing = true;
 
-        do {
-            for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
-                 iterator.hasNext();) {
-                final HttpResponseWrapper res = iterator.next();
-                // To avoid calling removeResponse by res.close(cause), remove before closing.
-                iterator.remove();
-                unfinishedResponses--;
-                res.close(cause);
-            }
-        } while (--wip != 0);
+        for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
+             iterator.hasNext();) {
+            final HttpResponseWrapper res = iterator.next();
+            // To avoid calling removeResponse by res.close(cause), remove before closing.
+            iterator.remove();
+            unfinishedResponses--;
+            res.close(cause);
+        }
     }
 
     abstract KeepAliveHandler keepAliveHandler();
