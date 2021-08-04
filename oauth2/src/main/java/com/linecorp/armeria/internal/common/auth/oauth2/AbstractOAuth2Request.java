@@ -140,7 +140,7 @@ public abstract class AbstractOAuth2Request<T> {
         } else {
             requestFormData = requestFormData.withMutations(this::addCredentialsAsBodyParameters);
         }
-        headersBuilder.addObject(HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
+        headersBuilder.contentType(MediaType.FORM_DATA);
 
         return HttpRequest.of(headersBuilder.build(), HttpData.ofUtf8(requestFormData.toQueryString()));
     }

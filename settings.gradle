@@ -13,6 +13,7 @@ includeWithFlags ':eureka',                              'java', 'publish', 'rel
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate'
 includeWithFlags ':graphql',                             'java', 'publish', 'relocate'
+includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
@@ -26,14 +27,20 @@ includeWithFlags ':resteasy',                            'java', 'publish', 'rel
 includeWithFlags ':retrofit2',                           'java', 'publish', 'relocate'
 includeWithFlags ':rxjava2',                             'java', 'publish', 'relocate'
 includeWithFlags ':rxjava3',                             'java', 'publish', 'relocate'
-includeWithFlags ':scala_2.12',                          'java', 'publish', 'relocate', 'no_aggregation'
+
+includeWithFlags ':sangria_2.12',     'java', 'publish', 'relocate', 'no_aggregation', 'scala_2.12'
+project(':sangria_2.12').projectDir = file('sangria/sangria_2.12')
+includeWithFlags ':sangria_2.13',     'java', 'publish', 'relocate', 'scala_2.13'
+project(':sangria_2.13').projectDir = file('sangria/sangria_2.13')
+includeWithFlags ':scala_2.12',       'java', 'publish', 'relocate', 'no_aggregation', 'scala_2.12'
 project(':scala_2.12').projectDir = file('scala/scala_2.12')
-includeWithFlags ':scala_2.13',                          'java', 'publish', 'relocate'
+includeWithFlags ':scala_2.13',       'java', 'publish', 'relocate', 'scala_2.13'
 project(':scala_2.13').projectDir = file('scala/scala_2.13')
-includeWithFlags ':scalapb_2.12',                        'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':scalapb_2.12',     'java', 'publish', 'relocate', 'no_aggregation', 'scala_2.12'
 project(':scalapb_2.12').projectDir = file('scalapb/scalapb_2.12')
-includeWithFlags ':scalapb_2.13',                        'java', 'publish', 'relocate', 'scala-grpc_2.13'
+includeWithFlags ':scalapb_2.13',     'java', 'publish', 'relocate', 'scala-grpc_2.13', 'scala_2.13'
 project(':scalapb_2.13').projectDir = file('scalapb/scalapb_2.13')
+
 includeWithFlags ':spring:boot1-autoconfigure',          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot1-starter',                'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot2-actuator-autoconfigure', 'java', 'publish', 'relocate'
@@ -64,7 +71,7 @@ includeWithFlags ':it:context-storage',             'java'
 includeWithFlags ':it:dgs',                         'java'
 includeWithFlags ':it:grpcweb',                     'java', 'akka-grpc_2.13'
 includeWithFlags ':it:grpc:kotlin',                 'java', 'relocate', 'kotlin-grpc', 'kotlin'
-includeWithFlags ':it:grpc:scala',                  'java', 'relocate', 'scala-grpc_2.13'
+includeWithFlags ':it:grpc:scala',                  'java', 'relocate', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':it:grpc:reactor',                'java', 'relocate', 'reactor-grpc'
 includeWithFlags ':it:jackson-provider',            'java', 'relocate'
 includeWithFlags ':it:kotlin',                      'java', 'relocate', 'kotlin'
@@ -107,10 +114,14 @@ includeWithFlags ':examples:dropwizard-example',                   'java'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:graphql-example',                      'java'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
+includeWithFlags ':examples:graphql-kotlin-example',               'java', 'kotlin'
+project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
+includeWithFlags ':examples:graphql-sangria-example',              'java', 'scala_2.13'
+project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
 includeWithFlags ':examples:grpc-example',                         'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java', 'kotlin-grpc', 'kotlin'
-includeWithFlags ':examples:grpc-scala',                           'java', 'scala-grpc_2.13'
+includeWithFlags ':examples:grpc-scala',                           'java', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':examples:grpc-reactor',                         'java', 'reactor-grpc'
 includeWithFlags ':examples:proxy-server',                         'java'
 includeWithFlags ':examples:saml-service-provider',                'java'

@@ -80,6 +80,7 @@ module.exports = {
             'layouts',
             'release-notes.tsx',
           ),
+          tutorials: path.resolve(__dirname, 'src', 'layouts', 'tutorials.tsx'),
         },
         remarkPlugins: [remarkGithubPlugin, remarkGridTablesPlugin],
         gatsbyRemarkPlugins: [
@@ -116,6 +117,12 @@ module.exports = {
             resolve: 'gatsby-remark-images',
             options: {
               linkImagesToOriginal: false,
+            },
+          },
+          {
+            resolve: 'gatsby-remark-plantuml-lite',
+            options: {
+              imageType: 'svg',
             },
           },
           {
@@ -165,6 +172,13 @@ module.exports = {
       options: {
         name: 'docs',
         path: path.resolve(__dirname, 'src', 'pages', 'docs'),
+      },
+    },
+    {
+      resolve: `gatsby-source-filesystem`,
+      options: {
+        name: 'tutorials',
+        path: path.resolve(__dirname, 'src', 'pages', 'tutorials'),
       },
     },
     {

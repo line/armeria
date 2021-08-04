@@ -799,6 +799,22 @@ class HttpHeadersBaseTest {
         }
     }
 
+    @Test
+    void testCompareMediaTypes() {
+        // Sort by their quality factor.
+        assertThat(HttpHeadersBase.compareMediaType(MediaType.parse("application/octet-stream;q=0.8"),
+                                                    MediaType.parse("text/plain;q=0.9")))
+                .isGreaterThan(0);
+        // Sort by their coverage. (the number of wildcards)
+        assertThat(HttpHeadersBase.compareMediaType(MediaType.parse("text/*;q=0.9"),
+                                                    MediaType.parse("text/plain;q=0.9")))
+                .isGreaterThan(0);
+        // Preserve the original order
+        assertThat(HttpHeadersBase.compareMediaType(MediaType.parse("text/plain;q=0.9"),
+                                                    MediaType.parse("application/octet-stream;q=0.9")))
+                .isZero();
+    }
+
     private static HttpHeadersBase newEmptyHeaders() {
         return new HttpHeadersBase(16);
     }

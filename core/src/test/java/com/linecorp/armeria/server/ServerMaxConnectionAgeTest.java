@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -28,11 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
-import java.util.stream.IntStream;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,8 +38,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ConnectionPoolListener;
-import com.linecorp.armeria.client.GoAwayReceivedException;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -69,6 +62,7 @@ class ServerMaxConnectionAgeTest {
             sb.tlsSelfSigned();
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
+            sb.connectionDrainDuration(Duration.ofMillis(10));
             sb.maxConnectionAgeMillis(MAX_CONNECTION_AGE);
             meterRegistry = new SimpleMeterRegistry();
             sb.meterRegistry(meterRegistry);
@@ -90,6 +84,7 @@ class ServerMaxConnectionAgeTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
+            sb.connectionDrainDuration(Duration.ofMillis(10));
             sb.service("/", (ctx, req) ->
                     HttpResponse.delayed(HttpResponse.of(OK), Duration.ofMillis(100)));
         }
@@ -216,58 +211,18 @@ class ServerMaxConnectionAgeTest {
     @CsvSource({ "H2C", "H2" })
     @ParameterizedTest
     void http2MaxConnectionAge(SessionProtocol protocol) throws InterruptedException {
-        final int concurrency = 200;
         try (ClientFactory factory = newClientFactory(false)) {
             final WebClient client = newWebClient(factory, server.uri(protocol));
-
             // Make sure that a connection is opened.
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             assertThat(opened).hasValue(1);
-
-            final Supplier<HttpResponse> execute = () -> client.get("/");
-
+            assertThat(closed).hasValue(0);
             await().untilAsserted(() -> {
-                final List<HttpResponse> responses = IntStream.range(0, concurrency)
-                                                              .mapToObj(unused -> execute.get())
-                                                              .collect(toImmutableList());
-                Throwable cause = null;
-                for (HttpResponse response : responses) {
-                    try {
-                        response.aggregate().join();
-                    } catch (Exception e) {
-                        if (cause == null) {
-                            cause = e;
-                        }
-                    }
-                }
-
-                assertThat(cause)
-                        .isInstanceOf(CompletionException.class)
-                        .hasCauseInstanceOf(UnprocessedRequestException.class)
-                        .hasRootCauseInstanceOf(GoAwayReceivedException.class);
-            });
-
-            await().untilAsserted(() -> {
-                assertThat(MoreMeters.measureAll(meterRegistry))
-                        .hasEntrySatisfying(
-                                "armeria.server.connections.lifespan.percentile#value{phi=0,protocol=" +
-                                protocol.uriText() + '}',
-                                value -> {
-                                    assertThat(value * 1000).isBetween(
-                                            MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
-                                })
-                        .hasEntrySatisfying(
-                                "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
-                                protocol.uriText() + '}',
-                                value -> {
-                                    assertThat(value * 1000).isBetween(
-                                            MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
-                                }
-                        )
-                        .hasEntrySatisfying(
-                                "armeria.server.connections.lifespan#count{protocol=" +
-                                protocol.uriText() + '}',
-                                value -> assertThat(value).isEqualTo(closed.get()));
+                // Schedule another request to avoid idling the connection.
+                assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+                // Eventually connection should be closed due to max-age, a new connection will be opened.
+                assertThat(opened).hasValue(2);
+                assertThat(closed).hasValue(1);
             });
         }
     }

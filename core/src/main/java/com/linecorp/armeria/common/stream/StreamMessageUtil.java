@@ -22,6 +22,7 @@ import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.multipart.BodyPart;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 final class StreamMessageUtil {
@@ -52,7 +53,9 @@ final class StreamMessageUtil {
             return;
         }
 
-        PooledObjects.close(obj);
+        if (obj instanceof SafeCloseable) {
+            ((SafeCloseable) obj).close();
+        }
     }
 
     static void closeOrAbort(Object obj) {

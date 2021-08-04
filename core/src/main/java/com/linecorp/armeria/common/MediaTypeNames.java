@@ -297,6 +297,10 @@ public final class MediaTypeNames {
      */
     public static final String GRAPHQL = "application/graphql";
     /**
+     * {@value #GRAPHQL_JSON}.
+     */
+    public static final String GRAPHQL_JSON = "application/graphql+json";
+    /**
      * {@value #GZIP}.
      */
     public static final String GZIP = "application/x-gzip";

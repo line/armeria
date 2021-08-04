@@ -35,6 +35,13 @@ com.auth0:
     javadocs:
     - https://www.javadoc.io/doc/com.auth0/java-jwt/3.16.0/
 
+# This is only used for examples/graphql-kotlin
+com.expediagroup:
+  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '4.1.1' }
+  graphql-kotlin-client-jackson: { version: *GRAPHQL_KOTLIN_VERSION }
+  graphql-kotlin-client-serialization: { version: *GRAPHQL_KOTLIN_VERSION }
+  graphql-kotlin-schema-generator: { version: *GRAPHQL_KOTLIN_VERSION }
+
 com.fasterxml.jackson.core:
   jackson-annotations:
     javadocs:
@@ -126,6 +133,9 @@ com.google.protobuf:
 
 com.graphql-java:
   graphql-java: { version: '16.2' }
+
+com.guardsquare:
+  proguard-gradle: { version: '7.1.0' }
 
 # Akka is used only for testing in it:grpcweb module.
 com.lightbend.akka.grpc:
@@ -347,9 +357,6 @@ net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.27.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
-com.guardsquare:
-  proguard-gradle: { version: '7.1.0' }
-
 net.shibboleth.utilities:
   java-support: { version: '7.5.2' }
 
@@ -491,7 +498,8 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: '1.5.10' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.10' }
+  kotlin-reflect: { version: *KOTLIN_VERSION }
 
 org.jetbrains.kotlinx:
   kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.5.0' }
@@ -558,6 +566,12 @@ org.scala-lang.modules:
 org.scalameta:
   munit_2.12: { version: &MUNIT_VERSION '0.7.26' }
   munit_2.13: { version: *MUNIT_VERSION }
+
+org.sangria-graphql:
+  sangria_2.12: { version: &SANGRIA_VERSION '2.1.3' }
+  sangria_2.13: { version: *SANGRIA_VERSION }
+  sangria-slowlog_2.12: { version: &SANGRIA_SLOWLOG_VERSION '2.0.2' }
+  sangria-slowlog_2.13: { version: *SANGRIA_SLOWLOG_VERSION }
 
 org.slf4j:
   jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.31' }

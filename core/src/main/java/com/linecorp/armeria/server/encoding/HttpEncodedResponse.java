@@ -20,8 +20,8 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.function.Predicate;
-import java.util.zip.DeflaterOutputStream;
 
 import javax.annotation.Nullable;
 
@@ -56,7 +56,7 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
     private ByteArrayOutputStream encodedStream;
 
     @Nullable
-    private DeflaterOutputStream encodingStream;
+    private OutputStream encodingStream;
 
     private boolean headersSent;
 
@@ -105,6 +105,9 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                     break;
                 case DEFLATE:
                     mutable.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
+                    break;
+                case BROTLI:
+                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "br");
                     break;
             }
             mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
@@ -202,7 +205,10 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         // We switch to chunked encoding and compress the response if it's reasonably
         // large or the content length is unknown because the compression savings should
         // outweigh the chunked encoding overhead.
-        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, Long.MAX_VALUE);
+        long contentLength = headers.contentLength();
+        if (contentLength == -1) {
+            contentLength = Long.MAX_VALUE;
+        }
         return contentLength >= minBytesToForceChunkedAndEncoding;
     }
 }

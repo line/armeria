@@ -48,6 +48,13 @@ public final class StringUtil {
         return Integer.toString(num);
     }
 
+    public static String toString(long num) {
+        if (num >= MIN_NUM && num <= MAX_NUM) {
+            return intToString[(int) (num + MAX_NUM)];
+        }
+        return Long.toString(num);
+    }
+
     public static Boolean toBoolean(String s, boolean errorOnFailure) {
         final Boolean result = stringToBoolean.get(Ascii.toLowerCase(s));
         if (result != null) {

@@ -39,9 +39,9 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 
@@ -174,9 +174,9 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
                           .toString();
     }
 
-    private static void setDefaultRequestHeaders(HttpHeadersBuilder headers) {
-        if (!headers.contains(HttpHeaderNames.ACCEPT)) {
-            headers.add(HttpHeaderNames.ACCEPT, "*/*");
+    private static void setDefaultRequestHeaders(RequestHeadersBuilder headers) {
+        if (headers.accept().isEmpty()) {
+            headers.accept(MediaType.ANY_TYPE);
         }
     }
 }

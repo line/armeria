@@ -47,7 +47,7 @@ import io.netty.util.AttributeMap;
 
 class KeepAliveMaxNumRequestsTest {
 
-    private static final int MAX_NUM_REQUESTS = 20;
+    private static final int MAX_NUM_REQUESTS = 3;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
