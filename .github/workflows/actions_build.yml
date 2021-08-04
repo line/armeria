@@ -68,7 +68,6 @@ jobs:
     - name: Build with Gradle
       run: |
         ./gradlew --no-daemon --stacktrace build \
-        ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
         ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
