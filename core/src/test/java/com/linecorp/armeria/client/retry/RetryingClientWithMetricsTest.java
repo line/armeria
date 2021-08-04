@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
@@ -117,7 +118,8 @@ class RetryingClientWithMetricsTest {
 
         // wait until 3 calls are recorded.
         await().untilAsserted(() -> {
-            assertThat(MoreMeters.measureAll(meterRegistry))
+            final Map<String, Double> measured = MoreMeters.measureAll(meterRegistry);
+            assertThat(measured)
                     .containsEntry("foo.requests#count{http.status=200,method=GET,result=success,service=none}",
                                    1.0)
                     .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure,service=none}",
@@ -126,6 +128,19 @@ class RetryingClientWithMetricsTest {
                                    0.0)
                     .containsEntry("foo.requests#count{http.status=500,method=GET,result=failure,service=none}",
                                    2.0);
+            assertThat(measured.get("foo.request.duration#total{http.status=200,method=GET,service=none}"))
+                    .isGreaterThan(0);
+            assertThat(measured.get("foo.request.duration#total{http.status=500,method=GET,service=none}"))
+                    .isGreaterThan(0);
+            assertThat(measured.get("foo.response.duration#total{http.status=200,method=GET,service=none}"))
+                    .isGreaterThan(0);
+            assertThat(measured.get("foo.response.duration#total{http.status=500,method=GET,service=none}"))
+                    .isGreaterThan(0);
+            assertThat(measured.get("foo.total.duration#total{http.status=200,method=GET,service=none}"))
+                    .isGreaterThan(0);
+            assertThat(measured.get("foo.total.duration#total{http.status=500,method=GET,service=none}"))
+                    .isGreaterThan(0);
+
         });
     }
 
