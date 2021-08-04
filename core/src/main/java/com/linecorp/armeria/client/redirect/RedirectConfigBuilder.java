@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.redirect;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowAllDomains;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -30,7 +31,6 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -42,16 +42,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class RedirectConfigBuilder {
-
-    public static final BiPredicate<ClientRequestContext, String> allowAllDomains = (ctx, domain) -> true;
-
-    public static final BiPredicate<ClientRequestContext, String> allowSameDomain = (ctx, domain) -> {
-        final Endpoint endpoint = ctx.endpoint();
-        if (endpoint == null) {
-            return false;
-        }
-        return endpoint.host().contains(domain);
-    };
 
     private int maxRedirects = 19; // Widely used default value. https://stackoverflow.com/a/36041063/1736581
 

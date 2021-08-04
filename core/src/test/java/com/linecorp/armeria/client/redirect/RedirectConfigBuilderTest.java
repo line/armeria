@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.redirect;
 
-import static com.linecorp.armeria.client.redirect.RedirectConfigBuilder.allowAllDomains;
+import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowAllDomains;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.BiPredicate;

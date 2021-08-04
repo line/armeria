@@ -17,8 +17,8 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.client.redirect.RedirectConfigBuilder.allowAllDomains;
-import static com.linecorp.armeria.client.redirect.RedirectConfigBuilder.allowSameDomain;
+import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowAllDomains;
+import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowSameDomain;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;

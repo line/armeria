@@ -15,10 +15,13 @@
  */
 package com.linecorp.armeria.client.redirect;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.Set;
+
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -40,6 +43,7 @@ public final class UnexpectedProtocolRedirectException extends RuntimeException 
                                                          Set<SessionProtocol> expectedProtocols) {
         requireNonNull(redirectProtocol, "redirectProtocol");
         requireNonNull(expectedProtocols, "expectedProtocols");
+        checkArgument(!Iterables.isEmpty(expectedProtocols), "expectedProtocols can't be empty.");
         return new UnexpectedProtocolRedirectException(redirectProtocol, expectedProtocols);
     }
 

@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.redirect.CyclicRedirectsException.addR
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -28,6 +29,8 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * An exception indicating that
  * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a> exceeds the
  * maximum limit number.
+ *
+ * @see RedirectConfigBuilder#maxRedirects(int)
  */
 public final class TooManyRedirectsException extends RuntimeException {
 
@@ -46,6 +49,7 @@ public final class TooManyRedirectsException extends RuntimeException {
     public static TooManyRedirectsException of(int maxRedirects, Iterable<String> redirectUris) {
         checkArgument(maxRedirects > 0, "maxRedirects: %s (expected: > 0)", maxRedirects);
         requireNonNull(redirectUris, "redirectUris");
+        checkArgument(!Iterables.isEmpty(redirectUris), "redirectUris can't be empty.");
         return new TooManyRedirectsException(maxRedirects, redirectUris);
     }
 
