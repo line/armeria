@@ -1,0 +1,24 @@
+{
+  "root": ["index"],
+  "Useful links": {
+    "User manual": "/docs",
+    "API documentation": "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/index.html",
+    "Release notes": "/release-notes"
+  },
+  "REST service": [
+    "rest/blog",
+    "rest/blog/create-server",
+    "rest/blog/prepare-data-object",
+    "rest/blog/add-services-to-server",
+    "rest/blog/implement-create",
+    "rest/blog/implement-read",
+    "rest/blog/implement-update",
+    "rest/blog/implement-delete"
+  ],
+  "gRPC service":{
+    "Coming soon": null
+  },
+  "Thrift service":{
+    "Coming soon": null
+  }
+}

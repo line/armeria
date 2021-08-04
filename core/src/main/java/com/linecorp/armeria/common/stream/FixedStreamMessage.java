@@ -103,8 +103,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+            if (executor.inEventLoop()) {
+                abortLateSubscriber(subscriber);
+            } else {
+                executor.execute(() -> abortLateSubscriber(subscriber));
+            }
         } else {
             for (SubscriptionOption option : options) {
                 if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
@@ -113,35 +116,39 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
                     notifyCancellation = true;
                 }
             }
-            this.executor = executor;
             if (executor.inEventLoop()) {
-                subscribe0(subscriber);
+                subscribe0(subscriber, executor);
             } else {
-                executor.execute(() -> subscribe0(subscriber));
+                executor.execute(() -> subscribe0(subscriber, executor));
             }
         }
     }
 
-    private void subscribe0(Subscriber<? super T> subscriber) {
+    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor) {
         //noinspection unchecked
         this.subscriber = (Subscriber<T>) subscriber;
+        this.executor = executor;
         try {
             subscriber.onSubscribe(this);
 
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
-                onError0(abortCause);
+                onError(abortCause);
             } else if (isEmpty()) {
                 onComplete();
             }
         } catch (Throwable t) {
-            completed = true;
             cleanupObjects(t);
-            onError0(t);
+            onError(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
         }
+    }
+
+    private void abortLateSubscriber(Subscriber<? super T> subscriber) {
+        subscriber.onSubscribe(NoopSubscription.get());
+        subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
     }
 
     @Override
@@ -289,7 +296,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         if (completed) {
             return;
         }
-        completed = true;
 
         if (cause == null) {
             cause = AbortedStreamException.get();
@@ -298,11 +304,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
         abortCause = cause;
         if (executor == null) {
-            // abortCause will be propagated when subscribed
+            // 'abortCause' will be propagated and 'completed' will be set to true when subscribed
             completionFuture.completeExceptionally(cause);
         } else {
             // Subscribed already
-            onError0(cause);
+            onError(cause);
         }
     }
 }

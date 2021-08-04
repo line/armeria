@@ -37,12 +37,14 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import io.micrometer.core.instrument.internal.TimedScheduledExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
@@ -75,6 +77,7 @@ public final class ServerConfig {
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
+    private final long connectionDrainDurationMicros;
     private final int maxNumRequestsPerConnection;
 
     private final int http2InitialConnectionWindowSize;
@@ -119,8 +122,8 @@ public final class ServerConfig {
             VirtualHost defaultVirtualHost, Collection<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
-            int maxNumRequestsPerConnection, int http2InitialConnectionWindowSize,
-            int http2InitialStreamWindowSize,
+            int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
+            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
@@ -150,6 +153,8 @@ public final class ServerConfig {
         this.maxNumRequestsPerConnection =
                 validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
         this.maxConnectionAgeMillis = maxConnectionAgeMillis;
+        this.connectionDrainDurationMicros = validateNonNegative(connectionDrainDurationMicros,
+                                                                 "connectionDrainDurationMicros");
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
@@ -169,10 +174,8 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        blockingTaskExecutor =
-                ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                               "blockingTaskExecutor", "armeria");
-        this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
+        this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
+
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
@@ -253,6 +256,25 @@ public final class ServerConfig {
         this.requestIdGenerator = castRequestIdGenerator;
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
         this.sslContexts = sslContexts;
+    }
+
+    private static ScheduledExecutorService monitorBlockingTaskExecutor(ScheduledExecutorService executor,
+                                                                        MeterRegistry meterRegistry) {
+        final ScheduledExecutorService unwrappedExecutor;
+        if (executor instanceof BlockingTaskExecutor) {
+            unwrappedExecutor = ((BlockingTaskExecutor) executor).unwrap();
+        } else {
+            unwrappedExecutor = executor;
+        }
+
+        new ExecutorServiceMetrics(
+                unwrappedExecutor,
+                "blockingTaskExecutor", "armeria", ImmutableList.of())
+                .bindTo(meterRegistry);
+        executor = new TimedScheduledExecutorService(meterRegistry, executor,
+                                                     "blockingTaskExecutor", "armeria.",
+                                                     ImmutableList.of());
+        return UnstoppableScheduledExecutorService.from(executor);
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -456,6 +478,13 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns the graceful connection shutdown drain duration.
+     */
+    public long connectionDrainDurationMicros() {
+        return connectionDrainDurationMicros;
+    }
+
+    /**
      * Returns the maximum allowed number of requests that can be served through one connection.
      */
     public int maxNumRequestsPerConnection() {
@@ -620,7 +649,7 @@ public final class ServerConfig {
 
     /**
      * Returns the {@link ExceptionHandler} that converts a {@link Throwable} to an
-     * {@link AggregatedHttpResponse}.
+     * {@link HttpResponse}.
      */
     public ExceptionHandler exceptionHandler() {
         return exceptionHandler;
@@ -683,7 +712,7 @@ public final class ServerConfig {
 
         boolean hasPorts = false;
         for (final ServerPort p : ports) {
-            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols()));
+            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols(), p.portGroup()));
             buf.append(", ");
             hasPorts = true;
         }

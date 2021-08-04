@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.AbstractMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -127,60 +127,23 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
                 .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server server = resourceServer.start()) {
 
+        try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
 
-            final AggregatedHttpResponse response1 = client.get("/resource-read-write/").aggregate().join();
-            assertThat(response1.status()).isEqualTo(HttpStatus.OK);
-
-            final AggregatedHttpResponse response2 = client.get("/resource-read/").aggregate().join();
-            assertThat(response2.status()).isEqualTo(HttpStatus.OK);
-
-            final AggregatedHttpResponse response3 =
-                    client.get("/resource-read-write-update/").aggregate().join();
-            assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
-        }
-    }
-
-    @Test
-    public void testWithAuthorization() throws Exception {
-        final WebClient authClient = WebClient.of(authServer.httpUri());
-
-        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
-                .builder(authClient, "/token/user/")
-                .userCredentials(
-                        () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
-                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server server = resourceServer.start()) {
-
             final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
-            final CompletionStage<HttpRequest> authorizedRequest1 = grant.withAuthorization(request1);
-
             final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
-            final CompletionStage<HttpRequest> authorizedRequest2 = grant.withAuthorization(request2);
-
             final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
-            final CompletionStage<HttpRequest> authorizedRequest3 = grant.withAuthorization(request3);
 
-            final WebClient client = WebClient.of(resourceServer.httpUri());
+            final CompletableFuture<AggregatedHttpResponse> response1 = client.execute(request1).aggregate();
+            final CompletableFuture<AggregatedHttpResponse> response2 = client.execute(request2).aggregate();
+            final CompletableFuture<AggregatedHttpResponse> response3 = client.execute(request3).aggregate();
 
-            final AggregatedHttpResponse response1 =
-                    authorizedRequest1.thenCompose(signed -> client.execute(signed).aggregate())
-                                      .toCompletableFuture().join();
-            assertThat(response1.status()).isEqualTo(HttpStatus.OK);
-
-            final AggregatedHttpResponse response2 =
-                    authorizedRequest2.thenCompose(signed -> client.execute(signed).aggregate())
-                                      .toCompletableFuture().join();
-            assertThat(response2.status()).isEqualTo(HttpStatus.OK);
-
-            final AggregatedHttpResponse response3 =
-                    authorizedRequest3.thenCompose(signed -> client.execute(signed).aggregate())
-                                      .toCompletableFuture().join();
-            assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(response1.get().status()).isEqualTo(HttpStatus.OK);
+            assertThat(response2.get().status()).isEqualTo(HttpStatus.OK);
+            assertThat(response3.get().status()).isEqualTo(HttpStatus.FORBIDDEN);
         }
     }
 
@@ -193,8 +156,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
                 .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
-        try (Server server = resourceServer.start()) {
-
+        try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
@@ -214,8 +176,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
                 .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("foo", "bar"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server server = resourceServer.start()) {
-
+        try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();

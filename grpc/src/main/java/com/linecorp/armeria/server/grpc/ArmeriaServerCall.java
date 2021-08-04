@@ -49,12 +49,12 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -180,7 +180,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final RequestHeaders clientHeaders = req.headers();
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
-                new HttpStreamDeframer(decompressorRegistry, this, statusFunction,
+                new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
                                        maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc, byteBufConverter(alloc, grpcWebText));
@@ -339,20 +339,20 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
+            doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
+                doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
             });
         }
     }
 
     private void close(Throwable exception, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
+            doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
+                doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
             });
         }
     }

@@ -15,12 +15,9 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.parseGrpcWebTrailers;
 import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -38,12 +35,13 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
@@ -154,16 +152,16 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
 
         @Override
         public void onNext(DeframedMessage message) {
-            if (message.type() >> 7 == 1) {
+            if (message.isTrailer()) {
                 final ByteBuf buf;
                 try {
-                    buf = messageBuf(message, ctx.alloc());
+                    buf = InternalGrpcWebUtil.messageBuf(message, ctx.alloc());
                 } catch (IOException e) {
                     // Ignore silently
                     return;
                 }
                 try {
-                    final HttpHeaders trailers = parseGrpcWebTrailers(buf);
+                    final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                     if (trailers == null) {
                         return;
                     }
@@ -172,18 +170,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                     buf.release();
                 }
             } else {
-                final ByteBuf buf = message.buf();
-                if (buf != null) {
-                    buf.release();
-                } else {
-                    try {
-                        final InputStream stream = message.stream();
-                        assert stream != null;
-                        stream.close();
-                    } catch (IOException e) {
-                        // Ignore silently
-                    }
-                }
+                message.close();
             }
         }
 

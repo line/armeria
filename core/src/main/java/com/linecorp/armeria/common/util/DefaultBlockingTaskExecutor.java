@@ -125,4 +125,9 @@ final class DefaultBlockingTaskExecutor implements BlockingTaskExecutor {
     public void execute(Runnable command) {
         delegate.execute(command);
     }
+
+    @Override
+    public ScheduledExecutorService unwrap() {
+        return delegate;
+    }
 }

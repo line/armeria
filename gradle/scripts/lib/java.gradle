@@ -1,4 +1,4 @@
-def buildJdkVersion = 15
+def buildJdkVersion = 16
 if (rootProject.hasProperty('buildJdkVersion')) {
     def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
     if (buildJdkVersion != jdkVersion) {
@@ -92,7 +92,21 @@ configure(projectsWithFlags('java')) {
         testLogging.exceptionFormat = 'full'
 
         // Use JUnit platform.
-        useJUnitPlatform()
+        def flakyTests = rootProject.findProperty('flakyTests')
+        if (flakyTests == 'true') {
+            useJUnitPlatform {
+                includeTags 'FLAKY_TESTS'
+            }
+        } else if (flakyTests == 'false') {
+            useJUnitPlatform {
+                excludeTags 'FLAKY_TESTS'
+            }
+        } else {
+            if (flakyTests != null) {
+                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
+            }
+            useJUnitPlatform()
+        }
 
         // Use a different JRE for testing if necessary.
         if (rootProject.ext.buildJdkVersion != rootProject.ext.testJavaVersion) {

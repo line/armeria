@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -1303,6 +1304,7 @@ class AnnotatedServiceTest {
     }
 
     static void validateCancellation(AggregatedHttpResponse res, AtomicInteger cancelCallCounter) {
+        await().untilAsserted(() -> assertThat(cancelCallCounter.get()).isEqualTo(1));
         assertThat(cancelCallCounter.get()).isEqualTo(1);
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }

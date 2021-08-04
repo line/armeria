@@ -498,7 +498,7 @@ public final class GrpcServiceBuilder {
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
      */
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
-        return addExceptionMapping(exceptionType, (throwable, meta) -> status);
+        return addExceptionMapping(exceptionType, (ctx, throwable, meta) -> status);
     }
 
     /**
@@ -506,7 +506,10 @@ public final class GrpcServiceBuilder {
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     *
+     * @deprecated Use {@link #addExceptionMapping(Class, GrpcStatusFunction)} instead.
      */
+    @Deprecated
     public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
             Class<T> exceptionType, BiFunction<T, Metadata, Status> statusFunction) {
         requireNonNull(exceptionType, "exceptionType");
@@ -519,8 +522,31 @@ public final class GrpcServiceBuilder {
             exceptionMappings = new LinkedList<>();
         }
 
+        //noinspection unchecked
         addExceptionMapping(exceptionMappings, exceptionType,
-                            (throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
+                            (ctx, throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
+        return this;
+    }
+
+    /**
+     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping is used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     */
+    public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType,
+                                                  GrpcStatusFunction statusFunction) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(statusFunction, "statusFunction");
+
+        checkState(this.statusFunction == null,
+                   "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
+
+        if (exceptionMappings == null) {
+            exceptionMappings = new LinkedList<>();
+        }
+
+        addExceptionMapping(exceptionMappings, exceptionType, statusFunction);
         return this;
     }
 
@@ -561,10 +587,10 @@ public final class GrpcServiceBuilder {
         final List<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> mappings =
                 ImmutableList.copyOf(exceptionMappings);
 
-        return (throwable, metadata) -> {
+        return (ctx, throwable, metadata) -> {
             for (Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> mapping : mappings) {
                 if (mapping.getKey().isInstance(throwable)) {
-                    final Status status = mapping.getValue().apply(throwable, metadata);
+                    final Status status = mapping.getValue().apply(ctx, throwable, metadata);
                     return status == null ? null : status.withCause(throwable);
                 }
             }

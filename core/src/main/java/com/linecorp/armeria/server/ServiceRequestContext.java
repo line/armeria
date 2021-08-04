@@ -17,6 +17,7 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -45,6 +47,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -218,11 +221,11 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         if (oldCtx == null) {
-            return () -> RequestContextUtil.pop(this, null);
+            return RequestContextUtil.invokeHookAndPop(this, null);
         }
 
         if (oldCtx.root() == this) {
-            return () -> RequestContextUtil.pop(this, oldCtx);
+            return RequestContextUtil.invokeHookAndPop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
@@ -543,4 +546,55 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns the proxied addresses of the current {@link Request}.
      */
     ProxiedAddresses proxiedAddresses();
+
+    /**
+     * Initiates graceful connection shutdown with a given drain duration in microseconds and returns
+     * {@link CompletableFuture} that completes when the channel is closed..
+     *
+     * <p>
+     * At the connection drain server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * At the connection drain end server stops accepting new requests.
+     * </p>
+     *
+     * <p>
+     * If graceful shutdown is already triggered and the given connection drain duration is smaller than
+     * the wait time before the connection drain end, it reschedules the drain end to happen faster.
+     * Otherwise, drain will end as it was previously scheduled.
+     * </p>
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
+     * is always {@code 0}, which means the connection will be closed immediately
+     * at the end of the current response.
+     * </p>
+     *
+     * @see #initiateConnectionShutdown()
+     * @see #initiateConnectionShutdown(Duration)
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros);
+
+    /**
+     * Initiates graceful connection shutdown with a given drain duration and returns {@link CompletableFuture}
+     * that completes when the channel is closed.
+     *
+     * @see #initiateConnectionShutdown()
+     * @see #initiateConnectionShutdown(long)
+     */
+    @UnstableApi
+    default CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration) {
+        requireNonNull(drainDuration, "drainDuration");
+        return initiateConnectionShutdown(TimeUnit.NANOSECONDS.toMicros(drainDuration.toNanos()));
+    }
+
+    /**
+     * Initiates connection shutdown without overriding current configuration of the drain duration and returns
+     * {@link CompletableFuture} that completes when the channel is closed.
+     *
+     * @see #initiateConnectionShutdown(long)
+     * @see #initiateConnectionShutdown(Duration)
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown();
 }

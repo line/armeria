@@ -171,7 +171,7 @@ public abstract class AbstractHttpFile implements HttpFile {
     private ResponseHeaders addCommonHeaders(ResponseHeadersBuilder headers, HttpFileAttributes attrs,
                                              @Nullable String etag) {
         if (contentType != null) {
-            headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+            headers.contentType(contentType);
         }
         if (dateEnabled) {
             headers.setTimeMillis(HttpHeaderNames.DATE, clock.millis());

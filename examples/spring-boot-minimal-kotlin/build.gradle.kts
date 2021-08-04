@@ -15,7 +15,6 @@ plugins {
 }
 
 apply(plugin = "org.jetbrains.kotlin.plugin.spring")
-apply(plugin = "org.jlleitschuh.gradle.ktlint")
 apply(plugin = "org.springframework.boot")
 
 dependencies {

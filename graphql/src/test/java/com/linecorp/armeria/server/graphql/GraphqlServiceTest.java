@@ -110,9 +110,8 @@ class GraphqlServiceTest {
 
     @Test
     void shouldPostWhenMediaTypeIsGraphqlPlusJson() {
-        final MediaType graphqlPlusJson = MediaType.create("application", "graphql+json");
         final HttpRequest request = HttpRequest.builder().post("/graphql")
-                                               .content(graphqlPlusJson, "{\"query\": \"{foo}\"}")
+                                               .content(MediaType.GRAPHQL_JSON, "{\"query\": \"{foo}\"}")
                                                .build();
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
                                                          .execute(request)
@@ -216,5 +215,29 @@ class GraphqlServiceTest {
                                      return item.get("error") == null;
                                  }
                              });
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidJson() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL_JSON, "{\"query\": \"{__typena\"")
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidQuery() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                                .content(MediaType.GRAPHQL_JSON,
+                                                         "{\"query\": \"{null}\"}")
+                                                .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                          .execute(request)
+                                                          .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.contentUtf8()).contains("Validation error of type FieldUndefined");
     }
 }

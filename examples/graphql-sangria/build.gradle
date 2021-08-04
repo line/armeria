@@ -1,0 +1,5 @@
+dependencies {
+    implementation project(':graphql-protocol')
+    implementation project(':sangria_2.13')
+    runtimeOnly 'org.slf4j:slf4j-simple'
+}

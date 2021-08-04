@@ -28,8 +28,6 @@ import org.junit.rules.TestRule;
 
 import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-
 /**
  * A {@link TestRule} that provides a temporary self-signed certificate.
  */
@@ -100,7 +98,7 @@ public final class SelfSignedCertificateRule extends ExternalResource {
     }
 
     /**
-     * Generates a {@link SelfSignedCertificate}.
+     * Generates a self-signed certificate.
      */
     @Override
     protected void before() throws Throwable {
@@ -108,7 +106,7 @@ public final class SelfSignedCertificateRule extends ExternalResource {
     }
 
     /**
-     * Deletes the generated {@link SelfSignedCertificate}.
+     * Deletes the generated self-signed certificate.
      */
     @Override
     protected void after() {
@@ -116,7 +114,7 @@ public final class SelfSignedCertificateRule extends ExternalResource {
     }
 
     /**
-     *  Returns the generated {@link X509Certificate}.
+     *  Returns the generated self-signed {@link X509Certificate}.
      */
     public X509Certificate certificate() {
         return delegate.certificate();

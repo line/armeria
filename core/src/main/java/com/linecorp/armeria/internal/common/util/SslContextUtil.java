@@ -96,7 +96,7 @@ public final class SslContextUtil {
             boolean tlsAllowUnsafeCiphers,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
 
-        return BouncyCastleKeyFactoryProvider.call(() -> {
+        return MinifiedBouncyCastleProvider.call(() -> {
             final SslContextBuilder builder = builderSupplier.get();
             final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
             builder.sslProvider(provider);

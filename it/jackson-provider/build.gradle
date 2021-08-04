@@ -1,4 +1,4 @@
-// This module is for testing JacksonModuleProvider.
+// This module is for testing JacksonObjectMapperProvider.
 
 dependencies {
     testImplementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
