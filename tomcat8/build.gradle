@@ -39,5 +39,3 @@ tasks.compileTestJava.source "${tomcat9ProjectDir}/src/test/java"
 tasks.processResources.from "${tomcat9ProjectDir}/src/main/resources"
 tasks.processTestResources.from "${tomcat9ProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${tomcat9ProjectDir}/src/main/resources"
-
-tasks.compileTestJava.dependsOn(project(':tomcat9').tasks.compileTestJava)
