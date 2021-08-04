@@ -1,5 +1,6 @@
 dependencies {
     testImplementation project(':grpc')
+    testImplementation project(':grpc-protocol')
 
     testImplementation 'ch.megard:akka-http-cors_2.13'
     testImplementation 'com.lightbend.akka.grpc:akka-grpc-runtime_2.13'

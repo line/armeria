@@ -1,3 +1,4 @@
 dependencies {
     api 'com.graphql-java:graphql-java'
+    implementation project(':graphql-protocol')
 }

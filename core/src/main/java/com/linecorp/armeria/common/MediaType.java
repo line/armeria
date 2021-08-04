@@ -680,6 +680,12 @@ public final class MediaType {
      */
     public static final MediaType GRAPHQL = createConstant(APPLICATION_TYPE, "graphql");
 
+    /**
+     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#content-types">GraphQL over JSON</a>
+     * which is the official GraphQL content type.
+     */
+    public static final MediaType GRAPHQL_JSON = createConstant(APPLICATION_TYPE, "graphql+json");
+
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override
         public boolean contains(Charset cs) {

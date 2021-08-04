@@ -68,7 +68,6 @@ jobs:
     - name: Build with Gradle
       run: |
         ./gradlew --no-daemon --stacktrace build \
-        ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
         ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
@@ -184,7 +183,7 @@ jobs:
 
       - name: Run flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel build -PnoWeb -PnoLint -PflakyTests=true
+          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoWeb -PnoLint -PflakyTests=true
 
       - name: Clean up the cache
         run: |
@@ -193,4 +192,9 @@ jobs:
           rm -fr ~/.gradle/caches/transforms-* || true
           rm -f ~/.gradle/caches/*/*.lock || true
           rm -f ~/.gradle/caches/*/gc.properties || true
+        shell: bash
+
+      - name: Dump stuck threads
+        if: always()
+        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash

@@ -16,7 +16,7 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
+import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
 import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -49,10 +49,10 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
@@ -238,7 +239,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         final HttpStreamDeframer deframer =
-                new HttpStreamDeframer(decompressorRegistry, this, null, maxInboundMessageSizeBytes);
+                new HttpStreamDeframer(decompressorRegistry, ctx, this, null, maxInboundMessageSizeBytes);
         final ByteBufAllocator alloc = ctx.alloc();
         final StreamMessage<DeframedMessage> deframed =
                 res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
@@ -379,7 +380,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void onNext(DeframedMessage message) {
-        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
+        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.isTrailer()) {
             final ByteBuf buf;
             try {
                 buf = messageBuf(message, ctx.alloc());

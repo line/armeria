@@ -288,37 +288,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            Throwable cause = event.cause;
+            final Throwable cause = event.cause;
             if (state == State.CLEANUP) {
                 cleanupCause = cause;
             }
-            for (;;) {
-                final Object e = queue.poll();
-                if (e == null) {
-                    break;
-                }
-
-                // We already notified to the subscriber so skip.
-                if (e instanceof CloseEvent) {
-                    continue;
-                }
-
-                if (e instanceof CompletableFuture) {
-                    if (cause == null) {
-                        cause = ClosedStreamException.get();
-                    }
-                    ((CompletableFuture<?>) e).completeExceptionally(cause);
-                    continue;
-                }
-
-                try {
-                    @SuppressWarnings("unchecked")
-                    final T obj = (T) e;
-                    onRemoval(obj);
-                } finally {
-                    StreamMessageUtil.closeOrAbort(e, cause);
-                }
-            }
+            cleanupObjects(cause);
         }
     }
 
@@ -373,7 +347,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         for (;;) {
             if (state == State.CLEANUP) {
-                cleanupObjects();
+                cleanupObjects(null);
                 return;
             }
 
@@ -480,8 +454,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return stateUpdater.compareAndSet(this, oldState, newState);
     }
 
-    private void cleanupObjects() {
-        Throwable cause = null;
+    private void cleanupObjects(@Nullable Throwable cause) {
         for (;;) {
             final Object e = queue.poll();
             if (e == null) {

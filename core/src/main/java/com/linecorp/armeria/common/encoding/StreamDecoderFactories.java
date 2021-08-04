@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.encoding;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.compression.BrotliDecoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 enum StreamDecoderFactories implements StreamDecoderFactory {
@@ -40,6 +41,17 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         @Override
         public StreamDecoder newDecoder(ByteBufAllocator alloc) {
             return new ZlibStreamDecoder(ZlibWrapper.GZIP, alloc);
+        }
+    },
+    BROTLI {
+        @Override
+        public String encodingHeaderValue() {
+            return "br";
+        }
+
+        @Override
+        public StreamDecoder newDecoder(ByteBufAllocator alloc) {
+            return new BrotliStreamDecoder(new BrotliDecoder(), alloc);
         }
     }
 }

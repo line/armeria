@@ -1,0 +1,199 @@
+---
+menuTitle: "Implement CREATE"
+order: 4
+type: step
+tags:
+  - rest
+  - request
+  - request-converter
+level: basic
+---
+
+# Implementing CREATE operation
+
+In this step, you'll write a service method for creating a blog post. By completing this step, you'll learn to map your service with the HTTP POST (<type://@Post>) method and make your own request converter (<type://@RequestConverter>).
+
+<TutorialSteps current={4} />
+
+## What you need
+
+You must have the following files ready for creating a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+
+- Main.java from [Step 1. Create a server](/tutorials/rest/blog/create-server)
+- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object)
+- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server)
+
+## 1. Map HTTP method
+
+Let's start [mapping the HTTP POST method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+
+1. Declare a service method, `createBlogPost()`, in the class `BlogService`.
+2. Map this service method with the HTTP POST method by adding the <type://@Post> annotation.
+3. Bind the endpoint `/blogs` to the method.
+
+```java filename=BlogService.java highlight=6
+import com.linecorp.armeria.server.annotation.Post;
+
+public final class BlogService {
+  ...
+
+  @Post("/blogs")
+  public void createBlogPost(BlogPost blogPost) {}
+}
+```
+
+## 2. Handle parameters
+
+Let's receive blog post information through a request body. Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts request parameters in HTTP messages into Java objects for you. In the request converter, we define what keys of a JSON object to map with what properties of a Java object.
+
+Let's first [write a request converter](#write-a-request-converter) and then [register the request converter](#register-a-request-converter) to the service method.
+
+### Write a request converter
+
+Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts a request body from a client into a Java object for you.
+
+We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but here let's give a go at customizing a request converter for our blog post requests. We want to convert blog post details into a Java object.
+
+1. Create a BlogPostRequestConverter.java file and declare a class, implementing the <type://RequestConverterFunction> interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
+
+  ```java filename=BlogRequestConverter.java
+  package example.armeria.server.blog;
+
+  import com.fasterxml.jackson.databind.ObjectMapper;
+  import com.linecorp.armeria.server.annotation.RequestConverterFunction;
+  import java.util.concurrent.atomic.AtomicInteger;
+
+  final class BlogPostRequestConverter implements RequestConverterFunction {
+    private static final ObjectMapper mapper = new ObjectMapper();
+    private AtomicInteger idGenerator = new AtomicInteger(); // Blog post ID
+  }
+  ```
+
+2. Add a method retrieving a value of a given key in a JSON object:
+
+  ```java filename=BlogRequestConverter.java highlight=6-12
+  import com.fasterxml.jackson.databind.JsonNode;
+
+  final class BlogPostRequestConverter implements RequestConverterFunction {
+    ...
+
+    static String stringValue(JsonNode jsonNode, String field) {
+      JsonNode value = jsonNode.get(field);
+      if (value == null) {
+        throw new IllegalArgumentException(field + " is missing!");
+      }
+      return value.textValue();
+    }
+  }
+  ```
+
+3. Customize the default `convertRequest()` method as follows.
+
+  ```java filename=BlogRequestConverter.java highlight=10-22
+  import com.linecorp.armeria.server.ServiceRequestContext;
+  import com.linecorp.armeria.common.AggregatedHttpRequest;
+  import javax.annotation.Nullable;
+  import java.lang.reflect.ParameterizedType;
+
+  final class BlogPostRequestConverter implements RequestConverterFunction {
+    ...
+
+    @Override
+    public Object convertRequest(ServiceRequestContext ctx,
+      AggregatedHttpRequest request, Class<?> expectedResultType,
+      @Nullable ParameterizedType expectedParameterizedResultType)
+        throws Exception {
+      if (expectedResultType == BlogPost.class) {
+        JsonNode jsonNode = mapper.readTree(request.contentUtf8());
+        int id = idGenerator.getAndIncrement();
+        String title = stringValue(jsonNode, "title");
+        String content = stringValue(jsonNode, "content");
+        return new BlogPost(id, title, content); // Create an instance of BlogPost object
+      }
+      return RequestConverterFunction.fallthrough();
+    }
+    ...
+  }
+  ```
+
+### Register a request converter
+
+In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with <type://@RequestConverter> and specify the <type://RequestConverterFunction> class as `BlogPostRequestConverter.class`.
+
+```java filename=BlogService.java highlight=7
+import com.linecorp.armeria.server.annotation.RequestConverter;
+
+public final class BlogService {
+   ...
+   
+   @Post("/blogs")
+   @RequestConverter(BlogPostRequestConverter.class)
+   public void createBlogPost(BlogPost blogPost) {
+     // Implement blog service
+   }
+}
+```
+
+## 3. Implement service code
+
+When the request for creation is received, our request converter creates an instance of a blog post object for us. We want to save the blog post object in the map (`blogPosts`) created in the `BlogService` class.
+
+Let's store the blog post information in the map by adding line 4, in the `createBlogPost()` method.
+
+```java filename=BlogService.java highlight=4 showlineno=true
+@Post("/blogs")
+@RequestConverter(BlogPostRequestConverter.class)
+public void createBlogPost(BlogPost blogPost) {
+  blogPosts.put(blogPost.getId(), blogPost);
+}
+```
+
+## 4. Return response
+
+Now, it's time to return a response to our client. As the response, return the information received, with additional information including the ID of the post, created time, plus the modified time which would be identical to the created 
+time.
+
+Let's return a response for blog post creation:
+
+1. Replace the return type of the `createBlogPost()` method from `void` to <type://HttpResponse>.
+2. Create and return an HTTP response using Armeria's <type://HttpResponse> with the information of the post created.
+
+  ```java filename=BlogService.java highlight=5,7
+  import com.linecorp.armeria.common.HttpResponse;
+
+  public final class BlogService {
+    ...
+    public HttpResponse createBlogPost(BlogPost blogPost) {
+    ...
+      return HttpResponse.ofJson(blogPost);
+  }
+  ```
+
+## 5. Test creating a blog post
+
+1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the 
+   `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing the service method.
+2. Call the service method for creating a blog post. Here, we'll use cURL.
+
+  ```bash
+  $ curl --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"My first blog", "content":"Hello Armeria!"}'
+  ```
+
+3. Check the return value. The response includes created and modified times.
+
+  ```bash
+  {"id":0,"title":"My first blog","content":"Hello Armeria!","createdAt":...,"modifiedAt":...}
+  ```
+
+You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+
+## Next step
+
+In this step, we've written a method to implement a CREATE operation and used Armeria's annotations; <type://@Post> and <type://@RequestConverter>.
+
+Next, at [Step 5. Implement READ](/tutorials/rest/blog/implenment-read), we'll implement a READ operation to read a 
+single post and also multiple posts.
+
+<TutorialSteps current={4} />

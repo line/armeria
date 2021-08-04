@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -169,6 +170,7 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
+    private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
@@ -391,7 +393,14 @@ public final class ServerBuilder {
      * }</pre>
      */
     public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
-        return port(new InetSocketAddress(NetUtil.LOCALHOST, port), protocols);
+        final long portGroup = ServerPort.nextPortGroup();
+        port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST4, port), protocols, portGroup));
+
+        if (!NetUtil.isIpV4StackPreferred()) {
+            port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST6, port), protocols, portGroup));
+        }
+
+        return this;
     }
 
     /**
@@ -568,6 +577,48 @@ public final class ServerBuilder {
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the connection drain duration in micros for the connection shutdown.
+     * At the beginning of the connection drain server signals the clients that the connection shutdown is
+     * imminent but still accepts in flight requests.
+     * After the connection drain end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionDrainDuration(Duration)}.
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
+     * is always {@code 0}, which means the connection will be closed immediately as soon as
+     * the current in-progress request is handled.
+     * </p>
+     *
+     * @param durationMicros the drain duration. {@code 0} disables the drain.
+     */
+    public ServerBuilder connectionDrainDurationMicros(long durationMicros) {
+        checkArgument(connectionDrainDurationMicros >= 0,
+                      "connectionDrainDurationMicros: %s (expected: >= 0)",
+                      connectionDrainDurationMicros);
+        connectionDrainDurationMicros = durationMicros;
+        return this;
+    }
+
+    /**
+     * Sets the connection drain duration in micros for the connection shutdown.
+     * At the beginning of the connection drain server signals the clients that the connection shutdown is
+     * imminent but still accepts in flight requests.
+     * After the connection drain end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionDrainDurationMicros(long)}.
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
+     * is always {@code 0}.
+     * </p>
+     *
+     * @param duration the drain period. {@code Duration.ZERO} or negative value disables the drain period.
+     */
+    public ServerBuilder connectionDrainDuration(Duration duration) {
+        requireNonNull(duration, "duration");
+        return connectionDrainDurationMicros(TimeUnit.NANOSECONDS.toMicros(duration.toNanos()));
     }
 
     /**
@@ -1674,11 +1725,16 @@ public final class ServerBuilder {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
+        ExceptionHandler exceptionHandler = this.exceptionHandler;
+        if (exceptionHandler != ExceptionHandler.ofDefault()) {
+            exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
+        }
+
         return new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-                http2InitialConnectionWindowSize,
+                connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,

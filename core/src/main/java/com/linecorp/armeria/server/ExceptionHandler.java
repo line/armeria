@@ -15,15 +15,12 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.ExceptionHandlerUtil.internalServerErrorResponse;
-import static com.linecorp.armeria.server.ExceptionHandlerUtil.serviceUnavailableResponse;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -33,13 +30,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <pre>{@code
  * ExceptionHandler handler = (ctx, cause) -> {
  *     if (cause instanceof IllegalArgumentException) {
- *         return AggregatedHttpResponse.of(HttpStatus.BAD_REQUEST);
+ *         return HttpResponse.of(HttpStatus.BAD_REQUEST);
  *     }
  *
  *     // You can return a different response using the path.
  *     if ("/outage".equals(ctx.path())) {
- *         return AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
- *                                          MediaType.PLAIN_TEXT, "Oops, something went wrong.");
+ *         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+ *                                MediaType.PLAIN_TEXT, "Oops, something went wrong.");
  *     }
  *
  *     // Return null to let ExceptionHandler.ofDefault() convert the exception.
@@ -60,19 +57,7 @@ public interface ExceptionHandler {
      * Returns the default {@link ExceptionHandler}.
      */
     static ExceptionHandler ofDefault() {
-        return (ctx, cause) -> {
-            // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
-            //                when we reach v2.0.
-            if (cause instanceof HttpStatusException) {
-                final HttpStatus httpStatus = ((HttpStatusException) cause).httpStatus();
-                return AggregatedHttpResponse.of(httpStatus, MediaType.PLAIN_TEXT_UTF_8,
-                                                 httpStatus.toHttpData());
-            }
-            if (cause instanceof RequestTimeoutException || cause instanceof RequestCancellationException) {
-                return serviceUnavailableResponse;
-            }
-            return internalServerErrorResponse;
-        };
+        return DefaultExceptionHandler.INSTANCE;
     }
 
     /**
@@ -82,7 +67,7 @@ public interface ExceptionHandler {
      * @see #orElse(ExceptionHandler)
      */
     @Nullable
-    AggregatedHttpResponse convert(ServiceRequestContext context, Throwable cause);
+    HttpResponse convert(ServiceRequestContext context, Throwable cause);
 
     /**
      * Creates a new {@link ExceptionHandler} that tries this {@link ExceptionHandler} first and then the
@@ -91,7 +76,7 @@ public interface ExceptionHandler {
     default ExceptionHandler orElse(ExceptionHandler other) {
         requireNonNull(other, "other");
         return (ctx, cause) -> {
-            final AggregatedHttpResponse response = convert(ctx, cause);
+            final HttpResponse response = convert(ctx, cause);
             if (response != null) {
                 return response;
             }

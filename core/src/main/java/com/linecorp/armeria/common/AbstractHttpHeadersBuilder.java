@@ -41,6 +41,16 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
 
     // Shortcuts
 
+    public final SELF contentLength(long contentLength) {
+        setters().contentLength(contentLength);
+        return self();
+    }
+
+    public final long contentLength() {
+        final HttpHeadersBase getters = getters();
+        return getters != null ? getters.contentLength() : -1;
+    }
+
     @Nullable
     public final MediaType contentType() {
         final HttpHeadersBase getters = getters();

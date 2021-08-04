@@ -47,11 +47,10 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -173,7 +172,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();
         headersBuilder.method(HttpMethod.GET);
-        headersBuilder.add(HttpHeaderNames.ACCEPT, MediaTypeNames.JSON_UTF_8);
+        headersBuilder.accept(MediaType.JSON_UTF_8);
         responseConverter = responseConverter(headersBuilder, appName, instanceId,
                                               vipAddress, secureVipAddress, regions);
         requestHeaders = headersBuilder.build();
