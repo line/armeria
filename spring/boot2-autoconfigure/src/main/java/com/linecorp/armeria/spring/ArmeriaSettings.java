@@ -350,19 +350,19 @@ public class ArmeriaSettings {
      * The idle timeout of a connection for keep-alive.
      */
     @Nullable
-    private Long idleTimeoutMillis;
+    private Duration idleTimeout;
 
     /**
      * The interval of the HTTP/2 PING frame.
      */
     @Nullable
-    private Long pingIntervalMillis;
+    private Duration pingInterval;
 
     /**
      * The maximum allowed age of a connection for keep-alive.
      */
     @Nullable
-    private Long maxConnectionAgeMillis;
+    private Duration maxConnectionAge;
 
     /**
      * The maximum allowed number of requests that can be served through one connection.
@@ -434,7 +434,7 @@ public class ArmeriaSettings {
      * The timeout of a request.
      */
     @Nullable
-    private Long requestTimeoutMillis;
+    private Duration requestTimeout;
 
     /**
      * The maximum allowed length of the content decoded at the session layer.
@@ -646,45 +646,45 @@ public class ArmeriaSettings {
      * Returns the idle timeout of a connection for keep-alive.
      */
     @Nullable
-    public Long getIdleTimeoutMillis() {
-        return idleTimeoutMillis;
+    public Duration getIdleTimeout() {
+        return idleTimeout;
     }
 
     /**
      * Sets the idle timeout of a connection for keep-alive.
      */
-    public void setIdleTimeoutMillis(@Nullable Long idleTimeoutMillis) {
-        this.idleTimeoutMillis = idleTimeoutMillis;
+    public void setIdleTimeout(@Nullable Duration idleTimeout) {
+        this.idleTimeout = idleTimeout;
     }
 
     /**
      * Returns the interval of the HTTP/2 PING frame.
      */
     @Nullable
-    public Long getPingIntervalMillis() {
-        return pingIntervalMillis;
+    public Duration getPingInterval() {
+        return pingInterval;
     }
 
     /**
      * Sets the interval of the HTTP/2 PING frame.
      */
-    public void setPingIntervalMillis(@Nullable Long pingIntervalMillis) {
-        this.pingIntervalMillis = pingIntervalMillis;
+    public void setPingInterval(@Nullable Duration pingInterval) {
+        this.pingInterval = pingInterval;
     }
 
     /**
      * Returns the maximum allowed age of a connection for keep-alive.
      */
     @Nullable
-    public Long getMaxConnectionAgeMillis() {
-        return maxConnectionAgeMillis;
+    public Duration getMaxConnectionAge() {
+        return maxConnectionAge;
     }
 
     /**
      * Sets the maximum allowed age of a connection for keep-alive.
      */
-    public void setMaxConnectionAgeMillis(@Nullable Long maxConnectionAgeMillis) {
-        this.maxConnectionAgeMillis = maxConnectionAgeMillis;
+    public void setMaxConnectionAge(@Nullable Duration maxConnectionAge) {
+        this.maxConnectionAge = maxConnectionAge;
     }
 
     /**
@@ -856,15 +856,15 @@ public class ArmeriaSettings {
      * Returns the timeout of a request.
      */
     @Nullable
-    public Long getRequestTimeoutMillis() {
-        return requestTimeoutMillis;
+    public Duration getRequestTimeout() {
+        return requestTimeout;
     }
 
     /**
      * Sets the timeout of a request.
      */
-    public void setRequestTimeoutMillis(@Nullable Long requestTimeoutMillis) {
-        this.requestTimeoutMillis = requestTimeoutMillis;
+    public void setRequestTimeout(@Nullable Duration requestTimeout) {
+        this.requestTimeout = requestTimeout;
     }
 
     /**

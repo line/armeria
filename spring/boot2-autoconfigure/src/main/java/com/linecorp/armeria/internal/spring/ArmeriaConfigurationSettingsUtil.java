@@ -37,9 +37,9 @@ public final class ArmeriaConfigurationSettingsUtil {
         configureIfNonNull(settings.getBlockingTaskExecutor(), server::blockingTaskExecutor);
 
         configureIfNonNull(settings.getMaxNumConnections(), server::maxNumConnections);
-        configureIfNonNull(settings.getIdleTimeoutMillis(), server::idleTimeoutMillis);
-        configureIfNonNull(settings.getPingIntervalMillis(), server::pingIntervalMillis);
-        configureIfNonNull(settings.getMaxConnectionAgeMillis(), server::maxConnectionAgeMillis);
+        configureIfNonNull(settings.getIdleTimeout(), server::idleTimeout);
+        configureIfNonNull(settings.getPingInterval(), server::pingInterval);
+        configureIfNonNull(settings.getMaxConnectionAge(), server::maxConnectionAge);
         configureIfNonNull(settings.getMaxNumRequestsPerConnection(), server::maxNumRequestsPerConnection);
 
         configureIfNonNull(settings.getHttp2InitialConnectionWindowSize(),
@@ -56,7 +56,7 @@ public final class ArmeriaConfigurationSettingsUtil {
         configureIfNonNull(settings.getAccessLogFormat(), server::accessLogFormat);
         configureIfNonNull(settings.getAccessLogger(), server::accessLogger);
 
-        configureIfNonNull(settings.getRequestTimeoutMillis(), server::requestTimeoutMillis);
+        configureIfNonNull(settings.getRequestTimeout(), server::requestTimeout);
         configureIfNonNull(settings.getMaxRequestLength(), server::maxRequestLength);
         configureIfNonNull(settings.getVerboseResponses(), server::verboseResponses);
     }
