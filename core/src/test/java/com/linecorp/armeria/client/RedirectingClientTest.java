@@ -258,8 +258,12 @@ class RedirectingClientTest {
         final WebClient client = Clients.builder(server.httpUri())
                                         .followRedirects()
                                         .build(WebClient.class);
-        assertThatThrownBy(() -> client.get("/loop").aggregate().join()).hasMessageContainingAll(
-                "The original URI:", "/loop", "redirect URIs:", "/loop1", "/loop2");
+        assertThatThrownBy(() -> client.get("/loop").aggregate().join())
+                .hasMessageContainingAll("The original URI:", "/loop", "redirect URIs:", "/loop1", "/loop2")
+                // All URIs have a port number.
+                .hasMessageFindingMatch("http://.*:[0-9]+/loop")
+                .hasMessageFindingMatch("http://.*:[0-9]+/loop1")
+                .hasMessageFindingMatch("http://.*:[0-9]+/loop2");
     }
 
     @Test

@@ -19,6 +19,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
@@ -26,6 +27,7 @@ import java.util.function.BiPredicate;
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -39,7 +41,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -54,6 +55,10 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import io.netty.util.NetUtil;
 
 final class RedirectingClient extends SimpleDecoratingHttpClient {
+
+    private static final Set<HttpStatus> redirectStatuses =
+            ImmutableSet.of(HttpStatus.MOVED_PERMANENTLY, HttpStatus.FOUND, HttpStatus.SEE_OTHER,
+                            HttpStatus.TEMPORARY_REDIRECT);
 
     private final Set<SessionProtocol> allowedProtocols;
     private final BiPredicate<ClientRequestContext, String> domainFilter;
@@ -123,11 +128,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                     return;
                 }
             }
+
             final ResponseHeaders responseHeaders = log.responseHeaders();
-            final HttpStatus status = responseHeaders.status();
-            if (status.codeClass() != HttpStatusClass.REDIRECTION ||
-                status == HttpStatus.NOT_MODIFIED ||
-                status == HttpStatus.USE_PROXY) {
+            if (!redirectStatuses.contains(responseHeaders.status())) {
                 endRedirect(ctx, reqDuplicator, responseFuture, response);
                 return;
             }
@@ -164,7 +167,16 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
             final HttpRequestDuplicator newReqDuplicator =
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri.toString());
-            if (isCyclicRedirects(ctx, redirectCtx, redirectUri, newReqDuplicator.headers())) {
+
+            final String redirectFullUri;
+            try {
+                redirectFullUri = buildFullUri(ctx, redirectUri, newReqDuplicator.headers());
+            } catch (Throwable t) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
+                return;
+            }
+
+            if (isCyclicRedirects(redirectCtx, redirectFullUri, newReqDuplicator.headers())) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
                                 CyclicRedirectsException.of(redirectCtx.originalUri(),
                                                             redirectCtx.redirectUris().values()));
@@ -245,23 +257,35 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
     }
 
-    private static boolean isCyclicRedirects(ClientRequestContext ctx, RedirectContext redirectCtx, URI newUri,
-                                             RequestHeaders newHeaders) {
+    private static String buildFullUri(ClientRequestContext ctx, URI redirectUri, RequestHeaders newHeaders)
+            throws URISyntaxException {
         // Build the full uri so we don't consider the situation, which session protocol or port is changed,
         // as a cyclic redirects.
-        final String newFullUri;
-        if (newUri.isAbsolute()) {
-            newFullUri = newUri.toString();
-        } else {
-            newFullUri = buildUri(ctx, newHeaders);
+        if (redirectUri.isAbsolute()) {
+            if (redirectUri.getPort() > 0) {
+                return redirectUri.toString();
+            }
+            final int port;
+            if (redirectUri.getScheme().startsWith("https")) {
+                port = SessionProtocol.HTTPS.defaultPort();
+            } else {
+                port = SessionProtocol.HTTP.defaultPort();
+            }
+            return new URI(redirectUri.getScheme(), redirectUri.getRawUserInfo(), redirectUri.getHost(), port,
+                           redirectUri.getRawPath(), redirectUri.getRawQuery(), redirectUri.getRawFragment())
+                    .toString();
         }
+        return buildUri(ctx, newHeaders);
+    }
 
-        final boolean added = redirectCtx.addRedirectUri(newHeaders.method(), newFullUri);
+    private static boolean isCyclicRedirects(RedirectContext redirectCtx, String redirectUri,
+                                             RequestHeaders newHeaders) {
+        final boolean added = redirectCtx.addRedirectUri(newHeaders.method(), redirectUri);
         if (!added) {
             return true;
         }
 
-        return redirectCtx.originalUri().equals(newFullUri) &&
+        return redirectCtx.originalUri().equals(redirectUri) &&
                redirectCtx.request().method() == newHeaders.method();
     }
 
