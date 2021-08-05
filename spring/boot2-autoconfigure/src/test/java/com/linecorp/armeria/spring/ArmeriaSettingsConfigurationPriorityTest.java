@@ -25,52 +25,38 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.VirtualHost;
-import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationPriorityTest.TestConfiguration;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "settings" })
 @DirtiesContext
-class ArmeriaSettingsConfigurationTest {
+public class ArmeriaSettingsConfigurationPriorityTest {
 
     @SpringBootApplication
-    static class TestConfiguration {}
+    static class TestConfiguration {
+        @Bean
+        ArmeriaServerConfigurator maxNumConnectionsConfigurator() {
+            return builder -> builder.maxNumConnections(16);
+        }
+    }
 
     @Inject
     @Nullable
     private Server server;
 
     @Test
-    public void buildServerBasedOnProperties() {
+    public void shouldConfigurePropertiesBeforeBean() {
         assertThat(server).isNotNull();
         final ServerConfig config = server.config();
 
-        assertThat(config.maxNumConnections()).isEqualTo(8);
-        assertThat(config.idleTimeoutMillis()).isEqualTo(2000);
-        assertThat(config.pingIntervalMillis()).isEqualTo(1000);
-        assertThat(config.maxConnectionAgeMillis()).isEqualTo(4000);
-        assertThat(config.maxNumRequestsPerConnection()).isEqualTo(4);
-
-        assertThat(config.http2InitialConnectionWindowSize()).isEqualTo(2097152);
-        assertThat(config.http2InitialStreamWindowSize()).isEqualTo(4194304);
-        assertThat(config.http2MaxStreamsPerConnection()).isEqualTo(1);
-        assertThat(config.http2MaxFrameSize()).isEqualTo(32768);
-        assertThat(config.http2MaxHeaderListSize()).isEqualTo(16384);
-
-        assertThat(config.http1MaxInitialLineLength()).isEqualTo(8192);
-        assertThat(config.http1MaxHeaderSize()).isEqualTo(16384);
-        assertThat(config.http1MaxChunkSize()).isEqualTo(32768);
-
-        final VirtualHost defaultVirtualHost = config.defaultVirtualHost();
-        assertThat(defaultVirtualHost.requestTimeoutMillis()).isEqualTo(8000);
-        assertThat(defaultVirtualHost.maxRequestLength()).isEqualTo(0);
-        assertThat(defaultVirtualHost.verboseResponses()).isTrue();
+        assertThat(config.maxNumConnections()).isEqualTo(16);
     }
 }
