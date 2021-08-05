@@ -140,7 +140,6 @@ class RetryingClientWithMetricsTest {
                     .isGreaterThan(0);
             assertThat(measured.get("foo.total.duration#total{http.status=500,method=GET,service=none}"))
                     .isGreaterThan(0);
-
         });
     }
 
