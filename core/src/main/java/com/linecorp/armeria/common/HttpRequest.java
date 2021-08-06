@@ -47,8 +47,8 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
-import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import com.fasterxml.jackson.core.JsonProcessingException;  
@@ -295,7 +295,7 @@ public interface HttpRequest extends Request, HttpMessage {
         try {
             return of(method, path, MediaType.JSON_UTF_8, JacksonUtil.writeValueAsBytes(content));
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Unexpected exception while encoding the content of the request", e);
+            throw new IllegalArgumentException("Unexpected exception while encoding the content of the request", e);
         }
     }
 

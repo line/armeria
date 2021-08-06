@@ -723,7 +723,7 @@ public interface HttpResponse extends Response, HttpMessage {
             try {
                 return JacksonUtil.newDefaultObjectMapper().readValue(content, clazz);
             } catch (JsonProcessingException e) {
-                throw new IllegalStateException("Unexpected exception while decoding response body: " + content, e);
+                throw new IllegalArgumentException("Unexpected exception while decoding response body: " + content, e);
             }
         }, executor);
     }
@@ -744,7 +744,7 @@ public interface HttpResponse extends Response, HttpMessage {
             try {
                 return JacksonUtil.newDefaultObjectMapper().readValue(content, valueTypeRef);
             } catch (JsonProcessingException e) {
-                throw new IllegalStateException("Unexpected exception while decoding response body: " + content, e);
+                throw new IllegalArgumentException("Unexpected exception while decoding response body: " + content, e);
             }
         }, executor);
     }
