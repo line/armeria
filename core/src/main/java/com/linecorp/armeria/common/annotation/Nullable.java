@@ -23,7 +23,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import javax.annotation.Nonnull;
 import javax.annotation.meta.TypeQualifierNickname;
+import javax.annotation.meta.When;
 
 /**
  * Indicates the return values, parameters and fields are nullable.
@@ -32,8 +34,7 @@ import javax.annotation.meta.TypeQualifierNickname;
 @Documented
 @Inherited
 @TypeQualifierNickname
-@javax.annotation.Nullable
+@Nonnull(when = When.MAYBE)
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER,
-          ElementType.LOCAL_VARIABLE, ElementType.TYPE_USE })
+@Target({ ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER, ElementType.TYPE_USE })
 public @interface Nullable {}
