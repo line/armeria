@@ -47,6 +47,11 @@ class AnnotatedServiceNullableParamTest {
                     return firstNonNull(value, "unspecified");
                 }
 
+                @Get("/jsr305_nullable")
+                public String jsr305Nullable(@Param @javax.annotation.Nullable String value) {
+                    return firstNonNull(value, "unspecified");
+                }
+
                 @Get("/other_nullable")
                 public String otherNullable(
                         @Param @io.micrometer.core.lang.Nullable String value) {
@@ -70,6 +75,12 @@ class AnnotatedServiceNullableParamTest {
                     return firstNonNull(value, "unspecified");
                 }
 
+                @Get("/jsr305_nullable")
+                public String jsr305Nullable(
+                        @Header @javax.annotation.Nullable String value) {
+                    return nullable(value);
+                }
+
                 @Get("/other_nullable")
                 public String otherNullable(
                         @Header @reactor.util.annotation.Nullable String value) {
@@ -90,7 +101,7 @@ class AnnotatedServiceNullableParamTest {
     };
 
     @ParameterizedTest
-    @CsvSource({ "/nullable", "/other_nullable", "/default", "/optional" })
+    @CsvSource({ "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional" })
     void params(String path) {
         final WebClient client = WebClient.of(server.httpUri().resolve("/params"));
         assertThat(client.get(path + "?value=foo").aggregate().join().contentUtf8()).isEqualTo("foo");
@@ -98,7 +109,7 @@ class AnnotatedServiceNullableParamTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "/nullable", "/other_nullable", "/default", "/optional" })
+    @CsvSource({ "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional" })
     void headers(String path) {
         final WebClient client = WebClient.of(server.httpUri().resolve("/headers"));
         assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, path, "value", "foo"))
