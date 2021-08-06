@@ -608,31 +608,34 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code clazz}
+     * using the default {@link ObjectMapper}
      * if the HTTP status {@link HttpStatus} of the response is OK status.
      *
      * @param clazz the class for decoded response
      */
     default <T> CompletableFuture<T> aggregateAs(Class<? extends T> clazz) {
-        return aggregateAs(HttpStatus.OK, clazz);
+        return aggregateAs(HttpStatusClass.SUCCESS, clazz);
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code valueTypeRef}
+     * using the default {@link ObjectMapper}
      * if the HTTP status {@link HttpStatus} of the response is OK status.
      *
      * @param valueTypeRef the type reference for decoded response
      */
     default <T> CompletableFuture<T> aggregateAs(TypeReference<T> valueTypeRef) {
-        return aggregateAs(HttpStatus.OK, valueTypeRef);
+        return aggregateAs(HttpStatusClass.SUCCESS, valueTypeRef);
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code clazz}
+     * using the default {@link ObjectMapper}
      * if the HTTP status {@link HttpStatus} of the response matches the expected.
      *
      * @param expectedStatus the expected HTTP status
@@ -646,7 +649,8 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code valueTypeRef}
+     * using the default {@link ObjectMapper}
      * if the HTTP status {@link HttpStatus} of the response matches the expected.
      *
      * @param expectedStatus the expected HTTP status
@@ -660,61 +664,70 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code clazz}
+     * using the default {@link ObjectMapper}
      * if the HTTP status {@link HttpStatusClass} of the response matches the expected.
      *
      * @param expectedStatusClass the expected class of HTTP status
      * @param clazz the class for decoded response
      */
-    default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass, Class<? extends T> clazz) {
+    default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass,
+                                                 Class<? extends T> clazz) {
         requireNonNull(expectedStatusClass, "expectedStatusClass");
-        return aggregateAs(status -> expectedStatusClass.contains(status), clazz, defaultSubscriberExecutor());
+        return aggregateAs(expectedStatusClass::contains, clazz, defaultSubscriberExecutor());
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code valueTypeRef}
+     * using the default {@link ObjectMapper}
      * if the HTTP status {@link HttpStatusClass} of the response matches the expected.
      *
      * @param expectedStatusClass the expected class of HTTP status
      * @param valueTypeRef the type reference for decoded response
      */
-    default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass, TypeReference<T> valueTypeRef) {
+    default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass,
+                                                 TypeReference<T> valueTypeRef) {
         requireNonNull(expectedStatusClass, "expectedStatusClass");
-        return aggregateAs(status -> expectedStatusClass.contains(status), valueTypeRef, defaultSubscriberExecutor());
+        return aggregateAs(expectedStatusClass::contains, valueTypeRef, defaultSubscriberExecutor());
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code clazz}
+     * using the default {@link ObjectMapper}
      * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
      *
      * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
      * @param clazz the class for decoded response
      */
-    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter, Class<? extends T> clazz) {
+    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
+                                                 Class<? extends T> clazz) {
         return aggregateAs(httpStatusFilter, clazz, defaultSubscriberExecutor());
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code valueTypeRef}
+     * using the default {@link ObjectMapper}
      * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
      *
      * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
      * @param valueTypeRef the type reference for decoded response
      */
-    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter, TypeReference<T> valueTypeRef) {
+    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
+                                                 TypeReference<T> valueTypeRef) {
         return aggregateAs(httpStatusFilter, valueTypeRef, defaultSubscriberExecutor());
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code clazz}
+     * using the default {@link ObjectMapper}
      * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
      *
      * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
@@ -723,14 +736,14 @@ public interface HttpResponse extends Response, HttpMessage {
     default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
                                                  Class<? extends T> clazz,
                                                  EventExecutor executor) {
-        requireNonNull(httpStatusFilter, "httpStatusFilter");
         requireNonNull(clazz, "clazz");
-        requireNonNull(executor, "executor");
+
         return aggregateAs(httpStatusFilter, (content) -> {
             try {
-                return JacksonUtil.newDefaultObjectMapper().readValue(content, clazz);
+                return JacksonUtil.readValue(content, clazz);
             } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException("Unexpected exception while decoding response body: " + content, e);
+                throw new IllegalArgumentException(
+                        "Failed to decode the response body into an instance: " + content, e);
             }
         }, executor);
     }
@@ -738,7 +751,8 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef} using the default {@link ObjectMapper}
+     * The response is converted into an instance of type {@code valueTypeRef}
+     * using the default {@link ObjectMapper}
      * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
      *
      * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
@@ -747,21 +761,38 @@ public interface HttpResponse extends Response, HttpMessage {
     default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
                                                  TypeReference<T> valueTypeRef,
                                                  EventExecutor executor) {
-        return aggregateAs(httpStatusFilter, content -> {
+        requireNonNull(valueTypeRef, "valueTypeRef");
+
+        return aggregateAs(httpStatusFilter, (content) -> {
             try {
-                return JacksonUtil.newDefaultObjectMapper().readValue(content, valueTypeRef);
+                return JacksonUtil.readValue(content, valueTypeRef);
             } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException("Unexpected exception while decoding response body: " + content, e);
+                throw new IllegalArgumentException(
+                        "Failed to decode the response body into an instance: " + content, e);
             }
         }, executor);
     }
 
+    /**
+     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
+     * the trailers of the response are received fully.
+     * The response is converted into an instance by {@code jsonDecoder}
+     * using the default {@link ObjectMapper}
+     * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
+     *
+     * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
+     * @param jsonDecoder the type reference for decoded response
+     */
     default <T> CompletableFuture<T> aggregateAs(Predicate<? super HttpStatus> httpStatusFilter,
                                                  Function<String, T> jsonDecoder,
                                                  EventExecutor executor) {
-        return aggregate(executor).thenApply(response -> {
+        requireNonNull(httpStatusFilter, "httpStatusFilter");
+        requireNonNull(jsonDecoder, "jsonDecoder");
+        requireNonNull(executor, "executor");
+
+        return aggregate(executor).thenApply((response) -> {
             if (httpStatusFilter.test(response.status())) {
-                return fn.apply(response.contentUtf8());
+                return jsonDecoder.apply(response.contentUtf8());
             } else {
                 throw new IllegalStateException("Unexpected status: " + response.status());
             }

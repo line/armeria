@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
@@ -71,6 +72,15 @@ public final class JacksonUtil {
 
     public static byte[] writeValueAsBytes(Object value) throws JsonProcessingException {
         return INSTANCE.writeValueAsBytes(value);
+    }
+
+    public static <T> T readValue(String content, Class<T> valueType) throws JsonProcessingException {
+        return INSTANCE.readValue(content, valueType);
+    }
+
+    public static <T> T readValue(String content,
+                                  TypeReference<T> valueTypeRef) throws JsonProcessingException {
+        return INSTANCE.readValue(content, valueTypeRef);
     }
 
     private JacksonUtil() {}

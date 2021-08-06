@@ -19,11 +19,12 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableList;
 
 class HttpResponseTest {
 
@@ -158,13 +159,13 @@ class HttpResponseTest {
     @Test
     void aggregateAs() {
         // aggregate as class type
-        Content content = HttpResponse.of(MediaType.JSON_UTF_8, "{\"id\":1}")
+        final Content content = HttpResponse.of(MediaType.JSON_UTF_8, "{\"id\":1}")
                 .aggregateAs(Content.class)
                 .join();
         assertThat(content.id).isEqualTo(1);
 
         // aggregate as type reference
-        WrapperContent<Content> wrapperContent = HttpResponse.of(MediaType.JSON_UTF_8,
+        final WrapperContent<Content> wrapperContent = HttpResponse.of(MediaType.JSON_UTF_8,
                 "{\"id\":1,\"name\":\"name\",\"list\":[{\"id\":1},{\"id\":2},{\"id\":3}]}")
                 .aggregateAs(new TypeReference<WrapperContent<Content>>(){})
                 .join();
@@ -179,28 +180,44 @@ class HttpResponseTest {
     }
 
     static class WrapperContent<T> {
-        public Integer id;
-        public String name;
-        public List<T> list;
+        private Integer id;
+        private String name;
+        private List<T> list;
 
-        public WrapperContent() {
+        WrapperContent() {
         }
 
-        public WrapperContent(Integer id, String name, List<T> list) {
+        WrapperContent(Integer id, String name, List<T> list) {
             this.id = id;
             this.name = name;
             this.list = list;
         }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public List<T> getList() {
+            return list;
+        }
     }
 
     static class Content {
-        public Integer id;
+        private Integer id;
 
-        public Content() {
+        Content() {
         }
 
-        public Content(Integer id) {
+        Content(Integer id) {
             this.id = id;
+        }
+
+        public Integer getId() {
+            return id;
         }
     }
 }

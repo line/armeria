@@ -18,15 +18,15 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.google.common.collect.ImmutableList;
-
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.google.common.collect.ImmutableList;
 
 import reactor.test.StepVerifier;
 
@@ -123,17 +123,29 @@ class HttpRequestTest {
     }
 
     static class RequestContent {
-        public Integer id;
-        public String name;
-        public List<String> list;
+        private Integer id;
+        private String name;
+        private List<String> list;
 
-        public RequestContent() {
+        RequestContent() {
         }
 
-        public RequestContent(Integer id, String name, List<String> list) {
+        RequestContent(Integer id, String name, List<String> list) {
             this.id = id;
             this.name = name;
             this.list = list;
+        }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public List<String> getList() {
+            return list;
         }
     }
 }

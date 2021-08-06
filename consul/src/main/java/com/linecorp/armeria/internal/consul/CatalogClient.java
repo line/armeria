@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.consul;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,9 +27,8 @@ import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
@@ -38,7 +36,6 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
@@ -46,9 +43,6 @@ import com.linecorp.armeria.internal.common.PercentEncoder;
  * <a href="https://www.consul.io/api/catalog.html">Catalog HTTP API</a>.
  */
 final class CatalogClient {
-
-    private static final CollectionType collectionTypeForNode =
-            TypeFactory.defaultInstance().constructCollectionType(List.class, Node.class);
 
     static CatalogClient of(ConsulClient consulClient) {
         return new CatalogClient(consulClient);
@@ -89,14 +83,7 @@ final class CatalogClient {
             path.append('?').append(params.toQueryString());
         }
         return client.get(path.toString())
-                     .aggregate()
-                     .thenApply(response -> {
-                         try {
-                             return mapper.readValue(response.content().array(), collectionTypeForNode);
-                         } catch (IOException e) {
-                             return Exceptions.throwUnsafely(e);
-                         }
-                     });
+                .aggregateAs(status -> true, new TypeReference<List<Node>>(){});
     }
 
     @Nullable
