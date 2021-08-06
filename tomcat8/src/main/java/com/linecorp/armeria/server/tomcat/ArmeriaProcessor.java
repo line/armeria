@@ -22,7 +22,6 @@ import org.apache.coyote.AbstractProcessor;
 import org.apache.coyote.ActionHook;
 import org.apache.coyote.ContinueResponseTiming;
 import org.apache.juli.logging.Log;
-import org.apache.juli.logging.LogFactory;
 import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapperBase;
@@ -32,7 +31,7 @@ import org.apache.tomcat.util.net.SocketWrapperBase;
  */
 final class ArmeriaProcessor extends AbstractProcessor {
 
-    private static final Log log = LogFactory.getLog(ArmeriaProcessor.class);
+    private static final Log log = new LogWrapper(ArmeriaProcessor.class);
 
     /**
      * Create a new instance.
@@ -87,8 +86,7 @@ final class ArmeriaProcessor extends AbstractProcessor {
 
     @Override
     protected AbstractEndpoint.Handler.SocketState dispatchEndRequest() throws IOException {
-        // Doesn't seem to be used.
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
