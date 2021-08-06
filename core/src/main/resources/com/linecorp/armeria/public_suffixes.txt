@@ -821,6 +821,7 @@ birdart.museum
 birkenes.no
 birthplace.museum
 bitbridge.net
+bitbucket.io
 biz
 biz.at
 biz.az
@@ -1231,6 +1232,7 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.prod.atlassian-dev.net
 cdn77-ssl.net
 ce.gov.br
 ce.it
@@ -1854,6 +1856,7 @@ delmenhorst.museum
 deloitte
 delta
 demo.datacenter.fi
+demo.datadetect.com
 demo.jelastic.com
 democracia.bo
 democrat
@@ -1965,6 +1968,7 @@ draydns.de
 dreamhosters.com
 drive
 drobak.no
+drr.ac
 drud.io
 drud.us
 dscloud.biz
@@ -2203,6 +2207,8 @@ edugit.org
 edunet.tn
 ee
 ee.eu.org
+eero-stage.online
+eero.online
 eg
 egersund.no
 egyptian.museum
@@ -2219,6 +2225,8 @@ ekloges.cy
 elasticbeanstalk.com
 elblag.pl
 elburg.museum
+elementor.cloud
+elementor.cool
 elk.pl
 elvendrell.museum
 elverum.no
@@ -3338,6 +3346,9 @@ hk.org
 hkt
 hl.cn
 hl.no
+hlx.live
+hlx.page
+hlx3.page
 hm
 hm.no
 hn
@@ -3629,6 +3640,7 @@ ing.pa
 ingatlan.hu
 ink
 ino.kochi.jp
+instance.datadetect.com
 instantcloud.cn
 institute
 insurance
@@ -3796,6 +3808,7 @@ itami.hyogo.jp
 itano.tokushima.jp
 itau
 itayanagi.aomori.jp
+itcouldbewor.se
 ito.shizuoka.jp
 itoigawa.niigata.jp
 itoman.okinawa.jp
@@ -3921,6 +3934,7 @@ jprs
 js.cn
 js.org
 js.wpenginepowered.com
+ju.mp
 judaica.museum
 judygarland.museum
 juedisches.museum
@@ -5273,6 +5287,25 @@ mysecuritycamera.net
 mysecuritycamera.org
 myshopblocks.com
 myshopify.com
+myspreadshop.at
+myspreadshop.be
+myspreadshop.ca
+myspreadshop.ch
+myspreadshop.co.uk
+myspreadshop.com
+myspreadshop.com.au
+myspreadshop.de
+myspreadshop.dk
+myspreadshop.es
+myspreadshop.fi
+myspreadshop.fr
+myspreadshop.ie
+myspreadshop.it
+myspreadshop.net
+myspreadshop.nl
+myspreadshop.no
+myspreadshop.pl
+myspreadshop.se
 mytis.ru
 mytuleap.com
 myvnc.com
@@ -5699,6 +5732,7 @@ noda.chiba.jp
 noda.iwate.jp
 nodum.co
 nodum.io
+nog.community
 nogata.fukuoka.jp
 nogi.tochigi.jp
 noheji.aomori.jp
@@ -6708,6 +6742,10 @@ res.aero
 res.in
 research.aero
 research.museum
+reservd.com
+reservd.dev.thingdust.io
+reservd.disrec.thingdust.io
+reservd.testing.thingdust.io
 reserve-online.com
 reserve-online.net
 resindevice.io
@@ -6794,6 +6832,7 @@ royrvik.no
 rr.gov.br
 rr.leg.br
 rs
+rs.ba
 rs.gov.br
 rs.leg.br
 rsc.cdn77.org
@@ -7104,6 +7143,7 @@ selfip.net
 selfip.org
 selje.no
 seljord.no
+sellfy.store
 sells-for-less.com
 sells-for-u.com
 sells-it.net
@@ -7516,6 +7556,7 @@ stufftoread.com
 stuttgart.museum
 style
 su
+su.paba.se
 sucks
 sue.fukuoka.jp
 suedtirol.it
@@ -7537,6 +7578,9 @@ sumy.ua
 sunagawa.hokkaido.jp
 sund.no
 sunndal.no
+supabase.co
+supabase.in
+supabase.net
 supplies
 supply
 support
@@ -8026,6 +8070,7 @@ tt.im
 tube
 tui
 tula.su
+tuleap-partners.com
 tunes
 tunk.org
 tur.ar
@@ -8209,7 +8254,6 @@ uvic.museum
 uw.gov.pl
 uwajima.ehime.jp
 uwu.ai
-uwu.nu
 uy
 uy.com
 uz
@@ -9088,6 +9132,7 @@ ybo.trade
 ye
 yk.ca
 yn.cn
+ynh.fr
 yodobashi
 yoga
 yoichi.hokkaido.jp

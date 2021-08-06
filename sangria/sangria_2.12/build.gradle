@@ -1,0 +1,22 @@
+dependencies {
+    api 'org.sangria-graphql:sangria_2.12'
+    api 'org.sangria-graphql:sangria-slowlog_2.12'
+
+    implementation project(':graphql-protocol')
+    implementation project(':scala_2.12')
+    implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.12'
+    implementation 'org.scala-lang.modules:scala-java8-compat_2.12'
+}
+
+// Use the sources from ':sangria_2.13'.
+def sangria213ProjectDir = "${rootProject.projectDir}/sangria/sangria_2.13"
+tasks.compileScala.source "${sangria213ProjectDir}/src/main/scala"
+tasks.processResources.from "${sangria213ProjectDir}/src/main/resources"
+
+tasks.compileTestScala.source "${sangria213ProjectDir}/src/test/scala"
+tasks.processTestResources.from "${sangria213ProjectDir}/src/test/resources"
+
+tasks.sourcesJar.from "${sangria213ProjectDir}/src/main/scala"
+tasks.sourcesJar.from "${sangria213ProjectDir}/src/main/resources"
+tasks.scaladoc.source "${sangria213ProjectDir}/src/main/scala"
+

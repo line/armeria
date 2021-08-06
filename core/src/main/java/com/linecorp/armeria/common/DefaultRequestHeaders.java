@@ -26,13 +26,7 @@ import javax.annotation.Nullable;
 final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestHeaders {
 
     @Nullable
-    private HttpMethod method;
-    @Nullable
     private URI uri;
-    @Nullable
-    private List<LanguageRange> acceptLanguages;
-    @Nullable
-    private Cookies cookies;
 
     DefaultRequestHeaders(HttpHeadersBase headers) {
         super(headers);
@@ -59,24 +53,13 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     }
 
     @Override
-    @Nullable
     public List<LanguageRange> acceptLanguages() {
-        final List<LanguageRange> acceptLanguages = this.acceptLanguages;
-        if (acceptLanguages != null) {
-            return acceptLanguages;
-        }
-
-        return this.acceptLanguages = super.acceptLanguages();
+        return super.acceptLanguages();
     }
 
     @Override
     public HttpMethod method() {
-        final HttpMethod method = this.method;
-        if (method != null) {
-            return method;
-        }
-
-        return this.method = super.method();
+        return super.method();
     }
 
     @Override
@@ -98,11 +81,12 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
 
     @Override
     public Cookies cookies() {
-        final Cookies cookies = this.cookies;
-        if (cookies != null) {
-            return cookies;
-        }
-        return this.cookies = cookie();
+        return cookie();
+    }
+
+    @Override
+    public List<MediaType> accept() {
+        return super.accept();
     }
 
     @Override

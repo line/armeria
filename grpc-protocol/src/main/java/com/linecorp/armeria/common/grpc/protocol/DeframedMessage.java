@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.grpc.protocol;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
@@ -26,6 +27,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
 
@@ -35,13 +37,14 @@ import io.netty.buffer.ByteBuf;
  * and thus return an {@link InputStream} in {@code stream}.
  */
 @UnstableApi
-public final class DeframedMessage {
+public final class DeframedMessage implements SafeCloseable {
     private final int type;
 
     @Nullable
     private final ByteBuf buf;
     @Nullable
     private final InputStream stream;
+    private boolean closed;
 
     /**
      * Creates a new instance with the specified {@link ByteBuf} and {@code type}.
@@ -88,10 +91,10 @@ public final class DeframedMessage {
     }
 
     /**
-     * Returns the type.
+     * Returns {@code true} if this message is trailer.
      */
-    public int type() {
-        return type;
+    public boolean isTrailer() {
+        return type >> 7 == 1;
     }
 
     @Override
@@ -111,5 +114,22 @@ public final class DeframedMessage {
     @Override
     public int hashCode() {
         return Objects.hash(buf, stream);
+    }
+
+    @Override
+    public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        if (buf != null) {
+            buf.release();
+        } else {
+            try {
+                stream.close();
+            } catch (IOException e) {
+                // Ignore silently
+            }
+        }
     }
 }

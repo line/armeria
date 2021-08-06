@@ -80,11 +80,11 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
                                     .maxAge(60)
                                     .path("/")
                                     .build();
-        return HttpResponse.of(
-                ResponseHeaders.of(HttpStatus.OK,
-                                   HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
-                                   HttpHeaderNames.SET_COOKIE, cookie.toSetCookieHeader(false)),
-                HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
+        return HttpResponse.of(ResponseHeaders.builder(HttpStatus.OK)
+                                              .contentType(MediaType.HTML_UTF_8)
+                                              .cookies(cookie).build(),
+                               HttpData.ofUtf8(
+                                       "<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
     }
 
     /**

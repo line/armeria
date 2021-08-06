@@ -17,8 +17,10 @@
 package com.linecorp.armeria.internal.common;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -70,6 +73,9 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
     private boolean closing;
     private boolean handlingConnectionError;
+
+    /** Debug data that will be sent in the GOAWAY frame. */
+    private ByteBuf goAwayDebugData = Unpooled.EMPTY_BUFFER;
 
     /**
      * Creates a new instance.
@@ -149,6 +155,10 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         return remote.isValidStreamId(streamId) && streamId > remote.lastStreamKnownByPeer();
     }
 
+    /**
+     * Sends a {@code GO_AWAY} frame to initiate connection shutdown. No-op if channel isn't active.
+     * Does <strong>not</strong> flush immediately, this is the responsibility of the caller.
+     */
     @Override
     public final ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
                                       ByteBuf debugData, ChannelPromise promise) {
@@ -162,8 +172,17 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         return super.goAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
+    protected final ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId) {
+        return goAway(ctx, lastStreamId, NO_ERROR.code(), goAwayDebugData, ctx.newPromise());
+    }
+
+    protected final void setGoAwayDebugMessage(String debugMessage) {
+        goAwayDebugData = Unpooled.unreleasableBuffer(
+                Unpooled.copiedBuffer(debugMessage, StandardCharsets.UTF_8));
+    }
+
     @Override
-    public final void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (!closing) {
             closing = true;
 
@@ -172,7 +191,9 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
             }
         }
 
-        super.close(ctx, promise);
+        // Send final GOAWAY frame with the latest stream ID.
+        goAway(ctx, connection().remote().lastStreamCreated()).addListener(future -> super.close(ctx, promise));
+        ctx.flush();
     }
 
     /**

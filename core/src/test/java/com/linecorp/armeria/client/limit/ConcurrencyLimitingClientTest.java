@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
-import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class ConcurrencyLimitingClientTest {
@@ -141,7 +140,7 @@ class ConcurrencyLimitingClientTest {
         res2.subscribe(NoopSubscriber.get());
         assertThatThrownBy(() -> res2.whenComplete().join())
                 .hasCauseInstanceOf(UnprocessedRequestException.class)
-                .hasRootCauseInstanceOf(RequestTimeoutException.class);
+                .hasRootCauseInstanceOf(ConcurrencyLimitTimeoutException.class);
         assertThat(res2.isOpen()).isFalse();
 
         // req1 should not time out because it's been delegated already.
