@@ -23,10 +23,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.RoutingTrie.Node;
 import com.linecorp.armeria.server.RoutingTrie.NodeType;
 

@@ -17,11 +17,10 @@ package com.linecorp.armeria.server.zookeeper;
 
 import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperPathUtil.validatePath;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.zookeeper.LegacyNodeValueCodec;
 
 final class LegacyZooKeeperRegistrationSpec implements ZooKeeperRegistrationSpec {

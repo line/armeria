@@ -22,7 +22,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.springframework.core.io.buffer.DataBuffer;
@@ -39,6 +38,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;

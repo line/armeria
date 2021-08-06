@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.server.encoding;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 

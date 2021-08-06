@@ -21,10 +21,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -35,10 +34,10 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 final class DelegatingHttpRequestAuthorizer<T> extends AbstractAuthorizerWithHandlers<HttpRequest> {
 
-    private final Function<? super RequestHeaders, T> tokenExtractor;
+    private final Function<? super RequestHeaders, @Nullable T> tokenExtractor;
     private final Authorizer<? super T> delegate;
 
-    DelegatingHttpRequestAuthorizer(Function<? super RequestHeaders, T> tokenExtractor,
+    DelegatingHttpRequestAuthorizer(Function<? super RequestHeaders, @Nullable T> tokenExtractor,
                                     Authorizer<? super T> delegate) {
         this.tokenExtractor = requireNonNull(tokenExtractor, "tokenExtractor");
         this.delegate = requireNonNull(delegate, "authorizer");

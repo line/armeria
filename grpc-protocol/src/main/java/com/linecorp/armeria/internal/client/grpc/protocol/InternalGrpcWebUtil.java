@@ -20,12 +20,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-import javax.annotation.Nullable;
-
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 
 import io.netty.buffer.ByteBuf;

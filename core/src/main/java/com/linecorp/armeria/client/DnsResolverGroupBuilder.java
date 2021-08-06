@@ -24,13 +24,12 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.TransportType;
 

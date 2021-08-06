@@ -24,14 +24,13 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet, MapMaker}
 import com.google.protobuf.CodedInputStream
 import com.linecorp.armeria.common.AggregatedHttpRequest
-import com.linecorp.armeria.common.annotation.UnstableApi
+import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.RequestConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.ResultType._
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil._
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunction._
 
-import javax.annotation.Nullable
 import scalapb.json4s.Parser
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof}
 

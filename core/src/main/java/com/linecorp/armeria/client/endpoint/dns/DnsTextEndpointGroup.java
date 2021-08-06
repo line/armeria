@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
@@ -53,7 +54,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
      *                an {@link Endpoint}. The {@link Function} is expected to return {@code null}
      *                if the record contains unsupported content.
      */
-    public static DnsTextEndpointGroup of(String hostname, Function<byte[], Endpoint> mapping) {
+    public static DnsTextEndpointGroup of(String hostname, Function<byte[], @Nullable Endpoint> mapping) {
         return builder(hostname, mapping).build();
     }
 
@@ -66,16 +67,17 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
      *                an {@link Endpoint}. The {@link Function} is expected to return {@code null}
      *                if the record contains unsupported content.
      */
-    public static DnsTextEndpointGroupBuilder builder(String hostname, Function<byte[], Endpoint> mapping) {
+    public static DnsTextEndpointGroupBuilder builder(String hostname,
+                                                      Function<byte[], @Nullable Endpoint> mapping) {
         return new DnsTextEndpointGroupBuilder(hostname, mapping);
     }
 
-    private final Function<byte[], Endpoint> mapping;
+    private final Function<byte[], @Nullable Endpoint> mapping;
 
     DnsTextEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
                          int minTtl, int maxTtl, long queryTimeoutMillis,
                          DnsServerAddressStreamProvider serverAddressStreamProvider,
-                         Backoff backoff, String hostname, Function<byte[], Endpoint> mapping) {
+                         Backoff backoff, String hostname, Function<byte[], @Nullable Endpoint> mapping) {
         super(selectionStrategy, eventLoop, minTtl, maxTtl, queryTimeoutMillis, serverAddressStreamProvider,
               backoff, ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
               unused -> {});

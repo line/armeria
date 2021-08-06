@@ -16,19 +16,14 @@
 
 package com.linecorp.armeria.server.scalapb
 
-import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.server.annotation.{
-  ExceptionHandlerFunction,
-  ResponseConverterFunction,
-  ResponseConverterFunctionProvider
-}
+import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
+import com.linecorp.armeria.server.annotation.{ResponseConverterFunction, ResponseConverterFunctionProvider}
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{
   ResultType,
   isSupportedGenericType,
   toResultType
 }
 import java.lang.reflect.Type
-import javax.annotation.Nullable
 
 /**
  * Provides a [[com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction]] to annotated services.

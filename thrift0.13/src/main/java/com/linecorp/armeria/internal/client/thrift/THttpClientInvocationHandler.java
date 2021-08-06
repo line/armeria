@@ -24,8 +24,6 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -37,6 +35,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.thrift.THttpClient;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;

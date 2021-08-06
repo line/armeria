@@ -40,8 +40,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -50,6 +48,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
 import com.linecorp.armeria.common.stream.StreamMessage;
 

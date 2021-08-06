@@ -18,13 +18,12 @@ package com.linecorp.armeria.spring.web.reactive;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 
 import io.netty.util.concurrent.EventExecutor;

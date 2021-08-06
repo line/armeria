@@ -20,8 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 

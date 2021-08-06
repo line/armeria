@@ -21,7 +21,6 @@ import static org.opensaml.xmlsec.signature.support.SignatureConstants.ALGO_ID_C
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
-import javax.annotation.Nullable;
 import javax.xml.namespace.QName;
 
 import org.opensaml.core.xml.XMLObject;
@@ -48,6 +47,8 @@ import org.w3c.dom.Element;
 
 import net.shibboleth.utilities.java.support.xml.ParserPool;
 import net.shibboleth.utilities.java.support.xml.XMLParserException;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A utility class for SAML messages.

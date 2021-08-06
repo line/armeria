@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller.{
 import io.grpc.MethodDescriptor.Marshaller
 import java.io.{InputStream, OutputStream}
 import java.lang.invoke.{MethodHandle, MethodHandles}
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
+import java.util.concurrent.ConcurrentMap
 import scala.io.{Codec, Source}
 import scalapb.grpc.TypeMappedMarshaller
 import scalapb.json4s.{Parser, Printer}

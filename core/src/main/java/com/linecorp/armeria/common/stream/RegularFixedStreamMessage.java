@@ -21,10 +21,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.EventExecutor;

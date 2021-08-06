@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder class for creating {@link ContentDisposition}.

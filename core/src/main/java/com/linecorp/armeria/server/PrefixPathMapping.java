@@ -22,10 +22,10 @@ import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class PrefixPathMapping extends AbstractPathMapping {
 

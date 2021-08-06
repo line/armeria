@@ -25,8 +25,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +33,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Ordering;
 
 import com.linecorp.armeria.client.DnsTimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;

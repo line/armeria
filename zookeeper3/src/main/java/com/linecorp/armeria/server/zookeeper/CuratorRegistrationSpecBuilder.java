@@ -21,11 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceType;
 import org.apache.curator.x.discovery.UriSpec;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a {@link ZooKeeperRegistrationSpec} for

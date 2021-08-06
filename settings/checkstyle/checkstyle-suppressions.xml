@@ -22,4 +22,5 @@
   <!-- Enable 'NoCopyrightHeader' for examples only. -->
   <suppress id="NoCopyrightHeader" files="^((?![\\/]examples[\\/]).)*$" />
   <suppress id="CopyrightHeader" files="[\\/]examples[\\/]" />
+  <suppress id="LegacyNullableAnnotation" files="[\\/]common[\\/]annotation[\\/]Nullable.java" />
 </suppressions>

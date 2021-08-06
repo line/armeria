@@ -19,10 +19,9 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.time.Duration;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.testing.TemporaryFolder;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;

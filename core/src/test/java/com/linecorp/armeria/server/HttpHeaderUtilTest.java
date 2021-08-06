@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -35,6 +33,7 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 class HttpHeaderUtilTest {
 
