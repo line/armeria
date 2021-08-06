@@ -47,6 +47,7 @@ class AnnotatedServiceNullableParamTest {
                     return firstNonNull(value, "unspecified");
                 }
 
+                @SuppressWarnings("checkstyle:LegacyNullableAnnotation")
                 @Get("/jsr305_nullable")
                 public String jsr305Nullable(@Param @javax.annotation.Nullable String value) {
                     return firstNonNull(value, "unspecified");
@@ -75,6 +76,7 @@ class AnnotatedServiceNullableParamTest {
                     return firstNonNull(value, "unspecified");
                 }
 
+                @SuppressWarnings("checkstyle:LegacyNullableAnnotation")
                 @Get("/jsr305_nullable")
                 public String jsr305Nullable(
                         @Header @javax.annotation.Nullable String value) {
