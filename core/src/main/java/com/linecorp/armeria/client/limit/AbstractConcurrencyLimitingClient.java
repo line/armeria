@@ -16,27 +16,22 @@
 
 package com.linecorp.armeria.client.limit;
 
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.client.limit.ConcurrencyLimitBuilder.DEFAULT_TIMEOUT_MILLIS;
 
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * An abstract {@link Client} decorator that limits the concurrent number of active requests.
@@ -53,17 +48,13 @@ import io.netty.util.concurrent.ScheduledFuture;
 public abstract class AbstractConcurrencyLimitingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
-
-    private final int maxConcurrency;
-    private final long timeoutMillis;
+    private final ConcurrencyLimit<ClientRequestContext> concurrencyLimit;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
-    private final Queue<PendingTask> pendingRequests = new ConcurrentLinkedQueue<>();
 
     /**
      * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
-     * active requests to {@code maxConcurrency}, with the default timeout of {@value #DEFAULT_TIMEOUT_MILLIS}
-     * milliseconds.
+     * active requests to {@code maxConcurrency}, with the default timeout of
+     * {@value ConcurrencyLimitBuilder#DEFAULT_TIMEOUT_MILLIS} milliseconds.
      *
      * @param delegate the delegate {@link Client}
      * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
@@ -83,30 +74,22 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
                                                 int maxConcurrency, long timeout, TimeUnit unit) {
+        this(delegate, AsyncConcurrencyLimit.builder(maxConcurrency)
+                                              .timeoutMillis(unit.toMillis(timeout))
+                                              .build());
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
+     * active requests to {@code maxConcurrency}.
+     *
+     * @param delegate the delegate {@link Client}
+     * @param concurrencyLimit the concurrency limit config
+     */
+    protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
+                                                ConcurrencyLimit concurrencyLimit) {
         super(delegate);
-
-        validateAll(maxConcurrency, timeout, unit);
-
-        if (maxConcurrency == Integer.MAX_VALUE) {
-            this.maxConcurrency = 0;
-        } else {
-            this.maxConcurrency = maxConcurrency;
-        }
-        timeoutMillis = unit.toMillis(timeout);
-    }
-
-    static void validateAll(int maxConcurrency, long timeout, TimeUnit unit) {
-        validateMaxConcurrency(maxConcurrency);
-        if (timeout < 0) {
-            throw new IllegalArgumentException("timeout: " + timeout + " (expected: >= 0)");
-        }
-        requireNonNull(unit, "unit");
-    }
-
-    static void validateMaxConcurrency(int maxConcurrency) {
-        if (maxConcurrency < 0) {
-            throw new IllegalArgumentException("maxConcurrency: " + maxConcurrency + " (expected: >= 0)");
-        }
+        this.concurrencyLimit = concurrencyLimit;
     }
 
     /**
@@ -118,71 +101,31 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        return maxConcurrency == 0 ? unlimitedExecute(ctx, req)
-                                   : limitedExecute(ctx, req);
-    }
-
-    private O limitedExecute(ClientRequestContext ctx, I req) throws Exception {
         final CompletableFuture<O> resFuture = new CompletableFuture<>();
         final O deferred = newDeferredResponse(ctx, resFuture);
-        final PendingTask currentTask = new PendingTask(ctx, req, resFuture);
-
-        pendingRequests.add(currentTask);
-        drain();
-
-        if (!currentTask.isRun() && timeoutMillis != 0) {
-            // Current request was not delegated. Schedule a timeout.
-            final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
-                    () -> resFuture.completeExceptionally(
-                            UnprocessedRequestException.of(ConcurrencyLimitTimeoutException.get())),
-                    timeoutMillis, TimeUnit.MILLISECONDS);
-            currentTask.set(timeoutFuture);
-        }
-
+        concurrencyLimit.acquire(ctx)
+                        .whenCompleteAsync((permit, throwable) -> {
+                            if (throwable != null) {
+                                resFuture.completeExceptionally(throwable);
+                                return;
+                            }
+                            numActiveRequests.incrementAndGet();
+                            try (SafeCloseable ignored = ctx.replace()) {
+                                try {
+                                    final O actualRes = unwrap().execute(ctx, req);
+                                    actualRes.whenComplete().whenCompleteAsync((unused, cause) -> {
+                                        permit.release();
+                                        numActiveRequests.decrementAndGet();
+                                    }, ctx.eventLoop().withoutContext());
+                                    resFuture.complete(actualRes);
+                                } catch (Throwable t) {
+                                    permit.release();
+                                    numActiveRequests.decrementAndGet();
+                                    resFuture.completeExceptionally(t);
+                                }
+                            }
+                        }, ctx.eventLoop().withoutContext());
         return deferred;
-    }
-
-    private O unlimitedExecute(ClientRequestContext ctx, I req) throws Exception {
-        numActiveRequests.incrementAndGet();
-        boolean success = false;
-        try {
-            final O res = unwrap().execute(ctx, req);
-            res.whenComplete().handle((unused, cause) -> {
-                numActiveRequests.decrementAndGet();
-                return null;
-            });
-            success = true;
-            return res;
-        } finally {
-            if (!success) {
-                numActiveRequests.decrementAndGet();
-            }
-        }
-    }
-
-    final void drain() {
-        while (!pendingRequests.isEmpty()) {
-            final int currentActiveRequests = numActiveRequests.get();
-            if (currentActiveRequests >= maxConcurrency) {
-                break;
-            }
-
-            if (numActiveRequests.compareAndSet(currentActiveRequests, currentActiveRequests + 1)) {
-                final PendingTask task = pendingRequests.poll();
-                if (task == null) {
-                    numActiveRequests.decrementAndGet();
-                    if (!pendingRequests.isEmpty()) {
-                        // Another request might have been added to the queue while numActiveRequests reached
-                        // at its limit.
-                        continue;
-                    } else {
-                        break;
-                    }
-                }
-
-                task.run();
-            }
-        }
     }
 
     /**
@@ -198,53 +141,4 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected abstract O newDeferredResponse(ClientRequestContext ctx,
                                              CompletionStage<O> resFuture) throws Exception;
-
-    private final class PendingTask extends AtomicReference<ScheduledFuture<?>> implements Runnable {
-
-        private static final long serialVersionUID = -7092037489640350376L;
-
-        private final ClientRequestContext ctx;
-        private final I req;
-        private final CompletableFuture<O> resFuture;
-        private boolean isRun;
-
-        PendingTask(ClientRequestContext ctx, I req, CompletableFuture<O> resFuture) {
-            this.ctx = ctx;
-            this.req = req;
-            this.resFuture = resFuture;
-        }
-
-        boolean isRun() {
-            return isRun;
-        }
-
-        @Override
-        public void run() {
-            isRun = true;
-
-            final ScheduledFuture<?> timeoutFuture = get();
-            if (timeoutFuture != null) {
-                if (timeoutFuture.isDone() || !timeoutFuture.cancel(false)) {
-                    // Timeout task ran already or is determined to run.
-                    numActiveRequests.decrementAndGet();
-                    return;
-                }
-            }
-
-            try (SafeCloseable ignored = ctx.replace()) {
-                try {
-                    final O actualRes = unwrap().execute(ctx, req);
-                    actualRes.whenComplete().handleAsync((unused, cause) -> {
-                        numActiveRequests.decrementAndGet();
-                        drain();
-                        return null;
-                    }, ctx.eventLoop().withoutContext());
-                    resFuture.complete(actualRes);
-                } catch (Throwable t) {
-                    numActiveRequests.decrementAndGet();
-                    resFuture.completeExceptionally(t);
-                }
-            }
-        }
-    }
 }
