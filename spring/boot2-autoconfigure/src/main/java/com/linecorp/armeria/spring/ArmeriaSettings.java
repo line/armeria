@@ -374,13 +374,13 @@ public class ArmeriaSettings {
      * The initial connection-level HTTP/2 flow control window size.
      */
     @Nullable
-    private Integer http2InitialConnectionWindowSize;
+    private String http2InitialConnectionWindowSize;
 
     /**
      * The initial stream-level HTTP/2 flow control window size.
      */
     @Nullable
-    private Integer http2InitialStreamWindowSize;
+    private String http2InitialStreamWindowSize;
 
     /**
      * The maximum number of concurrent streams per HTTP/2 connection.
@@ -392,31 +392,31 @@ public class ArmeriaSettings {
      * The maximum size of HTTP/2 frame that can be received.
      */
     @Nullable
-    private Integer http2MaxFrameSize;
+    private String http2MaxFrameSize;
 
     /**
      * The maximum size of headers that can be received.
      */
     @Nullable
-    private Long http2MaxHeaderListSize;
+    private String http2MaxHeaderListSize;
 
     /**
      * The maximum length of an HTTP/1 response initial line.
      */
     @Nullable
-    private Integer http1MaxInitialLineLength;
+    private String http1MaxInitialLineLength;
 
     /**
      * The maximum length of all headers in an HTTP/1 response.
      */
     @Nullable
-    private Integer http1MaxHeaderSize;
+    private String http1MaxHeaderSize;
 
     /**
      * The maximum length of each chunk in an HTTP/1 response content.
      */
     @Nullable
-    private Integer http1MaxChunkSize;
+    private String http1MaxChunkSize;
 
     /**
      * The format of the {@link Server}'s access log.
@@ -440,7 +440,7 @@ public class ArmeriaSettings {
      * The maximum allowed length of the content decoded at the session layer.
      */
     @Nullable
-    private Long maxRequestLength;
+    private String maxRequestLength;
 
     /**
      * Whether the verbose response mode is enabled.
@@ -706,14 +706,14 @@ public class ArmeriaSettings {
      * Returns the initial connection-level HTTP/2 flow control window size.
      */
     @Nullable
-    public Integer getHttp2InitialConnectionWindowSize() {
+    public String getHttp2InitialConnectionWindowSize() {
         return http2InitialConnectionWindowSize;
     }
 
     /**
      * Sets the initial connection-level HTTP/2 flow control window size.
      */
-    public void setHttp2InitialConnectionWindowSize(@Nullable Integer http2InitialConnectionWindowSize) {
+    public void setHttp2InitialConnectionWindowSize(@Nullable String http2InitialConnectionWindowSize) {
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
     }
 
@@ -721,14 +721,14 @@ public class ArmeriaSettings {
      * Returns the initial stream-level HTTP/2 flow control window size.
      */
     @Nullable
-    public Integer getHttp2InitialStreamWindowSize() {
+    public String getHttp2InitialStreamWindowSize() {
         return http2InitialStreamWindowSize;
     }
 
     /**
      * Sets the initial stream-level HTTP/2 flow control window size.
      */
-    public void setHttp2InitialStreamWindowSize(@Nullable Integer http2InitialStreamWindowSize) {
+    public void setHttp2InitialStreamWindowSize(@Nullable String http2InitialStreamWindowSize) {
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
     }
 
@@ -751,14 +751,14 @@ public class ArmeriaSettings {
      * Returns the maximum size of HTTP/2 frame that can be received.
      */
     @Nullable
-    public Integer getHttp2MaxFrameSize() {
+    public String getHttp2MaxFrameSize() {
         return http2MaxFrameSize;
     }
 
     /**
      * Sets the maximum size of HTTP/2 frame that can be received.
      */
-    public void setHttp2MaxFrameSize(@Nullable Integer http2MaxFrameSize) {
+    public void setHttp2MaxFrameSize(@Nullable String http2MaxFrameSize) {
         this.http2MaxFrameSize = http2MaxFrameSize;
     }
 
@@ -766,14 +766,14 @@ public class ArmeriaSettings {
      * Returns the maximum size of headers that can be received.
      */
     @Nullable
-    public Long getHttp2MaxHeaderListSize() {
+    public String getHttp2MaxHeaderListSize() {
         return http2MaxHeaderListSize;
     }
 
     /**
      * Sets the maximum size of headers that can be received.
      */
-    public void setHttp2MaxHeaderListSize(@Nullable Long http2MaxHeaderListSize) {
+    public void setHttp2MaxHeaderListSize(@Nullable String http2MaxHeaderListSize) {
         this.http2MaxHeaderListSize = http2MaxHeaderListSize;
     }
 
@@ -781,14 +781,14 @@ public class ArmeriaSettings {
      * Returns the maximum length of an HTTP/1 response initial line.
      */
     @Nullable
-    public Integer getHttp1MaxInitialLineLength() {
+    public String getHttp1MaxInitialLineLength() {
         return http1MaxInitialLineLength;
     }
 
     /**
      * Sets the maximum length of an HTTP/1 response initial line.
      */
-    public void setHttp1MaxInitialLineLength(@Nullable Integer http1MaxInitialLineLength) {
+    public void setHttp1MaxInitialLineLength(@Nullable String http1MaxInitialLineLength) {
         this.http1MaxInitialLineLength = http1MaxInitialLineLength;
     }
 
@@ -796,14 +796,14 @@ public class ArmeriaSettings {
      * Returns the maximum length of all headers in an HTTP/1 response.
      */
     @Nullable
-    public Integer getHttp1MaxHeaderSize() {
+    public String getHttp1MaxHeaderSize() {
         return http1MaxHeaderSize;
     }
 
     /**
      * Sets the maximum length of all headers in an HTTP/1 response.
      */
-    public void setHttp1MaxHeaderSize(@Nullable Integer http1MaxHeaderSize) {
+    public void setHttp1MaxHeaderSize(@Nullable String http1MaxHeaderSize) {
         this.http1MaxHeaderSize = http1MaxHeaderSize;
     }
 
@@ -811,14 +811,14 @@ public class ArmeriaSettings {
      * Returns the maximum length of each chunk in an HTTP/1 response content.
      */
     @Nullable
-    public Integer getHttp1MaxChunkSize() {
+    public String getHttp1MaxChunkSize() {
         return http1MaxChunkSize;
     }
 
     /**
      * Sets the maximum length of each chunk in an HTTP/1 response content.
      */
-    public void setHttp1MaxChunkSize(@Nullable Integer http1MaxChunkSize) {
+    public void setHttp1MaxChunkSize(@Nullable String http1MaxChunkSize) {
         this.http1MaxChunkSize = http1MaxChunkSize;
     }
 
@@ -871,14 +871,14 @@ public class ArmeriaSettings {
      * Returns the maximum allowed length of the content decoded at the session layer.
      */
     @Nullable
-    public Long getMaxRequestLength() {
+    public String getMaxRequestLength() {
         return maxRequestLength;
     }
 
     /**
      * Sets the maximum allowed length of the content decoded at the session layer.
      */
-    public void setMaxRequestLength(@Nullable Long maxRequestLength) {
+    public void setMaxRequestLength(@Nullable String maxRequestLength) {
         this.maxRequestLength = maxRequestLength;
     }
 

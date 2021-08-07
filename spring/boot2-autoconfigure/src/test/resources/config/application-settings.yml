@@ -4,8 +4,8 @@ armeria:
   ping-interval: 1s
   max-connection-age: 4s
   max-num-requests-per-connection: 4
-  http2-initial-connection-window-size: 2097152 # 2Mib
-  http2-initial-stream-window-size: 4194304 # 4Mib
+  http2-initial-connection-window-size: 2mb
+  http2-initial-stream-window-size: 4mb
   http2-max-streams-per-connection: 1
   http2-max-frame-size: 32768
   http2-max-header-list-size: 16384

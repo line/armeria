@@ -16,9 +16,13 @@
 
 package com.linecorp.armeria.internal.spring;
 
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.parseDataSize;
+
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -43,21 +47,35 @@ public final class ArmeriaConfigurationSettingsUtil {
         configureIfNonNull(settings.getMaxNumRequestsPerConnection(), server::maxNumRequestsPerConnection);
 
         configureIfNonNull(settings.getHttp2InitialConnectionWindowSize(),
-                           server::http2InitialConnectionWindowSize);
-        configureIfNonNull(settings.getHttp2InitialStreamWindowSize(), server::http2InitialStreamWindowSize);
+                           http2InitialConnectionWindowSize -> server.http2InitialStreamWindowSize(
+                                   Ints.saturatedCast(parseDataSize(http2InitialConnectionWindowSize))));
+        configureIfNonNull(settings.getHttp2InitialStreamWindowSize(),
+                           http2InitialStreamWindowSize -> server.http2InitialStreamWindowSize(
+                                   Ints.saturatedCast(parseDataSize(http2InitialStreamWindowSize))));
         configureIfNonNull(settings.getHttp2MaxStreamsPerConnection(), server::http2MaxStreamsPerConnection);
-        configureIfNonNull(settings.getHttp2MaxFrameSize(), server::http2MaxFrameSize);
-        configureIfNonNull(settings.getHttp2MaxHeaderListSize(), server::http2MaxHeaderListSize);
+        configureIfNonNull(settings.getHttp2MaxFrameSize(),
+                           http2MaxFrameSize -> server.http2MaxFrameSize(
+                                   Ints.saturatedCast(parseDataSize(http2MaxFrameSize))));
+        configureIfNonNull(settings.getHttp2MaxHeaderListSize(),
+                           http2MaxHeaderListSize -> server.http2MaxHeaderListSize(
+                                   parseDataSize(http2MaxHeaderListSize)));
 
-        configureIfNonNull(settings.getHttp1MaxInitialLineLength(), server::http1MaxInitialLineLength);
-        configureIfNonNull(settings.getHttp1MaxHeaderSize(), server::http1MaxHeaderSize);
-        configureIfNonNull(settings.getHttp1MaxChunkSize(), server::http1MaxChunkSize);
+        configureIfNonNull(settings.getHttp1MaxInitialLineLength(),
+                           http1MaxInitialLineLength -> server.http1MaxInitialLineLength(
+                                   Ints.saturatedCast(parseDataSize(http1MaxInitialLineLength))));
+        configureIfNonNull(settings.getHttp1MaxHeaderSize(),
+                           http1MaxHeaderSize -> server.http1MaxHeaderSize(
+                                   Ints.saturatedCast(parseDataSize(http1MaxHeaderSize))));
+        configureIfNonNull(settings.getHttp1MaxChunkSize(),
+                           http1MaxChunkSize -> server.http1MaxChunkSize(
+                                   Ints.saturatedCast(parseDataSize(http1MaxChunkSize))));
 
         configureIfNonNull(settings.getAccessLogFormat(), server::accessLogFormat);
         configureIfNonNull(settings.getAccessLogger(), server::accessLogger);
 
         configureIfNonNull(settings.getRequestTimeout(), server::requestTimeout);
-        configureIfNonNull(settings.getMaxRequestLength(), server::maxRequestLength);
+        configureIfNonNull(settings.getMaxRequestLength(),
+                           maxRequestLength -> server.maxRequestLength(parseDataSize(maxRequestLength)));
         configureIfNonNull(settings.getVerboseResponses(), server::verboseResponses);
     }
 
