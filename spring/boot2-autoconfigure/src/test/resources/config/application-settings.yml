@@ -12,6 +12,6 @@ armeria:
   http1-max-initial-line-length: 8192
   http1-max-header-size: 16384
   http1-max-chunk-size: 32768
-  request-timeout: 8s
+  request-timeout: 8000
   max-request-length: 0
   verbose-responses: true
