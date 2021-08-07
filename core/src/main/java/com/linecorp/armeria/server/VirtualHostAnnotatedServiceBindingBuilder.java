@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
@@ -237,6 +238,14 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder blockingTaskExecutor(
+            ScheduledExecutorService blockingTaskExecutor,
+            boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;
     }
 

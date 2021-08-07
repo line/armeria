@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -117,4 +118,14 @@ interface ServiceConfigSetters {
      * @param defaultLogName the default log name.
      */
     ServiceConfigSetters defaultLogName(String defaultLogName);
+
+    /**
+     * Sets an {@link ScheduledExecutorService executor} to be used when executing blocking tasks.
+     *
+     * @param blockingTaskExecutor the {@link ScheduledExecutorService executor} to be used.
+     * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the {@link Server}
+     *                       stops.
+     */
+    ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                              boolean shutdownOnStop);
 }

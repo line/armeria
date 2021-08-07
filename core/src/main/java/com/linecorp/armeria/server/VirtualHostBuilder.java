@@ -41,6 +41,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -59,6 +60,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -125,6 +127,9 @@ public final class VirtualHostBuilder {
     private boolean shutdownAccessLogWriterOnStop;
     @Nullable
     private AnnotatedServiceExtensions annotatedServiceExtensions;
+    @Nullable
+    private ScheduledExecutorService blockingTaskExecutor;
+    private boolean shutdownBlockingTaskExecutorOnStop;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -865,6 +870,20 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the
+     *                       {@link Server} stops
+     */
+    public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                   boolean shutdownOnStop) {
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        this.shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -948,10 +967,21 @@ public final class VirtualHostBuilder {
                 annotatedServiceExtensions != null ?
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
+        final ScheduledExecutorService blockingTaskExecutor;
+        final boolean shutdownBlockingTaskExecutorOnStop;
+        if (this.blockingTaskExecutor != null) {
+            blockingTaskExecutor = this.blockingTaskExecutor;
+            shutdownBlockingTaskExecutorOnStop = this.shutdownBlockingTaskExecutorOnStop;
+        } else {
+            blockingTaskExecutor = template.blockingTaskExecutor;
+            shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
+        }
+
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
+        assert blockingTaskExecutor != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -971,13 +1001,15 @@ public final class VirtualHostBuilder {
                     }
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
-                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
+                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                               accessLogWriter, shutdownAccessLogWriterOnStop);
+                               accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
+                               shutdownBlockingTaskExecutorOnStop);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
@@ -1045,7 +1077,8 @@ public final class VirtualHostBuilder {
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
-                                    shutdownAccessLogWriterOnStop);
+                                    shutdownAccessLogWriterOnStop,
+                                    blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);

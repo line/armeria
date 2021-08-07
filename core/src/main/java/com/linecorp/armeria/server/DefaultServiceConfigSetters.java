@@ -21,6 +21,7 @@ import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMi
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
@@ -52,6 +53,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Function<? super HttpService, ? extends HttpService> decorator;
     @Nullable
     private AccessLogWriter accessLogWriter;
+    @Nullable
+    private ScheduledExecutorService blockingTaskExecutor;
+    private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
 
     @Override
@@ -151,6 +155,15 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor,
+                                                   "ScheduledExecutorService blockingTaskExecutor");
+        this.shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -198,6 +211,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (accessLogWriter != null) {
             serviceConfigBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
+        }
+        if (blockingTaskExecutor != null) {
+            serviceConfigBuilder.blockingTaskExecutor(blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
         }
         return serviceConfigBuilder;
     }

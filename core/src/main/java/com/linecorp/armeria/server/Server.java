@@ -41,6 +41,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
@@ -604,28 +605,18 @@ public final class Server implements ListenableAsyncCloseable {
             serverChannels.clear();
 
             if (config.shutdownBlockingTaskExecutorOnStop()) {
-                final ScheduledExecutorService executor;
-                final ScheduledExecutorService blockingTaskExecutor = config.blockingTaskExecutor();
-                if (blockingTaskExecutor instanceof UnstoppableScheduledExecutorService) {
-                    executor =
-                            ((UnstoppableScheduledExecutorService) blockingTaskExecutor).getExecutorService();
-                } else {
-                    executor = blockingTaskExecutor;
-                }
-
-                try {
-                    executor.shutdown();
-                    while (!executor.isTerminated()) {
-                        try {
-                            executor.awaitTermination(1, TimeUnit.DAYS);
-                        } catch (InterruptedException ignore) {
-                            // Do nothing.
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
-                }
+                shutdownExecutor(config.blockingTaskExecutor());
             }
+
+            Stream.concat(config.virtualHosts()
+                                .stream()
+                                .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
+                                .map(VirtualHost::blockingTaskExecutor),
+                          config.serviceConfigs()
+                                .stream()
+                                .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
+                                .map(ServiceConfig::blockingTaskExecutor))
+                  .forEach(this::shutdownExecutor);
 
             final Builder<AccessLogWriter> builder = ImmutableSet.builder();
             config.virtualHosts()
@@ -690,6 +681,25 @@ public final class Server implements ListenableAsyncCloseable {
 
         private void logStopFailure(Throwable cause) {
             logger.warn("Failed to stop a server: {}", cause.getMessage(), cause);
+        }
+
+        private void shutdownExecutor(ScheduledExecutorService executor) {
+            if (executor instanceof UnstoppableScheduledExecutorService) {
+                executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
+            }
+
+            try {
+                executor.shutdown();
+                while (!executor.isTerminated()) {
+                    try {
+                        executor.awaitTermination(1, TimeUnit.DAYS);
+                    } catch (InterruptedException ignore) {
+                        // Do nothing.
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
+            }
         }
     }
 
