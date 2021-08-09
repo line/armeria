@@ -32,6 +32,8 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.stream.StreamMessage;
+
 /**
  * A utility class which provides functions for collecting objects published from a {@link Publisher} or
  * {@link Stream}.
@@ -84,8 +86,12 @@ public final class ObjectCollectingUtil {
      * @param publisher publishes objects
      * @return a {@link CompletableFuture} which will complete when all published objects are collected
      */
+    @SuppressWarnings("unchecked")
     public static CompletableFuture<Object> collectFrom(Publisher<?> publisher) {
         requireNonNull(publisher, "publisher");
+        if (publisher instanceof StreamMessage) {
+            return (CompletableFuture<Object>) (CompletableFuture<?>) ((StreamMessage<?>) publisher).collect();
+        }
         final CompletableFuture<Object> future = new CompletableFuture<>();
         if (MONO_CLASS != null && MONO_CLASS.isAssignableFrom(publisher.getClass())) {
             publisher.subscribe(new CollectingSingleObjectSubscriber<>(future));
