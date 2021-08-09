@@ -19,30 +19,22 @@ package com.linecorp.armeria.server
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.AggregatedHttpResponse
-import com.linecorp.armeria.common.HttpResponse
-import com.linecorp.armeria.common.HttpStatus
-import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.common.ResponseHeaders
-import com.linecorp.armeria.server.annotation.Blocking
-import com.linecorp.armeria.server.annotation.Delete
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
-import com.linecorp.armeria.server.annotation.Get
-import com.linecorp.armeria.server.annotation.HttpResult
-import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction
-import com.linecorp.armeria.server.annotation.Param
-import com.linecorp.armeria.server.annotation.ProducesJson
+import com.linecorp.armeria.common.*
+import com.linecorp.armeria.server.annotation.*
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
 import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.coroutineContext
 
 class SuspendingAnnotatedServiceTest {
@@ -104,8 +96,15 @@ class SuspendingAnnotatedServiceTest {
         assertThat(result.contentUtf8()).isEqualTo("OK")
     }
 
+    @Test
+    fun test_downstreamCancellation() {
+        get("/downstream-cancellation/long-running-suspend-fun")
+        await().untilAsserted { assertThat(cancellationCallCounter.get()).isOne() }
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(SuspendingAnnotatedServiceTest::class.java)
+        private val cancellationCallCounter = AtomicInteger()
 
         @JvmField
         @RegisterExtension
@@ -187,7 +186,20 @@ class SuspendingAnnotatedServiceTest {
                             return "OK"
                         }
                     })
+                    .annotatedService("/downstream-cancellation", object {
+                        @Get("/long-running-suspend-fun")
+                        suspend fun longRunningSuspendFun(): String {
+                            try {
+                                delay(10000L)
+                            } catch (e: CancellationException) {
+                                cancellationCallCounter.incrementAndGet()
+                                throw e
+                            }
+                            return "OK"
+                        }
+                    })
                     .decorator(LoggingService.newDecorator())
+                    .requestTimeoutMillis(500L) // to test cancellation
             }
         }
 

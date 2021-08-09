@@ -1304,8 +1304,7 @@ class AnnotatedServiceTest {
     }
 
     static void validateCancellation(AggregatedHttpResponse res, AtomicInteger cancelCallCounter) {
-        await().untilAsserted(() -> assertThat(cancelCallCounter.get()).isEqualTo(1));
-        assertThat(cancelCallCounter.get()).isEqualTo(1);
+        await().untilAsserted(() -> assertThat(cancelCallCounter.get()).isOne());
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
