@@ -100,6 +100,7 @@ public final class ObjectCollectingUtil {
      */
     private abstract static class AbstractCollectingSubscriber<T> implements Subscriber<T> {
         private final CompletableFuture<Object> future;
+        private volatile boolean onErrorCalled;
 
         AbstractCollectingSubscriber(CompletableFuture<Object> future) {
             this.future = future;
@@ -107,8 +108,9 @@ public final class ObjectCollectingUtil {
 
         @Override
         public void onSubscribe(Subscription s) {
-            future.handle((ignored, cause) -> {
-                if (cause != null) {
+            future.exceptionally(ignored -> {
+                if (!onErrorCalled) {
+                    // propagate downstream cancellation to upstream.
                     s.cancel();
                 }
                 return null;
@@ -118,6 +120,7 @@ public final class ObjectCollectingUtil {
 
         @Override
         public void onError(Throwable cause) {
+            onErrorCalled = true;
             future.completeExceptionally(cause);
         }
     }
