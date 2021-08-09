@@ -108,8 +108,8 @@ public final class ObjectCollectingUtil {
 
         @Override
         public void onSubscribe(Subscription s) {
-            future.exceptionally(ignored -> {
-                if (!onErrorCalled) {
+            future.handle((ignored, cause) -> {
+                if (cause != null && !onErrorCalled) {
                     // propagate downstream cancellation to upstream.
                     s.cancel();
                 }

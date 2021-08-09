@@ -464,7 +464,10 @@ public final class AnnotatedService implements HttpService {
      */
     private static CompletionStage<?> cancelOnDownstreamException(
             CompletionStage<?> upstream, CompletionStage<? extends HttpResponse> downstream) {
-        downstream.exceptionally(cause -> {
+        downstream.handle((ignored, cause) -> {
+            if (cause == null) {
+                return null;
+            }
             final CompletableFuture<?> upstreamFuture = upstream.toCompletableFuture();
             if (!upstreamFuture.isDone()) {
                 upstreamFuture.completeExceptionally(cause);
@@ -555,8 +558,8 @@ public final class AnnotatedService implements HttpService {
                     return Exceptions.throwUnsafely(ex);
                 }
             });
-            resFuture.exceptionally(cause -> {
-                if (!f.isDone()) {
+            resFuture.handle((ignored, cause) -> {
+                if (cause != null && !f.isDone()) {
                     f.completeExceptionally(cause);
                 }
                 return null;
