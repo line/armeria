@@ -43,7 +43,7 @@ final class LogWrapper implements Log {
 
     @Override
     public boolean isFatalEnabled() {
-        return false;
+        return delegate.isErrorEnabled();
     }
 
     @Override
@@ -112,8 +112,12 @@ final class LogWrapper implements Log {
     }
 
     @Override
-    public void fatal(Object message) {}
+    public void fatal(Object message) {
+        delegate.error("{}", message);
+    }
 
     @Override
-    public void fatal(Object message, Throwable t) {}
+    public void fatal(Object message, Throwable t) {
+        delegate.error("{}", message, t);
+    }
 }
