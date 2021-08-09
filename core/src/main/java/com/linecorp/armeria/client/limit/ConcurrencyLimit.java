@@ -16,29 +16,57 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.Integer.MAX_VALUE;
+
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.util.SafeCloseable;
+
 /**
- * A concurrency limiter based on an AsyncSemaphore.
+ * Limits the concurrency of client requests.
  */
-public interface ConcurrencyLimit<Context> {
+public interface ConcurrencyLimit {
     /**
-     * Acquire a {@link Permit}, asynchronously.
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
      *
-     * <p>Make sure to `permit.release()` once the operation guarded by the permit completes successfully or
-     * with error.
-     *
-     * @return the {@link Permit}
+     * @param maxConcurrency the maximum number of concurrent active requests,
+     *                       specify {@code 0} to disable the limit.
      */
-    CompletableFuture<Permit> acquire(Context ctx);
+    static ConcurrencyLimitBuilder builder(int maxConcurrency) {
+        checkArgument(maxConcurrency >= 0,
+                      "maxConcurrency: %s (expected: >= 0)", maxConcurrency);
+        return new ConcurrencyLimitBuilder(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
+    }
 
     /**
-     * Token representing an interest in a resource and a way to release that interest.
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
+     *
+     * @param maxConcurrency the maximum number of concurrent active requests,
+     *                       specify {@code 0} to disable the limit.
      */
-    interface Permit {
-        /**
-         * Indicate that you are done with your Permit.
-         */
-        void release();
+    static ConcurrencyLimitBuilder of(int maxConcurrency) {
+        return builder(maxConcurrency);
     }
+
+    /**
+     * Acquire a {@link SafeCloseable}, asynchronously.
+     *
+     * <p>Make sure to call {@link SafeCloseable#close()} once the operation guarded by the permit
+     * completes successfully or with error
+     *
+     * @return the {@link SafeCloseable}
+     */
+    CompletableFuture<SafeCloseable> acquire(ClientRequestContext ctx);
+
+    /**
+     * Returns the total number of acquired permits or -1 in case its value is unknown.
+     */
+    int acquiredPermits();
+
+    /**
+     * Returns the total number of available permits -1 in case its value is unknown.
+     */
+    int availablePermits();
 }

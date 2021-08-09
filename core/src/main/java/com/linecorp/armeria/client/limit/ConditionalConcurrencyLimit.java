@@ -19,29 +19,50 @@ package com.linecorp.armeria.client.limit;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
- * ConcurrencyLimit that applies the limit based a given {@code Predicate<ClientRequestContext>}.
+ * A {@link ConcurrencyLimit} that applies the limit based a given {@code Predicate<ClientRequestContext>}.
  */
-public class ConditionalConcurrencyLimit implements ConcurrencyLimit<ClientRequestContext> {
-    private static final CompletableFuture<Permit> READY_PERMIT = CompletableFuture.completedFuture(
+class ConditionalConcurrencyLimit implements ConcurrencyLimit {
+    private static final CompletableFuture<SafeCloseable> READY_PERMIT = CompletableFuture.completedFuture(
             () -> {
             });
     private final Predicate<? super ClientRequestContext> predicate;
-    private final ConcurrencyLimit<ClientRequestContext> delegate;
+    private final ConcurrencyLimit delegate;
 
     /**
-     * Creates a new instance with the specified {@code predicate} and {@code delegage}.
+     * Creates a new instance with the specified {@code predicate} and {@code delegate}.
      */
-    public ConditionalConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
-                                       ConcurrencyLimit<ClientRequestContext> delegate) {
+    ConditionalConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
+                                ConcurrencyLimit delegate) {
         this.predicate = predicate;
         this.delegate = delegate;
     }
 
     @Override
-    public CompletableFuture<Permit> acquire(ClientRequestContext ctx) {
+    public CompletableFuture<SafeCloseable> acquire(ClientRequestContext ctx) {
         return predicate.test(ctx) ? delegate.acquire(ctx) : READY_PERMIT;
+    }
+
+    @Override
+    public int acquiredPermits() {
+        return delegate.acquiredPermits();
+    }
+
+    @Override
+    public int availablePermits() {
+        return delegate.availablePermits();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("predicate", predicate)
+                          .add("delegate", delegate)
+                          .toString();
     }
 }

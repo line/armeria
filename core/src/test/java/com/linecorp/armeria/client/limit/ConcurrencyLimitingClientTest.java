@@ -47,9 +47,7 @@ class ConcurrencyLimitingClientTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
-    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> {
-
-    };
+    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> {};
     @Mock
     private HttpClient delegate;
 
@@ -231,7 +229,6 @@ class ConcurrencyLimitingClientTest {
 
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
-
 
         final ConcurrencyLimit concurrencyLimit = new ConditionalConcurrencyLimit(
                 requestContext -> false,

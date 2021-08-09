@@ -48,7 +48,7 @@ import io.netty.util.concurrent.EventExecutor;
 public abstract class AbstractConcurrencyLimitingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private final ConcurrencyLimit<ClientRequestContext> concurrencyLimit;
+    private final ConcurrencyLimit concurrencyLimit;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
 
     /**
@@ -74,9 +74,9 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
                                                 int maxConcurrency, long timeout, TimeUnit unit) {
-        this(delegate, AsyncConcurrencyLimit.builder(maxConcurrency)
-                                              .timeoutMillis(unit.toMillis(timeout))
-                                              .build());
+        this(delegate, ConcurrencyLimit.builder(maxConcurrency)
+                                       .timeoutMillis(unit.toMillis(timeout))
+                                       .build());
     }
 
     /**
@@ -104,26 +104,28 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         final CompletableFuture<O> resFuture = new CompletableFuture<>();
         final O deferred = newDeferredResponse(ctx, resFuture);
         concurrencyLimit.acquire(ctx)
-                        .whenCompleteAsync((permit, throwable) -> {
+                        .handleAsync((permit, throwable) -> {
                             if (throwable != null) {
                                 resFuture.completeExceptionally(throwable);
-                                return;
+                                return null;
                             }
                             numActiveRequests.incrementAndGet();
                             try (SafeCloseable ignored = ctx.replace()) {
                                 try {
                                     final O actualRes = unwrap().execute(ctx, req);
-                                    actualRes.whenComplete().whenCompleteAsync((unused, cause) -> {
-                                        permit.release();
+                                    actualRes.whenComplete().handle((unused, cause) -> {
+                                        permit.close();
                                         numActiveRequests.decrementAndGet();
-                                    }, ctx.eventLoop().withoutContext());
+                                        return null;
+                                    });
                                     resFuture.complete(actualRes);
                                 } catch (Throwable t) {
-                                    permit.release();
+                                    permit.close();
                                     numActiveRequests.decrementAndGet();
                                     resFuture.completeExceptionally(t);
                                 }
                             }
+                            return null;
                         }, ctx.eventLoop().withoutContext());
         return deferred;
     }

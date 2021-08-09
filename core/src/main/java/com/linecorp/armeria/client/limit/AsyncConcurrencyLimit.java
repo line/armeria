@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client.limit;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.Integer.MAX_VALUE;
-
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -26,40 +23,22 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 
 /**
  * Concurrency settings that limits the concurrent number of active requests.
  */
-public class AsyncConcurrencyLimit implements ConcurrencyLimit<ClientRequestContext> {
-    /**
-     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
-     *
-     * @param maxConcurrency the maximum number of concurrent active requests,
-     *                       specify {@code 0} to disable the limit.
-     */
-    public static ConcurrencyLimitBuilder builder(int maxConcurrency) {
-        checkArgument(maxConcurrency >= 0,
-                      "maxConcurrency: %s (expected: >= 0)", maxConcurrency);
-        return new ConcurrencyLimitBuilder(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
-    }
-
-    /**
-     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
-     *
-     * @param maxConcurrency the maximum number of concurrent active requests,
-     *                       specify {@code 0} to disable the limit.
-     */
-    public static ConcurrencyLimitBuilder of(int maxConcurrency) {
-        return builder(maxConcurrency);
-    }
-
+final class AsyncConcurrencyLimit implements ConcurrencyLimit {
+    private static final UnprocessedRequestException REQUEST_EXCEPTION = UnprocessedRequestException.of(
+            ConcurrencyLimitTimeoutException.get());
+    private static final IllegalStateException TOO_MANY_OUTSTANDING_ACQUIRE_OPERATIONS =
+            new IllegalStateException("Too many outstanding acquire operations");
     private final int maxParallelism;
     private final int maxPendingAcquires;
     private final long acquireTimeoutNanos;
@@ -67,8 +46,8 @@ public class AsyncConcurrencyLimit implements ConcurrencyLimit<ClientRequestCont
     private final Queue<AcquireTask> pendingAcquireQueue;
     private final AtomicInteger acquiredPermitCount = new AtomicInteger();
     private final Runnable timeoutTask;
-    private final Permit semaphorePermit = this::decrementAndRunTaskQueue;
     private int pendingAcquireCount;
+    private final SafeCloseable semaphorePermit = this::decrementAndRunTaskQueue;
 
     AsyncConcurrencyLimit(
             long acquireTimeoutMillis,
@@ -76,65 +55,59 @@ public class AsyncConcurrencyLimit implements ConcurrencyLimit<ClientRequestCont
             int maxPendingAcquires) {
         this.maxParallelism = maxParallelism;
         this.maxPendingAcquires = maxPendingAcquires;
-        this.pendingAcquireQueue = new ArrayDeque<>(maxPendingAcquires);
-        this.acquireTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(acquireTimeoutMillis);
-        this.timeoutTask = new TimeoutTask();
+        pendingAcquireQueue = new ArrayDeque<>(maxPendingAcquires);
+        acquireTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(acquireTimeoutMillis);
+        timeoutTask = new TimeoutTask();
     }
 
     /**
      * Returns the total number of acquired permits.
      */
-    public int acquiredPermitCount() {
+    @Override
+    public int acquiredPermits() {
         return acquiredPermitCount.get();
     }
 
     /**
      * Returns the total number of available permits.
      */
-    public int availablePermitCount() {
-        return maxParallelism - acquiredPermitCount();
+    @Override
+    public int availablePermits() {
+        return maxParallelism - acquiredPermits();
     }
 
     @Override
-    public CompletableFuture<Permit> acquire(ClientRequestContext requestContext) {
-        return Futures.toCompletableFuture(acquire(requestContext, requestContext.eventLoop().newPromise()));
-    }
-
-    private Future<Permit> acquire(final ClientRequestContext requestContext, final Promise<Permit> promise) {
+    public CompletableFuture<SafeCloseable> acquire(ClientRequestContext requestContext) {
+        final CompletableFuture<SafeCloseable> future = new CompletableFuture<>();
         final EventLoop executor = requestContext.eventLoop().withoutContext();
         try {
             if (executor.inEventLoop()) {
-                acquire0(executor, promise);
+                acquire0(executor, future);
             } else {
-                executor.execute(() -> acquire0(executor, promise));
+                executor.execute(() -> acquire0(executor, future));
             }
         } catch (Throwable cause) {
-            promise.setFailure(cause);
+            future.completeExceptionally(cause);
         }
-        return promise;
+        return future;
     }
 
-    private void acquire0(EventLoop executor, final Promise<Permit> promise) {
+    private void acquire0(EventLoop executor, final CompletableFuture<SafeCloseable> future) {
         assert executor.inEventLoop();
 
         if (acquiredPermitCount.get() < maxParallelism) {
             assert acquiredPermitCount.get() >= 0;
-
-            // We need to create a new promise as we need to ensure the AcquireListener runs in the correct
-            // EventLoop
-            final Promise<Permit> p = executor.newPromise();
-            final AcquireListener l = new AcquireListener(executor, promise);
-            l.acquired();
-            p.addListener(l);
-            newPermit(p);
+            // Acquire immediately.
+            acquiredPermitCount.incrementAndGet();
+            future.complete(semaphorePermit);
         } else {
             if (pendingAcquireCount >= maxPendingAcquires) {
-                tooManyOutstanding(promise);
+                tooManyOutstanding(future);
             } else {
                 final ScheduledFuture<?> timeoutFuture = executor.schedule(timeoutTask,
-                                                                     acquireTimeoutNanos,
-                                                                     TimeUnit.NANOSECONDS);
-                final AcquireTask task = new AcquireTask(executor, promise, timeoutFuture);
+                                                                           acquireTimeoutNanos,
+                                                                           TimeUnit.NANOSECONDS);
+                final AcquireTask task = new AcquireTask(executor, future, timeoutFuture);
                 pendingAcquireQueue.offer(task);
                 ++pendingAcquireCount;
             }
@@ -143,8 +116,8 @@ public class AsyncConcurrencyLimit implements ConcurrencyLimit<ClientRequestCont
         }
     }
 
-    private void tooManyOutstanding(Promise<?> promise) {
-        promise.setFailure(new IllegalStateException("Too many outstanding acquire operations"));
+    private void tooManyOutstanding(CompletableFuture<?> future) {
+        future.completeExceptionally(TOO_MANY_OUTSTANDING_ACQUIRE_OPERATIONS);
     }
 
     private void decrementAndRunTaskQueue() {
@@ -173,7 +146,7 @@ public class AsyncConcurrencyLimit implements ConcurrencyLimit<ClientRequestCont
             --pendingAcquireCount;
             task.acquired();
 
-            newPermit(task.promise);
+            task.future.complete(semaphorePermit);
         }
 
         // We should never have a negative value.
@@ -181,66 +154,18 @@ public class AsyncConcurrencyLimit implements ConcurrencyLimit<ClientRequestCont
         assert acquiredPermitCount.get() >= 0;
     }
 
-    private Future<Permit> newPermit(Promise<Permit> promise) {
-        promise.setSuccess(semaphorePermit);
-        return promise;
-    }
-
-    private final class AcquireTask extends AcquireListener {
-        final Promise<Permit> promise;
+    private final class AcquireTask {
+        final CompletableFuture<SafeCloseable> future;
         final long expireNanoTime = System.nanoTime() + acquireTimeoutNanos;
+        final EventLoop executor;
         final ScheduledFuture<?> timeoutFuture;
+        boolean acquired;
 
-        AcquireTask(EventLoop executor, Promise<Permit> promise, ScheduledFuture<?> timeoutFuture) {
-            super(executor, promise);
-            this.timeoutFuture = timeoutFuture;
-            this.promise = executor.<Permit>newPromise().addListener(this);
-        }
-    }
-
-    private class TimeoutTask implements Runnable {
-        @Override
-        public final void run() {
-            final long nanoTime = System.nanoTime();
-            for (;;) {
-                final AcquireTask task = pendingAcquireQueue.peek();
-                if (task == null || nanoTime - task.expireNanoTime < 0) {
-                    break;
-                }
-                pendingAcquireQueue.remove();
-
-                --pendingAcquireCount;
-                task.acquired();
-                task.promise.setFailure(UnprocessedRequestException.of(ConcurrencyLimitTimeoutException.get()));
-            }
-        }
-    }
-
-    private class AcquireListener implements FutureListener<Permit> {
-        private final EventLoop executor;
-        private final Promise<Permit> originalPromise;
-        private boolean acquired;
-
-        AcquireListener(EventLoop executor, Promise<Permit> originalPromise) {
+        AcquireTask(EventLoop executor, CompletableFuture<SafeCloseable> future,
+                    ScheduledFuture<?> timeoutFuture) {
             this.executor = executor;
-            this.originalPromise = originalPromise;
-        }
-
-        @Override
-        public void operationComplete(Future<Permit> future) throws Exception {
-            assert executor.inEventLoop();
-
-            if (future.isSuccess()) {
-                originalPromise.setSuccess(future.getNow());
-            } else {
-                if (acquired) {
-                    decrementAndRunTaskQueue();
-                } else {
-                    runTaskQueue();
-                }
-
-                originalPromise.setFailure(future.cause());
-            }
+            this.timeoutFuture = timeoutFuture;
+            this.future = future;
         }
 
         public void acquired() {
@@ -250,5 +175,34 @@ public class AsyncConcurrencyLimit implements ConcurrencyLimit<ClientRequestCont
             acquiredPermitCount.incrementAndGet();
             acquired = true;
         }
+    }
+
+    private class TimeoutTask implements Runnable {
+        @Override
+        public final void run() {
+            final long nanoTime = System.nanoTime();
+            for (; ; ) {
+                final AcquireTask task = pendingAcquireQueue.peek();
+                if (task == null || nanoTime - task.expireNanoTime < 0) {
+                    break;
+                }
+                pendingAcquireQueue.remove();
+                --pendingAcquireCount;
+
+                task.acquired();
+                task.future.completeExceptionally(REQUEST_EXCEPTION);
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("maxParallelism", maxParallelism)
+                          .add("maxPendingAcquires", maxPendingAcquires)
+                          .add("acquireTimeoutNanos", acquireTimeoutNanos)
+                          .add("acquiredPermitCount", acquiredPermitCount)
+                          .add("pendingAcquireCount", pendingAcquireCount)
+                          .toString();
     }
 }

@@ -25,7 +25,7 @@ import java.util.function.Predicate;
 import com.linecorp.armeria.client.ClientRequestContext;
 
 /**
- * Builds a {@link AsyncConcurrencyLimit} instance using builder pattern.
+ * Builds an instance of the default {@link ConcurrencyLimit} implementation using builder pattern.
  */
 public final class ConcurrencyLimitBuilder {
     static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
@@ -61,11 +61,11 @@ public final class ConcurrencyLimitBuilder {
     }
 
     /**
-     * Sets the amount of time until this decorator fails the request if the request was not
-     * delegated to the {@code delegate} before then.
+     * Sets the the maximum number of pending acquires.
      */
     public ConcurrencyLimitBuilder maxPendingAcquires(int maxPendingAcquires) {
-        checkArgument(maxPendingAcquires >= 0);
+        checkArgument(maxPendingAcquires >= 0 && maxPendingAcquires <= 256,
+                      "maxPendingAcquires: %s (0 <= expected <= 256)", maxPendingAcquires);
         this.maxPendingAcquires = maxPendingAcquires;
         return this;
     }
