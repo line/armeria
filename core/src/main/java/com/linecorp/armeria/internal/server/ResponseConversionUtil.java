@@ -86,8 +86,8 @@ public final class ResponseConversionUtil {
                                                     ResponseHeaders headers, HttpHeaders trailers,
                                                     Function<Object, HttpData> contentConverter) {
         final HttpResponseWriter writer = HttpResponse.streaming();
-        writer.whenComplete().handle((ignored, cause) -> {
-            if (cause != null) {
+        writer.whenComplete().exceptionally(cause -> {
+            if (!future.isDone()) {
                 future.completeExceptionally(cause);
             }
             return null;
