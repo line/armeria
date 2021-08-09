@@ -21,6 +21,9 @@ import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ResponseBody
 
+/**
+ * This controller returns a JSON with an incorrect content type header.
+ */
 @Controller
 class AbnormalController(private val objectMapper: ObjectMapper) {
 
