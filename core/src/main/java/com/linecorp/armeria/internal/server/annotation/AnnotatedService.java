@@ -31,7 +31,6 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -327,38 +326,29 @@ public final class AnnotatedService implements HttpService {
             case COMPLETION_STAGE:
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
+                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                 final CompletableFuture<?> composedFuture;
-                final AtomicReference<CompletionStage<?>> upstreamStage = new AtomicReference<>();
                 if (useBlockingTaskExecutor) {
-                    composedFuture = f.thenComposeAsync(aReq -> {
-                        final CompletionStage<?> res =
-                                toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor());
-                        upstreamStage.set(res);
-                        return res;
-                    }, ctx.blockingTaskExecutor());
+                    composedFuture = f.thenComposeAsync(
+                            aReq -> cancelOnDownstreamException(
+                                    toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
+                                    responseFuture),
+                            ctx.blockingTaskExecutor());
                 } else {
-                    composedFuture = f.thenCompose(aReq -> {
-                        final CompletionStage<?> res =
-                                toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop());
-                        upstreamStage.set(res);
-                        return res;
-                    });
+                    composedFuture = f.thenCompose(
+                            aReq -> cancelOnDownstreamException(
+                                    toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()),
+                                    responseFuture));
                 }
-                final CompletableFuture<HttpResponse> resFuture = composedFuture
-                        .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
-                resFuture.exceptionally(cause -> {
-                    final CompletionStage<?> upstream = upstreamStage.get();
-                    if (upstream == null) {
-                        return null;
+                composedFuture.handle((result, cause) -> {
+                    if (cause != null) {
+                        responseFuture.completeExceptionally(cause);
+                    } else {
+                        responseFuture.complete(convertResponse(ctx, null, result, HttpHeaders.of()));
                     }
-                    final CompletableFuture<?> future = upstream.toCompletableFuture();
-                    if (future.isDone()) {
-                        return null;
-                    }
-                    future.completeExceptionally(cause);
                     return null;
                 });
-                return resFuture;
+                return responseFuture;
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
                         aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
@@ -467,6 +457,21 @@ public final class AnnotatedService implements HttpService {
             return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
+    }
+
+    /**
+     * Propagates {@link CompletionStage downstream} error to {@link CompletionStage upstream}.
+     */
+    private static CompletionStage<?> cancelOnDownstreamException(
+            CompletionStage<?> upstream, CompletionStage<? extends HttpResponse> downstream) {
+        downstream.exceptionally(cause -> {
+            final CompletableFuture<?> upstreamFuture = upstream.toCompletableFuture();
+            if (!upstreamFuture.isDone()) {
+                upstreamFuture.completeExceptionally(cause);
+            }
+            return null;
+        });
+        return upstream;
     }
 
     /**
