@@ -63,52 +63,52 @@ final class LogWrapper implements Log {
 
     @Override
     public void trace(Object message) {
-        delegate.trace(message.toString());
+        delegate.trace("{}", message);
     }
 
     @Override
     public void trace(Object message, Throwable t) {
-        delegate.trace(message.toString(), t);
+        delegate.trace("{}", message, t);
     }
 
     @Override
     public void debug(Object message) {
-        delegate.debug(message.toString());
+        delegate.debug("{}", message);
     }
 
     @Override
     public void debug(Object message, Throwable t) {
-        delegate.debug(message.toString());
+        delegate.debug("{}", message, t);
     }
 
     @Override
     public void info(Object message) {
-        delegate.info(message.toString());
+        delegate.info("{}", message);
     }
 
     @Override
     public void info(Object message, Throwable t) {
-        delegate.info(message.toString());
+        delegate.info("{}", message, t);
     }
 
     @Override
     public void warn(Object message) {
-        delegate.warn(message.toString());
+        delegate.warn("{}", message);
     }
 
     @Override
     public void warn(Object message, Throwable t) {
-        delegate.warn(message.toString());
+        delegate.warn("{}", message, t);
     }
 
     @Override
     public void error(Object message) {
-        delegate.error(message.toString());
+        delegate.error("{}", message);
     }
 
     @Override
     public void error(Object message, Throwable t) {
-        delegate.error(message.toString());
+        delegate.error("{}", message, t);
     }
 
     @Override
