@@ -100,7 +100,7 @@ public final class ObjectCollectingUtil {
      */
     private abstract static class AbstractCollectingSubscriber<T> implements Subscriber<T> {
         private final CompletableFuture<Object> future;
-        private volatile boolean onErrorCalled;
+        private boolean onErrorCalled;
 
         AbstractCollectingSubscriber(CompletableFuture<Object> future) {
             this.future = future;
