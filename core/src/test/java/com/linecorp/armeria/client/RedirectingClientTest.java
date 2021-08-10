@@ -135,8 +135,10 @@ class RedirectingClientTest {
 
     @Test
     void redirect_failExceedingTotalAttempts() {
-        assertThatThrownBy(() -> sendRequest(1)).hasCauseInstanceOf(TooManyRedirectsException.class)
-                                                .hasMessageContaining("maxRedirects: 1");
+        assertThatThrownBy(() -> sendRequest(1))
+                .hasCauseInstanceOf(TooManyRedirectsException.class)
+                .hasMessageContainingAll("maxRedirects: 1", "The original URI: ",
+                                         "Redirect URIs:", "fooRedirect1", "fooRedirect2");
     }
 
     private static AggregatedHttpResponse sendRequest(int maxRedirects) {
@@ -216,7 +218,7 @@ class RedirectingClientTest {
                                               .build();
             assertThatThrownBy(() -> client.get("/anotherDomain").aggregate().join())
                     .hasCauseInstanceOf(UnexpectedDomainRedirectException.class)
-                    .hasMessageContaining("foo.com is not allowed to redirect.");
+                    .hasMessageContaining("foo.com");
 
             final WebClient client1 = WebClient.builder(server.httpUri())
                                                .factory(factory)
@@ -259,7 +261,7 @@ class RedirectingClientTest {
                                         .followRedirects()
                                         .build(WebClient.class);
         assertThatThrownBy(() -> client.get("/loop").aggregate().join())
-                .hasMessageContainingAll("The original URI:", "/loop", "redirect URIs:", "/loop1", "/loop2")
+                .hasMessageContainingAll("The original URI:", "/loop", "Redirect URIs:", "/loop1", "/loop2")
                 // All URIs have a port number.
                 .hasMessageFindingMatch("http://.*:[0-9]+/loop")
                 .hasMessageFindingMatch("http://.*:[0-9]+/loop1")

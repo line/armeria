@@ -53,19 +53,19 @@ public final class CyclicRedirectsException extends RuntimeException {
         super(createMessage(originalUri, paths));
     }
 
-    private static String createMessage(String originalUri, Iterable<String> redirectUris) {
+    static String createMessage(String originalUri, Iterable<String> redirectUris) {
         try (TemporaryThreadLocals threadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder sb = threadLocals.stringBuilder();
-            sb.append("The original URI: ");
-            sb.append(originalUri);
-            sb.append(System.lineSeparator());
-            addRedirectUris(sb, redirectUris);
+            addUris(sb, originalUri, redirectUris);
             return sb.toString();
         }
     }
 
-    static void addRedirectUris(StringBuilder sb, Iterable<String> redirectUris) {
-        sb.append("redirect URIs:");
+    static void addUris(StringBuilder sb, String originalUri, Iterable<String> redirectUris) {
+        sb.append("The original URI: ");
+        sb.append(originalUri);
+        sb.append(System.lineSeparator());
+        sb.append("Redirect URIs:");
         sb.append(System.lineSeparator());
         for (String path : redirectUris) {
             sb.append('\t');

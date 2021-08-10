@@ -147,7 +147,7 @@ public final class RedirectConfigBuilder {
     }
 
     /**
-     * Sets the {@link BiPredicate} that returns {@code true} if {@linkplain URI#getHost() host component}
+     * Sets the {@link BiPredicate} that returns {@code true} if the {@linkplain URI#getHost() host component}
      * of a redirection URI is allowed for automatic redirection.
      *
      * <p>If the {@link WebClient} is created <b>without</b> a base URI, the {@link WebClient} executes
@@ -155,10 +155,12 @@ public final class RedirectConfigBuilder {
      * If the {@link WebClient} is created <b>with</b> a base URI, automatic redirection is executed to
      * the domain of the base URI by default.
      */
-    public RedirectConfigBuilder allowDomains(BiPredicate<ClientRequestContext, String> predicate) {
+    public RedirectConfigBuilder allowDomains(
+            BiPredicate<? super ClientRequestContext, ? super String> predicate) {
         requireNonNull(predicate, "predicate");
         if (this.predicate == null) {
-            this.predicate = predicate;
+            //noinspection unchecked
+            this.predicate = (BiPredicate<ClientRequestContext, String>) predicate;
         } else {
             this.predicate = this.predicate.or(predicate);
         }

@@ -40,7 +40,7 @@ public final class UnexpectedDomainRedirectException extends RuntimeException {
     }
 
     private UnexpectedDomainRedirectException(String domain) {
-        super(domain + " is not allowed to redirect.");
+        super(domain);
     }
 
     @Override

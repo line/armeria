@@ -108,16 +108,6 @@ public enum SessionProtocol {
     }
 
     /**
-     * Returns {@code true} if the {@link SessionProtocol} is one of {@link #HTTP}, {@link #H1C} and
-     * {@link #H2C}.
-     *
-     * @see #httpValues()
-     */
-    public static boolean isHttp(SessionProtocol protocol) {
-        return HTTP_VALUES.contains(protocol);
-    }
-
-    /**
      * Returns an immutable {@link Set} that contains {@link #HTTPS}, {@link #H1} and {@link #H2}.
      * Note that it does not contain HTTP protocols such as {@link #HTTP}, {@link #H1C} and {@link #H2C}.
      *
@@ -125,16 +115,6 @@ public enum SessionProtocol {
      */
     public static Set<SessionProtocol> httpsValues() {
         return HTTPS_VALUES;
-    }
-
-    /**
-     * Returns {@code true} if the {@link SessionProtocol} is one of {@link #HTTPS}, {@link #H1} and
-     * {@link #H2}.
-     *
-     * @see #httpsValues()
-     */
-    public static boolean isHttps(SessionProtocol protocol) {
-        return HTTPS_VALUES.contains(protocol);
     }
 
     private final String uriText;
@@ -147,6 +127,26 @@ public enum SessionProtocol {
         this.uriText = uriText;
         this.isMultiplex = isMultiplex;
         this.defaultPort = defaultPort;
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #HTTP}, {@link #H1C} and
+     * {@link #H2C}.
+     *
+     * @see #httpValues()
+     */
+    public boolean isHttp() {
+        return HTTP_VALUES.contains(this);
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #HTTPS}, {@link #H1} and
+     * {@link #H2}.
+     *
+     * @see #httpsValues()
+     */
+    public boolean isHttps() {
+        return HTTPS_VALUES.contains(this);
     }
 
     /**

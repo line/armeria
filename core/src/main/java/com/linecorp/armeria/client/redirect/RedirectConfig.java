@@ -82,7 +82,7 @@ public final class RedirectConfig {
     }
 
     /**
-     * Returns the {@link BiPredicate} that filters using {@linkplain URI#getHost() host component} of a
+     * Returns the {@link BiPredicate} that filters using the {@linkplain URI#getHost() host component} of a
      * redirection URI.
      */
     @Nullable

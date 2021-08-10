@@ -19,8 +19,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Set;
+import java.util.EnumSet;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.Flags;
@@ -40,15 +41,16 @@ public final class UnexpectedProtocolRedirectException extends RuntimeException 
      * Returns a new {@link UnexpectedProtocolRedirectException}.
      */
     public static UnexpectedProtocolRedirectException of(SessionProtocol redirectProtocol,
-                                                         Set<SessionProtocol> expectedProtocols) {
+                                                         Iterable<SessionProtocol> expectedProtocols) {
         requireNonNull(redirectProtocol, "redirectProtocol");
         requireNonNull(expectedProtocols, "expectedProtocols");
         checkArgument(!Iterables.isEmpty(expectedProtocols), "expectedProtocols can't be empty.");
-        return new UnexpectedProtocolRedirectException(redirectProtocol, expectedProtocols);
+        return new UnexpectedProtocolRedirectException(
+                redirectProtocol, EnumSet.copyOf(ImmutableSet.copyOf(expectedProtocols)));
     }
 
     private UnexpectedProtocolRedirectException(SessionProtocol redirectProtocol,
-                                                Set<SessionProtocol> expectedProtocols) {
+                                                EnumSet<SessionProtocol> expectedProtocols) {
         super("redirectProtocol: " + redirectProtocol + " (expected: " + expectedProtocols + ')');
     }
 

@@ -17,12 +17,15 @@ package com.linecorp.armeria.client;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowAllDomains;
+import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowSameDomain;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -30,8 +33,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.redirect.CyclicRedirectsException;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
 import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
@@ -59,6 +64,54 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     private static final Set<HttpStatus> redirectStatuses =
             ImmutableSet.of(HttpStatus.MOVED_PERMANENTLY, HttpStatus.FOUND, HttpStatus.SEE_OTHER,
                             HttpStatus.TEMPORARY_REDIRECT);
+
+    private static final Set<SessionProtocol> httpAndHttps =
+            Sets.immutableEnumSet(SessionProtocol.HTTP, SessionProtocol.HTTPS);
+
+    static Function<? super HttpClient, RedirectingClient> newDecorator(
+            ClientBuilderParams params, RedirectConfig redirectConfig) {
+        final boolean undefinedUri = Clients.isUndefinedUri(params.uri());
+        final Set<SessionProtocol> allowedProtocols =
+                allowedProtocols(undefinedUri, redirectConfig.allowedProtocols(),
+                                 params.scheme().sessionProtocol());
+        final BiPredicate<ClientRequestContext, String> domainFilter =
+                domainFilter(undefinedUri, redirectConfig.domainFilter());
+        return delegate -> new RedirectingClient(delegate, allowedProtocols, domainFilter,
+                                                 redirectConfig.maxRedirects());
+    }
+
+    private static Set<SessionProtocol> allowedProtocols(boolean undefinedUri,
+                                                         @Nullable Set<SessionProtocol> allowedProtocols,
+                                                         SessionProtocol usedProtocol) {
+        if (undefinedUri) {
+            if (allowedProtocols != null) {
+                return allowedProtocols;
+            }
+            return httpAndHttps;
+        }
+        final ImmutableSet.Builder<SessionProtocol> builder = ImmutableSet.builderWithExpectedSize(2);
+        if (allowedProtocols != null) {
+            builder.addAll(allowedProtocols);
+        }
+        if (usedProtocol.isHttp()) {
+            builder.add(SessionProtocol.HTTP);
+        } else if (usedProtocol.isHttps()) {
+            builder.add(SessionProtocol.HTTPS);
+        }
+        return builder.build();
+    }
+
+    private static BiPredicate<ClientRequestContext, String> domainFilter(
+            boolean undefinedUri,
+            @Nullable BiPredicate<ClientRequestContext, String> domainFilter) {
+        if (domainFilter != null) {
+            return domainFilter;
+        }
+        if (undefinedUri) {
+            return allowAllDomains;
+        }
+        return allowSameDomain;
+    }
 
     private final Set<SessionProtocol> allowedProtocols;
     private final BiPredicate<ClientRequestContext, String> domainFilter;
@@ -186,7 +239,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             final Multimap<HttpMethod, String> redirectUris = redirectCtx.redirectUris();
             if (redirectUris.size() > maxRedirects) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
-                                response, TooManyRedirectsException.of(maxRedirects,
+                                response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
                                                                        redirectUris.values()));
                 return;
             }
@@ -293,7 +346,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final String originalUri;
         try (TemporaryThreadLocals threadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder sb = threadLocals.stringBuilder();
-            if (SessionProtocol.isHttp(ctx.sessionProtocol())) {
+            if (ctx.sessionProtocol().isHttp()) {
                 sb.append(SessionProtocol.HTTP.uriText());
             } else {
                 sb.append(SessionProtocol.HTTPS.uriText());
@@ -353,19 +406,21 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     @VisibleForTesting
     static class RedirectContext {
 
+        private final ClientRequestContext ctx;
         private final HttpRequest request;
         private final CompletableFuture<Void> responseWhenComplete;
         private final CompletableFuture<HttpResponse> responseFuture;
-        private final Multimap<HttpMethod, String> redirectUris = LinkedListMultimap.create();
-        private final String originalUri;
+        @Nullable
+        private Multimap<HttpMethod, String> redirectUris;
+        @Nullable
+        private String originalUri;
 
         RedirectContext(ClientRequestContext ctx, HttpRequest request,
                         HttpResponse response, CompletableFuture<HttpResponse> responseFuture) {
+            this.ctx = ctx;
             this.request = request;
             responseWhenComplete = response.whenComplete();
             this.responseFuture = responseFuture;
-
-            originalUri = buildUri(ctx, request.headers());
         }
 
         HttpRequest request() {
@@ -381,14 +436,22 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
 
         String originalUri() {
+            if (originalUri == null) {
+                originalUri = buildUri(ctx, request.headers());
+            }
             return originalUri;
         }
 
         boolean addRedirectUri(HttpMethod method, String redirectUri) {
+            if (redirectUris == null) {
+                redirectUris = LinkedListMultimap.create();
+            }
             return redirectUris.put(method, redirectUri);
         }
 
         Multimap<HttpMethod, String> redirectUris() {
+            // Always called after addRedirectUri is called.
+            assert redirectUris != null;
             return redirectUris;
         }
     }
