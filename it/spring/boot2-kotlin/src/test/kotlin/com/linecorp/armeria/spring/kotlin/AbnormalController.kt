@@ -33,7 +33,6 @@ class AbnormalController(private val objectMapper: ObjectMapper) {
         return ResponseEntity.ok()
             .body(objectMapper.writeValueAsString(Abnormal(abnormal = true, dummyText = "output")))
     }
-
 }
 
 data class Abnormal(val abnormal: Boolean, val dummyText: String)
