@@ -2,6 +2,7 @@
   "root": ["index"],
   "Pages": [
     "articles",
+    "office-hours",
     "developer-guide",
     "code-of-conduct",
     "design-resources"
