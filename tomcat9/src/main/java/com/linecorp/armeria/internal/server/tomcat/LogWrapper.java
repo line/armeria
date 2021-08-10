@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.tomcat;
+package com.linecorp.armeria.internal.server.tomcat;
 
 import org.apache.juli.logging.Log;
 import org.slf4j.Logger;
@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Wraps an existing {@link Logger}.
  */
-final class LogWrapper implements Log {
+public final class LogWrapper implements Log {
 
     private final Logger delegate;
 
-    LogWrapper(Class<?> clazz) {
+    public LogWrapper(Class<?> clazz) {
         delegate = LoggerFactory.getLogger(clazz);
     }
 

@@ -21,20 +21,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.spring.LocalArmeriaPort;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-public class ErrorHandlingTest {
+class ErrorHandlingTest {
 
     private static final String TOMCAT_BASE_PATH = "/tomcat/api/rest/v1";
 
@@ -48,67 +46,18 @@ public class ErrorHandlingTest {
         return "http://localhost:" + port + TOMCAT_BASE_PATH;
     }
 
-    @Test
-    public void runtimeExceptionShouldReturnSpringFormattedMessage() throws Exception {
+    @ParameterizedTest
+    @CsvSource({
+            "/error-handling/runtime-exception, 500, runtime exception",
+            "/error-handling/custom-exception, 404, custom not found",
+            "/error-handling/exception-handler, 500, exception handler",
+            "/error-handling/global-exception-handler, 500, global exception handler"
+    })
+    void shouldReturnFormattedMessage(String path, int status, String message) throws Exception {
         final ResponseEntity<String> response =
-                restTemplate.getForEntity(tomcatBaseUrlPath(port) + "/error-handling/runtime-exception",
-                                          String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThatJson(response.getBody()).node("timestamp").isPresent();
-        assertThatJson(response.getBody()).node("status")
-                                          .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        assertThatJson(response.getBody()).node("error")
-                                          .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
-        assertThatJson(response.getBody()).node("message")
-                                          .isEqualTo("runtime exception");
-        assertThatJson(response.getBody()).node("path")
-                                          .isEqualTo("/error-handling/runtime-exception");
-    }
-
-    @Test
-    public void customExceptionShouldReturnSpringFormattedMessage() throws Exception {
-        final ResponseEntity<String> response =
-                restTemplate.getForEntity(tomcatBaseUrlPath(port) + "/error-handling/custom-exception",
-                                          String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThatJson(response.getBody()).node("timestamp").isPresent();
-        assertThatJson(response.getBody()).node("status")
-                                          .isEqualTo(HttpStatus.NOT_FOUND.value());
-        assertThatJson(response.getBody()).node("error")
-                                          .isEqualTo(HttpStatus.NOT_FOUND.getReasonPhrase());
-        assertThatJson(response.getBody()).node("message")
-                                          .isEqualTo("custom not found");
-        assertThatJson(response.getBody()).node("path")
-                                          .isEqualTo("/error-handling/custom-exception");
-    }
-
-    @Test
-    public void exceptionHandlerShouldReturnCustomFormattedMessage() throws Exception {
-        final ResponseEntity<String> response =
-                restTemplate.getForEntity(tomcatBaseUrlPath(port) + "/error-handling/exception-handler",
-                                          String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThatJson(response.getBody()).node("timestamp").isAbsent();
-        assertThatJson(response.getBody()).node("status")
-                                          .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        assertThatJson(response.getBody()).node("error").isAbsent();
-        assertThatJson(response.getBody()).node("message")
-                                          .isEqualTo("exception handler");
-        assertThatJson(response.getBody()).node("path").isAbsent();
-    }
-
-    @Test
-    public void globalExceptionHandlerShouldReturnCustomFormattedMessage() throws Exception {
-        final ResponseEntity<String> response =
-                restTemplate.getForEntity(tomcatBaseUrlPath(port) + "/error-handling/global-exception-handler",
-                                          String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThatJson(response.getBody()).node("timestamp").isAbsent();
-        assertThatJson(response.getBody()).node("status")
-                                          .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        assertThatJson(response.getBody()).node("error").isAbsent();
-        assertThatJson(response.getBody()).node("message")
-                                          .isEqualTo("global exception handler");
-        assertThatJson(response.getBody()).node("path").isAbsent();
+                restTemplate.getForEntity(tomcatBaseUrlPath(port) + path, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.valueOf(status));
+        assertThatJson(response.getBody()).node("status").isEqualTo(status);
+        assertThatJson(response.getBody()).node("message").isEqualTo(message);
     }
 }

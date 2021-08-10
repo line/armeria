@@ -82,8 +82,6 @@ public abstract class TomcatService implements HttpService {
     private static final MethodHandle OUTPUT_BUFFER_CONSTRUCTOR;
     static final Class<?> PROTOCOL_HANDLER_CLASS;
 
-    @Nullable
-    private static final MethodHandle ENDPOINT_CONSTRUCTOR;
     private static final MethodHandle PROCESSOR_CONSTRUCTOR;
 
     static {
@@ -117,16 +115,12 @@ public abstract class TomcatService implements HttpService {
         try {
             final Class<?> processorClass = ArmeriaProcessor.class;
             if (TomcatVersion.major() >= 9) {
-                ENDPOINT_CONSTRUCTOR = null;
                 PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
                         processorClass,
                         MethodType.methodType(void.class, Adapter.class));
             } else {
-                final Class<?> endpointClass = Class.forName(prefix + "ArmeriaEndpoint", true, classLoader);
-                ENDPOINT_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
-                        endpointClass, MethodType.methodType(void.class));
                 PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
-                        processorClass, MethodType.methodType(void.class, endpointClass.getSuperclass()));
+                        processorClass, MethodType.methodType(void.class));
             }
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(
@@ -451,10 +445,10 @@ public abstract class TomcatService implements HttpService {
     }
 
     private static ArmeriaProcessor createProcessor(Adapter coyoteAdapter) throws Throwable {
-        if (ENDPOINT_CONSTRUCTOR == null) {
+        if (TomcatVersion.major() >= 9) {
             return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke(coyoteAdapter);
         } else {
-            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke(ENDPOINT_CONSTRUCTOR.invoke());
+            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke();
         }
     }
 
