@@ -92,6 +92,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final ImmutableSet.Builder<SessionProtocol> builder = ImmutableSet.builderWithExpectedSize(2);
         if (allowedProtocols != null) {
             builder.addAll(allowedProtocols);
+        } else {
+            // We always add HTTPS if allowedProtocols is not specified by a user.
+            builder.add(SessionProtocol.HTTPS);
         }
         if (usedProtocol.isHttp()) {
             builder.add(SessionProtocol.HTTP);

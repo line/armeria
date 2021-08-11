@@ -19,13 +19,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.EnumSet;
+import java.util.Iterator;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * An exception indicating that the {@linkplain URI#getScheme()} session protocol} of the redirection URI
@@ -45,13 +45,32 @@ public final class UnexpectedProtocolRedirectException extends RuntimeException 
         requireNonNull(redirectProtocol, "redirectProtocol");
         requireNonNull(expectedProtocols, "expectedProtocols");
         checkArgument(!Iterables.isEmpty(expectedProtocols), "expectedProtocols can't be empty.");
-        return new UnexpectedProtocolRedirectException(
-                redirectProtocol, EnumSet.copyOf(ImmutableSet.copyOf(expectedProtocols)));
+        return new UnexpectedProtocolRedirectException(redirectProtocol, expectedProtocols);
     }
 
     private UnexpectedProtocolRedirectException(SessionProtocol redirectProtocol,
-                                                EnumSet<SessionProtocol> expectedProtocols) {
-        super("redirectProtocol: " + redirectProtocol + " (expected: " + expectedProtocols + ')');
+                                                Iterable<SessionProtocol> expectedProtocols) {
+        super("redirectProtocol: " + redirectProtocol + " (expected: " + toString(expectedProtocols) + ')');
+    }
+
+    private static String toString(Iterable<SessionProtocol> expectedProtocols) {
+        final Iterator<SessionProtocol> it = expectedProtocols.iterator();
+        if (!it.hasNext()) {
+            throw new IllegalArgumentException("expectedProtocols can't be empty.");
+        }
+
+        try (TemporaryThreadLocals threadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder sb = threadLocals.stringBuilder();
+            sb.append('[');
+            for (;;) {
+                final SessionProtocol protocol = it.next();
+                sb.append(protocol);
+                if (!it.hasNext()) {
+                    return sb.append(']').toString();
+                }
+                sb.append(", ");
+            }
+        }
     }
 
     @Override

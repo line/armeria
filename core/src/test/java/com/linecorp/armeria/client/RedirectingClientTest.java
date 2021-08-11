@@ -154,7 +154,9 @@ class RedirectingClientTest {
     void protocolChange() {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(ClientFactory.insecure())
-                                          .followRedirects()
+                                          .followRedirects(RedirectConfig.builder()
+                                                                         .allowProtocols(SessionProtocol.HTTP)
+                                                                         .build())
                                           .build();
         assertThatThrownBy(() -> client.get("/protocolChange").aggregate().join())
                 .hasCauseInstanceOf(UnexpectedProtocolRedirectException.class)
@@ -163,9 +165,8 @@ class RedirectingClientTest {
         requestCounter.set(0);
         final WebClient client1 = WebClient.builder(server.httpUri())
                                            .factory(ClientFactory.insecure())
-                                           .followRedirects(RedirectConfig.builder()
-                                                                          .allowProtocols(SessionProtocol.HTTPS)
-                                                                          .build())
+                                           // Allows HTTPS by default when allowProtocols is not specified.
+                                           .followRedirects()
                                            .build();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThat(client1.get("/protocolChange").aggregate().join().status()).isSameAs(HttpStatus.OK);
