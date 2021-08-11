@@ -1,0 +1,37 @@
+final def JETTY_VERSION = '9.3.27.v20190418'
+
+dependencies {
+    // Use the classes compiled with the latest Jetty,
+    // but use an older version for test classes.
+    testImplementation(project(':jetty9')) {
+        exclude group: 'org.eclipse.jetty', module: 'jetty-server'
+    }
+
+    testImplementation(platform('org.eclipse.jetty:jetty-bom')) {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly JETTY_VERSION
+        }
+    }
+
+    ['jetty-server', 'jetty-webapp', 'jetty-annotations', 'apache-jsp', 'apache-jstl'].each {
+        testImplementation("org.eclipse.jetty:$it") {
+            version {
+                // Will fail the build if the override doesn't work
+                strictly JETTY_VERSION
+            }
+        }
+    }
+}
+
+// Use the test sources from ':jetty9'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+tasks.compileTestJava.source "${rootProject.projectDir}/jetty9/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/jetty9/src/test/resources"
+
+// Disable checkstyle because it's checked by ':jetty9'.
+tasks.withType(Checkstyle) {
+    onlyIf { false }
+}

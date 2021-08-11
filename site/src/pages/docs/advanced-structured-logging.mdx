@@ -36,7 +36,7 @@ retrieving the information collected during request life cycle in a machine-frie
 |                                       | such as:                                                             |
 |                                       | - gRPC - a service name (e.g, `com.foo.GrpcService`)                 |
 |                                       | - Thrift - a service type (e.g, `com.foo.ThriftService$AsyncIface` or|
-|                                       |           `com.foo.ThriftService$Iface})`                            |
+|                                       |           `com.foo.ThriftService$Iface)`                             |
 |                                       | - <type://HttpService> and annotated service - an innermost class    |
 |                                       |   name                                                               |
 +---------------------------------------+----------------------------------------------------------------------+
@@ -79,6 +79,96 @@ retrieving the information collected during request life cycle in a machine-frie
 | `responseContentPreview`              | the preview of the response content                                  |
 +---------------------------------------+----------------------------------------------------------------------+
 
+The `totalDurationNanos` value is calculated differently between the client-side and the server-side.
+
+For the server-side, `totalDurationNanos` starts when the server receives the <type://RequestHeaders> and
+ends when the server sends the response fully:
+
+```bob-svg
+
+           +---------------------------------------------------------------------+
+           |<--------------------------totalDurationNanos----------------------->|
+           +----------------------------+----------------------------------------+
+           |<---requestDurationNanos--->|
+           +----------------------------+            +---------------------------+
+           ^                            ^            |<--responseDurationNanos-->|
+           :                            :            +---------------------------+
+           :                            :            ^                           ^
+  Received RequestHeaders    Received the last frame :                           :
+                                                     :                           :
+                                           Sending ResponseHeaders    Sending the last frame
+```
+
+As you noticed, `totalDurationNanos` is not the sum of `requestDurationNanos` and `responseDurationNanos`.
+The sum of `requestDurationNanos` and `responseDurationNanos` even can be greater than `totalDurationNanos` when
+the <type://ResponseHeaders> is sent before the service receives the <type://HttpRequest> fully:
+
+```bob-svg
+
+           +---------------------------------------------------------------------+
+           |<--------------------------totalDurationNanos----------------------->|
+           +--------------------------------------------+------------------------+
+           |<-----------requestDurationNanos----------->|
+           +-----------------------+--------------------+------------------------+
+                                   |<-----------responseDurationNanos----------->|
+                                   +---------------------------------------------+
+                                   ^
+                                   :
+             Sending ResponseHeaders before the service fully receives the request
+```
+
+On the other hand, `totalDurationNanos` of the client-side contains
+[connectionAcquisitionDuration](/docs/advanced-structured-logging#client-connection-timing-properties),
+because a client may have to establish a new connection or acquire an existing connection from
+the connection pool before sending a request:
+
+```bob-svg
+
+   +------------------------------------------------------------------------------------------+
+   |<------------------------------------totalDurationNanos---------------------------------->|
+   +---------------------------+--------------------------------------------------------------+
+   |<--connectionAcquisition-->|
+   +---------------------------+  +--------------------------+
+                                  |<--requestDurationNanos-->|
+                                  +--------------------------+    +---------------------------+
+                                  ^                          ^    |<--responseDurationNanos-->|
+                                  :                          :    +---------------------------+
+                                  :                          :    ^                           ^
+                   Sending RequestHeaders   Sending the last frame:                           :
+                                                                  :                           :
+                                              Received ResponseHeaders  Received the last chunk
+```
+
+<Tip>
+
+In the client-side, the response timeout scheduler starts by the first of the following two events:
+- The client sends the last frame of an <type://HttpRequest>.
+- The client receives a <type://ResponseHeaders>.
+
+```bob-svg
+
+ +-------------------------------------------------------------------------------+
+ |<-------------------------totalDurationNanos---------------------------------->|
+ +----------------+--------------------------------------------------------------+
+ |<--connection-->|
+ +----------------+  +--------------------------+
+                     |<--requestDurationNanos-->|
+                     +--------------------------+    +---------------------------+
+                                                ^    |<--responseDurationNanos-->|
+                                                :    +---------------------------+
+                                 Response timeout scheduler starts
+                                      :
+                                      v
+                     +------------------------------------------+
+                     |<----------requestDurationNanos---------->|
+                     +------------------------------------------+----------------+
+                                      |<-----------responseDurationNanos-------->|
+                                      +------------------------------------------+
+
+```
+
+</Tip>
+
 ### Client connection timing properties
 
 +------------------------------------------+-------------------------------------------------------------------+
@@ -112,7 +202,7 @@ retrieving the information collected during request life cycle in a machine-frie
 |                                          | waiting did not occur                                             |
 +------------------------------------------+-------------------------------------------------------------------+
 
-The total duration is the sum of `dnsResolutionDurationNanos`, `socketConnectDurationNanos` and
+The connection acquisition duration is the sum of `dnsResolutionDurationNanos`, `socketConnectDurationNanos` and
 `pendingAcquisitionDurationNanos`. They may or may not occur depending on circumstances.
 These are some of the scenarios how the total duration is composed of:
 
@@ -283,7 +373,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactoryBuilder;
 ServerBuilder sb = Server.builder();
 
 ContentPreviewerFactoryBuilder builder = ContentPreviewerFactory.builder().maxLength(100);
-builder.text(StandardCharsets.UTF_8 /* default charset */, (ctx, headers) -> {
+builder.text((ctx, headers) -> {
     final MediaType contentType = headers.contentType();
     // Produces the textual preview when the content type is ANY_TEXT_TYPE.
     if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {

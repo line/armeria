@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -57,6 +59,9 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
+    private final ImmutableList.Builder<HealthCheckUpdateListener> updateListenersBuilder =
+            ImmutableList.builder();
+    private boolean startHealthy = true;
 
     private final TransientServiceOptionsBuilder
             transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
@@ -256,6 +261,31 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
         return this;
     }
 
+    /**
+     * Adds a {@link HealthCheckUpdateListener} which is invoked when the healthiness of the {@link Server} is
+     * updated.
+     *
+     * @see #updatable(boolean)
+     * @see #updatable(HealthCheckUpdateHandler)
+     */
+    public HealthCheckServiceBuilder updateListener(HealthCheckUpdateListener updateListener) {
+        updateListenersBuilder.add(requireNonNull(updateListener, "updateListener"));
+        return this;
+    }
+
+    /**
+     * Disables setting healthy when the {@link Server} starts. This might be useful when you want to update
+     * the healthiness manually later via using {@link HealthCheckUpdateHandler}. Please note that it's set
+     * unhealthy when the {@link Server} stops regardless.
+     *
+     * @see #updatable(boolean)
+     * @see #updatable(HealthCheckUpdateHandler)
+     */
+    public HealthCheckServiceBuilder startUnhealthy() {
+        startHealthy = false;
+        return this;
+    }
+
     @Override
     public HealthCheckServiceBuilder transientServiceOptions(
             TransientServiceOption... transientServiceOptions) {
@@ -274,10 +304,12 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
+        checkState(startHealthy || updateHandler != null,
+                   "Healthiness must be updatable by server listener or update handler.");
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler,
-                                      transientServiceOptionsBuilder.build());
+                                      pingIntervalMillis, updateHandler, updateListenersBuilder.build(),
+                                      startHealthy, transientServiceOptionsBuilder.build());
     }
 }

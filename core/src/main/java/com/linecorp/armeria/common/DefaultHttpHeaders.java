@@ -24,9 +24,6 @@ class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
 
     static final DefaultHttpHeaders EMPTY_EOS = new DefaultHttpHeaders(true);
 
-    @Nullable
-    private MediaType contentType;
-
     /**
      * Creates an empty headers.
      */
@@ -55,14 +52,13 @@ class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
     @Nullable
     @Override
     public final MediaType contentType() {
-        final MediaType contentType = this.contentType;
-        if (contentType != null) {
-            return contentType;
-        }
+        return super.contentType();
+    }
 
-        final MediaType newContentType = super.contentType();
-        this.contentType = newContentType;
-        return newContentType;
+    @Nullable
+    @Override
+    public final ContentDisposition contentDisposition() {
+        return super.contentDisposition();
     }
 
     @Override

@@ -21,10 +21,8 @@ import javax.inject.Inject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -48,68 +46,33 @@ public class LocalArmeriaPortTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
-    static class TestConfiguration {
-
-        @Bean
-        LocalArmeriaPortForFieldInjection localArmeriaPortForFieldInjection() {
-            return new LocalArmeriaPortForFieldInjection();
-        }
-
-        @Bean
-        LocalArmeriaPortForMethodInjection localArmeriaPortForMethodInjection() {
-            return new LocalArmeriaPortForMethodInjection();
-        }
-    }
-
-    static class LocalArmeriaPortForFieldInjection {
-
-        @LocalArmeriaPort
-        private Integer port;
-
-        Integer getPort() {
-            return port;
-        }
-    }
-
-    static class LocalArmeriaPortForMethodInjection {
-
-        private Integer port;
-
-        @LocalArmeriaPort
-        void setPort(Integer port) {
-            this.port = port;
-        }
-
-        Integer getPort() {
-            return port;
-        }
-    }
+    static class TestConfiguration {}
 
     @Inject
     private Server server;
-    @Inject
-    private BeanFactory beanFactory;
     @LocalArmeriaPort
-    private Integer port;
+    private Integer portField;
+    private Integer portMethod;
+
+    @LocalArmeriaPort
+    public void setPortField(Integer port) {
+        portMethod = port;
+    }
 
     private String newUrl(String scheme) {
-        return scheme + "://127.0.0.1:" + port;
+        return scheme + "://127.0.0.1:" + portField;
     }
 
     @Test
     public void testPortConfigurationFromFieldInjection() throws Exception {
         final Integer actualPort = server.activeLocalPort();
-        final LocalArmeriaPortForFieldInjection bean = beanFactory.getBean(
-                LocalArmeriaPortForFieldInjection.class);
-        assertThat(actualPort).isEqualTo(bean.getPort());
+        assertThat(actualPort).isEqualTo(portField);
     }
 
     @Test
     public void testPortConfigurationFromMethodInjection() throws Exception {
         final Integer actualPort = server.activeLocalPort();
-        final LocalArmeriaPortForMethodInjection bean = beanFactory.getBean(
-                LocalArmeriaPortForMethodInjection.class);
-        assertThat(actualPort).isEqualTo(bean.getPort());
+        assertThat(actualPort).isEqualTo(portMethod);
     }
 
     @Test

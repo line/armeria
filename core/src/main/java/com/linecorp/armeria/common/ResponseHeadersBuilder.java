@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -42,6 +43,21 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
      */
     ResponseHeadersBuilder status(HttpStatus status);
 
+    /**
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.
+     */
+    ResponseHeadersBuilder cookie(Cookie cookie);
+
+    /**
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.
+     */
+    ResponseHeadersBuilder cookies(Iterable<? extends Cookie> cookies);
+
+    /**
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.
+     */
+    ResponseHeadersBuilder cookies(Cookie... cookies);
+
     // Override the return type of the chaining methods in the superclass.
 
     @Override
@@ -51,7 +67,13 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder endOfStream(boolean endOfStream);
 
     @Override
+    ResponseHeadersBuilder contentLength(long contentLength);
+
+    @Override
     ResponseHeadersBuilder contentType(MediaType contentType);
+
+    @Override
+    ResponseHeadersBuilder contentDisposition(ContentDisposition contentDisposition);
 
     @Override
     ResponseHeadersBuilder add(CharSequence name, String value);
@@ -64,6 +86,11 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
 
     @Override
     ResponseHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> entries);
+
+    @Override
+    default ResponseHeadersBuilder add(Map<? extends CharSequence, String> entries) {
+        return (ResponseHeadersBuilder) HttpHeadersBuilder.super.add(entries);
+    }
 
     @Override
     ResponseHeadersBuilder addObject(CharSequence name, Object value);
@@ -103,6 +130,11 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
 
     @Override
     ResponseHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> entries);
+
+    @Override
+    default ResponseHeadersBuilder set(Map<? extends CharSequence, String> entries) {
+        return (ResponseHeadersBuilder) HttpHeadersBuilder.super.set(entries);
+    }
 
     @Override
     ResponseHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> entries);

@@ -1,0 +1,52 @@
+configure(projectsWithFlags('kotlin')) {
+
+    apply plugin: 'kotlin'
+
+    def target = "1.8"
+    def compilerArgs = ["-Xjsr305=strict", "-java-parameters"]
+    compileKotlin {
+        kotlinOptions.jvmTarget = target
+        kotlinOptions.freeCompilerArgs = compilerArgs
+    }
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = target
+        kotlinOptions.freeCompilerArgs = compilerArgs
+    }
+
+    if (!rootProject.hasProperty('noLint')) {
+        apply plugin: "org.jlleitschuh.gradle.ktlint"
+
+        ktlint {
+            // https://github.com/pinterest/ktlint/issues/764
+            version.set("0.36.0")
+            verbose.set(true)
+            reporters {
+                reporter "html"
+            }
+            // https://github.com/pinterest/ktlint/issues/527
+            disabledRules = ["import-ordering"]
+
+            filter {
+                exclude("**/gen-src/**")
+            }
+        }
+
+        afterEvaluate {
+            // A workaround for 'runKtlintCheckOverMainSourceSet' uses this output of task ':generateProto' without
+            // declaring an explicit or implicit dependency.
+            tasks.runKtlintCheckOverMainSourceSet.dependsOn(project.ext.getGenerateSourcesTask())
+            project.ext.getLintTask().dependsOn(tasks.ktlintCheck)
+        }
+    }
+
+    // A workaround for runtime JAR files in the classpath should have the same version.
+    // See: https://stackoverflow.com/questions/42569445/warning-kotlin-runtime-jar-files-in-the-classpath-should-have-the-same-version
+    configurations.all {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            def requested = details.requested
+            if (requested.group == 'org.jetbrains.kotlin' && requested.name == 'kotlin-reflect') {
+                details.useVersion managedVersions['org.jetbrains.kotlin:kotlin-reflect']
+            }
+        }
+    }
+}

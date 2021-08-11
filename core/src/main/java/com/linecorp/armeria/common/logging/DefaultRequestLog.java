@@ -51,11 +51,12 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
@@ -536,12 +537,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> {
                  final String serviceName = log.serviceName();
                  final String name = log.name();
-                 if (name != null) {
-                     if (serviceName != null) {
-                         name(serviceName, name);
-                     } else {
-                         name(name);
-                     }
+                 if (serviceName != null) {
+                     name(serviceName, name);
+                 } else {
+                     name(name);
                  }
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
@@ -604,6 +603,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             lastChild.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
+        }
+
+        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+            responseTrailers(lastChild.responseTrailers());
+        } else {
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
+                     .thenAccept(log -> responseTrailers(log.responseTrailers()));
         }
 
         if (lastChild.isComplete()) {
@@ -768,6 +774,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String name() {
         ensureAvailable(RequestLogProperty.NAME);
+        assert name != null;
         return name;
     }
 
@@ -908,11 +915,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
-        updateFlags(RequestLogProperty.REQUEST_CONTENT);
-
         if (requestContent instanceof RpcRequest && ctx.rpcRequest() == null) {
             ctx.updateRpcRequest((RpcRequest) requestContent);
         }
+        updateFlags(RequestLogProperty.REQUEST_CONTENT);
 
         final int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         if (isAvailable(requestCompletionFlags)) {
@@ -1025,7 +1031,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             setNamesIfAbsent();
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
-        this.requestCause = requestCause;
+
+        if (requestCause instanceof HttpStatusException || requestCause instanceof HttpResponseException) {
+            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
+            this.requestCause = requestCause.getCause();
+        } else {
+            this.requestCause = requestCause;
+        }
         updateFlags(flags);
     }
 
@@ -1034,11 +1046,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             String newServiceName = null;
             String newName = null;
             ServiceConfig config = null;
+            ServiceRequestContext sctx = null;
 
             // Set the default names from ServiceConfig
             if (ctx instanceof ServiceRequestContext) {
-                config = ((ServiceRequestContext) ctx).config();
-                newServiceName = config.defaultServiceName();
+                sctx = (ServiceRequestContext) ctx;
+                config = sctx.config();
+                newServiceName = config.defaultServiceNaming().serviceName(sctx);
                 newName = config.defaultLogName();
             }
 
@@ -1049,21 +1063,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             // Set serviceName from ServiceType or innermost class name
             if (newServiceName == null) {
-                if (rpcReq != null) {
-                    final String serviceType = rpcReq.serviceType().getName();
-                    if ("com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(serviceType)) {
-                        // Parse gRPC serviceName and methodName
-                        final String fullMethodName = rpcReq.method();
-                        final int methodIndex = fullMethodName.lastIndexOf('/');
-                        newServiceName = fullMethodName.substring(0, methodIndex);
-                        if (newName == null) {
-                            newName = fullMethodName.substring(methodIndex + 1);
-                        }
-                    } else {
-                        newServiceName = serviceType;
-                    }
-                } else if (config != null) {
-                    newServiceName = getInnermostServiceName(config.service());
+                if (config != null) {
+                    newServiceName = ServiceNaming.fullTypeName().serviceName(sctx);
+                } else if (rpcReq != null) {
+                    newServiceName = rpcReq.serviceName();
                 }
             }
 
@@ -1079,18 +1082,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             name = newName;
 
             updateFlags(RequestLogProperty.NAME);
-        }
-    }
-
-    private static String getInnermostServiceName(HttpService service) {
-        Unwrappable unwrappable = service;
-        while (true) {
-            final Unwrappable delegate = unwrappable.unwrap();
-            if (delegate != unwrappable) {
-                unwrappable = delegate;
-                continue;
-            }
-            return delegate.getClass().getName();
         }
     }
 
@@ -1356,7 +1347,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             responseHeaders = DUMMY_RESPONSE_HEADERS;
         }
         if (this.responseCause == null) {
-            this.responseCause = responseCause;
+            if (responseCause instanceof HttpStatusException ||
+                responseCause instanceof HttpResponseException) {
+                // Log the responseCause only when an Http{Status,Response}Exception was created with a cause.
+                this.responseCause = responseCause.getCause();
+            } else {
+                this.responseCause = responseCause;
+            }
         }
         updateFlags(flags);
     }
@@ -1441,54 +1438,56 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("{startTime=");
-        TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("{startTime=");
+            TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
 
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_LENGTH)) {
-            buf.append(", length=");
-            TextFormatter.appendSize(buf, requestLength);
+            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_LENGTH)) {
+                buf.append(", length=");
+                TextFormatter.appendSize(buf, requestLength);
+            }
+
+            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_END_TIME)) {
+                buf.append(", duration=");
+                TextFormatter.appendElapsed(buf, requestDurationNanos());
+            }
+
+            if (requestCauseString != null) {
+                buf.append(", cause=").append(requestCauseString);
+            }
+
+            buf.append(", scheme=");
+            if (scheme != null) {
+                buf.append(scheme.uriText());
+            } else {
+                buf.append(SerializationFormat.UNKNOWN.uriText())
+                   .append('+')
+                   .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
+            }
+
+            if (name != null) {
+                buf.append(", name=").append(name);
+            }
+
+            if (sanitizedHeaders != null) {
+                buf.append(", headers=").append(sanitizedHeaders);
+            }
+
+            if (sanitizedContent != null) {
+                buf.append(", content=").append(sanitizedContent);
+            } else if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
+                       requestContentPreview != null) {
+                buf.append(", contentPreview=").append(requestContentPreview);
+            }
+
+            if (sanitizedTrailers != null) {
+                buf.append(", trailers=").append(sanitizedTrailers);
+            }
+            buf.append('}');
+
+            requestStr = buf.toString();
         }
-
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_END_TIME)) {
-            buf.append(", duration=");
-            TextFormatter.appendElapsed(buf, requestDurationNanos());
-        }
-
-        if (requestCauseString != null) {
-            buf.append(", cause=").append(requestCauseString);
-        }
-
-        buf.append(", scheme=");
-        if (scheme != null) {
-            buf.append(scheme.uriText());
-        } else {
-            buf.append(SerializationFormat.UNKNOWN.uriText())
-               .append('+')
-               .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
-        }
-
-        if (name != null) {
-            buf.append(", name=").append(name);
-        }
-
-        if (sanitizedHeaders != null) {
-            buf.append(", headers=").append(sanitizedHeaders);
-        }
-
-        if (sanitizedContent != null) {
-            buf.append(", content=").append(sanitizedContent);
-        } else if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                   requestContentPreview != null) {
-            buf.append(", contentPreview=").append(requestContentPreview);
-        }
-
-        if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);
-        }
-        buf.append('}');
-
-        requestStr = buf.toString();
         requestStrFlags = flags;
 
         return requestStr;
@@ -1545,50 +1544,52 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("{startTime=");
-        TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("{startTime=");
+            TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
 
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_LENGTH)) {
-            buf.append(", length=");
-            TextFormatter.appendSize(buf, responseLength);
-        }
+            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_LENGTH)) {
+                buf.append(", length=");
+                TextFormatter.appendSize(buf, responseLength);
+            }
 
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_END_TIME)) {
-            buf.append(", duration=");
-            TextFormatter.appendElapsed(buf, responseDurationNanos());
-            buf.append(", totalDuration=");
-            TextFormatter.appendElapsed(buf, totalDurationNanos());
-        }
+            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_END_TIME)) {
+                buf.append(", duration=");
+                TextFormatter.appendElapsed(buf, responseDurationNanos());
+                buf.append(", totalDuration=");
+                TextFormatter.appendElapsed(buf, totalDurationNanos());
+            }
 
-        if (responseCauseString != null) {
-            buf.append(", cause=").append(responseCauseString);
-        }
+            if (responseCauseString != null) {
+                buf.append(", cause=").append(responseCauseString);
+            }
 
-        if (sanitizedHeaders != null) {
-            buf.append(", headers=").append(sanitizedHeaders);
-        }
+            if (sanitizedHeaders != null) {
+                buf.append(", headers=").append(sanitizedHeaders);
+            }
 
-        if (sanitizedContent != null) {
-            buf.append(", content=").append(sanitizedContent);
-        } else if (responseContentPreview != null) {
-            buf.append(", contentPreview=").append(responseContentPreview);
-        }
+            if (sanitizedContent != null) {
+                buf.append(", content=").append(sanitizedContent);
+            } else if (responseContentPreview != null) {
+                buf.append(", contentPreview=").append(responseContentPreview);
+            }
 
-        if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);
-        }
-        buf.append('}');
-
-        final int numChildren = children != null ? children.size() : 0;
-        if (numChildren > 1) {
-            // Append only when there were retries which the numChildren is greater than 1.
-            buf.append(", {totalAttempts=");
-            buf.append(numChildren);
+            if (sanitizedTrailers != null) {
+                buf.append(", trailers=").append(sanitizedTrailers);
+            }
             buf.append('}');
-        }
 
-        responseStr = buf.toString();
+            final int numChildren = children != null ? children.size() : 0;
+            if (numChildren > 1) {
+                // Append only when there were retries which the numChildren is greater than 1.
+                buf.append(", {totalAttempts=");
+                buf.append(numChildren);
+                buf.append('}');
+            }
+
+            responseStr = buf.toString();
+        }
         responseStrFlags = flags;
 
         return responseStr;

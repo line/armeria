@@ -78,7 +78,14 @@ public final class SslContextUtil {
 
     public static final List<String> DEFAULT_PROTOCOLS = ImmutableList.of("TLSv1.3", "TLSv1.2");
 
+    private static final String ESSENTIAL_HTTP2_CIPHER_SUITE = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
+    private static final String MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE =
+            "Attempted to configure TLS without the " + ESSENTIAL_HTTP2_CIPHER_SUITE +
+            " cipher suite enabled. It must be enabled for proper HTTP/2 support.";
+
     private static boolean warnedUnsupportedProtocols;
+    private static boolean warnedMissingEssentialCipherSuite;
+    private static boolean warnedBadCipherSuite;
 
     /**
      * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
@@ -89,7 +96,7 @@ public final class SslContextUtil {
             boolean tlsAllowUnsafeCiphers,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
 
-        return BouncyCastleKeyFactoryProvider.call(() -> {
+        return MinifiedBouncyCastleProvider.call(() -> {
             final SslContextBuilder builder = builderSupplier.get();
             final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
             builder.sslProvider(provider);
@@ -129,12 +136,14 @@ public final class SslContextUtil {
                 sslContext = builder.build();
 
                 final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
-                checkState(!ciphers.isEmpty(), "SSLContext has no cipher suites enabled.");
+                checkState(!ciphers.isEmpty(),
+                           "SSLContext has no cipher suites enabled. " +
+                           "You must specify at least one cipher suite.");
 
-                if (forceHttp1 || tlsAllowUnsafeCiphers) {
+                if (forceHttp1) {
                    // Skip validation
                 } else {
-                    validateHttp2Ciphers(ciphers);
+                    validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers);
                 }
 
                 success = true;
@@ -169,24 +178,40 @@ public final class SslContextUtil {
         }
     }
 
-    private static void validateHttp2Ciphers(Set<String> ciphers) {
-        if (!ciphers.contains("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")) {
-            throw new IllegalStateException("Attempting to configure a server or HTTP/2 client without the " +
-                                            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher enabled. This " +
-                                            "cipher must be enabled for HTTP/2 support.");
+    private static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers) {
+        if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
+            if (tlsAllowUnsafeCiphers) {
+                if (!warnedMissingEssentialCipherSuite) {
+                    warnedMissingEssentialCipherSuite = true;
+                    logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+                }
+            } else {
+                throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+            }
         }
 
         for (String cipher : ciphers) {
             if (BAD_HTTP2_CIPHERS.contains(cipher)) {
-                throw new IllegalStateException(
-                        "Attempted to configure a server or HTTP/2 client with a TLS cipher that is not " +
-                        "allowed. Please remove any ciphers from the HTTP/2 cipher disallowed list " +
-                        "https://httpwg.org/specs/rfc7540.html#BadCipherSuites");
+                if (tlsAllowUnsafeCiphers) {
+                    if (!warnedBadCipherSuite) {
+                        warnedBadCipherSuite = true;
+                        logger.warn(badCipherSuiteMessage(cipher));
+                    }
+                    break;
+                } else {
+                    throw new IllegalStateException(badCipherSuiteMessage(cipher));
+                }
             }
         }
     }
 
-    // https://httpwg.org/specs/rfc7540.html#BadCipherSuites
+    private static String badCipherSuiteMessage(String cipher) {
+        return "Attempted to configure TLS with a bad cipher suite (" + cipher + "). " +
+               "Do not use any cipher suites listed in " +
+               "https://datatracker.ietf.org/doc/html/rfc7540#appendix-A";
+    }
+
+    // https://datatracker.ietf.org/doc/html/rfc7540#appendix-A
     @VisibleForTesting
     static final Set<String> BAD_HTTP2_CIPHERS =
             ImmutableSet.of(

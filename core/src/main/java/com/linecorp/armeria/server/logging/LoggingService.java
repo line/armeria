@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
  * Decorates an {@link HttpService} to log {@link HttpRequest}s and {@link HttpResponse}s.
@@ -122,8 +121,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_SERVICE_LOGGING) &&
-            sampler.isSampled(ctx)) {
+        if (sampler.isSampled(ctx)) {
             logWhenComplete(logger, ctx, requestLogger, responseLogger);
         }
         return unwrap().serve(ctx, req);

@@ -133,10 +133,63 @@ sb.build().start();
 ```
 
 For more information, please refer to the API documentation of the
-[com.linecorp.armeria.client.eureka](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/eureka/package-summary.html) package.
+[com.linecorp.armeria.server.eureka](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/server/eureka/package-summary.html) package.
 
 <Tip>
 
 See [Eureka service discovery](/docs/client-service-discovery#eureka-based-service-discovery-with-eurekaendpointgroup).
+
+</Tip>
+
+## [Consul](https://www.consul.io)-based service registration with `ConsulUpdatingListener`
+
+First, You need the `armeria-consul` dependency:
+
+<RequiredDependencies
+boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+dependencies={[
+{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-consul' },
+]}
+/>
+
+Then, use <type://ConsulUpdatingListener> to register your server to the Consul:
+
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.consul.ConsulUpdatingListener;
+
+ConsulUpdatingListener listener =
+    ConsulUpdatingListener.of("http://my-consul.com:8500", "my-service");
+
+ServerBuilder sb = Server.builder();
+sb.serverListener(listener);
+sb.build().start();
+```
+
+If you want to specify an [HTTP check](https://www.consul.io/api/agent/check#http) or 
+[tags](https://www.consul.io/api-docs/agent/service#tags) to the <type://Server>, 
+use <type://ConsulUpdatingListenerBuilder>:
+
+```java
+import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
+
+ConsulUpdatingListenerBuilder builder =
+    ConsulUpdatingListener.builder("http://my-consul.com:8500", "my-service")
+                          .check("http://my.hostname.local:8080/internal/l7check")
+                          .tags("production", "v1");
+                              
+ConsulUpdatingListener listener = builder.build();
+ServerBuilder sb = Server.builder();
+sb.serverListener(listener);
+sb.build().start();
+```
+
+For more information, please refer to the API documentation of the
+[com.linecorp.armeria.server.consul](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/consul/package-summary.html) package.
+
+<Tip>
+
+See [Consul service discovery](/docs/client-service-discovery#consul-based-service-discovery-with-consulendpointgroup).
 
 </Tip>

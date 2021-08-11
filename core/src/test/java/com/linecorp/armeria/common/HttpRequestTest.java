@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class HttpRequestTest {
 
     @Test
     void abortWithCause() {
-        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/foo");
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/foo", MediaType.PLAIN_TEXT, "foo");
         final AtomicReference<Throwable> abortCauseHolder = new AtomicReference<>();
         request.subscribe(new Subscriber<HttpObject>() {
             @Override
@@ -65,6 +66,28 @@ class HttpRequestTest {
         await().untilAsserted(() -> {
             assertThat(abortCauseHolder).hasValue(abortCause);
         });
+    }
+
+    @Test
+    void completeOnSubscribing() {
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/foo");
+        final AtomicBoolean completed = new AtomicBoolean();
+        request.subscribe(new Subscriber<HttpObject>() {
+            @Override
+            public void onSubscribe(Subscription subscription) {}
+
+            @Override
+            public void onNext(HttpObject httpObject) {}
+
+            @Override
+            public void onError(Throwable throwable) {}
+
+            @Override
+            public void onComplete() {
+                completed.set(true);
+            }
+        });
+        await().untilTrue(completed);
     }
 
     @Test

@@ -17,19 +17,18 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.SessionProtocol.H1;
-import static com.linecorp.armeria.common.SessionProtocol.H1C;
-import static com.linecorp.armeria.common.SessionProtocol.H2;
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+import static com.linecorp.armeria.common.SessionProtocol.httpValues;
+import static com.linecorp.armeria.common.SessionProtocol.httpsValues;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
 
@@ -43,9 +42,28 @@ import com.linecorp.armeria.common.SessionProtocol;
  */
 public final class ServerPort implements Comparable<ServerPort> {
 
+    private static final AtomicLong nextPortGroup = new AtomicLong();
+
+    /**
+     * Returns a unique value that is used for identifying a group of {@link ServerPort}s.
+     * When two ephemeral {@link ServerPort}s have the same port group value, {@link Server}
+     * will choose the same port number for them, rather than allocating two ephemeral ports.
+     */
+    static long nextPortGroup() {
+        for (;;) {
+            final long portGroup = nextPortGroup.incrementAndGet();
+            if (portGroup > 0) {
+                return portGroup;
+            } else {
+                // 0 means 'no group'.
+            }
+        }
+    }
+
     private final InetSocketAddress localAddress;
     private final String comparisonStr;
     private final Set<SessionProtocol> protocols;
+    private final long portGroup;
     private int hashCode;
 
     @Nullable
@@ -80,6 +98,18 @@ public final class ServerPort implements Comparable<ServerPort> {
      * {@link SessionProtocol}s.
      */
     public ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols) {
+        this(localAddress, protocols, 0);
+    }
+
+    /**
+     * Creates a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
+     * {@link SessionProtocol}s.
+     *
+     * @param portGroup a unique value that is used for identifying a group of {@link ServerPort}s.
+     *                  When two ephemeral {@link ServerPort}s have the same port group value, {@link Server}
+     *                  will choose the same port number for them, rather than allocating two ephemeral ports.
+     */
+    ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols, long portGroup) {
         // Try to resolve the localAddress if not resolved yet.
         if (requireNonNull(localAddress, "localAddress").isUnresolved()) {
             try {
@@ -91,9 +121,9 @@ public final class ServerPort implements Comparable<ServerPort> {
             }
         }
 
-        requireNonNull(protocols, "protocols");
         this.localAddress = localAddress;
-        this.protocols = Sets.immutableEnumSet(protocols);
+        this.protocols = Sets.immutableEnumSet(requireNonNull(protocols, "protocols"));
+        this.portGroup = portGroup;
 
         checkArgument(!this.protocols.isEmpty(),
                       "protocols: %s (must not be empty)", this.protocols);
@@ -129,33 +159,53 @@ public final class ServerPort implements Comparable<ServerPort> {
     }
 
     /**
-     * Returns whether the {@link SessionProtocol#HTTP}, {@link SessionProtocol#H1C} or
-     * {@link SessionProtocol#H2C} is in the list of {@link SessionProtocol}s.
+     * Returns whether {@link SessionProtocol#HTTP} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttp() {
-        return hasProtocol(HTTP) || hasProtocol(H1C) || hasProtocol(H2C);
+        return hasExactProtocol(HTTP);
     }
 
     /**
-     * Returns whether the {@link SessionProtocol#HTTPS}, {@link SessionProtocol#H1} or
-     * {@link SessionProtocol#H2} is in the list of {@link SessionProtocol}s.
+     * Returns whether {@link SessionProtocol#HTTPS} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttps() {
-        return hasProtocol(HTTPS) || hasProtocol(H1) || hasProtocol(H2);
+        return hasExactProtocol(HTTPS);
     }
 
     /**
      * Returns whether the {@link SessionProtocol#PROXY} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasProxyProtocol() {
-        return hasProtocol(PROXY);
+        return hasExactProtocol(PROXY);
     }
 
     /**
      * Returns whether the specified {@code protocol} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasProtocol(SessionProtocol protocol) {
+        requireNonNull(protocol, "protocol");
+
+        if (httpValues().contains(protocol)) {
+            return hasHttp();
+        }
+
+        if (httpsValues().contains(protocol)) {
+            return hasHttps();
+        }
+
+        return hasExactProtocol(protocol);
+    }
+
+    private boolean hasExactProtocol(SessionProtocol protocol) {
         return protocols.contains(requireNonNull(protocol, "protocol"));
+    }
+
+    /**
+     * Returns the port group this {@link ServerPort} belongs to, or {@code 0} if this {@link ServerPort}
+     * doesn't belong to any port group.
+     */
+    long portGroup() {
+        return portGroup;
     }
 
     @Override
@@ -201,14 +251,14 @@ public final class ServerPort implements Comparable<ServerPort> {
     public String toString() {
         String strVal = this.strVal;
         if (strVal == null) {
-            this.strVal = strVal = toString(getClass(), localAddress(), protocols());
+            this.strVal = strVal = toString(getClass(), localAddress(), protocols(), portGroup());
         }
 
         return strVal;
     }
 
     static String toString(@Nullable Class<?> type, InetSocketAddress localAddress,
-                           Set<SessionProtocol> protocols) {
+                           Set<SessionProtocol> protocols, long portGroup) {
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
             buf.append(type.getSimpleName());
@@ -217,6 +267,9 @@ public final class ServerPort implements Comparable<ServerPort> {
         buf.append(localAddress);
         buf.append(", ");
         buf.append(protocols);
+        if (portGroup != 0) {
+            buf.append(", group: ").append(portGroup);
+        }
         buf.append(')');
 
         return buf.toString();

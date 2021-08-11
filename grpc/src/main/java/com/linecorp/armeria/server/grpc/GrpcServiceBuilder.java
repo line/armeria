@@ -29,6 +29,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -64,6 +65,7 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
@@ -86,7 +88,9 @@ public final class GrpcServiceBuilder {
 
     static {
         boolean useCoroutineContextInterceptor;
-        final String className = "io.grpc.kotlin.CoroutineContextServerInterceptor";
+        final String className =
+                BindableService.class.getPackage().getName() +
+                ".kotlin.CoroutineContextServerInterceptor";
         try {
             Class.forName(className, false, GrpcServiceBuilder.class.getClassLoader());
             useCoroutineContextInterceptor = true;
@@ -109,7 +113,7 @@ public final class GrpcServiceBuilder {
     private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
 
     @Nullable
-    private LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
+    private LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings;
 
     @Nullable
     private GrpcStatusFunction statusFunction;
@@ -281,6 +285,23 @@ public final class GrpcServiceBuilder {
     public GrpcServiceBuilder addServices(Iterable<BindableService> bindableServices) {
         requireNonNull(bindableServices, "bindableServices");
         bindableServices.forEach(this::addService);
+        return this;
+    }
+
+    /**
+     * Adds gRPC {@link ServerServiceDefinition}s to this {@link GrpcServiceBuilder}.
+     */
+    public GrpcServiceBuilder addServiceDefinitions(ServerServiceDefinition... services) {
+        requireNonNull(services, "services");
+        return addServiceDefinitions(ImmutableList.copyOf(services));
+    }
+
+    /**
+     * Adds gRPC {@link ServerServiceDefinition}s to this {@link GrpcServiceBuilder}.
+     */
+    public GrpcServiceBuilder addServiceDefinitions(Iterable<ServerServiceDefinition> services) {
+        requireNonNull(services, "services");
+        services.forEach(this::addService);
         return this;
     }
 
@@ -477,35 +498,71 @@ public final class GrpcServiceBuilder {
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
      */
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
-        requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(status, "status");
+        return addExceptionMapping(exceptionType, (ctx, throwable, meta) -> status);
+    }
 
-        checkState(statusFunction == null,
+    /**
+     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping is used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     *
+     * @deprecated Use {@link #addExceptionMapping(Class, GrpcStatusFunction)} instead.
+     */
+    @Deprecated
+    public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
+            Class<T> exceptionType, BiFunction<T, Metadata, Status> statusFunction) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(statusFunction, "statusFunction");
+
+        checkState(this.statusFunction == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
         if (exceptionMappings == null) {
             exceptionMappings = new LinkedList<>();
-            exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
-            return this;
         }
 
-        addExceptionMapping(exceptionMappings, exceptionType, status);
+        //noinspection unchecked
+        addExceptionMapping(exceptionMappings, exceptionType,
+                            (ctx, throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
+        return this;
+    }
+
+    /**
+     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping is used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     */
+    public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType,
+                                                  GrpcStatusFunction statusFunction) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(statusFunction, "statusFunction");
+
+        checkState(this.statusFunction == null,
+                   "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
+
+        if (exceptionMappings == null) {
+            exceptionMappings = new LinkedList<>();
+        }
+
+        addExceptionMapping(exceptionMappings, exceptionType, statusFunction);
         return this;
     }
 
     @VisibleForTesting
-    static void addExceptionMapping(
-            LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings,
-            Class<? extends Throwable> exceptionType, Status status) {
+    static <T extends Throwable> void addExceptionMapping(
+            LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings,
+            Class<T> exceptionType, GrpcStatusFunction function) {
         requireNonNull(exceptionMappings, "exceptionMappings");
         requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(status, "status");
+        requireNonNull(function, "function");
 
-        final ListIterator<Map.Entry<Class<? extends Throwable>, Status>> it =
+        final ListIterator<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> it =
                 exceptionMappings.listIterator();
 
         while (it.hasNext()) {
-            final Map.Entry<Class<? extends Throwable>, Status> next = it.next();
+            final Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> next = it.next();
             final Class<? extends Throwable> oldExceptionType = next.getKey();
             checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
                           oldExceptionType, next.getValue());
@@ -513,12 +570,12 @@ public final class GrpcServiceBuilder {
             if (oldExceptionType.isAssignableFrom(exceptionType)) {
                 // exceptionType is a subtype of oldExceptionType. exceptionType needs a higher priority.
                 it.previous();
-                it.add(new SimpleImmutableEntry<>(exceptionType, status));
+                it.add(new SimpleImmutableEntry<>(exceptionType, function));
                 return;
             }
         }
 
-        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
+        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, function));
     }
 
     /**
@@ -526,14 +583,15 @@ public final class GrpcServiceBuilder {
      */
     @VisibleForTesting
     static GrpcStatusFunction toGrpcStatusFunction(
-            List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
-        final List<Map.Entry<Class<? extends Throwable>, Status>> mappings =
+            List<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings) {
+        final List<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> mappings =
                 ImmutableList.copyOf(exceptionMappings);
 
-        return throwable -> {
-            for (Map.Entry<Class<? extends Throwable>, Status> mapping : mappings) {
+        return (ctx, throwable, metadata) -> {
+            for (Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> mapping : mappings) {
                 if (mapping.getKey().isInstance(throwable)) {
-                    return mapping.getValue().withCause(throwable);
+                    final Status status = mapping.getValue().apply(ctx, throwable, metadata);
+                    return status == null ? null : status.withCause(throwable);
                 }
             }
             return null;

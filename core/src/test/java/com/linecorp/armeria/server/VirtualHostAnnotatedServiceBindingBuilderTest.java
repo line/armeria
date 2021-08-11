@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -107,7 +108,9 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(pathBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathBar.verboseResponses()).isTrue();
-        assertThat(pathBar.defaultServiceName()).isEqualTo(defaultServiceName);
+        final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                                .build();
+        assertThat(pathBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(pathBar.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig pathFoo = virtualHost.serviceConfigs().get(1);
         assertThat(pathFoo.route().paths()).allMatch("/path/foo"::equals);
@@ -116,7 +119,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(pathFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathFoo.verboseResponses()).isTrue();
-        assertThat(pathFoo.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(pathFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(pathFoo.defaultLogName()).isEqualTo(defaultLogName);
     }
 

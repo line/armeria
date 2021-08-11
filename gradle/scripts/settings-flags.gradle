@@ -1,4 +1,4 @@
-import org.gradle.util.GradleVersion
+import org.gradle.util.GradleVersion;
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -140,7 +140,7 @@ static void afterProjectsWithFlags(Project project, Iterable<?> flags, Closure<S
 
     projects.each { p ->
         p.afterEvaluate {
-            remainingProjects.remove(p);
+            remainingProjects.remove(p)
             if (remainingProjects.isEmpty()) {
                 closure(projects)
             }
@@ -151,3 +151,4 @@ static void afterProjectsWithFlags(Project project, Iterable<?> flags, Closure<S
 // We add a "virtual project", with no source code, to control dependency management using Gradle's platform
 // functionality.
 includeWithFlags ':dependencyManagement', 'dependencyManagement'
+project(':dependencyManagement').projectDir = file("${rootProject.projectDir}/build/dependencyManagement")

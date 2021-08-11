@@ -219,4 +219,14 @@ public class ServiceRequestContextWrapper
     public ProxiedAddresses proxiedAddresses() {
         return delegate().proxiedAddresses();
     }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
+        return delegate().initiateConnectionShutdown(drainDurationMicros);
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return delegate().initiateConnectionShutdown();
+    }
 }

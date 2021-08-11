@@ -16,69 +16,15 @@
 
 package com.linecorp.armeria.common.encoding;
 
-import com.linecorp.armeria.common.HttpData;
-
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
- * A {@link StreamDecoder} that user zlib ('gzip' or 'deflate'). Netty implementation used to allow
- * for incremental decoding using an {@link EmbeddedChannel}.
+ * A {@link StreamDecoder} that uses zlib ('gzip' or 'deflate').
  */
-final class ZlibStreamDecoder implements StreamDecoder {
-
-    private final EmbeddedChannel decoder;
-
+final class ZlibStreamDecoder extends AbstractStreamDecoder {
     ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc) {
-        decoder = new EmbeddedChannel(false, ZlibCodecFactory.newZlibDecoder(zlibWrapper));
-        decoder.config().setAllocator(alloc);
-    }
-
-    @Override
-    public HttpData decode(HttpData obj) {
-        decoder.writeInbound(obj.byteBuf());
-        return fetchDecoderOutput();
-    }
-
-    @Override
-    public HttpData finish() {
-        if (decoder.finish()) {
-            return fetchDecoderOutput();
-        } else {
-            return HttpData.empty();
-        }
-    }
-
-    // Mostly copied from netty's HttpContentDecoder.
-    private HttpData fetchDecoderOutput() {
-        ByteBuf decoded = null;
-        for (;;) {
-            final ByteBuf buf = decoder.readInbound();
-            if (buf == null) {
-                break;
-            }
-            if (!buf.isReadable()) {
-                buf.release();
-                continue;
-            }
-            if (decoded == null) {
-                decoded = buf;
-            } else {
-                try {
-                    decoded.writeBytes(buf);
-                } finally {
-                    buf.release();
-                }
-            }
-        }
-
-        if (decoded == null) {
-            return HttpData.empty();
-        }
-
-        return HttpData.wrap(decoded);
+        super(ZlibCodecFactory.newZlibDecoder(zlibWrapper), alloc);
     }
 }

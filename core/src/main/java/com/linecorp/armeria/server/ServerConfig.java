@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -36,13 +37,17 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import io.micrometer.core.instrument.internal.TimedScheduledExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -60,6 +65,7 @@ public final class ServerConfig {
     private final List<ServerPort> ports;
     private final VirtualHost defaultVirtualHost;
     private final List<VirtualHost> virtualHosts;
+    @Nullable
     private final Mapping<String, VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
@@ -71,6 +77,8 @@ public final class ServerConfig {
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
+    private final long connectionDrainDurationMicros;
+    private final int maxNumRequestsPerConnection;
 
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -101,15 +109,20 @@ public final class ServerConfig {
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final Supplier<RequestId> requestIdGenerator;
+    private final ExceptionHandler exceptionHandler;
+
+    @Nullable
+    private final Mapping<String, SslContext> sslContexts;
 
     @Nullable
     private String strVal;
 
     ServerConfig(
             Iterable<ServerPort> ports,
-            VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
+            VirtualHost defaultVirtualHost, Collection<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
+            int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
@@ -123,8 +136,9 @@ public final class ServerConfig {
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
-            Supplier<? extends RequestId> requestIdGenerator) {
-
+            Supplier<? extends RequestId> requestIdGenerator,
+            ExceptionHandler exceptionHandler,
+            @Nullable Mapping<String, SslContext> sslContexts) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -136,7 +150,11 @@ public final class ServerConfig {
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
+        this.maxNumRequestsPerConnection =
+                validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
         this.maxConnectionAgeMillis = maxConnectionAgeMillis;
+        this.connectionDrainDurationMicros = validateNonNegative(connectionDrainDurationMicros,
+                                                                 "connectionDrainDurationMicros");
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
@@ -156,10 +174,8 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        blockingTaskExecutor =
-                ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                               "blockingTaskExecutor", "armeria");
-        this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
+        this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
+
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
@@ -195,18 +211,22 @@ public final class ServerConfig {
             this.proxyProtocolMaxTlvSize = 0;
         }
 
-        // Set virtual host definitions and initialize their domain name mapping.
-        final DomainMappingBuilder<VirtualHost> mappingBuilder =
-                new DomainMappingBuilder<>(defaultVirtualHost);
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
-        for (VirtualHost h : virtualHosts) {
-            if (h == null) {
-                break;
+        if (virtualHosts.isEmpty()) {
+            virtualHostMapping = null;
+        } else {
+            // Set virtual host definitions and initialize their domain name mapping.
+            final DomainMappingBuilder<VirtualHost> mappingBuilder =
+                    new DomainMappingBuilder<>(defaultVirtualHost);
+            for (VirtualHost h : virtualHosts) {
+                if (h == null) {
+                    break;
+                }
+                virtualHostsCopy.add(h);
+                mappingBuilder.add(h.hostnamePattern(), h);
             }
-            virtualHostsCopy.add(h);
-            mappingBuilder.add(h.hostnamePattern(), h);
+            virtualHostMapping = mappingBuilder.build();
         }
-        virtualHostMapping = mappingBuilder.build();
 
         // Add the default VirtualHost to the virtualHosts so that a user can retrieve all VirtualHosts
         // via virtualHosts(). i.e. no need to check defaultVirtualHost().
@@ -234,6 +254,27 @@ public final class ServerConfig {
         final Supplier<RequestId> castRequestIdGenerator =
                 (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        this.sslContexts = sslContexts;
+    }
+
+    private static ScheduledExecutorService monitorBlockingTaskExecutor(ScheduledExecutorService executor,
+                                                                        MeterRegistry meterRegistry) {
+        final ScheduledExecutorService unwrappedExecutor;
+        if (executor instanceof BlockingTaskExecutor) {
+            unwrappedExecutor = ((BlockingTaskExecutor) executor).unwrap();
+        } else {
+            unwrappedExecutor = executor;
+        }
+
+        new ExecutorServiceMetrics(
+                unwrappedExecutor,
+                "blockingTaskExecutor", "armeria", ImmutableList.of())
+                .bindTo(meterRegistry);
+        executor = new TimedScheduledExecutorService(meterRegistry, executor,
+                                                     "blockingTaskExecutor", "armeria.",
+                                                     ImmutableList.of());
+        return UnstoppableScheduledExecutorService.from(executor);
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -328,6 +369,9 @@ public final class ServerConfig {
      * {@link #defaultVirtualHost()} is returned.
      */
     public VirtualHost findVirtualHost(String hostname) {
+        if (virtualHostMapping == null) {
+            return defaultVirtualHost;
+        }
         return virtualHostMapping.map(hostname);
     }
 
@@ -431,6 +475,20 @@ public final class ServerConfig {
      */
     public long maxConnectionAgeMillis() {
         return maxConnectionAgeMillis;
+    }
+
+    /**
+     * Returns the graceful connection shutdown drain duration.
+     */
+    public long connectionDrainDurationMicros() {
+        return connectionDrainDurationMicros;
+    }
+
+    /**
+     * Returns the maximum allowed number of requests that can be served through one connection.
+     */
+    public int maxNumRequestsPerConnection() {
+        return maxNumRequestsPerConnection;
     }
 
     /**
@@ -589,6 +647,22 @@ public final class ServerConfig {
         return requestIdGenerator;
     }
 
+    /**
+     * Returns the {@link ExceptionHandler} that converts a {@link Throwable} to an
+     * {@link HttpResponse}.
+     */
+    public ExceptionHandler exceptionHandler() {
+        return exceptionHandler;
+    }
+
+    /**
+     * Returns a map of SslContexts {@link SslContext}.
+     */
+    @Nullable
+    Mapping<String, SslContext> sslContextMapping() {
+        return sslContexts;
+    }
+
     @Override
     public String toString() {
         String strVal = this.strVal;
@@ -638,7 +712,7 @@ public final class ServerConfig {
 
         boolean hasPorts = false;
         for (final ServerPort p : ports) {
-            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols()));
+            buf.append(ServerPort.toString(null, p.localAddress(), p.protocols(), p.portGroup()));
             buf.append(", ");
             hasPorts = true;
         }

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 /**
  * The result returned by {@link Route#apply(RoutingContext, boolean)}.
@@ -36,6 +37,9 @@ public final class RoutingResult {
     private static final RoutingResult EMPTY =
             new RoutingResult(RoutingResultType.NOT_MATCHED, null, null, ImmutableMap.of(), LOWEST_SCORE, null);
 
+    private static final RoutingResult EXCLUDED =
+            new RoutingResult(RoutingResultType.NOT_MATCHED, null, null, ImmutableMap.of(), LOWEST_SCORE, null);
+
     /**
      * The empty {@link RoutingResult} whose {@link #type()} is {@link RoutingResultType#NOT_MATCHED} and
      * {@link #isPresent()} returns {@code false}. It is returned by
@@ -44,6 +48,16 @@ public final class RoutingResult {
      */
     public static RoutingResult empty() {
         return EMPTY;
+    }
+
+    /**
+     * The empty {@link RoutingResult} whose {@link #type()} is {@link RoutingResultType#NOT_MATCHED} and
+     * {@link #isPresent()} returns {@code false}. It is returned by
+     * {@link Route#apply(RoutingContext, boolean)} when the {@link RoutingContext} is acceptable from
+     * one of the {@code excludedRoutes}.
+     */
+    public static RoutingResult excluded() {
+        return EXCLUDED;
     }
 
     /**
@@ -190,7 +204,7 @@ public final class RoutingResult {
     @Override
     public String toString() {
         if (isPresent()) {
-            String score = String.valueOf(this.score);
+            String score = StringUtil.toString(this.score);
             if (hasHighestScore()) {
                 score += " (highest)";
             } else if (hasLowestScore()) {

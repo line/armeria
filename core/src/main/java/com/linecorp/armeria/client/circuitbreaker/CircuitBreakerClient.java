@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -32,7 +31,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 /**
@@ -191,7 +189,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      *
-     * @deprecated Use newDecorator(), building a CircuitBreakerMapping using CircuitBreakerMapping.Builder().
+     * @deprecated Use {@link #newDecorator(CircuitBreakerMapping, CircuitBreakerRule)} with
+     *             {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
      */
     @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
@@ -209,7 +208,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
      *
-     * @deprecated Use newDecorator(), building a CircuitBreakerMapping using CircuitBreakerMapping.Builder().
+     * @deprecated Use {@link #newDecorator(CircuitBreakerMapping, CircuitBreakerRuleWithContent)} with
+     *             {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
      */
     @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
@@ -290,44 +290,52 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
             throw cause;
         }
 
-        final CompletableFuture<HttpResponse> responseFuture =
-                ctx.log()
-                   .whenAvailable(rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
-                                                                  : RequestLogProperty.RESPONSE_HEADERS)
-                   .thenApply(log -> {
-                       final Throwable resCause =
-                               log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+        final RequestLogProperty property =
+                rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
+                                                : RequestLogProperty.RESPONSE_HEADERS;
 
-                       if (needsContentInRule && resCause == null) {
-                           final HttpResponseDuplicator duplicator =
-                                   response.toDuplicator(ctx.eventLoop().withoutContext(),
-                                                         ctx.maxResponseLength());
-                           try {
-                               final TruncatingHttpResponse truncatingHttpResponse =
-                                       new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
+        if (!needsContentInRule) {
+            reportResult(ctx, circuitBreaker, property);
+            return response;
+        } else {
+            return reportResultWithContent(ctx, response, circuitBreaker, property);
+        }
+    }
 
-                               final CompletionStage<CircuitBreakerDecision> f =
-                                       ruleWithContent().shouldReportAsSuccess(
-                                               ctx, truncatingHttpResponse, null);
-                               f.handle((unused1, unused2) -> {
-                                   truncatingHttpResponse.abort();
-                                   return null;
-                               });
-                               reportSuccessOrFailure(circuitBreaker, f);
+    private void reportResult(ClientRequestContext ctx, CircuitBreaker circuitBreaker,
+                              RequestLogProperty logProperty) {
+        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
+            final Throwable resCause =
+                    log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+            reportSuccessOrFailure(circuitBreaker, rule().shouldReportAsSuccess(ctx, resCause));
+        });
+    }
 
-                               final HttpResponse duplicate = duplicator.duplicate();
-                               duplicator.close();
-                               return duplicate;
-                           } catch (Throwable cause) {
-                               duplicator.abort(cause);
-                               return Exceptions.throwUnsafely(cause);
-                           }
-                       } else {
-                           reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, resCause));
-                           return response;
-                       }
-                   });
+    private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
+                                                 CircuitBreaker circuitBreaker,
+                                                 RequestLogProperty logProperty) {
 
-        return HttpResponse.from(responseFuture);
+        final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
+                                                                        ctx.maxResponseLength());
+        final TruncatingHttpResponse truncatingHttpResponse =
+                new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
+        final HttpResponse duplicate = duplicator.duplicate();
+        duplicator.close();
+
+        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
+            try {
+                final CompletionStage<CircuitBreakerDecision> f =
+                        ruleWithContent().shouldReportAsSuccess(ctx, truncatingHttpResponse, null);
+                f.handle((unused1, unused2) -> {
+                    truncatingHttpResponse.abort();
+                    return null;
+                });
+                reportSuccessOrFailure(circuitBreaker, f);
+            } catch (Throwable cause) {
+                duplicator.abort(cause);
+            }
+        });
+
+        return duplicate;
     }
 }

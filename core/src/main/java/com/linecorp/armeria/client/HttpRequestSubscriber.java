@@ -193,15 +193,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        if (request.isEmpty()) {
+        final boolean isEmpty = request.isEmpty();
+        if (isEmpty) {
             state = State.DONE;
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
 
         final RequestHeaders merged = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
-        logBuilder.requestHeaders(firstHeaders);
-        final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, request.isEmpty());
+        logBuilder.requestHeaders(merged);
+        final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, isEmpty);
         future.addListener(this);
         ch.flush();
     }

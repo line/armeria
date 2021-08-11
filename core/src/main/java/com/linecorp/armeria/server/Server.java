@@ -79,6 +79,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 import io.netty.util.concurrent.FastThreadLocalThread;
@@ -101,7 +102,9 @@ public final class Server implements ListenableAsyncCloseable {
         return new ServerBuilder();
     }
 
-    private final ServerConfig config;
+    private ServerConfig config;
+    @Nullable
+    private HttpServerPipelineConfigurator pipelineConfigurator;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
 
@@ -114,9 +117,9 @@ public final class Server implements ListenableAsyncCloseable {
     @VisibleForTesting
     ServerBootstrap serverBootstrap;
 
-    Server(ServerConfig config, @Nullable Mapping<String, SslContext> sslContexts) {
+    Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
-        this.sslContexts = sslContexts;
+        sslContexts = config.sslContextMapping();
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
@@ -397,6 +400,22 @@ public final class Server implements ListenableAsyncCloseable {
                           .toString();
     }
 
+    /**
+     * Reconfigure Server configuration. This feature is only available once a server is configured
+     * and started. We do not allow ports to be reconfigured.
+     */
+    public void reconfigure(ServerConfigurator serverConfigurator) {
+        requireNonNull(serverConfigurator, "serverConfigurator");
+        requireNonNull(pipelineConfigurator, "pipelineConfigurator");
+        final ServerBuilder sb = builder();
+        serverConfigurator.reconfigure(sb);
+        config = sb.buildServerConfig(config());
+        // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
+        // add a listener to it.
+        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        pipelineConfigurator.updateConfig(config);
+    }
+
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
         @Nullable
@@ -425,23 +444,7 @@ public final class Server implements ListenableAsyncCloseable {
 
             final ServerPort primary = it.next();
             doStart(primary).addListener(new ServerPortStartListener(primary))
-                            .addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture f) throws Exception {
-                                    if (!f.isSuccess()) {
-                                        future.completeExceptionally(f.cause());
-                                        return;
-                                    }
-                                    if (!it.hasNext()) {
-                                        future.complete(null);
-                                        return;
-                                    }
-
-                                    final ServerPort next = it.next();
-                                    doStart(next).addListener(new ServerPortStartListener(next))
-                                                 .addListener(this);
-                                }
-                            });
+                            .addListener(new NextServerPortStartListener(this, it, future));
 
             setupServerMetrics();
             return future;
@@ -470,9 +473,12 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
-                                                              gracefulShutdownSupport));
+            pipelineConfigurator = new HttpServerPipelineConfigurator(
+                    config,
+                    port, sslContexts,
+                    gracefulShutdownSupport);
 
+            b.childHandler(pipelineConfigurator);
             return b.bind(port.localAddress());
         }
 
@@ -688,6 +694,9 @@ public final class Server implements ListenableAsyncCloseable {
         }
     }
 
+    /**
+     * Collects the {@link ServerSocketChannel} and {@link ServerPort} on a successful bind operation.
+     */
     private final class ServerPortStartListener implements ChannelFutureListener {
 
         private final ServerPort port;
@@ -704,7 +713,8 @@ public final class Server implements ListenableAsyncCloseable {
 
             if (f.isSuccess()) {
                 final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
-                final ServerPort actualPort = new ServerPort(localAddress, port.protocols());
+                final ServerPort actualPort =
+                        new ServerPort(localAddress, port.protocols(), port.portGroup());
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -724,6 +734,69 @@ public final class Server implements ListenableAsyncCloseable {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Initiates the next bind operation if the previous bind attempt was successful.
+     */
+    private final class NextServerPortStartListener implements ChannelFutureListener {
+
+        private final ServerStartStopSupport startStopSupport;
+        private final Iterator<ServerPort> it;
+        private final CompletableFuture<Void> future;
+
+        NextServerPortStartListener(ServerStartStopSupport startStopSupport,
+                                    Iterator<ServerPort> it, CompletableFuture<Void> future) {
+            this.startStopSupport = startStopSupport;
+            this.it = it;
+            this.future = future;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture f) throws Exception {
+            if (!f.isSuccess()) {
+                future.completeExceptionally(f.cause());
+                return;
+            }
+            if (!it.hasNext()) {
+                future.complete(null);
+                return;
+            }
+
+            final ServerPort next = it.next();
+            final ServerPort actualNext;
+
+            // Try to use the same port number if the port belongs to a group.
+            // See: https://github.com/line/armeria/issues/3725
+            final long portGroup = next.portGroup();
+            if (portGroup != 0) {
+                int previousPort = 0;
+                synchronized (activePorts) {
+                    for (ServerPort activePort : activePorts.values()) {
+                        if (activePort.portGroup() == portGroup) {
+                            previousPort = activePort.localAddress().getPort();
+                            break;
+                        }
+                    }
+                }
+
+                if (previousPort > 0) {
+                    // Use the previously bound ephemeral local port.
+                    actualNext = new ServerPort(
+                            new InetSocketAddress(next.localAddress().getAddress(), previousPort),
+                            next.protocols(), portGroup);
+                } else {
+                    // `next` is the first ephemeral local port.
+                    actualNext = next;
+                }
+            } else {
+                actualNext = next;
+            }
+
+            startStopSupport.doStart(actualNext)
+                            .addListener(new ServerPortStartListener(actualNext))
+                            .addListener(this);
         }
     }
 

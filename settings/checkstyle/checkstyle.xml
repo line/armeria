@@ -61,6 +61,11 @@
     <property name="format" value="File \| Settings \| File Templates"/>
     <property name="message" value="IDE-generated comment"/>
   </module>
+  <!-- Use datatracker.ietf.org if possible. -->
+  <module name="RegexpSingleline">
+    <property name="format" value="(http://datatracker\.ietf\.org|tools\.ietf\.org|rfc-editor\.org|(www\.ietf\.org|httpwg\.org|w3\.org)/[^ ]+/rfc)"/>
+    <property name="message" value="Use https://datatracker.ietf.org/ instead."/>
+  </module>
   <!-- Trailing spaces -->
   <module name="RegexpSingleline">
     <property name="format" value="\s+$"/>
@@ -181,8 +186,7 @@
       <property name="excludeScope" value="package"/>
     </module>
     <module name="JavadocMethod">
-      <property name="scope" value="protected"/>
-      <property name="excludeScope" value="package"/>
+      <property name="accessModifiers" value="protected, public"/>
       <property name="allowMissingParamTags" value="true"/>
       <property name="allowMissingReturnTag" value="true"/>
       <property name="allowedAnnotations" value="Override, Test"/>

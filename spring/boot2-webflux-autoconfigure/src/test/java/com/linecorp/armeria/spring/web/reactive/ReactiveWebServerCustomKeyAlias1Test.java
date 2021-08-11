@@ -16,14 +16,12 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test_custom_key_alias_1")
 class ReactiveWebServerCustomKeyAlias1Test extends AbstractReactiveWebServerCustomKeyAliasTest {
 
     @SpringBootApplication
-    @Configuration
     static class TestConfiguration {}
 
     ReactiveWebServerCustomKeyAlias1Test() {

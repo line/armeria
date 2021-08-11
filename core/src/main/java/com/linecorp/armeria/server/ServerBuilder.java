@@ -40,9 +40,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -56,17 +56,22 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -77,10 +82,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -141,14 +146,6 @@ public final class ServerBuilder {
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
 
-    // Prohibit deprecated options
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
-
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
@@ -173,6 +170,8 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
+    private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
+    private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -187,6 +186,7 @@ public final class ServerBuilder {
     private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -200,12 +200,14 @@ public final class ServerBuilder {
         // Set the default host-level properties.
         virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
+        virtualHostTemplate.defaultServiceNaming(ServiceNaming.fullTypeName());
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
         virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
         virtualHostTemplate.verboseResponses(Flags.verboseResponses());
         virtualHostTemplate.accessLogger(
                 host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
+        virtualHostTemplate.tlsAllowUnsafeCiphers(false);
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
     }
@@ -368,6 +370,40 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, SessionProtocol... protocols) {
+        requireNonNull(protocols, "protocols");
+        return localPort(port, ImmutableList.copyOf(protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, Arrays.asList(SessionProtocol.HTTP, SessionProtocol.HTTPS));
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
+        final long portGroup = ServerPort.nextPortGroup();
+        port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST4, port), protocols, portGroup));
+
+        if (!NetUtil.isIpV4StackPreferred()) {
+            port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST6, port), protocols, portGroup));
+        }
+
+        return this;
+    }
+
+    /**
      * Sets the {@link ChannelOption} of the server socket bound by {@link Server}.
      * Note that the previously added option will be overridden if the same option is set again.
      *
@@ -378,7 +414,7 @@ public final class ServerBuilder {
      */
     public <T> ServerBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+        checkArgument(!ChannelUtil.prohibitedOptions().contains(option),
                       "prohibited socket option: %s", option);
 
         option.validate(value);
@@ -398,7 +434,7 @@ public final class ServerBuilder {
      */
     public <T> ServerBuilder childChannelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+        checkArgument(!ChannelUtil.prohibitedOptions().contains(option),
                       "prohibited socket option: %s", option);
 
         option.validate(value);
@@ -417,6 +453,19 @@ public final class ServerBuilder {
     public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         shutdownWorkerGroupOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ServerBuilder workerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
         return this;
     }
 
@@ -464,7 +513,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -484,7 +533,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -503,6 +552,7 @@ public final class ServerBuilder {
     /**
      * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
@@ -519,6 +569,7 @@ public final class ServerBuilder {
     /**
      * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAge} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
@@ -526,6 +577,61 @@ public final class ServerBuilder {
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the connection drain duration in micros for the connection shutdown.
+     * At the beginning of the connection drain server signals the clients that the connection shutdown is
+     * imminent but still accepts in flight requests.
+     * After the connection drain end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionDrainDuration(Duration)}.
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
+     * is always {@code 0}, which means the connection will be closed immediately as soon as
+     * the current in-progress request is handled.
+     * </p>
+     *
+     * @param durationMicros the drain duration. {@code 0} disables the drain.
+     */
+    public ServerBuilder connectionDrainDurationMicros(long durationMicros) {
+        checkArgument(connectionDrainDurationMicros >= 0,
+                      "connectionDrainDurationMicros: %s (expected: >= 0)",
+                      connectionDrainDurationMicros);
+        connectionDrainDurationMicros = durationMicros;
+        return this;
+    }
+
+    /**
+     * Sets the connection drain duration in micros for the connection shutdown.
+     * At the beginning of the connection drain server signals the clients that the connection shutdown is
+     * imminent but still accepts in flight requests.
+     * After the connection drain end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionDrainDurationMicros(long)}.
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
+     * is always {@code 0}.
+     * </p>
+     *
+     * @param duration the drain period. {@code Duration.ZERO} or negative value disables the drain period.
+     */
+    public ServerBuilder connectionDrainDuration(Duration duration) {
+        requireNonNull(duration, "duration");
+        return connectionDrainDurationMicros(TimeUnit.NANOSECONDS.toMicros(duration.toNanos()));
+    }
+
+    /**
+     * Sets the maximum allowed number of requests that can be served through one connection.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxNumRequestsPerConnection the maximum number of requests per connection.
+     *                                    {@code 0} disables the limit.
+     */
+    public ServerBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
+        this.maxNumRequestsPerConnection =
+                validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
+        return this;
     }
 
     /**
@@ -582,7 +688,7 @@ public final class ServerBuilder {
     public ServerBuilder http2MaxFrameSize(int http2MaxFrameSize) {
         checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
                       http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
-                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      "http2MaxFrameSize: %s (expected: >= %s and <= %s)",
                       http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
         this.http2MaxFrameSize = http2MaxFrameSize;
         return this;
@@ -680,10 +786,37 @@ public final class ServerBuilder {
     }
 
     /**
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public ServerBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    /**
      * Sets the {@link MeterRegistry} that collects various stats.
      */
     public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets a global naming rule for the name of services. This property can be overridden via
+     * {@link VirtualHostBuilder#defaultServiceNaming(ServiceNaming)}. The overriding is also possible if
+     * service-level naming rule is set via {@link ServiceBindingBuilder#defaultServiceNaming(ServiceNaming)}.
+     *
+     * @see RequestOnlyLog#serviceName()
+     */
+    public ServerBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        virtualHostTemplate.defaultServiceNaming(defaultServiceNaming);
         return this;
     }
 
@@ -850,6 +983,46 @@ public final class ServerBuilder {
      */
     public ServerBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tlsCustomizer(tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public ServerBuilder tlsAllowUnsafeCiphers() {
+        virtualHostTemplate.tlsAllowUnsafeCiphers();
+        return this;
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
         return this;
     }
 
@@ -1272,6 +1445,18 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+     *
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * but the {@link HttpResponseException#httpResponse()} is sent as-is.
+     */
+    @UnstableApi
+    public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        return this;
+    }
+
+    /**
      * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
      * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
      * and the source address of a PROXY protocol header will be used by default.
@@ -1452,6 +1637,16 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        final Server server = new Server(buildServerConfig(ports));
+        serverListeners.forEach(server::addListener);
+        return server;
+    }
+
+    ServerConfig buildServerConfig(ServerConfig existingConfig) {
+        return buildServerConfig(existingConfig.ports());
+    }
+
+    private ServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1463,11 +1658,9 @@ public final class ServerBuilder {
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate))
                                    .collect(toImmutableList());
-
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
-
         final Collection<ServerPort> ports;
 
         this.ports.forEach(
@@ -1477,8 +1670,8 @@ public final class ServerBuilder {
 
         if (defaultSslContext == null) {
             sslContexts = null;
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
                 for (final ServerPort p : ports) {
                     if (p.hasTls()) {
                         throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
@@ -1497,8 +1690,8 @@ public final class ServerBuilder {
                         "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
             }
 
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
             } else {
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
@@ -1528,21 +1721,27 @@ public final class ServerBuilder {
             }
         }
 
-        final Server server = new Server(new ServerConfig(
-                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
-                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
-                http2InitialConnectionWindowSize,
+        final Map<ChannelOption<?>, Object> newChildChannelOptions =
+                ChannelUtil.applyDefaultChannelOptions(
+                        childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
+
+        ExceptionHandler exceptionHandler = this.exceptionHandler;
+        if (exceptionHandler != ExceptionHandler.ofDefault()) {
+            exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
+        }
+
+        return new ServerConfig(
+                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
+                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
+                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
-
-        serverListeners.forEach(server::addListener);
-        return server;
+                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
     }
 
     /**

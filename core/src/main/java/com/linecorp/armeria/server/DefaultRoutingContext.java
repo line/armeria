@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,14 +26,10 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
@@ -60,16 +55,21 @@ final class DefaultRoutingContext implements RoutingContext {
 
     private final VirtualHost virtualHost;
     private final String hostname;
+    private final HttpMethod method;
     private final RequestHeaders headers;
     private final String path;
     @Nullable
     private final String query;
+    @Nullable
+    private final MediaType contentType;
     private final List<MediaType> acceptTypes;
     @Nullable
     private volatile QueryParams queryParams;
     private final boolean isCorsPreflight;
     @Nullable
     private HttpStatusException deferredCause;
+
+    private final int hashCode;
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
                           String path, @Nullable String query, boolean isCorsPreflight) {
@@ -79,7 +79,10 @@ final class DefaultRoutingContext implements RoutingContext {
         this.path = requireNonNull(path, "path");
         this.query = query;
         this.isCorsPreflight = isCorsPreflight;
-        acceptTypes = extractAcceptTypes(headers);
+        method = headers.method();
+        contentType = headers.contentType();
+        acceptTypes = headers.accept();
+        hashCode = hashCode(this);
     }
 
     @Override
@@ -94,7 +97,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public HttpMethod method() {
-        return headers.method();
+        return method;
     }
 
     @Override
@@ -125,7 +128,7 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     @Override
     public MediaType contentType() {
-        return headers.contentType();
+        return contentType;
     }
 
     @Override
@@ -167,7 +170,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public int hashCode() {
-        return hashCode(this);
+        return hashCode;
     }
 
     static int hashCode(RoutingContext routingCtx) {
@@ -227,52 +230,5 @@ final class DefaultRoutingContext implements RoutingContext {
               .add("requiresMatchingParamsPredicates", routingCtx.requiresMatchingParamsPredicates())
               .add("requiresMatchingHeadersPredicates", routingCtx.requiresMatchingHeadersPredicates());
         return helper.toString();
-    }
-
-    @VisibleForTesting
-    static List<MediaType> extractAcceptTypes(HttpHeaders headers) {
-        final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
-        if (acceptHeaders.isEmpty()) {
-            // No 'Accept' header means accepting everything.
-            return ImmutableList.of();
-        }
-
-        final List<MediaType> acceptTypes = new ArrayList<>(4);
-        for (String acceptHeader : acceptHeaders) {
-            for (String mediaType : ACCEPT_SPLITTER.split(acceptHeader)) {
-                try {
-                    acceptTypes.add(MediaType.parse(mediaType));
-                } catch (IllegalArgumentException e) {
-                    logger.debug("Ignoring a malformed media type from 'accept' header: {}",
-                                 mediaType);
-                }
-            }
-        }
-
-        if (acceptTypes.isEmpty()) {
-            return ImmutableList.of();
-        }
-
-        if (acceptTypes.size() > 1) {
-            acceptTypes.sort(DefaultRoutingContext::compareMediaType);
-        }
-        return ImmutableList.copyOf(acceptTypes);
-    }
-
-    @VisibleForTesting
-    static int compareMediaType(MediaType m1, MediaType m2) {
-        // The order should be "q=1.0, q=0.5".
-        // To ensure descending order, we pass the q values of m2 and m1 respectively.
-        final int qCompare = Float.compare(m2.qualityFactor(), m1.qualityFactor());
-        if (qCompare != 0) {
-            return qCompare;
-        }
-        // The order should be "application/*, */*".
-        final int wildcardCompare = Integer.compare(m1.numWildcards(), m2.numWildcards());
-        if (wildcardCompare != 0) {
-            return wildcardCompare;
-        }
-        // Finally, sort by lexicographic order. ex, application/*, image/*
-        return m1.type().compareTo(m2.type());
     }
 }

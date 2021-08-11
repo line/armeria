@@ -40,6 +40,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private String defaultServiceName;
     @Nullable
+    private ServiceNaming defaultServiceNaming;
+    @Nullable
     private String defaultLogName;
     @Nullable
     private Long requestTimeoutMillis;
@@ -131,7 +133,16 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        requireNonNull(defaultServiceName, "defaultServiceName");
+        this.defaultServiceName = defaultServiceName;
+        defaultServiceNaming = ServiceNaming.of(defaultServiceName);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        defaultServiceName = null;
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         return this;
     }
 
@@ -151,7 +162,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
 
         final AnnotatedService annotatedService;
-        if (defaultServiceName == null || defaultLogName == null) {
+        if (defaultServiceNaming == null || defaultLogName == null) {
             annotatedService = service.as(AnnotatedService.class);
         } else {
             annotatedService = null;
@@ -159,8 +170,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
         if (defaultServiceName != null) {
             serviceConfigBuilder.defaultServiceName(defaultServiceName);
+        } else if (defaultServiceNaming != null) {
+            serviceConfigBuilder.defaultServiceNaming(defaultServiceNaming);
         } else {
-            if (annotatedService != null) {
+            // Set the default service name only when the service name is set using @ServiceName.
+            // If it's not, the global defaultServiceNaming is used.
+            if (annotatedService != null && annotatedService.serviceNameSetByAnnotation()) {
                 serviceConfigBuilder.defaultServiceName(annotatedService.serviceName());
             }
         }

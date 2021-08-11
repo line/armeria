@@ -38,6 +38,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
@@ -45,6 +47,8 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.Server;
@@ -95,25 +99,32 @@ public abstract class WebAppContainerTest {
      */
     protected abstract ServerExtension server();
 
-    @Test
-    public void jsp() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().httpUri() + "/jsp/index.jsp"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>Hello, Armerian World!</p>" +
-                        "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
-                        "<p>Context path: </p>" + // ROOT context path
-                        "<p>Request URI: /index.jsp</p>" +
-                        "<p>Scheme: http</p>" +
-                        "<p>Protocol: HTTP/1.1</p>" +
-                        "</body></html>");
-            }
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C", "H1", "H2" })
+    public void jsp(SessionProtocol sessionProtocol) throws Exception {
+        final WebClient client = WebClient.builder(server().uri(sessionProtocol))
+                                          .factory(ClientFactory.insecure())
+                                          .build();
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse res = client.get("/jsp/index.jsp").aggregate().join();
+            assertThat(res.status()).isSameAs(HttpStatus.OK);
+            assertThat(res.contentType()).isEqualTo(MediaType.HTML_UTF_8);
+
+            final String actualContent = CR_OR_LF.matcher(res.contentUtf8()).replaceAll("");
+
+            // Get the session protocol observed from the client side.
+            final String expectedProtocol = ctxCaptor.get().log().ensureAvailable(RequestLogProperty.SESSION)
+                                                     .sessionProtocol().isMultiplex() ? "HTTP/2.0" : "HTTP/1.1";
+            assertThat(actualContent).isEqualTo(
+                    "<html><body>" +
+                    "<p>Hello, Armerian World!</p>" +
+                    "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
+                    "<p>Host: 127.0.0.1:" + server().port(sessionProtocol) + "</p>" +
+                    "<p>Context path: </p>" + // ROOT context path
+                    "<p>Request URI: /index.jsp</p>" +
+                    "<p>Scheme: " + (sessionProtocol.isTls() ? "https" : "http") + "</p>" +
+                    "<p>Protocol: " + expectedProtocol + "</p>" +
+                    "</body></html>");
         }
     }
 
@@ -136,31 +147,6 @@ public abstract class WebAppContainerTest {
                         "<p>Servlet Path: /日本語/index.jsp</p>" +
                         "</body></html>");
             }
-        }
-    }
-
-    @Test
-    public void https() throws Exception {
-        final WebClient client = WebClient.builder(server().uri(SessionProtocol.HTTPS))
-                                          .factory(ClientFactory.insecure())
-                                          .build();
-
-        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
-            final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
-                                                 .replaceAll("");
-            // Get the session protocol observed from the client side.
-            final String expectedProtocol = ctxCaptor.get().log().ensureAvailable(RequestLogProperty.SESSION)
-                                                     .sessionProtocol().isMultiplex() ? "HTTP/2.0" : "HTTP/1.1";
-            assertThat(actualContent).isEqualTo(
-                    "<html><body>" +
-                    "<p>Hello, Armerian World!</p>" +
-                    "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
-                    "<p>Context path: </p>" + // ROOT context path
-                    "<p>Request URI: /index.jsp</p>" +
-                    "<p>Scheme: https</p>" +
-                    "<p>Protocol: " + expectedProtocol + "</p>" +
-                    "</body></html>");
         }
     }
 
@@ -331,15 +317,15 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void largeFile() throws Exception {
-        testLarge("/jsp/large.txt");
+        testLarge("/jsp/large.txt", true /* Static content has a content-length header. */);
     }
 
     @Test
     public void largeResponse() throws Exception {
-        testLarge("/jsp/large.jsp");
+        testLarge("/jsp/large.jsp", false /* Dynamic content doesn't have a content-length header */);
     }
 
-    protected void testLarge(String path) throws IOException {
+    protected void testLarge(String path, boolean requiresContentLength) throws IOException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server().httpUri().resolve(path)))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
@@ -347,9 +333,11 @@ public abstract class WebAppContainerTest {
                         .startsWith("text/plain");
 
                 final byte[] content = EntityUtils.toByteArray(res.getEntity());
-                // Check if the content-length header matches.
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
-                        .isEqualTo(String.valueOf(content.length));
+                if (requiresContentLength) {
+                    // Check if the content-length header matches.
+                    assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
+                            .isEqualTo(String.valueOf(content.length));
+                }
 
                 // Check if the content contains what's expected.
                 assertThat(Arrays.stream(CR_OR_LF.split(new String(content, StandardCharsets.UTF_8)))

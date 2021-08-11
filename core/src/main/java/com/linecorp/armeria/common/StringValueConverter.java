@@ -37,6 +37,8 @@ import java.util.Date;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.common.util.StringUtil;
+
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.ValueConverter;
 
@@ -79,6 +81,10 @@ final class StringValueConverter implements ValueConverter<String> {
             return ((CacheControl) value).asHeaderValue();
         }
 
+        if (value instanceof ContentDisposition) {
+            return ((ContentDisposition) value).asHeaderValue();
+        }
+
         // Obsolete types.
         if (value instanceof Date) {
             return DateFormatter.format((Date) value);
@@ -93,12 +99,12 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Override
     public String convertInt(int value) {
-        return String.valueOf(value);
+        return StringUtil.toString(value);
     }
 
     @Override
     public String convertLong(long value) {
-        return String.valueOf(value);
+        return StringUtil.toString(value);
     }
 
     @Override
@@ -128,7 +134,7 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Override
     public String convertByte(byte value) {
-        return String.valueOf(value & 0xFF);
+        return StringUtil.toString(value & 0xFF);
     }
 
     @Override
@@ -146,7 +152,7 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Override
     public String convertShort(short value) {
-        return String.valueOf(value);
+        return StringUtil.toString(value);
     }
 
     @Override

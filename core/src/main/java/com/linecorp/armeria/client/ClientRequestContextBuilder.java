@@ -64,8 +64,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     private static final CancellationScheduler noopResponseCancellationScheduler = new CancellationScheduler(0);
 
     static {
-        noopResponseCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0,
-                                               ResponseTimeoutException.get());
+        noopResponseCancellationScheduler
+                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, /* server */ false);
         noopResponseCancellationScheduler.finishNow();
     }
 
@@ -74,6 +74,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Nullable
     private Endpoint endpoint;
     private ClientOptions options = ClientOptions.of();
+    private RequestOptions requestOptions = RequestOptions.of();
     @Nullable
     private ClientConnectionTimings connectionTimings;
 
@@ -118,6 +119,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     /**
+     * Sets the {@link RequestOptions}. If not set, {@link RequestOptions#of()} is used.
+     */
+    public ClientRequestContextBuilder requestOptions(RequestOptions requestOptions) {
+        this.requestOptions = requireNonNull(requestOptions, "requestOptions");
+        return this;
+    }
+
+    /**
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
     public ClientRequestContext build() {
@@ -135,8 +144,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             responseCancellationScheduler = new CancellationScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0,
-                                                   ResponseTimeoutException.get());
+                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
                 latch.countDown();
             });
 
@@ -149,7 +157,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
                 id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
-                responseCancellationScheduler,
+                requestOptions, responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 

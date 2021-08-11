@@ -17,11 +17,12 @@
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * A {@link RuntimeException} raised when a server set
- * HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#SETTINGS_MAX_CONCURRENT_STREAMS">{@code MAX_CONCURRENT_STREAMS}</a> to 0,
- * which means a client can't send anything.
+ * HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-5.1.2">{@code MAX_CONCURRENT_STREAMS}</a>
+ * to 0, which means a client can't send anything.
  */
 public final class RefusedStreamException extends RuntimeException {
 
@@ -30,7 +31,8 @@ public final class RefusedStreamException extends RuntimeException {
     private static final RefusedStreamException INSTANCE = new RefusedStreamException(false);
 
     /**
-     * Returns a singleton {@link RefusedStreamException}.
+     * Returns a singleton {@link RefusedStreamException} or newly-created exception depending on
+     * the result of {@link Sampler#isSampled(Object)} of {@link Flags#verboseExceptionSampler()}.
      */
     public static RefusedStreamException get() {
         return Flags.verboseExceptionSampler().isSampled(RefusedStreamException.class) ?

@@ -86,6 +86,26 @@ public interface RequestContext {
     }
 
     /**
+     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, propagating
+     * the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor service is only used from a single request then it's better to use
+     * {@link #makeContextAware(ExecutorService)}
+     */
+    static ExecutorService makeContextPropagating(ExecutorService executor) {
+        return new PropagatingContextAwareExecutorService(executor);
+    }
+
+    /**
+     * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
+     * propagating the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor service is only used from a single request then it's better to use
+     * {@link #makeContextAware(ScheduledExecutorService)}
+     */
+    static ScheduledExecutorService makeContextPropagating(ScheduledExecutorService executor) {
+        return new PropagatingContextAwareScheduledExecutorService(executor);
+    }
+
+    /**
      * Maps the context of the {@link Request} that is being handled in the current thread.
      *
      * @param mapper the {@link Function} that maps the {@link RequestContext}
@@ -331,7 +351,7 @@ public interface RequestContext {
 
     /**
      * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     String path();
 
@@ -343,7 +363,7 @@ public interface RequestContext {
 
     /**
      * Returns the query part of the current {@link Request} URI, without the leading {@code '?'},
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     @Nullable
     String query();
@@ -436,6 +456,26 @@ public interface RequestContext {
     SafeCloseable push();
 
     /**
+     * Immediately run a given {@link Runnable} with this context.
+     */
+    default void run(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
+        try (SafeCloseable ignored = push()) {
+            runnable.run();
+        }
+    }
+
+    /**
+     * Immediately call a given {@link Callable} with this context.
+     */
+    default <T> T run(Callable<T> callable) throws Exception {
+        requireNonNull(callable, "callable");
+        try (SafeCloseable ignored = push()) {
+            return callable.call();
+        }
+    }
+
+    /**
      * Replaces the current {@link RequestContext} in the thread-local with this context without any validation.
      * This method also does not run any callbacks.
      *
@@ -464,7 +504,9 @@ public interface RequestContext {
 
     /**
      * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, making
-     * sure to propagate the current {@link RequestContext} into the callback execution.
+     * sure to propagate this {@link RequestContext} into the callback execution.
+     * If this executor service will be used for callbacks from several different requests, use
+     * {@link #makeContextPropagating(ExecutorService)} instead.
      */
     default ExecutorService makeContextAware(ExecutorService executor) {
         return ContextAwareExecutorService.of(this, executor);
@@ -472,7 +514,9 @@ public interface RequestContext {
 
     /**
      * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
-     * making sure to propagate the current {@link RequestContext} into the callback execution.
+     * making sure to propagate this {@link RequestContext} into the callback execution.
+     * If this executor service will be used for callbacks from several different requests, use
+     * {@link #makeContextPropagating(ScheduledExecutorService)} instead.
      */
     default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
         return ContextAwareScheduledExecutorService.of(this, executor);

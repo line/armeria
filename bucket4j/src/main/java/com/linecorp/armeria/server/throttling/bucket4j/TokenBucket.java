@@ -42,7 +42,8 @@ public final class TokenBucket {
     /**
      * Returns a newly created {@link TokenBucket}. Computes a set of {@link BandwidthLimit} out of
      * a comma-separated {@code specification} string that conforms to the following format,
-     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
+     * as per <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header
+     * Fields for HTTP</a>:
      * <pre>{@code
      * <bandwidth limit 1>[, <bandwidth limit 2>[, etc.]]
      * }</pre>
@@ -135,7 +136,8 @@ public final class TokenBucket {
 
     /**
      * Returns a string representation of the multiple limits in the following format,
-     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
+     * as per <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header
+     * Fields for HTTP</a>:
      * <pre>{@code
      * <lowest limit>, <first limit>;window=<first period(in seconds)>;burst=<first overdraftLimit>,
      *                 <second limit>;window=<second period(in seconds)>;burst=<second overdraftLimit>, etc.

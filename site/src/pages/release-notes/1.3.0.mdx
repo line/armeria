@@ -227,6 +227,15 @@ date: 2020-11-30
 - `ServletRequest.getProtocol()` now returns the proper value when using <type://TomcatService> and
   <type://JettyService>. #3194
 - The route decorators are now evaluated in the reverse order they applied. #3160 #3166
+  - The purpose of this change is to make sure we provide a consistent experience when decorating a service.
+    For example, when we decorate a service like the following:
+    ```java
+    myService
+      .decorate(decoratorA)
+      .decorate(decoratorB);
+    ```
+    we expect `decoratorA` decorates `myService` and `decoratorB` decorates `decoratorA`.
+    Route decorators were breaking this expectation.
 - You now get the FORBIDDEN status if your service does not handle preflight requests regardless of
   route decorators. #3152
 - A gRPC `ServerCall` is now closed exactly only once. #3153
@@ -237,7 +246,7 @@ date: 2020-11-30
 ## 🏚️ Deprecations
 
 - <type://CircuitBreakerClient#newPerHostAndMethodDecorator(BiFunction,CircuitBreakerRule)> is now deprecated.
-  #31356
+  #3135
   - Use <type://CircuitBreakerClient#newDecorator(CircuitBreakerMapping,CircuitBreakerRule)> with the customized
     <type://CircuitBreakerMapping> using <type://CircuitBreakerMapping#builder()>.
 - The response timeout and max total attempts setters in <type://RetryingClientBuilder> are now deprecated.
@@ -251,7 +260,16 @@ date: 2020-11-30
 
 ## ☢️ Breaking changes
 
-- N/A
+- Route decorators are now evaluated in the reverse order they applied. #3160 #3166
+  - The purpose of this change is to make sure we provide a consistent experience when decorating a service.
+    For example, when we decorate a service like the following:
+    ```java
+    myService
+      .decorate(decoratorA)
+      .decorate(decoratorB);
+    ```
+    we expect `decoratorA` decorates `myService` and `decoratorB` decorates `decoratorA`.
+    Route decorators were breaking this expectation.
 
 ## ⛓ Dependencies
 
@@ -276,8 +294,8 @@ date: 2020-11-30
 
 <ThankYou
   usernames={[
-    'adriancole',
     'anuraaga',
+    'codefromthecrypt',
     'ghkim3221',
     'haithamgabr',
     'heowc',

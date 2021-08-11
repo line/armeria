@@ -37,6 +37,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.PercentEncoder;
 
@@ -64,9 +65,10 @@ final class CatalogClient {
     /**
      * Gets endpoint list by service name.
      */
-    CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
+    CompletableFuture<List<Endpoint>> endpoints(String serviceName, @Nullable String datacenter,
+                                                @Nullable String filter) {
         requireNonNull(serviceName, "serviceName");
-        return service(serviceName)
+        return service(serviceName, datacenter, filter)
                 .thenApply(nodes -> nodes.stream()
                                          .map(CatalogClient::toEndpoint)
                                          .filter(Objects::nonNull)
@@ -77,10 +79,15 @@ final class CatalogClient {
      * Returns node list by service name.
      */
     @VisibleForTesting
-    CompletableFuture<List<Node>> service(String serviceName) {
+    CompletableFuture<List<Node>> service(String serviceName, @Nullable String datacenter,
+                                          @Nullable String filter) {
         requireNonNull(serviceName, "serviceName");
         final StringBuilder path = new StringBuilder("/catalog/service/");
         PercentEncoder.encodeComponent(path, serviceName);
+        final QueryParams params = ConsulClientUtil.queryParams(datacenter, filter);
+        if (!params.isEmpty()) {
+            path.append('?').append(params.toQueryString());
+        }
         return client.get(path.toString())
                      .aggregate()
                      .thenApply(response -> {

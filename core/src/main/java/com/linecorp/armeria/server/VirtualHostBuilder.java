@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -59,7 +60,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -70,7 +73,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -101,12 +104,16 @@ public final class VirtualHostBuilder {
     @Nullable
     private SelfSignedCertificate selfSignedCertificate;
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
+    @Nullable
+    private Boolean tlsAllowUnsafeCiphers;
     private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
 
     @Nullable
     private RejectedRouteHandler rejectedRouteHandler;
+    @Nullable
+    private ServiceNaming defaultServiceNaming;
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -330,6 +337,45 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
         tlsCustomizers.add(tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public VirtualHostBuilder tlsAllowUnsafeCiphers() {
+        return tlsAllowUnsafeCiphers(true);
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public VirtualHostBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        this.tlsAllowUnsafeCiphers = tlsAllowUnsafeCiphers;
         return this;
     }
 
@@ -593,7 +639,13 @@ public final class VirtualHostBuilder {
     }
 
     VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
-        routeDecoratingServices.addFirst(routeDecoratingService);
+        if (Flags.useLegacyRouteDecoratorOrdering()) {
+            // The first inserted decorator is applied first.
+            routeDecoratingServices.addLast(routeDecoratingService);
+        } else {
+            // The last inserted decorator is applied first.
+            routeDecoratingServices.addFirst(routeDecoratingService);
+        }
         return this;
     }
 
@@ -758,6 +810,15 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the default naming rule for the name of services. If not set, the value set via
+     * {@link ServerBuilder#defaultServiceNaming(ServiceNaming)} is used.
+     */
+    public VirtualHostBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming);
+        return this;
+    }
+
+    /**
      * Sets the timeout of a request in milliseconds. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -853,6 +914,9 @@ public final class VirtualHostBuilder {
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
 
         // Retrieve all settings as a local copy. Use default builder's properties if not set.
+        final ServiceNaming defaultServiceNaming =
+                this.defaultServiceNaming != null ?
+                this.defaultServiceNaming : template.defaultServiceNaming;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
@@ -906,28 +970,34 @@ public final class VirtualHostBuilder {
                                         cfgSetters.getClass().getSimpleName());
                     }
                 }).map(cfgBuilder -> {
-                    return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                            accessLogWriter, shutdownAccessLogWriterOnStop);
+                    return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
+                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
-                new ServiceConfigBuilder(Route.ofCatchAll(), FallbackService.INSTANCE)
-                        .build(requestTimeoutMillis, maxRequestLength, verboseResponses,
+                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
+                        .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
+            final boolean tlsAllowUnsafeCiphers =
+                    this.tlsAllowUnsafeCiphers != null ?
+                    this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
+
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(sslContextBuilderSupplier, tlsCustomizers);
+                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(template.sslContextBuilderSupplier, template.tlsCustomizers);
+                sslContext = buildSslContext(template.sslContextBuilderSupplier,
+                                             tlsAllowUnsafeCiphers,
+                                             template.tlsCustomizers);
                 releaseSslContextOnFailure = true;
             }
 
@@ -945,15 +1015,18 @@ public final class VirtualHostBuilder {
                 }
 
                 if (tlsSelfSigned) {
+                    final SelfSignedCertificate ssc;
                     try {
-                        final SelfSignedCertificate ssc = selfSignedCertificate();
-                        sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
-                                                                                       ssc.privateKey()),
-                                                     tlsCustomizers);
-                        releaseSslContextOnFailure = true;
+                        ssc = selfSignedCertificate();
                     } catch (Exception e) {
                         throw new RuntimeException("failed to create a self signed certificate", e);
                     }
+
+                    sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
+                                                                                   ssc.privateKey()),
+                                                 tlsAllowUnsafeCiphers,
+                                                 tlsCustomizers);
+                    releaseSslContextOnFailure = true;
                 }
             }
 
@@ -970,8 +1043,9 @@ public final class VirtualHostBuilder {
             final VirtualHost virtualHost =
                     new VirtualHost(defaultHostname, hostnamePattern, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                    accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
-                                    verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+                                    accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
+                                    maxRequestLength, verboseResponses, accessLogWriter,
+                                    shutdownAccessLogWriterOnStop);
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -995,10 +1069,11 @@ public final class VirtualHostBuilder {
 
     private static SslContext buildSslContext(
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
+            boolean tlsAllowUnsafeCiphers,
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
         return SslContextUtil
                 .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, /* tlsAllowUnsafeCiphers */ false, tlsCustomizers);
+                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers);
     }
 
     /**
@@ -1019,18 +1094,28 @@ public final class VirtualHostBuilder {
             serverEngine.setUseClientMode(false);
             serverEngine.setNeedClientAuth(false);
 
+            // Create a client-side engine with very permissive settings.
             final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder::forClient, ImmutableList.of());
+                    buildSslContext(() -> SslContextBuilder.forClient()
+                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE),
+                                    true, ImmutableList.of());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
+            clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
+            clientEngine.setEnabledCipherSuites(clientEngine.getSupportedCipherSuites());
 
-            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
             final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
 
-            clientEngine.wrap(appBuf, packetBuf);
-            appBuf.clear();
+            // Wrap an empty app buffer to initiate handshake.
+            wrap(clientEngine, packetBuf);
+
+            // Feed the handshake packet to the server engine.
             packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
+            unwrap(serverEngine, packetBuf);
+
+            // See if the server has something to say.
+            packetBuf.clear();
+            wrap(serverEngine, packetBuf);
         } catch (SSLException e) {
             throw new IllegalStateException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
         } finally {
@@ -1039,6 +1124,41 @@ public final class VirtualHostBuilder {
         }
 
         return sslContext;
+    }
+
+    private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {
+        final ByteBuffer appBuf = ByteBuffer.allocate(engine.getSession().getApplicationBufferSize());
+        // Limit the number of unwrap() calls to 8 times, to prevent a potential infinite loop.
+        // 8 is an arbitrary number, it can be any number greater than 2.
+        for (int i = 0; i < 8; i++) {
+            appBuf.clear();
+            final SSLEngineResult result = engine.unwrap(packetBuf, appBuf);
+            switch (result.getHandshakeStatus()) {
+                case NEED_UNWRAP:
+                    continue;
+                case NEED_TASK:
+                    engine.getDelegatedTask().run();
+                    continue;
+            }
+            break;
+        }
+    }
+
+    private static void wrap(SSLEngine sslEngine, ByteBuffer packetBuf) throws SSLException {
+        final ByteBuffer appBuf = ByteBuffer.allocate(0);
+        // Limit the number of wrap() calls to 8 times, to prevent a potential infinite loop.
+        // 8 is an arbitrary number, it can be any number greater than 2.
+        for (int i = 0; i < 8; i++) {
+            final SSLEngineResult result = sslEngine.wrap(appBuf, packetBuf);
+            switch (result.getHandshakeStatus()) {
+                case NEED_WRAP:
+                    continue;
+                case NEED_TASK:
+                    sslEngine.getDelegatedTask().run();
+                    continue;
+            }
+            break;
+        }
     }
 
     @Override
@@ -1050,6 +1170,7 @@ public final class VirtualHostBuilder {
                           .add("routeDecoratingServices", routeDecoratingServices)
                           .add("accessLoggerMapper", accessLoggerMapper)
                           .add("rejectedRouteHandler", rejectedRouteHandler)
+                          .add("defaultServiceNaming", defaultServiceNaming)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

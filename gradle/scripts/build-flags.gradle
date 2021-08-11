@@ -42,3 +42,11 @@ if (!projectsWithFlags('java').isEmpty()) {
     apply from: "${libDir}/java-versionprops.gradle"
     apply from: "${libDir}/java-publish.gradle"
 }
+
+if (!projectsWithFlags('kotlin').isEmpty()) {
+    apply from: "${libDir}/kotlin.gradle"
+}
+
+if (!projectsWithFlags('scala_2.12').isEmpty() || !projectsWithFlags('scala_2.13').isEmpty()) {
+    apply from: "${libDir}/scala.gradle"
+}

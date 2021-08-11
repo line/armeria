@@ -45,24 +45,19 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
 
     private static void stream(long elements, boolean abort,
                                AtomicLong remaining, DefaultStreamMessage<Long> stream) {
-        stream.whenConsumed().thenRun(() -> {
-            for (;;) {
-                final long r = remaining.decrementAndGet();
-                final boolean written = stream.tryWrite(elements - r);
-                if (r == 0) {
-                    if (abort) {
-                        stream.abort();
-                    } else {
-                        stream.close();
-                    }
-                    break;
-                }
-
-                if (!written) {
-                    stream(elements, abort, remaining, stream);
-                    break;
-                }
+        final long r = remaining.get();
+        if (r == 0) {
+            if (abort) {
+                stream.abort();
+            } else {
+                stream.close();
             }
+            return;
+        }
+        stream.write(elements - r);
+        stream.whenConsumed().thenRun(() -> {
+            remaining.decrementAndGet();
+            stream(elements, abort, remaining, stream);
         });
     }
 

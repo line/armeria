@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import java.util.function.Function;
-
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
@@ -29,13 +29,13 @@ import io.grpc.Status;
  */
 @UnstableApi
 @FunctionalInterface
-public interface GrpcStatusFunction extends Function<Throwable, Status> {
+public interface GrpcStatusFunction {
 
     /**
-     * Maps the specified {@link Throwable} to a gRPC {@link Status}.
+     * Maps the specified {@link Throwable} to a gRPC {@link Status},
+     * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
     @Nullable
-    @Override
-    Status apply(Throwable throwable);
+    Status apply(RequestContext ctx, Throwable throwable, Metadata metadata);
 }

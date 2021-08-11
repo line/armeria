@@ -45,6 +45,7 @@ import javax.net.ssl.TrustManagerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
@@ -52,8 +53,11 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -92,6 +96,8 @@ public final class ClientFactoryBuilder {
     private static final ClientFactoryOptionValue<Long> MIN_PING_INTERVAL =
             ClientFactoryOptions.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
 
+    static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
+
     static {
         RequestContextUtil.init();
     }
@@ -125,6 +131,17 @@ public final class ClientFactoryBuilder {
         option(ClientFactoryOptions.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
         option(ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE, shutdownOnClose);
         return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Client#execute(ClientRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link ClientFactory} is closed.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ClientFactoryBuilder workerGroup(int numThreads) {
+        return workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
     }
 
     /**
@@ -302,14 +319,38 @@ public final class ClientFactoryBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
      */
+    @Deprecated
+    public ClientFactoryBuilder tlsAllowUnsafeCiphers() {
+        return tlsAllowUnsafeCiphers(true);
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
     public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         option(ClientFactoryOptions.TLS_ALLOW_UNSAFE_CIPHERS, tlsAllowUnsafeCiphers);
         return this;
@@ -351,7 +392,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>. The HTTP/2 connection is first established with
      * {@value Http2CodecUtil#DEFAULT_WINDOW_SIZE} bytes of connection flow-control window size,
      * and it is changed if and only if {@code http2InitialConnectionWindowSize} is set.
@@ -368,7 +409,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control. Note that this setting affects the window size of all streams,
      * not the connection-level window size.
      *
@@ -383,7 +424,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public ClientFactoryBuilder http2MaxFrameSize(int http2MaxFrameSize) {
@@ -396,7 +437,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public ClientFactoryBuilder http2MaxHeaderListSize(long http2MaxHeaderListSize) {
@@ -466,9 +507,9 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the PING interval in milliseconds.
      * When neither read nor write was performed for the given {@code pingIntervalMillis},
-     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1.
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -490,9 +531,9 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the PING interval.
      * When neither read nor write was performed for the given {@code pingInterval},
-     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1.
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -505,6 +546,50 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder pingInterval(Duration pingInterval) {
         pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
+     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     */
+    public ClientFactoryBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
+        checkArgument(maxConnectionAgeMillis >= MIN_MAX_CONNECTION_AGE_MILLIS || maxConnectionAgeMillis == 0,
+                      "maxConnectionAgeMillis: %s (expected: >= %s or == 0)",
+                      maxConnectionAgeMillis, MIN_MAX_CONNECTION_AGE_MILLIS);
+        option(ClientFactoryOptions.MAX_CONNECTION_AGE_MILLIS, maxConnectionAgeMillis);
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAge} since the connection was established.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
+     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     */
+    public ClientFactoryBuilder maxConnectionAge(Duration maxConnectionAge) {
+        return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the maximum allowed number of requests that can be sent through one connection.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxNumRequestsPerConnection the maximum number of requests per connection.
+     *                                    {@code 0} disables the limit.
+     */
+    public ClientFactoryBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
+        checkArgument(maxNumRequestsPerConnection >= 0, "maxNumRequestsPerConnection: %s (expected: >= 0)",
+                      maxNumRequestsPerConnection);
+        option(ClientFactoryOptions.MAX_NUM_REQUESTS_PER_CONNECTION, maxNumRequestsPerConnection);
         return this;
     }
 
@@ -571,6 +656,17 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder proxyConfig(ProxyConfigSelector proxyConfigSelector) {
         requireNonNull(proxyConfigSelector, "proxyConfigSelector");
         option(ClientFactoryOptions.PROXY_CONFIG_SELECTOR, proxyConfigSelector);
+        return this;
+    }
+
+    /**
+     * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public ClientFactoryBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
+        requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        option(ClientFactoryOptions.HTTP1_HEADER_NAMING, http1HeaderNaming);
         return this;
     }
 
@@ -651,21 +747,42 @@ public final class ClientFactoryBuilder {
         }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
-        final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
-        final long pingIntervalMillis = newOptions.pingIntervalMillis();
+        final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
+        long idleTimeoutMillis = newOptions.idleTimeoutMillis();
+        long pingIntervalMillis = newOptions.pingIntervalMillis();
+        final ImmutableList.Builder<ClientFactoryOptionValue<?>> adjustedOptionsBuilder =
+                ImmutableList.builderWithExpectedSize(2);
+
+        if (maxConnectionAgeMillis != 0 && idleTimeoutMillis > maxConnectionAgeMillis) {
+            adjustedOptionsBuilder
+                    .add(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS.newValue(maxConnectionAgeMillis));
+            idleTimeoutMillis = maxConnectionAgeMillis;
+        }
+
         if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
             final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
             if (clampedPingIntervalMillis >= idleTimeoutMillis) {
-                return ClientFactoryOptions.of(newOptions, ZERO_PING_INTERVAL);
-            }
-            if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
-                return newOptions;
-            }
-            if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
-                return ClientFactoryOptions.of(newOptions, MIN_PING_INTERVAL);
+                adjustedOptionsBuilder.add(ZERO_PING_INTERVAL);
+                pingIntervalMillis = 0;
+            } else if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                // no-op, clampedPingIntervalMillis is equal to pingIntervalMillis
+            } else if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                adjustedOptionsBuilder.add(MIN_PING_INTERVAL);
+                pingIntervalMillis = MIN_PING_INTERVAL_MILLIS;
             }
         }
-        return newOptions;
+
+        final Map<ChannelOption<?>, Object> newChannelOptions =
+                ChannelUtil.applyDefaultChannelOptions(
+                        newOptions.channelOptions(), idleTimeoutMillis, pingIntervalMillis);
+        adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
+
+        final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
+        if (!adjustedOptions.isEmpty()) {
+            return ClientFactoryOptions.of(newOptions, adjustedOptions);
+        } else {
+            return newOptions;
+        }
     }
 
     /**

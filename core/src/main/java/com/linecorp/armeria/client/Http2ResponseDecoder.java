@@ -25,14 +25,17 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
-import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -56,15 +59,16 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
-    @Nullable
-    private final Http2KeepAliveHandler keepAliveHandler;
+    private final KeepAliveHandler keepAliveHandler;
 
     Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
-                         @Nullable Http2KeepAliveHandler keepAliveHandler) {
+                         KeepAliveHandler keepAliveHandler) {
         super(channel,
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
+        assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }
@@ -147,9 +151,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             res.close(ClosedStreamException.get());
         }
 
-        // Send a GOAWAY frame if the connection has been scheduled for disconnection and
-        // it did not receive or send a GOAWAY frame.
-        if (needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway()) {
+        if (shouldSendGoAway()) {
             channel().close();
         }
     }
@@ -208,6 +210,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
+
+            if (shouldSendGoAway()) {
+                channel().close();
+            }
         }
     }
 
@@ -241,11 +247,18 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         final long maxContentLength = res.maxContentLength();
-        if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
-            res.close(ContentTooLargeException.get());
-            throw connectionError(INTERNAL_ERROR,
-                                  "content length too large: %d + %d > %d (stream: %d)",
-                                  res.writtenBytes(), dataLength, maxContentLength, streamId);
+        final long writtenBytes = res.writtenBytes();
+        if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
+            final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
+            res.close(ContentTooLargeException.builder()
+                                              .maxContentLength(maxContentLength)
+                                              .contentLength(res.headers())
+                                              .transferred(transferred)
+                                              .build());
+            throw connectionError(
+                    INTERNAL_ERROR,
+                    "content too large: transferred(%d + %d) > limit(%d) (stream: %d)",
+                    writtenBytes, dataLength, maxContentLength, streamId);
         }
 
         try {
@@ -257,10 +270,24 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
+
+            if (shouldSendGoAway()) {
+                // The connection has reached its lifespan.
+                // Should send a GOAWAY frame if it did not receive or send a GOAWAY frame.
+                channel().close();
+            }
         }
 
         // All bytes have been processed.
         return dataLength + padding;
+    }
+
+    /**
+     * Returns {@code true} if a connection has reached its lifespan
+     * and the connection did not receive or send a GOAWAY frame.
+     */
+    private boolean shouldSendGoAway() {
+        return needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
     }
 
     @Override
@@ -280,7 +307,15 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             return;
         }
 
-        res.close(new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode)));
+        final Http2Error http2Error = Http2Error.valueOf(errorCode);
+        final ClosedStreamException cause =
+                new ClosedStreamException("received a RST_STREAM frame: " + http2Error);
+
+        if (http2Error == Http2Error.REFUSED_STREAM) {
+            res.close(UnprocessedRequestException.of(cause));
+        } else {
+            res.close(cause);
+        }
     }
 
     @Override
@@ -293,14 +328,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onPingRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onPing();
-        }
+        keepAliveHandler.onPing();
     }
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler != null) {
+        if (keepAliveHandler.isHttp2()) {
             keepAliveHandler.onPingAck(data);
         }
     }
@@ -314,6 +347,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
+
+    @Override
+    KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
 
     private void keepAliveChannelRead() {
         if (keepAliveHandler != null) {

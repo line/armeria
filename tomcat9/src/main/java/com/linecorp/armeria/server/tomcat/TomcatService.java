@@ -124,10 +124,14 @@ public abstract class TomcatService implements HttpService {
     }
 
     private static final ResponseHeaders INVALID_AUTHORITY_HEADERS =
-            ResponseHeaders.of(HttpStatus.BAD_REQUEST,
-                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+            ResponseHeaders.builder(HttpStatus.BAD_REQUEST)
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                           .build();
+
     private static final HttpData INVALID_AUTHORITY_DATA =
             HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nInvalid authority");
+
+    private static final byte[] HOST_BYTES = { 'h', 'o', 's', 't' };
 
     /**
      * Creates a new {@link TomcatService} with the web application at the specified document base, which can
@@ -329,7 +333,7 @@ public abstract class TomcatService implements HttpService {
     @Override
     public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Connector connector = connector();
-        if (connector == null || isConnectorStopped(connector.getState())) {
+        if (connector == null || !isConnectorAvailable(connector.getState())) {
             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
         final Adapter coyoteAdapter = connector.getProtocolHandler().getAdapter();
@@ -347,7 +351,7 @@ public abstract class TomcatService implements HttpService {
                     }
                     return null;
                 }
-                if (isConnectorStopped(connector.getState())) {
+                if (!isConnectorAvailable(connector.getState())) {
                     if (res.tryWrite(ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE))) {
                         res.close();
                     }
@@ -375,7 +379,7 @@ public abstract class TomcatService implements HttpService {
                         return;
                     }
 
-                    if (isConnectorStopped(connector.getState())) {
+                    if (!isConnectorAvailable(connector.getState())) {
                         if (res.tryWrite(ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE))) {
                             res.close();
                         }
@@ -410,12 +414,11 @@ public abstract class TomcatService implements HttpService {
         return res;
     }
 
-    private static boolean isConnectorStopped(LifecycleState connectorState) {
+    private static boolean isConnectorAvailable(LifecycleState connectorState) {
         switch (connectorState) {
-            case STOPPED:
-            case DESTROYING:
-            case DESTROYED:
-            case FAILED:
+            case STARTED:
+            case STOPPING_PREP:
+            case STOPPING:
                 return true;
             default:
                 return false;
@@ -456,7 +459,7 @@ public abstract class TomcatService implements HttpService {
             }
         }
 
-        // Set the protocol, as documented in https://tools.ietf.org/html/rfc3875#section-4.1.16
+        // Set the protocol, as documented in https://datatracker.ietf.org/doc/html/rfc3875#section-4.1.16
         coyoteReq.protocol().setString(ctx.sessionProtocol().isMultiplex() ? "HTTP/2.0" : "HTTP/1.1");
 
         // Set the method.
@@ -493,13 +496,20 @@ public abstract class TomcatService implements HttpService {
             final AsciiString k = e.getKey();
             final String v = e.getValue();
 
-            if (k.isEmpty() || k.byteAt(0) == ':') {
+            if (k.isEmpty()) {
                 continue;
             }
 
-            final MessageBytes cValue = cHeaders.addValue(k.array(), k.arrayOffset(), k.length());
-            final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
-            cValue.setBytes(valueBytes, 0, valueBytes.length);
+            if (k.byteAt(0) != ':') {
+                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
+                cHeaders.addValue(k.array(), k.arrayOffset(), k.length())
+                        .setBytes(valueBytes, 0, valueBytes.length);
+            } else if (HttpHeaderNames.AUTHORITY.equals(k) && !headers.contains(HttpHeaderNames.HOST)) {
+                // Convert `:authority` to `host`.
+                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
+                cHeaders.addValue(HOST_BYTES, 0, HOST_BYTES.length)
+                        .setBytes(valueBytes, 0, valueBytes.length);
+            }
         }
     }
 
@@ -515,7 +525,7 @@ public abstract class TomcatService implements HttpService {
         final long contentLength = coyoteRes.getBytesWritten(true); // 'true' will trigger flush.
         final String method = coyoteRes.getRequest().method().toString();
         if (!"HEAD".equals(method)) {
-            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+            headers.contentLength(contentLength);
         }
 
         final MimeHeaders cHeaders = coyoteRes.getMimeHeaders();

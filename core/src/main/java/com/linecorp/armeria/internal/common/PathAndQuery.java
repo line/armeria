@@ -133,7 +133,8 @@ public final class PathAndQuery {
      * the parsed result was valid (e.g., when a server is able to successfully handle the parsed path).
      */
     public void storeInCache(@Nullable String rawPath) {
-        if (CACHE != null && rawPath != null) {
+        if (CACHE != null && !cached && rawPath != null) {
+            cached = true;
             CACHE.put(rawPath, this);
         }
     }
@@ -141,6 +142,8 @@ public final class PathAndQuery {
     private final String path;
     @Nullable
     private final String query;
+
+    private boolean cached;
 
     private PathAndQuery(String path, @Nullable String query) {
         this.path = path;
@@ -520,7 +523,7 @@ public final class PathAndQuery {
      * Reserved characters which require percent-encoding. These values are only used for constructing
      * {@link #RAW_CHAR_TO_MARKER} and {@link #MARKER_TO_PERCENT_ENCODED_CHAR} mapping tables.
      *
-     * @see <a href="https://tools.ietf.org/html/rfc3986#section-2.2">RFC 3986, section 2.2</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.2">RFC 3986, section 2.2</a>
      */
     private enum ReservedChar {
         GEN_DELIM_01(':', "%3A", (byte) 0x01),

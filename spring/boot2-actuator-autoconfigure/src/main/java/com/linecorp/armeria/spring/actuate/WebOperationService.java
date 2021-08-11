@@ -17,6 +17,7 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.acceptHeadersResolver;
 
 import java.io.Closeable;
 import java.io.EOFException;
@@ -29,7 +30,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -61,6 +62,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -84,6 +86,7 @@ final class WebOperationService implements HttpService {
     private static final Class<?> healthComponentClass;
     @Nullable
     private static final MethodHandle getStatusMethodHandle;
+    private static final boolean hasProducibleOperationArgumentResolver;
 
     static {
         final String healthComponentClassName = "org.springframework.boot.actuate.health.HealthComponent";
@@ -107,6 +110,19 @@ final class WebOperationService implements HttpService {
             healthComponentClass = null;
             getStatusMethodHandle = null;
         }
+
+        // ProducibleOperationArgumentResolver has been added in Spring Boot 2.5.0
+        final String producibleOperationArgumentResolverClassName =
+                "org.springframework.boot.actuate.endpoint.ProducibleOperationArgumentResolver";
+        boolean hasArgumentResolver;
+        try {
+            Class.forName(producibleOperationArgumentResolverClassName, false,
+                          WebOperationService.class.getClassLoader());
+            hasArgumentResolver = true;
+        } catch (ClassNotFoundException e) {
+            hasArgumentResolver = false;
+        }
+        hasProducibleOperationArgumentResolver = hasArgumentResolver;
     }
 
     private final WebOperation operation;
@@ -120,34 +136,23 @@ final class WebOperationService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-        req.aggregate().handle((aggregatedReq, t) -> {
-            if (t != null) {
-                resFuture.completeExceptionally(t);
-                return null;
-            }
-            if (operation.isBlocking()) {
-                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
-            } else {
-                invoke(ctx, aggregatedReq, resFuture);
-            }
-            return null;
-        });
-        return HttpResponse.from(resFuture);
+        if (operation.isBlocking()) {
+            return HttpResponse.from(req.aggregate().thenApplyAsync(invoke(ctx), ctx.blockingTaskExecutor()));
+        } else {
+            return HttpResponse.from(req.aggregate().thenApply(invoke(ctx)));
+        }
     }
 
-    private void invoke(ServiceRequestContext ctx,
-                        AggregatedHttpRequest req,
-                        CompletableFuture<HttpResponse> resFuture) {
-        final Map<String, Object> arguments = getArguments(ctx, req);
-        final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
-
-        try {
-            final HttpResponse res = handleResult(ctx, result, req.method());
-            resFuture.complete(res);
-        } catch (Throwable cause) {
-            resFuture.completeExceptionally(cause);
-        }
+    private Function<AggregatedHttpRequest, HttpResponse> invoke(ServiceRequestContext ctx) {
+        return req -> {
+            final Map<String, Object> arguments = getArguments(ctx, req);
+            final Object result = operation.invoke(newInvocationContext(req, arguments));
+            try {
+                return handleResult(ctx, result, req.method());
+            } catch (Throwable throwable) {
+                return Exceptions.throwUnsafely(throwable);
+            }
+        };
     }
 
     private static Map<String, Object> getArguments(ServiceRequestContext ctx, AggregatedHttpRequest req) {
@@ -169,6 +174,15 @@ final class WebOperationService implements HttpService {
         }
 
         return ImmutableMap.copyOf(arguments);
+    }
+
+    private static InvocationContext newInvocationContext(AggregatedHttpRequest req,
+                                                          Map<String, Object> arguments) {
+        if (hasProducibleOperationArgumentResolver) {
+            return new InvocationContext(SecurityContext.NONE, arguments, acceptHeadersResolver(req.headers()));
+        } else {
+            return new InvocationContext(SecurityContext.NONE, arguments);
+        }
     }
 
     private HttpResponse handleResult(ServiceRequestContext ctx,
@@ -197,10 +211,11 @@ final class WebOperationService implements HttpService {
         }
 
         final MediaType contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON_UTF_8);
-        final String contentSubType = contentType.subtype();
-
-        if ("json".equals(contentSubType) || contentSubType.endsWith("+json")) {
-            return HttpResponse.of(status, contentType, OBJECT_MAPPER.writeValueAsBytes(body));
+        if (contentType.isJson()) {
+            final ResponseHeaders headers = ResponseHeaders.builder(status)
+                                                           .contentType(contentType)
+                                                           .build();
+            return HttpResponse.ofJson(headers, body);
         }
 
         if (body instanceof CharSequence) {
@@ -214,7 +229,7 @@ final class WebOperationService implements HttpService {
             final long length = resource.contentLength();
             final ResponseHeadersBuilder headers = ResponseHeaders.builder(status);
             headers.contentType(contentType);
-            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, length);
+            headers.contentLength(length);
             headers.setTimeMillis(HttpHeaderNames.LAST_MODIFIED, resource.lastModified());
             if (filename != null) {
                 headers.set(HttpHeaderNames.CONTENT_DISPOSITION,

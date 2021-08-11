@@ -12,7 +12,7 @@ web site for Armeria.
 1. Download and install `node`, `npm` and other dependencies as well as
    generating the required `.json` files into the `gen-src` directory.
    ```console
-   $ ../gradlew generateSources
+   $ ../gradlew generateSiteSources
    ```
 2. Run Gatsby in development mode.
    ```console
@@ -26,7 +26,7 @@ web site for Armeria.
    All changes will be visible at <http://127.0.0.1:8000/>.
 
 Note that you can also use your local `npm` or `node` installation,
-although you'll have to run `../gradlew generateSources` to generate the `.json`
+although you'll have to run `../gradlew generateSiteSources` to generate the `.json`
 files into the `gen-src` directory at least once.
 
 ### Adding a short URL

@@ -27,38 +27,33 @@ import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-final class ByteBufDecoderInput implements HttpDecoderInput {
+public final class ByteBufDecoderInput implements HttpDecoderInput {
 
     private final ByteBufAllocator alloc;
     private final Queue<ByteBuf> queue;
+    private int readableBytes;
 
     private boolean closed;
 
-    ByteBufDecoderInput(ByteBufAllocator alloc) {
+    public ByteBufDecoderInput(ByteBufAllocator alloc) {
         this.alloc = alloc;
         queue = new ArrayDeque<>();
     }
 
-    boolean add(ByteBuf byteBuf) {
-        if (closed || !byteBuf.isReadable()) {
+    public boolean add(ByteBuf byteBuf) {
+        final int readableBytes = byteBuf.readableBytes();
+        if (closed || readableBytes == 0) {
             byteBuf.release();
             return false;
         }
 
         queue.add(byteBuf);
+        this.readableBytes += readableBytes;
         return true;
     }
 
     @Override
     public int readableBytes() {
-        if (queue.isEmpty()) {
-            return 0;
-        }
-
-        int readableBytes = 0;
-        for (ByteBuf buf : queue) {
-            readableBytes += buf.readableBytes();
-        }
         return readableBytes;
     }
 
@@ -76,6 +71,8 @@ final class ByteBufDecoderInput implements HttpDecoderInput {
             queue.remove();
             buf.release();
         }
+
+        this.readableBytes--;
         return value;
     }
 
@@ -87,16 +84,19 @@ final class ByteBufDecoderInput implements HttpDecoderInput {
         }
 
         final int readableBytes = firstBuf.readableBytes();
+        final int value;
         if (readableBytes >= 4) {
-            final int value = firstBuf.readInt();
+            value = firstBuf.readInt();
             if (readableBytes == 4) {
                 queue.remove();
                 firstBuf.release();
             }
-            return value;
+        } else {
+            value = readIntSlow();
         }
 
-        return readIntSlow();
+        this.readableBytes -= 4;
+        return value;
     }
 
     private int readIntSlow() {
@@ -143,14 +143,17 @@ final class ByteBufDecoderInput implements HttpDecoderInput {
         }
 
         final int readableBytes = firstBuf.readableBytes();
+        final ByteBuf byteBuf;
         if (readableBytes == length) {
-            return queue.remove();
-        }
-        if (readableBytes > length) {
-            return firstBuf.readRetainedSlice(length);
+            byteBuf = queue.remove();
+        } else if (readableBytes > length) {
+            byteBuf = firstBuf.readRetainedSlice(length);
+        } else {
+            byteBuf = readBytesSlow(length);
         }
 
-        return readBytesSlow(length);
+        this.readableBytes -= length;
+        return byteBuf;
     }
 
     private ByteBuf readBytesSlow(int length) {
@@ -178,6 +181,83 @@ final class ByteBufDecoderInput implements HttpDecoderInput {
         throw newEndOfInputException();
     }
 
+    @Override
+    public byte getByte(int index) {
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes > index) {
+            return firstBuf.getByte(firstBuf.readerIndex() + index);
+        } else {
+            return getByteSlow(index - readableBytes);
+        }
+    }
+
+    private byte getByteSlow(int remaining) {
+        final Iterator<ByteBuf> it = queue.iterator();
+        // The first buf was already checked in getByte().
+        it.next();
+
+        while (it.hasNext()) {
+            final ByteBuf buf = it.next();
+            final int readableBytes = buf.readableBytes();
+            if (readableBytes > remaining) {
+                return buf.getByte(buf.readerIndex() + remaining);
+            } else {
+                remaining -= readableBytes;
+            }
+        }
+
+        throw newEndOfInputException();
+    }
+
+    @Override
+    public void skipBytes(int length) {
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes > length) {
+            firstBuf.skipBytes(length);
+        } else {
+            skipBytesSlow(length - readableBytes);
+        }
+        this.readableBytes -= length;
+    }
+
+    private void skipBytesSlow(int remaining) {
+        // The first buf was already checked in skipBytes().
+        queue.remove().release();
+
+        if (remaining <= 0) {
+            // Nothing to skip
+            return;
+        }
+
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
+            final ByteBuf buf = it.next();
+            final int readableBytes = buf.readableBytes();
+            if (readableBytes > remaining) {
+                buf.skipBytes(remaining);
+                return;
+            } else {
+                buf.release();
+                it.remove();
+                remaining -= readableBytes;
+                if (remaining == 0) {
+                    return;
+                }
+            }
+        }
+
+        throw newEndOfInputException();
+    }
+
     private static IllegalStateException newEndOfInputException() {
         return new IllegalStateException("end of deframer input");
     }
@@ -189,6 +269,7 @@ final class ByteBufDecoderInput implements HttpDecoderInput {
         }
 
         closed = true;
+        readableBytes = 0;
         for (;;) {
             final ByteBuf buf = queue.poll();
             if (buf != null) {

@@ -2,9 +2,12 @@ def libDir = "${buildscript.sourceFile.parentFile}"
 
 configure(projectsWithFlags('java')) {
     def thriftJsonEnabled = true
+    def fullCamel = false
+
     ext {
         thriftVersion = null
         thriftPath = null
+        enableThriftFullCamel = { fullCamel = true }
         disableThriftJson = { thriftJsonEnabled = false }
     }
 
@@ -18,6 +21,11 @@ configure(projectsWithFlags('java')) {
                 group: 'Build',
                 description: "Compiles the ${sourceSet.name} .thrift files."
         ])
+
+        def sourcesJarTask = project.tasks.findByName(sourceSet.getTaskName('sources', 'jar'))
+        if (sourcesJarTask) {
+            sourcesJarTask.dependsOn(task)
+        }
 
         // Use afterEvaluate to give subprojects a chance to override the properties.
         project.afterEvaluate {
@@ -35,7 +43,7 @@ configure(projectsWithFlags('java')) {
                 srcDirs = [srcDirs]
             }
 
-            def includeDirs = project.findProperty(sourceSet.getTaskName('', 'thriftIncludeDirs'))?: []
+            def includeDirs = project.findProperty(sourceSet.getTaskName('', 'thriftIncludeDirs')) ?: []
             if (!(includeDirs instanceof Iterable) || includeDirs instanceof CharSequence) {
                 includeDirs = [includeDirs]
             }
@@ -54,7 +62,7 @@ configure(projectsWithFlags('java')) {
                     } else {
                         actualThriftPath =
                                 "${libDir}/thrift" +
-                                "/${project.findProperty('thriftVersion')?: '0.13'}" +
+                                "/${project.findProperty('thriftVersion')?: '0.14'}" +
                                 "/thrift.${rootProject.osdetector.classifier}"
                     }
 
@@ -64,9 +72,13 @@ configure(projectsWithFlags('java')) {
                         }.each { sourceFile ->
                             logger.info("Using ${actualThriftPath} to generate Java sources from ${sourceFile}")
                             project.mkdir(javaOutputDir)
+                            def javaGenerator = 'java'
+                            if (fullCamel) {
+                                javaGenerator = 'java:fullcamel'
+                            }
                             project.exec {
                                 commandLine actualThriftPath
-                                args '-gen', 'java', '-out', javaOutputDir
+                                args '-gen', javaGenerator, '-out', javaOutputDir
                                 includeDirs.each {
                                     args '-I', it
                                 }

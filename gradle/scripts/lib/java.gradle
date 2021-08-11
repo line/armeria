@@ -1,3 +1,23 @@
+def buildJdkVersion = 16
+if (rootProject.hasProperty('buildJdkVersion')) {
+    def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
+    if (buildJdkVersion != jdkVersion) {
+        buildJdkVersion = jdkVersion
+        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
+    }
+}
+rootProject.ext.set("buildJdkVersion", buildJdkVersion)
+
+def testJavaVersion = buildJdkVersion
+if (rootProject.hasProperty('testJavaVersion')) {
+    def testVersion = Integer.parseInt(rootProject.findProperty('testJavaVersion'))
+    if (buildJdkVersion != testVersion) {
+        testJavaVersion = testVersion
+        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
+    }
+}
+rootProject.ext.set("testJavaVersion", testJavaVersion)
+
 // Enable checkstyle if the rule file exists.
 def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
 def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
@@ -26,10 +46,24 @@ configure(projectsWithFlags('java')) {
         delete project.ext.genSrcDir
     }
 
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.buildJdkVersion)
+            vendor = JvmVendorSpec.ADOPTOPENJDK
+            implementation = JvmImplementation.VENDOR_SPECIFIC
+        }
+    }
+
     // Add the generated source directories to the source sets.
     project.sourceSets.all { sourceSet ->
         sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/java")
         sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
+    }
+    afterEvaluate {
+        Task generateSourcesTask = project.tasks.findByName('generateSources')
+        if (generateSourcesTask != null) {
+            tasks.sourcesJar.dependsOn(generateSourcesTask)
+        }
     }
 
     java {
@@ -46,34 +80,40 @@ configure(projectsWithFlags('java')) {
 
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
-        def task = delegate
         sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: '1.8'
         targetCompatibility = project.findProperty('javaTargetCompatibility') ?: '1.8'
         options.encoding = 'UTF-8'
         options.warnings = false
         options.compilerArgs += '-parameters'
-        project.configurations.each { Configuration cfg ->
-            if (cfg.name == 'annotationProcessor' || cfg.name.endsWith('AnnotationProcessor')) {
-                cfg.withDependencies { deps ->
-                    // Use incremental compilation only when there are no annotation processors,
-                    // because it seems to cause compilation errors for some processors such as Lombok.
-                    def useIncrementalCompilation = deps.size() == 0
-                    options.incremental = useIncrementalCompilation
-                    logger.info("${useIncrementalCompilation ? 'Enabling' : 'Disabling'} " +
-                            "incremental compilation for '${task.path}'")
-                }
-            }
-        }
     }
 
     // Enable full exception logging for test failures.
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         testLogging.exceptionFormat = 'full'
-    }
 
-    // Use JUnit platform.
-    tasks.withType(Test) {
-        useJUnitPlatform()
+        // Use JUnit platform.
+        def flakyTests = rootProject.findProperty('flakyTests')
+        if (flakyTests == 'true') {
+            useJUnitPlatform {
+                includeTags 'FLAKY_TESTS'
+            }
+        } else if (flakyTests == 'false') {
+            useJUnitPlatform {
+                excludeTags 'FLAKY_TESTS'
+            }
+        } else {
+            if (flakyTests != null) {
+                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
+            }
+            useJUnitPlatform()
+        }
+
+        // Use a different JRE for testing if necessary.
+        if (rootProject.ext.buildJdkVersion != rootProject.ext.testJavaVersion) {
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(rootProject.ext.testJavaVersion)
+            }
+        }
     }
 
     // Enforce checkstyle rules.
@@ -93,18 +133,11 @@ configure(projectsWithFlags('java')) {
             def dependencyTask = project.tasks.findByName("checkstyle${sourceSet.name.capitalize()}")
             if (dependencyTask instanceof Checkstyle) {
                 tasks.checkstyle.dependsOn dependencyTask
-
-                // Run checkstyle as soon as possible after compilation to get feedback earlier.
-                tasks.named(sourceSet.compileJavaTaskName).configure {
-                    finalizedBy dependencyTask
-                }
             }
         }
 
-        project.ext.getLintTask().dependsOn tasks.checkstyle
-
-        test {
-            dependsOn tasks.lint
-        }
+        def lintTask = project.ext.getLintTask()
+        lintTask.dependsOn tasks.checkstyle
+        tasks.check.dependsOn lintTask
     }
 }

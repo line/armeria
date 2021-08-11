@@ -157,8 +157,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
-        return of(RequestHeaders.builder(method, path)
-                                .contentType(mediaType).build(),
+        return of(RequestHeaders.builder(method, path).contentType(mediaType).build(),
                   content, trailers);
     }
 
@@ -200,7 +199,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         if (content.isEmpty()) {
             builder.remove(CONTENT_LENGTH);
         } else {
-            builder.setInt(CONTENT_LENGTH, content.length());
+            builder.contentLength(content.length());
         }
         headers = builder.build();
         return new DefaultAggregatedHttpRequest(headers, content, trailers);
@@ -265,8 +264,8 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      * according to client preference. It does this via <s>Basic Filter</s>ing each
      * {@link LanguageRange} and picking the first match. This is the "classic"
      * algorithm described in
-     * <a href="https://tools.ietf.org/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
-     * and also referenced in <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
+     * and also referenced in <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
      * @param supportedLocales an {@link Iterable} of {@link Locale}s supported by the server.
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */
@@ -281,8 +280,8 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      * according to client preference. It does this via <s>Basic Filter</s>ing each
      * {@link LanguageRange} and picking the first match. This is the "classic"
      * algorithm described in
-     * <a href="https://tools.ietf.org/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
-     * and also referenced in <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
+     * and also referenced in <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
      * @param supportedLocales {@link Locale}s supported by the server.
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */

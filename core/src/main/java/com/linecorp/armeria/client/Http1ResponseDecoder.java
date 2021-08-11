@@ -21,6 +21,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
@@ -29,6 +31,7 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
@@ -57,11 +60,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         DISCARD
     }
 
-    /** The request being decoded currently. */
+    /** The response being decoded currently. */
     @Nullable
     private HttpResponseWrapper res;
-    @Nullable
-    private KeepAliveHandler keepAliveHandler;
+    private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
     private int resId = 1;
     private int lastPingReqId = -1;
     private State state = State.NEED_HEADERS;
@@ -166,6 +168,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
+                        if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
+                            close(ctx);
+                            return;
+                        }
                         assert res != null;
                         this.res = res;
 
@@ -207,8 +213,14 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         if (dataLength > 0) {
                             assert res != null;
                             final long maxContentLength = res.maxContentLength();
-                            if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
-                                fail(ctx, ContentTooLargeException.get());
+                            final long writtenBytes = res.writtenBytes();
+                            if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
+                                final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
+                                fail(ctx, ContentTooLargeException.builder()
+                                                                  .maxContentLength(maxContentLength)
+                                                                  .contentLength(res.headers())
+                                                                  .transferred(transferred)
+                                                                  .build());
                                 return;
                             } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
                                 fail(ctx, ClosedStreamException.get());
@@ -250,16 +262,18 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("unexpected message type: " + msg.getClass().getName() +
-                   " (expected: " + expected.getName() + ", channel: " + ctx.channel() +
-                   ", resId: " + resId);
-        if (lastPingReqId == -1) {
-            buf.append(')');
-        } else {
-            buf.append(", lastPingReqId: " + lastPingReqId + ')');
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("unexpected message type: " + msg.getClass().getName() +
+                       " (expected: " + expected.getName() + ", channel: " + ctx.channel() +
+                       ", resId: " + resId);
+            if (lastPingReqId == -1) {
+                buf.append(')');
+            } else {
+                buf.append(", lastPingReqId: " + lastPingReqId + ')');
+            }
+            fail(ctx, new ProtocolViolationException(buf.toString()));
         }
-        fail(ctx, new ProtocolViolationException(buf.toString()));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
@@ -274,6 +288,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             logger.warn("Unexpected exception:", cause);
         }
 
+        ctx.close();
+    }
+
+    private void close(ChannelHandlerContext ctx) {
+        state = State.DISCARD;
         ctx.close();
     }
 
@@ -297,26 +316,30 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         ctx.fireExceptionCaught(cause);
     }
 
+    @Override
+    KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
+
     void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
+        assert keepAliveHandler instanceof Http1ClientKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         maybeInitializeKeepAliveHandler(ctx);
     }
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
-        if (keepAliveHandler != null && ctx.channel().isActive()) {
+        if (ctx.channel().isActive()) {
             keepAliveHandler.initialize(ctx);
         }
     }
 
     private void destroyKeepAliveHandler() {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.destroy();
-        }
+        keepAliveHandler.destroy();
     }
 
     private void onPingRead(Object msg) {
         if (msg instanceof HttpResponse) {
-            assert keepAliveHandler != null;
+            assert keepAliveHandler != NoopKeepAliveHandler.INSTANCE;
             keepAliveHandler.onPing();
         }
         if (msg instanceof LastHttpContent) {

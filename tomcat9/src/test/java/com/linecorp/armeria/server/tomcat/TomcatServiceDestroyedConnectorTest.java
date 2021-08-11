@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -40,6 +39,7 @@ class TomcatServiceDestroyedConnectorTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             tomcatWithWebApp = new Tomcat();
+            tomcatWithWebApp.setPort(0);
             tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
                                         "tomcat-" + TomcatServiceDestroyedConnectorTest.class.getSimpleName());
             tomcatWithWebApp.addWebapp("", WebAppContainerTest.webAppRoot().getAbsolutePath());
@@ -51,11 +51,9 @@ class TomcatServiceDestroyedConnectorTest {
     @Test
     void serviceUnavailableAfterConnectorIsDestroyed() throws LifecycleException {
         final WebClient client = WebClient.of(server.httpUri());
-        AggregatedHttpResponse join = client.get("/api/").aggregate().join();
-        assertThat(join.status()).isSameAs(HttpStatus.OK);
+        assertThat(client.get("/api/").aggregate().join().status()).isSameAs(HttpStatus.OK);
         tomcatWithWebApp.stop();
         tomcatWithWebApp.getConnector().destroy();
-        join = client.get("/api/").aggregate().join();
-        assertThat(join.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(client.get("/api/").aggregate().join().status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

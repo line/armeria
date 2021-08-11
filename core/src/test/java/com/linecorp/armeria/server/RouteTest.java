@@ -23,9 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.testng.util.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 
@@ -146,13 +148,13 @@ class RouteTest {
                                  .methods(HttpMethod.GET, HttpMethod.POST)
                                  .build();
 
-        final RoutingResult getResult = route.apply(method(HttpMethod.GET), false);
-        final RoutingResult postResult = route.apply(method(HttpMethod.POST), false);
+        final RoutingResult getResult = route.apply(withMethod(HttpMethod.GET), false);
+        final RoutingResult postResult = route.apply(withMethod(HttpMethod.POST), false);
         assertThat(getResult.isPresent()).isTrue();
         assertThat(postResult.isPresent()).isTrue();
 
-        assertThat(route.apply(method(HttpMethod.PUT), false).isPresent()).isFalse();
-        assertThat(route.apply(method(HttpMethod.DELETE), false).isPresent()).isFalse();
+        assertThat(route.apply(withMethod(HttpMethod.PUT), false).isPresent()).isFalse();
+        assertThat(route.apply(withMethod(HttpMethod.DELETE), false).isPresent()).isFalse();
     }
 
     @Test
@@ -163,8 +165,8 @@ class RouteTest {
                                  .consumes(JSON_UTF_8)
                                  .build();
 
-        assertThat(route.apply(consumeType(HttpMethod.POST, JSON_UTF_8), false).isPresent()).isTrue();
-        assertThat(route.apply(consumeType(HttpMethod.POST, MediaType.create("application", "json")), false)
+        assertThat(route.apply(withConsumeType(HttpMethod.POST, JSON_UTF_8), false).isPresent()).isTrue();
+        assertThat(route.apply(withConsumeType(HttpMethod.POST, MediaType.create("application", "json")), false)
                         .isPresent()).isFalse();
     }
 
@@ -205,7 +207,7 @@ class RouteTest {
                            .methods(HttpMethod.GET, HttpMethod.POST)
                            .build();
 
-        RoutingResult getResult = route.apply(method(HttpMethod.GET), false);
+        RoutingResult getResult = route.apply(withMethod(HttpMethod.GET), false);
         assertThat(getResult.isPresent()).isTrue();
         // When there's no "Accept" header, it has the highest score.
         assertThat(getResult.hasHighestScore()).isTrue();
@@ -224,7 +226,7 @@ class RouteTest {
                      .methods(HttpMethod.GET, HttpMethod.POST)
                      .produces(ANY_TYPE)
                      .build();
-        getResult = route.apply(method(HttpMethod.GET), false);
+        getResult = route.apply(withMethod(HttpMethod.GET), false);
         assertThat(getResult.isPresent()).isTrue();
 
         getResult = route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"), false);
@@ -244,7 +246,7 @@ class RouteTest {
                      .produces(JSON_UTF_8)
                      .build();
 
-        getResult = route.apply(method(HttpMethod.GET), false);
+        getResult = route.apply(withMethod(HttpMethod.GET), false);
         assertThat(getResult.isPresent()).isTrue();
 
         getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"), false);
@@ -257,12 +259,126 @@ class RouteTest {
         assertThat(getResult.isPresent()).isFalse();
     }
 
-    private static RoutingContext method(HttpMethod method) {
+    @Test
+    void testRouteExclusion() {
+        Route route = Route.builder().pathPrefix("/foo")
+                           .exclude(Route.builder().pathPrefix("/foo/bar").build())
+                           .build();
+        assertThat(route.apply(withPath("/foo/baz"), false).isPresent()).isTrue();
+        // PrefixPathMapping will automatically add '/' to the end of the given path prefix.
+        assertThat(route.apply(withPath("/foo/bar"), false).isPresent()).isTrue();
+        assertThat(route.apply(withPath("/foo/bar/"), false).isPresent()).isFalse();
+
+        route = Route.builder().pathPrefix("/foo")
+                     .exclude(Route.builder().exact("/foo/bar").build())
+                     .build();
+        assertThat(route.apply(withPath("/foo/baz"), false).isPresent()).isTrue();
+        assertThat(route.apply(withPath("/foo/bar"), false).isPresent()).isFalse();
+        assertThat(route.apply(withPath("/foo/bar/"), false).isPresent()).isTrue();
+
+        route = Route.builder().pathPrefix("/foo")
+                     .exclude("regex:^/foo/(bar|baz)$") // Use shortcut.
+                     .build();
+        assertThat(route.apply(withPath("/foo/baz"), false).isPresent()).isFalse();
+        assertThat(route.apply(withPath("/foo/bar"), false).isPresent()).isFalse();
+        assertThat(route.apply(withPath("/foo/bar/"), false).isPresent()).isTrue();
+
+        route = Route.builder().pathPrefix("/foo")
+                     .exclude("glob:/foo/bar/**")   // Use shortcut.
+                     .build();
+        assertThat(route.apply(withPath("/foo/baz"), false).isPresent()).isTrue();
+        assertThat(route.apply(withPath("/foo/bar"), false).isPresent()).isTrue();
+        assertThat(route.apply(withPath("/foo/bar/"), false).isPresent()).isFalse();
+        assertThat(route.apply(withPath("/foo/bar/baz"), false).isPresent()).isFalse();
+    }
+
+    @Test
+    void testRouteExclusionIsEvaluatedAtLast() {
+        final Route route = Route.builder()
+                                 .pathPrefix(PATH)
+                                 .methods(HttpMethod.GET, HttpMethod.POST)
+                                 .consumes(MediaType.JSON)
+                                 .produces(MediaType.JSON)
+                                 .matchesHeaders("x-custom-header", Strings::isNotNullAndNotEmpty)
+                                 .matchesParams("custom-param", Strings::isNotNullAndNotEmpty)
+                                 .exclude(Route.builder().exact(PATH + "/excluded").build())
+                                 .build();
+
+        // Make sure that RoutingResult.empty() and RoutingResult.excluded() are different.
+        assertThat(RoutingResult.empty()).isNotEqualTo(RoutingResult.excluded());
+
+        RoutingContext ctx = withRequestHeaders(RequestHeaders.of(HttpMethod.PUT, PATH + "/bar"));
+        assertThat(route.apply(ctx, false)).isEqualTo(RoutingResult.empty());
+        assertThat(ctx.deferredStatusException().httpStatus()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+
+        ctx = withRequestHeaders(RequestHeaders.builder()
+                                               .method(HttpMethod.POST)
+                                               .path(PATH + "/bar")
+                                               .contentType(MediaType.APPLICATION_XML_UTF_8)
+                                               .build());
+        assertThat(route.apply(ctx, false)).isEqualTo(RoutingResult.empty());
+        assertThat(ctx.deferredStatusException().httpStatus()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+
+        ctx = withRequestHeaders(
+                RequestHeaders.builder()
+                              .method(HttpMethod.POST)
+                              .path(PATH + "/bar")
+                              .add(HttpHeaderNames.ACCEPT, MediaType.APPLICATION_XML_UTF_8.toString())
+                              .build());
+        assertThat(route.apply(ctx, false)).isEqualTo(RoutingResult.empty());
+        assertThat(ctx.deferredStatusException().httpStatus()).isEqualTo(HttpStatus.NOT_ACCEPTABLE);
+
+        // No x-custom-header exists.
+        ctx = withRequestHeaders(RequestHeaders.builder()
+                                               .method(HttpMethod.POST)
+                                               .path(PATH + "/bar")
+                                               .contentType(MediaType.JSON)
+                                               .add(HttpHeaderNames.ACCEPT, "*/*")
+                                               .build());
+        assertThat(route.apply(ctx, false)).isEqualTo(RoutingResult.empty());
+        assertThat(ctx.deferredStatusException()).isNull();
+
+        // No custom-param exists.
+        ctx = withRequestHeaders(RequestHeaders.builder()
+                                               .method(HttpMethod.POST)
+                                               .path(PATH + "/bar")
+                                               .contentType(MediaType.JSON)
+                                               .add(HttpHeaderNames.ACCEPT, "*/*")
+                                               .add("x-custom-header", "yes")
+                                               .build());
+        assertThat(route.apply(ctx, false)).isEqualTo(RoutingResult.empty());
+        assertThat(ctx.deferredStatusException()).isNull();
+
+        // All conditions are met.
+        ctx = withRequestHeaders(RequestHeaders.builder()
+                                               .method(HttpMethod.POST)
+                                               .path(PATH + "/bar?custom-param=yes")
+                                               .contentType(MediaType.JSON)
+                                               .add(HttpHeaderNames.ACCEPT, "*/*")
+                                               .add("x-custom-header", "yes")
+                                               .build());
+        assertThat(route.apply(ctx, false).isPresent()).isTrue();
+
+        // All conditions are met but the request is matched with excludedRoute.
+        ctx = withRequestHeaders(RequestHeaders.builder()
+                                               .method(HttpMethod.POST)
+                                               .path(PATH + "/excluded?custom-param=yes")
+                                               .contentType(MediaType.JSON)
+                                               .add(HttpHeaderNames.ACCEPT, "*/*")
+                                               .add("x-custom-header", "yes")
+                                               .build());
+        // Note that DefaultRoute returns RoutingResult.EXCLUDED when the request is failed to route due to
+        // 'excludedRoutes' configuration.
+        assertThat(route.apply(ctx, false)).isEqualTo(RoutingResult.excluded());
+        assertThat(ctx.deferredStatusException()).isNull();
+    }
+
+    private static RoutingContext withMethod(HttpMethod method) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
                                         PATH, null, RequestHeaders.of(method, PATH), false);
     }
 
-    private static RoutingContext consumeType(HttpMethod method, MediaType contentType) {
+    private static RoutingContext withConsumeType(HttpMethod method, MediaType contentType) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.CONTENT_TYPE, contentType);
         return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, false);
@@ -272,5 +388,17 @@ class RouteTest {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, false);
+    }
+
+    private RoutingContext withPath(String path) {
+        return DefaultRoutingContext.of(virtualHost(), "example.com",
+                                        path, null, RequestHeaders.of(HttpMethod.GET, path), false);
+    }
+
+    private RoutingContext withRequestHeaders(RequestHeaders headers) {
+        final String[] pathAndQuery = headers.path().split("\\?", 2);
+        return DefaultRoutingContext.of(virtualHost(), "example.com",
+                                        pathAndQuery[0], pathAndQuery.length == 2 ? pathAndQuery[1] : null,
+                                        headers, false);
     }
 }

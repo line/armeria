@@ -16,13 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
@@ -39,6 +40,8 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableSubscriber;
+
+import io.netty.buffer.ByteBuf;
 
 class PublisherBasedStreamMessageTest {
 
@@ -92,14 +95,16 @@ class PublisherBasedStreamMessageTest {
         }
 
         // Publisher should not be involved at all because we are aborting without subscribing.
-        verify(delegate, never()).subscribe(any());
+        verify(delegate, only()).subscribe(any(AbortableSubscriber.class));
     }
 
     @Test
     void notifyCancellation() {
+        final ByteBuf buf = newPooledBuffer();
         final DefaultStreamMessage<HttpData> delegate = new DefaultStreamMessage<>();
+        delegate.write(HttpData.wrap(buf));
         final PublisherBasedStreamMessage<HttpData> p = new PublisherBasedStreamMessage<>(delegate);
-        SubscriptionOptionTest.notifyCancellation(p);
+        SubscriptionOptionTest.notifyCancellation(buf, p);
     }
 
     @Test

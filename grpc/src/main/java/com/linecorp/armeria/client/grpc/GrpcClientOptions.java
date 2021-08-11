@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.ServiceDescriptor;
@@ -113,6 +114,20 @@ public final class GrpcClientOptions {
     public static final ClientOption<Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller>>
             GRPC_JSON_MARSHALLER_FACTORY = ClientOption.define("GRPC_JSON_MARSHALLER_FACTORY",
                                                                GrpcJsonMarshaller::of);
+
+    /**
+     * Sets the {@link GrpcClientStubFactory} that creates a gRPC client stub.
+     * If not specified, Armeria provides built-in factories for the following gRPC client stubs:
+     * <ul>
+     *   <li><a href="https://github.com/grpc/grpc-java">gRPC-Java</a></li>
+     *   <li><a href="https://github.com/salesforce/reactive-grpc">Reactive-gRPC</a></li>
+     *   <li><a href="https://github.com/grpc/grpc-kotlin">gRPC-Kotlin</a></li>
+     *   <li><a href="https://scalapb.github.io/">ScalaPB</a></li>
+     * </ul>
+     */
+    public static final ClientOption<GrpcClientStubFactory>
+            GRPC_CLIENT_STUB_FACTORY = ClientOption.define("GRPC_CLIENT_STUB_FACTORY",
+                                                           NullGrpcClientStubFactory.INSTANCE);
 
     private GrpcClientOptions() {}
 }

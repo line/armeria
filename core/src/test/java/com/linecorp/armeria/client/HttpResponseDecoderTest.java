@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
-import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -72,10 +71,6 @@ class HttpResponseDecoderTest {
                 CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
 
         final WebClientBuilder builder = WebClient.builder(server.uri(protocol));
-        // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
-        // which means that we have more chance to reproduce the bug if two threads are racing
-        // for notifying RESPONSE_END to listeners.
-        builder.decorator(ContentPreviewingClient.newDecorator(100));
         // In order to use a different thread to subscribe to the response.
         builder.decorator(RetryingClient.builder(strategy)
                                         .maxTotalAttempts(2)
@@ -89,7 +84,7 @@ class HttpResponseDecoderTest {
                 final Thread thread = responseStartedThread.get();
                 if (thread != null && thread != Thread.currentThread()) {
                     logger.error("{} Response ended in another thread: {} != {}",
-                                 ctx, thread, Thread.currentThread());
+                                 ctx, thread, Thread.currentThread(), new RuntimeException());
                     failed.set(true);
                 }
             });

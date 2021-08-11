@@ -70,6 +70,58 @@ class HttpHeadersBaseTest {
         assertThat(h1).isEqualTo(h2);
     }
 
+    @Test
+    void testGetLastOperations() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        headers.add("Foo", "1");
+
+        assertThat(headers.getLast("Foo")).isEqualTo("1");
+    }
+
+    @Test
+    void testGetLastOperationsWithEmptyHeaders() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        assertThat(headers.getLast("Foo")).isNull();
+    }
+
+    @Test
+    void testGetLastOperationsWithMultipleValues() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        headers.add("Foo", "1");
+        headers.add("Foo", "2");
+
+        assertThat(headers.getLast("Foo")).isEqualTo("2");
+    }
+
+    @Test
+    void testGetBooleanOperation() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        headers.add("foo", "100");
+        assertThat(headers.getBoolean("foo")).isNull();
+        assertThat(headers.getBoolean("foo", true)).isTrue();
+
+        headers.add("foo_true", "1");
+        assertThat(headers.getBoolean("foo_true")).isTrue();
+        assertThat(headers.containsBoolean("foo_true", true)).isTrue();
+        assertThat(headers.containsBoolean("foo_true", false)).isFalse();
+
+        headers.add("foo_false", "0");
+        assertThat(headers.getBoolean("foo_false")).isFalse();
+        assertThat(headers.containsBoolean("foo_false", false)).isTrue();
+        assertThat(headers.containsBoolean("foo_false", true)).isFalse();
+
+        headers.add("bar", "true");
+        headers.add("bar", "false");
+        assertThat(headers.getBoolean("bar")).isTrue();
+        assertThat(headers.getLastBoolean("bar")).isFalse();
+        assertThat(headers.getLastBoolean("baz", false)).isFalse();
+        assertThat(headers.containsBoolean("baz", true)).isFalse();
+
+        headers.add("baz", "false");
+        assertThat(headers.containsBoolean("baz", false)).isTrue();
+        assertThat(headers.containsBoolean("baz", true)).isFalse();
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test
@@ -720,6 +772,15 @@ class HttpHeadersBaseTest {
         assertThat(headers.uri()).isEqualTo(URI.create("https://netty.io/index.html"));
     }
 
+    @Test
+    void testContentDispositionObject() {
+        final HttpHeadersBase headers = newHttp2Headers();
+        final ContentDisposition contentDisposition = ContentDisposition.of("form-data", "fieldA", "text.txt");
+        headers.addObject(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition);
+        assertThat(headers.get(HttpHeaderNames.CONTENT_DISPOSITION))
+                .isSameAs(contentDisposition.asHeaderValue());
+    }
+
     private static void verifyAllPseudoHeadersPresent(HttpHeadersBase headers) {
         for (PseudoHeaderName pseudoName : PseudoHeaderName.values()) {
             assertThat(headers.get(pseudoName.value())).isNotNull();
@@ -728,7 +789,7 @@ class HttpHeadersBaseTest {
 
     static void verifyPseudoHeadersFirst(HttpHeadersBase headers) {
         AsciiString lastNonPseudoName = null;
-        for (Map.Entry<AsciiString, String> entry: headers) {
+        for (Map.Entry<AsciiString, String> entry : headers) {
             if (entry.getKey().isEmpty() || entry.getKey().charAt(0) != ':') {
                 lastNonPseudoName = entry.getKey();
             } else if (lastNonPseudoName != null) {
@@ -736,6 +797,22 @@ class HttpHeadersBaseTest {
                      " is after a non-pseudo header " + lastNonPseudoName);
             }
         }
+    }
+
+    @Test
+    void testCompareMediaTypes() {
+        // Sort by their quality factor.
+        assertThat(HttpHeadersBase.compareMediaType(MediaType.parse("application/octet-stream;q=0.8"),
+                                                    MediaType.parse("text/plain;q=0.9")))
+                .isGreaterThan(0);
+        // Sort by their coverage. (the number of wildcards)
+        assertThat(HttpHeadersBase.compareMediaType(MediaType.parse("text/*;q=0.9"),
+                                                    MediaType.parse("text/plain;q=0.9")))
+                .isGreaterThan(0);
+        // Preserve the original order
+        assertThat(HttpHeadersBase.compareMediaType(MediaType.parse("text/plain;q=0.9"),
+                                                    MediaType.parse("application/octet-stream;q=0.9")))
+                .isZero();
     }
 
     private static HttpHeadersBase newEmptyHeaders() {
@@ -752,6 +829,7 @@ class HttpHeadersBaseTest {
         headers.authority("netty.io");
         headers.add("name3", "value4");
         headers.scheme("https");
+        headers.add(HttpHeaderNames.PROTOCOL, "websocket");
         return headers;
     }
 }

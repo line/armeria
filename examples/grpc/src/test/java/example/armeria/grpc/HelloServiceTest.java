@@ -1,6 +1,7 @@
 package example.armeria.grpc;
 
 import static example.armeria.grpc.HelloServiceImpl.toMessage;
+import static example.armeria.grpc.Main.configureServices;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -9,9 +10,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.FutureCallback;
@@ -20,7 +20,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import example.armeria.grpc.Hello.HelloReply;
 import example.armeria.grpc.Hello.HelloRequest;
@@ -31,26 +33,13 @@ import io.grpc.stub.StreamObserver;
 
 class HelloServiceTest {
 
-    private static Server server;
-    private static HelloServiceStub helloService;
-
-    @BeforeAll
-    static void beforeClass() throws Exception {
-        server = Main.newServer(0, 0);
-        server.start().join();
-        helloService = Clients.newClient(uri(), HelloServiceStub.class);
-    }
-
-    @AfterAll
-    static void afterClass() {
-        if (server != null) {
-            server.stop().join();
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            configureServices(sb);
         }
-    }
-
-    private static String uri() {
-        return "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/';
-    }
+    };
 
     @Test
     void getReply() {
@@ -93,6 +82,7 @@ class HelloServiceTest {
 
     @Test
     void getLotsOfReplies() {
+        final HelloServiceStub helloService = helloService();
         final AtomicBoolean completed = new AtomicBoolean();
         helloService.lotsOfReplies(
                 HelloRequest.newBuilder().setName("Armeria").build(),
@@ -122,6 +112,7 @@ class HelloServiceTest {
 
     @Test
     void blockForLotsOfReplies() throws Exception {
+        final HelloServiceStub helloService = helloService();
         final BlockingQueue<HelloReply> replies = new LinkedBlockingQueue<>();
         final AtomicBoolean completed = new AtomicBoolean();
         helloService.lotsOfReplies(
@@ -159,6 +150,7 @@ class HelloServiceTest {
 
     @Test
     void sendLotsOfGreetings() {
+        final HelloServiceStub helloService = helloService();
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
@@ -195,6 +187,7 @@ class HelloServiceTest {
 
     @Test
     void bidirectionalHello() {
+        final HelloServiceStub helloService = helloService();
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
@@ -225,5 +218,13 @@ class HelloServiceTest {
         }
         request.onCompleted();
         await().untilTrue(completed);
+    }
+
+    private static HelloServiceStub helloService() {
+        return Clients.newClient(uri(), HelloServiceStub.class);
+    }
+
+    private static String uri() {
+        return server.httpUri(GrpcSerializationFormats.PROTO).toString();
     }
 }

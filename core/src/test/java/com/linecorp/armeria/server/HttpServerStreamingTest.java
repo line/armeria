@@ -80,7 +80,7 @@ class HttpServerStreamingTest {
                          .build();
 
     // Stream as much as twice of the heap.
-    private static final long STREAMING_CONTENT_LENGTH = Runtime.getRuntime().maxMemory() * 2;
+    private static final long STREAMING_CONTENT_LENGTH = Runtime.getRuntime().maxMemory();
     private static final int STREAMING_CONTENT_CHUNK_LENGTH =
             (int) Math.min(Integer.MAX_VALUE, STREAMING_CONTENT_LENGTH / 8);
 
@@ -164,7 +164,7 @@ class HttpServerStreamingTest {
 
         final byte[] content = new byte[maxContentLength + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
         assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
     }
 

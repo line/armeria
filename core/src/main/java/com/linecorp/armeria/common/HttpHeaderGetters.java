@@ -42,12 +42,28 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     boolean isEndOfStream();
 
     /**
+     * Returns the value of the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a> header,
+     * or {@code -1} if this value is not known.
+     */
+    long contentLength();
+
+    /**
      * Returns the parsed {@code "content-type"} header.
      *
      * @return the parsed {@link MediaType} if present and valid, or {@code null} otherwise.
      */
     @Nullable
     MediaType contentType();
+
+    /**
+     * Returns the parsed {@code "content-disposition"} header.
+     *
+     * @return the parsed {@link MediaType} if present and valid. {@code null} if not present or
+     *         failed to parse {@code "content-disposition"} header.
+     */
+    @Nullable
+    ContentDisposition contentDisposition();
 
     /**
      * Returns the value of a header with the specified {@code name}. If there are more than one value for
@@ -72,6 +88,28 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     String get(CharSequence name, String defaultValue);
 
     /**
+     * Returns the value of a header with the specified {@code name}. If there are more than one value for
+     * the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the last header value if the header is found, or {@code null} if there's no such header
+     */
+    @Override
+    @Nullable
+    String getLast(CharSequence name);
+
+    /**
+     * Returns the value of a header with the specified {@code name}. If there are more than one value for
+     * the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the last header value or {@code defaultValue} if there is no such header
+     */
+    @Override
+    String getLast(CharSequence name, String defaultValue);
+
+    /**
      * Returns all values for the header with the specified name. The returned {@link List} can't be modified.
      *
      * @param name the name of the header to retrieve
@@ -79,6 +117,78 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      */
     @Override
     List<String> getAll(CharSequence name);
+
+    /**
+     * Returns the {@code boolean} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the {@code boolean} value of the first value in insertion order or {@code null} if there is
+     *         no such header or it can't be converted to {@code boolean}.
+     */
+    @Override
+    @Nullable
+    Boolean getBoolean(CharSequence name);
+
+    /**
+     * Returns the {@code boolean} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue}
+     *         if there is no such header or it can't be converted to {@code boolean}.
+     */
+    @Override
+    boolean getBoolean(CharSequence name, boolean defaultValue);
+
+    /**
+     * Returns the {@code boolean} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the {@code boolean} value of the last value in insertion order or {@code null} if there is
+     *         no such header or it can't be converted to {@code boolean}.
+     */
+    @Override
+    @Nullable
+    Boolean getLastBoolean(CharSequence name);
+
+    /**
+     * Returns the {@code boolean} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the {@code boolean} value of the last value in insertion order or {@code defaultValue}
+     *         if there is no such header or it can't be converted to {@code boolean}.
+     */
+    @Override
+    boolean getLastBoolean(CharSequence name, boolean defaultValue);
+
+    /**
+     * Returns the {@code int} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the {@code int} value of the last value in insertion order or {@code null} if there is no such
+     *         header or it can't be converted to {@code int}.
+     */
+    @Override
+    @Nullable
+    Integer getLastInt(CharSequence name);
+
+    /**
+     * Returns the {@code int} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the {@code int} value of the last value in insertion order or {@code defaultValue} if there is
+     *         no such header or it can't be converted to {@code int}.
+     */
+    @Override
+    int getLastInt(CharSequence name, int defaultValue);
 
     /**
      * Returns the {@code int} value of a header with the specified {@code name}. If there are more than one
@@ -129,6 +239,30 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     long getLong(CharSequence name, long defaultValue);
 
     /**
+     * Returns the {@code long} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the {@code long} value of the last value in insertion order or {@code null} if there is no such
+     *         header or it can't be converted to {@code long}.
+     */
+    @Override
+    @Nullable
+    Long getLastLong(CharSequence name);
+
+    /**
+     * Returns the {@code long} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the {@code long} value of the last value in insertion order or {@code defaultValue} if there is
+     *         no such header or it can't be converted to {@code long}.
+     */
+    @Override
+    long getLastLong(CharSequence name, long defaultValue);
+
+    /**
      * Returns the {@code float} value of a header with the specified {@code name}. If there are more than one
      * value for the specified {@code name}, the first value in insertion order is returned.
      *
@@ -151,6 +285,30 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      */
     @Override
     float getFloat(CharSequence name, float defaultValue);
+
+    /**
+     * Returns the {@code float} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the {@code float} value of the last value in insertion order or {@code null} if there is no
+     *         such header or it can't be converted to {@code float}.
+     */
+    @Override
+    @Nullable
+    Float getLastFloat(CharSequence name);
+
+    /**
+     * Returns the {@code float} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the {@code float} value of the last value in insertion order or {@code defaultValue} if there
+     *         is no such header or it can't be converted to {@code float}.
+     */
+    @Override
+    float getLastFloat(CharSequence name, float defaultValue);
 
     /**
      * Returns the {@code double} value of a header with the specified {@code name}. If there are more than one
@@ -177,6 +335,30 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     double getDouble(CharSequence name, double defaultValue);
 
     /**
+     * Returns the {@code double} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the {@code double} value of the last value in insertion order or {@code null} if there is no
+     *         such header or it can't be converted to {@code double}.
+     */
+    @Override
+    @Nullable
+    Double getLastDouble(CharSequence name);
+
+    /**
+     * Returns the {@code double} value of a header with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the {@code double} value of the last value in insertion order or {@code defaultValue} if there
+     *         is no such header or it can't be converted to {@code double}.
+     */
+    @Override
+    double getLastDouble(CharSequence name, double defaultValue);
+
+    /**
      * Returns the value of a header with the specified {@code name} in milliseconds. If there are more than
      * one value for the specified {@code name}, the first value in insertion order is returned.
      *
@@ -199,6 +381,30 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      */
     @Override
     long getTimeMillis(CharSequence name, long defaultValue);
+
+    /**
+     * Returns the value of a header with the specified {@code name} in milliseconds. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @return the milliseconds value of the last value in insertion order or {@code null} if there is no such
+     *         header or it can't be converted to milliseconds.
+     */
+    @Override
+    @Nullable
+    Long getLastTimeMillis(CharSequence name);
+
+    /**
+     * Returns the value of a header with the specified {@code name} in milliseconds. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the name of the header to retrieve
+     * @param defaultValue the default value
+     * @return the milliseconds value of the last value in insertion order or {@code defaultValue} if there is
+     *         no such header or it can't be converted to milliseconds.
+     */
+    @Override
+    long getLastTimeMillis(CharSequence name, long defaultValue);
 
     /**
      * Returns {@code true} if a header with the {@code name} exists, {@code false} otherwise.
@@ -226,6 +432,16 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      */
     @Override
     boolean containsObject(CharSequence name, Object value);
+
+    /**
+     * Returns {@code true} if a header with the {@code name} and {@code value} exists.
+     *
+     * @param name the header name
+     * @param value the header value
+     * @return {@code true} if the header exists. {@code false} otherwise
+     */
+    @Override
+    boolean containsBoolean(CharSequence name, boolean value);
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists.

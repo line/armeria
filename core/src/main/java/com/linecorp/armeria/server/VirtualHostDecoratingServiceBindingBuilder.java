@@ -177,6 +177,16 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
         return (VirtualHostDecoratingServiceBindingBuilder) super.addRoute(route);
     }
 
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder exclude(String pathPattern) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.exclude(pathPattern);
+    }
+
+    @Override
+    public VirtualHostDecoratingServiceBindingBuilder exclude(Route excludedRoute) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.exclude(excludedRoute);
+    }
+
     /**
      * Sets the {@code decorator} and returns {@link VirtualHostBuilder} that this
      * {@link VirtualHostDecoratingServiceBindingBuilder} was created from.

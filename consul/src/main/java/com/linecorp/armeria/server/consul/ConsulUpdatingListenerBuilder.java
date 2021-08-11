@@ -23,6 +23,8 @@ import java.time.Duration;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -33,7 +35,7 @@ import com.linecorp.armeria.server.Server;
 
 /**
  * Builds a new {@link ConsulUpdatingListener}, which registers the server to Consul cluster.
- * <h3>Examples</h3>
+ * <h2>Examples</h2>
  * <pre>{@code
  * ConsulUpdatingListener listener = ConsulUpdatingListener.builder(consulUri, "myService")
  *                                                         .build();
@@ -55,6 +57,7 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
     private String checkInterval = DEFAULT_CHECK_INTERVAL_MILLIS + "ms";
     private HttpMethod checkMethod = HttpMethod.HEAD;
     private final ConsulClientBuilder consulClientBuilder;
+    private final ImmutableSet.Builder<String> tagsBuilder = ImmutableSet.builder();
 
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
@@ -139,6 +142,26 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
         return this;
     }
 
+    /**
+     * Adds a list of tags to the list of tags associated with the service on registration.
+     *
+     * @param tags the tags to add
+     */
+    public ConsulUpdatingListenerBuilder tags(String... tags) {
+        tagsBuilder.add(requireNonNull(tags, "tags"));
+        return this;
+    }
+
+    /**
+     * Adds a list of tags to the list of tags associated with the service on registration.
+     *
+     * @param tags the tags to add
+     */
+    public ConsulUpdatingListenerBuilder tags(Iterable<String> tags) {
+        tagsBuilder.addAll(requireNonNull(tags, "tags"));
+        return this;
+    }
+
     @Override
     public ConsulUpdatingListenerBuilder consulApiVersion(String consulApiVersion) {
         consulClientBuilder.consulApiVersion(consulApiVersion);
@@ -157,6 +180,6 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
      */
     public ConsulUpdatingListener build() {
         return new ConsulUpdatingListener(consulClientBuilder.build(), serviceName, serviceEndpoint,
-                                          checkUri, checkMethod, checkInterval);
+                                          checkUri, checkMethod, checkInterval, tagsBuilder.build().asList());
     }
 }

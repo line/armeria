@@ -55,7 +55,7 @@ public class ArmeriaAutoConfigurationWithConsumerTest {
     public static class TestConfiguration {
         @Bean
         public Consumer<ServerBuilder> customizer() {
-            return sb -> sb.service("/customizer", ((ctx, req) -> HttpResponse.of(HttpStatus.OK)));
+            return sb -> sb.service("/customizer", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
         }
     }
 

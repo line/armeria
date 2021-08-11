@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -69,16 +70,15 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.incubator.channel.uring.IOUring;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -174,9 +174,8 @@ public final class Flags {
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
             System.getProperty(PREFIX + "requestContextStorageProvider");
 
-    private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
-    private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
-                                                        value -> isEpollAvailable() || !value);
+    private static final boolean USE_EPOLL = getBoolean("useEpoll", TransportType.EPOLL.isAvailable(),
+                                                        value -> TransportType.EPOLL.isAvailable() || !value);
 
     private static final String DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? "epoll" : "nio";
     private static final String TRANSPORT_TYPE_NAME = getNormalized("transportType",
@@ -269,10 +268,32 @@ public final class Flags {
                     DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
+    private static final int DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION = 0; // Disabled
+    private static final int DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION =
+            getInt("defaultMaxServerNumRequestsPerConnection",
+                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
+                   value -> value >= 0);
+
+    private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
+            getInt("defaultMaxClientNumRequestsPerConnection",
+                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
             getLong("defaultMaxServerConnectionAgeMillis",
-                    DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS,
+                    DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS =
+            getLong("defaultMaxClientConnectionAgeMillis",
+                    DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
+    private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
+            getLong("defaultServerConnectionDrainDurationMicros",
+                    DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -414,36 +435,39 @@ public final class Flags {
                             }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
                            .collect(toImmutableSet()));
 
+    private static final boolean
+            DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
+
+    private static final boolean DEFAULT_USE_DEFAULT_SOCKET_OPTIONS = true;
+    private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
+            getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
+
     static {
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
             case "io_uring":
-                if (isIoUringAvailable()) {
+                if (TransportType.IO_URING.isAvailable()) {
                     logger.info("Using io_uring");
                     type = TransportType.IO_URING;
                 } else {
-                    final Throwable cause = IOUring.unavailabilityCause();
+                    final Throwable cause = TransportType.IO_URING.unavailabilityCause();
                     if (cause != null) {
-                        logger.info("io_uring not available: {}", Exceptions.peel(cause).toString());
+                        logger.info("io_uring not available: {}", cause.toString());
                     } else {
                         logger.info("io_uring not available: ?");
                     }
                 }
                 // fallthrough
             case "epoll":
-                if (isEpollAvailable() && type == null) {
+                if (TransportType.EPOLL.isAvailable() && type == null) {
                     logger.info("Using /dev/epoll");
                     type = TransportType.EPOLL;
                 } else {
-                    final Throwable cause = Epoll.unavailabilityCause();
+                    final Throwable cause = TransportType.EPOLL.unavailabilityCause();
                     if (cause != null) {
-                        logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
+                        logger.info("/dev/epoll not available: {}", cause.toString());
                     } else {
-                        if (HAS_WSLENV) {
-                            logger.info("/dev/epoll not available: WSL not supported");
-                        } else {
-                            logger.info("/dev/epoll not available: ?");
-                        }
+                        logger.info("/dev/epoll not available: ?");
                     }
                 }
                 // fallthrough
@@ -455,19 +479,6 @@ public final class Flags {
                 break;
         }
         TRANSPORT_TYPE = type;
-    }
-
-    private static boolean isEpollAvailable() {
-        if (SystemInfo.isLinux()) {
-            // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
-            // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
-            return Epoll.isAvailable() && !HAS_WSLENV;
-        }
-        return false;
-    }
-
-    private static boolean isIoUringAvailable() {
-        return SystemInfo.isLinux() && IOUring.isAvailable();
     }
 
     /**
@@ -856,10 +867,10 @@ public final class Flags {
 
     /**
      * Returns the default value for the PING interval.
-     * A <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
+     * A <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame
      * is sent for HTTP/2 server and client or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1 client.
+     * an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1 client.
      *
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
      * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.
@@ -873,11 +884,39 @@ public final class Flags {
     }
 
     /**
+     * Returns the server-side maximum allowed number of requests that can be served through one connection.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#maxNumRequestsPerConnection(int)}.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerNumRequestsPerConnection=<integer>} JVM option
+     * to override the default value. {@code 0} disables the limit.
+     */
+    public static int defaultMaxServerNumRequestsPerConnection() {
+        return DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION;
+    }
+
+    /**
+     * Returns the client-side maximum allowed number of requests that can be sent through one connection.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#maxNumRequestsPerConnection(int)}.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientNumRequestsPerConnection=<integer>} JVM option
+     * to override the default value. {@code 0} disables the limit.
+     */
+    public static int defaultMaxClientNumRequestsPerConnection() {
+        return DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION;
+    }
+
+    /**
      * Returns the default server-side max age of a connection for keep-alive in milliseconds.
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS}.
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerConnectionAgeMillis=<integer>} JVM option
      * to override the default value. If the specified value was smaller than 1 second,
      * bumps the max connection age to 1 second.
@@ -886,6 +925,50 @@ public final class Flags {
      */
     public static long defaultMaxServerConnectionAgeMillis() {
         return DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side max age of a connection for keep-alive in milliseconds.
+     * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of the time since the connection was established.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientConnectionAgeMillis=<integer>} JVM option
+     * to override the default value. If the specified value was smaller than 1 second,
+     * bumps the max connection age to 1 second.
+     *
+     * @see ClientFactoryBuilder#maxConnectionAgeMillis(long)
+     */
+    public static long defaultMaxClientConnectionAgeMillis() {
+        return DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS;
+    }
+
+    /**
+     * Returns the default server-side graceful connection shutdown drain duration in microseconds.
+     * If the value of this flag is greater than {@code 0}, a connection shutdown will have a drain period
+     * when client will be notified about the shutdown, but in flight requests will still be accepted.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
+     * JVM option to override the default value.
+     *
+     * <p>
+     * At the beginning of the drain period server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * After the drain period end server stops accepting new requests.
+     * </p>
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain period microseconds
+     * is always {@code 0}, which means the connection will be closed immediately as soon as
+     * the current in-progress request is handled.
+     * </p>
+     *
+     * @see ServerBuilder#connectionDrainDuration(Duration)
+     * @see ServerBuilder#connectionDrainDurationMicros(long)
+     */
+    public static long defaultServerConnectionDrainDurationMicros() {
+        return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
     }
 
     /**
@@ -1102,7 +1185,11 @@ public final class Flags {
      * to override the default value.
      *
      * @see ExceptionVerbosity
+     *
+     * @deprecated Use {@link LoggingService} or log exceptions using
+     *             {@link ServerBuilder#exceptionHandler(com.linecorp.armeria.server.ExceptionHandler)}.
      */
+    @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
     }
@@ -1114,7 +1201,7 @@ public final class Flags {
      * <p>The default value of this flag is {@code null}, which means all valid IPv4 addresses are
      * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
      * to override the default value. The {@code csv} should be
-     * <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing(CIDR)</a>s or
+     * <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing(CIDR)</a>s or
      * exact IP addresses separated by commas. For example,
      * {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
      */
@@ -1175,7 +1262,7 @@ public final class Flags {
 
     /**
      * Returns whether to allow the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#tlsAllowUnsafeCiphers(boolean)}.
      *
@@ -1198,6 +1285,43 @@ public final class Flags {
      */
     public static Set<TransientServiceOption> transientServiceOptions() {
         return TRANSIENT_SERVICE_OPTIONS;
+    }
+
+    /**
+     * Returns whether default socket options defined by Armeria are enabled.
+     * If enabled, the following socket options are set automatically when
+     * {@code /dev/epoll} or {@code io_uring} is in use:
+     * <ul>
+     *   <li>TCP_USER_TIMEOUT</li>
+     *   <li>TCP_KEEPIDLE</li>
+     *   <li>TCP_KEEPINTVL</li>
+     * </ul>
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultSocketOptions=false}
+     * JVM option to disable it.</p>
+     */
+    public static boolean useDefaultSocketOptions() {
+        return USE_DEFAULT_SOCKET_OPTIONS;
+    }
+
+    /**
+     * Returns whether to order route decorators with legacy order that the first decorator is first applied to.
+     * For example, if a service and decorators are defined like the followings:
+     * <pre>{@code
+     * Server server =
+     *     Server.builder()
+     *           .service("/users", userService)
+     *           .decoratorUnder("/", loggingDecorator)
+     *           .decoratorUnder("/", authDecorator)
+     *           .decoratorUnder("/", traceDecorator)
+     *           .build();
+     * }</pre>
+     * A request will go through the below decorators' order to reach the {@code userService}.
+     * {@code request -> loggingDecorator -> authDecorator -> traceDecorator -> userService}
+     */
+    public static boolean useLegacyRouteDecoratorOrdering() {
+        return DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
     }
 
     @Nullable
@@ -1241,7 +1365,7 @@ public final class Flags {
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
-        return ExceptionVerbosity.valueOf(mode.toUpperCase());
+        return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {
@@ -1263,7 +1387,7 @@ public final class Flags {
     }
 
     private static int getInt(String name, int defaultValue, IntPredicate validator) {
-        return Integer.parseInt(getNormalized(name, String.valueOf(defaultValue), value -> {
+        return Integer.parseInt(getNormalized(name, StringUtil.toString(defaultValue), value -> {
             try {
                 return validator.test(Integer.parseInt(value));
             } catch (Exception e) {
@@ -1274,7 +1398,7 @@ public final class Flags {
     }
 
     private static long getLong(String name, long defaultValue, LongPredicate validator) {
-        return Long.parseLong(getNormalized(name, String.valueOf(defaultValue), value -> {
+        return Long.parseLong(getNormalized(name, StringUtil.toString(defaultValue), value -> {
             try {
                 return validator.test(Long.parseLong(value));
             } catch (Exception e) {

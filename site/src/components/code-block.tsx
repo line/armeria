@@ -16,6 +16,7 @@ import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
 import groovy from 'react-syntax-highlighter/dist/esm/languages/prism/groovy';
 import http from 'react-syntax-highlighter/dist/esm/languages/prism/http';
 import java from 'react-syntax-highlighter/dist/esm/languages/prism/java';
+import javascript from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
 import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import kotlin from 'react-syntax-highlighter/dist/esm/languages/prism/kotlin';
 import markup from 'react-syntax-highlighter/dist/esm/languages/prism/markup';
@@ -41,6 +42,7 @@ const supportedLanguages = {
   groovy,
   http,
   java,
+  javascript,
   json,
   kotlin,
   markup,
@@ -70,6 +72,12 @@ function filterLanguage(language?: string) {
   return isSupported ? language : 'none';
 }
 
+function getLineStyle(show?: any) {
+  if (show === 1 || show === 'true')
+    return { marginRight: '0.5em', minWidth: '1.4em' };
+  return { display: 'none' };
+}
+
 // Override some CSS properties from the Prism style.
 const newPrismTheme = Object.entries(prismTheme).reduce(
   (result, [key, value]) => {
@@ -85,7 +93,8 @@ const newPrismTheme = Object.entries(prismTheme).reduce(
       tabSize: 2,
       background: undefined,
       textShadow: undefined,
-      margin: undefined,
+      marginTop: undefined,
+      marginBottom: undefined,
       padding: undefined,
     };
     return result;
@@ -93,13 +102,39 @@ const newPrismTheme = Object.entries(prismTheme).reduce(
   {},
 );
 
+const lineHighlights = {
+  backgroundColor: '#616161',
+  display: 'block',
+  width: '760px',
+};
+
+function getTargetLines(lines: string): string[] {
+  const range = (start, end, length = end - start + 1) =>
+    Array.from({ length }, (_, i) => start + i);
+
+  const targetLines = lines.split(',').reduce((acc, cur) => {
+    if (!cur.includes('-')) {
+      acc.push(parseInt(cur, 10));
+      return acc;
+    }
+    const [start, end] = cur.split('-');
+    acc.push(...range(parseInt(start, 10), parseInt(end, 10)));
+    return acc;
+  }, []);
+
+  return targetLines;
+}
+
 interface CodeBlockProps extends SyntaxHighlighterProps {
   filename?: string;
+  highlight?: string;
+  showlineno?: any;
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
+  const targetLines = props.highlight ? getTargetLines(props.highlight) : [];
 
   const onCopyCallback = useCallback(() => {
     setCopied(true);
@@ -113,6 +148,12 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   if (code.length === 0) {
     return null;
   }
+  const applyHighlightStyle = (lineNumber: number) => {
+    if (lineNumber !== 0 && targetLines.includes(`${lineNumber}`)) {
+      return { style: lineHighlights };
+    }
+    return {};
+  };
 
   return (
     <div
@@ -137,6 +178,9 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
         {...props}
         style={newPrismTheme}
         language={filterLanguage(props.language)}
+        showLineNumbers={targetLines.length > 0 ? true : props.showlineno}
+        lineNumberStyle={getLineStyle(props.showlineno)}
+        lineProps={(lineNumber) => applyHighlightStyle(lineNumber)}
       >
         {code}
       </Prism>

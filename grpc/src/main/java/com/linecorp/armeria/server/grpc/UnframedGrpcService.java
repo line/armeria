@@ -26,10 +26,11 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -46,12 +47,15 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
@@ -181,10 +185,12 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
-            if (t != null) {
-                responseFuture.completeExceptionally(t);
-            } else {
-                frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
+            try (SafeCloseable ignore = ctx.push()) {
+                if (t != null) {
+                    responseFuture.completeExceptionally(t);
+                } else {
+                    frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
+                }
             }
             return null;
         });
@@ -221,19 +227,21 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             return;
         }
 
-        grpcResponse.aggregate().handleAsync(
+        grpcResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(
                 (framedResponse, t) -> {
-                    if (t != null) {
-                        res.completeExceptionally(t);
-                    } else {
-                        deframeAndRespond(ctx, framedResponse, res);
+                    try (SafeCloseable ignore = ctx.push()) {
+                        if (t != null) {
+                            res.completeExceptionally(t);
+                        } else {
+                            deframeAndRespond(ctx, framedResponse, res);
+                        }
                     }
                     return null;
-                },
-                ctx.eventLoop());
+                });
     }
 
-    private static void deframeAndRespond(
+    @VisibleForTesting
+    static void deframeAndRespond(
             ServiceRequestContext ctx,
             AggregatedHttpResponse grpcResponse,
             CompletableFuture<HttpResponse> res) {
@@ -243,6 +251,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
+            PooledObjects.close(grpcResponse.content());
             final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
             final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
             message.append(", ").append(httpStatus.reasonPhrase()).append(LINE_SEPARATOR);
@@ -279,7 +288,8 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE);
         grpcResponse.toHttpResponse().decode(deframer, ctx.alloc())
-                    .subscribe(singleSubscriber(unframedHeaders, res), ctx.eventLoop());
+                    .subscribe(singleSubscriber(unframedHeaders, res), ctx.eventLoop(),
+                               SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     private static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
@@ -295,7 +305,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
                 final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
-                unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
+                unframedHeaders.contentLength(unframedContent.length());
                 res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
             }
 

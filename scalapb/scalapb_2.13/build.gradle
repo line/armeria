@@ -1,11 +1,5 @@
-plugins {
-    id 'scala'
-    id 'cz.alenkacz.gradle.scalafmt' version '1.14.0'
-}
-
 dependencies {
     implementation project(':grpc')
-    implementation 'org.scala-lang:scala-library:2.13.3'
 
     // ScalaPB
     api "com.thesamet.scalapb:scalapb-json4s_2.13"
@@ -15,42 +9,10 @@ dependencies {
     testImplementation 'io.monix:monix-reactive_2.13'
 }
 
-compileScala.targetCompatibility = 1.8
-ScalaCompileOptions.metaClass.useAnt = false
-
-tasks.withType(ScalaCompile) {
-    scalaCompileOptions.with {
-        // Disable incremental compilation to avoid intermittent compile errors.
-        force = true
-    }
-}
-
 sourceSets {
     test {
         scala {
             srcDirs "${protobuf.generatedFilesBaseDir}/test/scalapb"
-        }
-    }
-}
-
-// Run `scalafmt` to automatically format scala code from source sets
-// https://github.com/alenkacz/gradle-scalafmt#tasks
-project.ext.getLintTask().dependsOn tasks.checkScalafmt
-
-task aggregatedScaladocs(
-        type: ScalaDoc,
-        description: 'Generate scaladocs from all child projects',
-        group: 'Documentation') {
-    destinationDir = file("$buildDir/docs/scaladoc")
-    title = "$project.name $version API"
-
-    subprojects.each { proj ->
-        proj.tasks.withType(ScalaDoc).each {
-            source += proj.sourceSets.main.allJava
-            source += proj.sourceSets.main.allScala
-            classpath += proj.sourceSets.main.compileClasspath
-            excludes += scaladoc.excludes
-            includes += scaladoc.includes
         }
     }
 }

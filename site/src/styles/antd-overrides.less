@@ -65,6 +65,9 @@
 @marketing-block-width: 532px;
 @marketing-block-margin: 100px;
 
+@import '../components/steps.module.less';
+@steps-description-max-width: 105px;
+
 :global(.ant-typography) {
   code::before,
   code::after,
@@ -142,5 +145,17 @@ h6 {
   }
   .showOnReducedMotion {
     display: initial;
+  }
+}
+
+.tweet-box {
+  // No sidebar
+  @media (max-width: @layout-width-0-max) {
+    width: 100%;
+  }
+
+  // Single or double sidebar
+  @media (min-width: @layout-width-1-min) {
+    width: 40%;
   }
 }

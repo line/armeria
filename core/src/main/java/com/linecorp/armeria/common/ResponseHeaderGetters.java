@@ -28,4 +28,12 @@ interface ResponseHeaderGetters extends HttpHeaderGetters {
      * @throws IllegalStateException if there is no such header.
      */
     HttpStatus status();
+
+    /**
+     * Returns the parsed
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.
+     *
+     * @return a {@link Cookies} or an empty {@link Cookies} if there is no such header.
+     */
+    Cookies cookies();
 }

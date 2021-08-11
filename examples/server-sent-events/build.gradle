@@ -7,6 +7,7 @@ dependencies {
     implementation 'io.projectreactor:reactor-core'
     runtimeOnly 'org.slf4j:slf4j-simple'
 
+    testImplementation project(':junit5')
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
     testImplementation 'org.assertj:assertj-core'
@@ -14,5 +15,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.server.sse.Main'
+    mainClass.set('example.armeria.server.sse.Main')
 }

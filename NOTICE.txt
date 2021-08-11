@@ -20,7 +20,7 @@ License for the specific language governing permissions and limitations
 under the License.
 
 Also, please refer to each LICENSE.<component>.<licenseType>.txt file, which
-is located in the 'licenses' directory of the distribution file, for the 
+is located in the 'licenses' directory of the distribution file, for the
 license terms of the components that this product depends on.
 
 
@@ -88,6 +88,11 @@ This product contains a modified part of Guava, distributed by Google:
   * License: licenses/LICENSE.guava.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/google/guava
 
+This product contains a modified part of Helidon Multipart, distributed by Oracle, Inc:
+
+  * License: license/LICENSE.helidon.al20.txt (Apache License v2.0)
+  * Homepage: https://helidon.io/
+
 This product contains a modified part of json-minify, distributed by Kyle Simpson:
 
   * License: licenses/LICENSE.json-minify.mit.txt (MIT License)
@@ -103,6 +108,11 @@ This product contains a modified part of RxJava, distributed by RxJava Contribut
   * License: licenses/LICENSE.rxjava.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/ReactiveX/RxJava
 
+This product contains a modified part of Sangria Jackson, distributed by Sangria Contributors:
+
+  * License: licenses/LICENSE.sangria.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/sangria-graphql/sangria-jackson
+
 This product contains a modified part of Spring Boot, distributed by Pivotal Software, Inc:
 
   * License: licenses/LICENSE.spring.al20.txt (Apache License v2.0)
@@ -117,6 +127,11 @@ This product contains a modified part of OkHttp, distributed by Square, Inc:
 
   * License: license/LICENSE.okhttp.al20.txt (Apache License v2.0)
   * Homepage: https://square.github.io/okhttp
+
+This product contains a modified part of Logback, distributed by QOS.ch, Inc:
+
+  * License: license/LICENSE.logback.lgpl.txt (GNU Lesser General Public License v2.1)
+  * Homepage: https://logback.qos.ch/
 
 
 Dependencies
@@ -157,6 +172,11 @@ This product depends on completable-futures, distributed by Spotify AB:
   * License: license/LICENSE.completable-futures.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/spotify/completable-futures
 
+This product depends on dgs-framework, distributed by Netflix:
+
+  * License: licenses/LICENSE.dgs.al20.txt (Apache License v2.0)
+  * Homepage: https://netflix.github.io/dgs/
+
 This product depends on Dropwizard Metrics, distributed by Coda Hale:
 
   * License: licenses/LICENSE.dropwizard.al20.txt (Apache License v2.0)
@@ -174,8 +194,18 @@ This product depends on JCTools, distributed by Nitsan Wakart and contributors:
 
 This product depends on FindBugs-JSR305, distributed by
 
-  * License: licenses/LICENSE.jsr305.al20.txt (Apache License v2.0)
+  * License: licenses/LICENSE.jsr305.bsd.txt (New BSD License)
   * Homepage: http://findbugs.sourceforge.net/
+
+This product depends on graphql-java, distributed by Andreas Marek:
+
+  * License: licenses/LICENSE.graphql-java.mit.txt (MIT License)
+  * Homepage: https://www.graphql-java.com/
+
+This product depends on graphql-kotlin, distributed by ExpediaGroup:
+
+  * License: licenses/LICENSE.graphql-kotlin.al20.txt (Apache License v2.0)
+  * Homepage: https://opensource.expediagroup.com/graphql-kotlin/
 
 This product depends on gRPC, distributed by Google:
 
@@ -306,6 +336,11 @@ This product depends on SLF4J, distributed by QOS.ch:
 
   * License: licenses/LICENSE.slf4j.mit.txt (MIT License)
   * Homepage: https://www.slf4j.org/
+
+This product depends on Sangria GraphQL, distributed by Sangria Contributors:
+
+  * License: licenses/LICENSE.sangria.al20.txt (Apache License v2.0)
+  * Homepage: https://sangria-graphql.github.io/
 
 This product depends on Spring Boot, distributed by Pivotal Software, Inc:
 

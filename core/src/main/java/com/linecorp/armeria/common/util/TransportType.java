@@ -15,100 +15,96 @@
  */
 package com.linecorp.armeria.common.util;
 
-import java.util.Set;
 import java.util.concurrent.ThreadFactory;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.TransportTypeProvider;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.epoll.EpollSocketChannel;
-import io.netty.channel.nio.NioEventLoop;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.incubator.channel.uring.IOUringDatagramChannel;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
-import io.netty.incubator.channel.uring.IOUringServerSocketChannel;
-import io.netty.incubator.channel.uring.IOUringSocketChannel;
 
 /**
  * Native transport types.
  */
 public enum TransportType {
 
-    NIO(NioServerSocketChannel.class, NioSocketChannel.class, NioDatagramChannel.class,
-        NioEventLoopGroup::new, NioEventLoopGroup.class, NioEventLoop.class),
+    NIO(TransportTypeProvider.NIO),
+    EPOLL(TransportTypeProvider.EPOLL),
+    IO_URING(TransportTypeProvider.IO_URING);
 
-    EPOLL(EpollServerSocketChannel.class, EpollSocketChannel.class, EpollDatagramChannel.class,
-          EpollEventLoopGroup::new, EpollEventLoopGroup.class, ChannelUtil.epollEventLoopClass()),
+    private final TransportTypeProvider provider;
 
-    IO_URING(IOUringServerSocketChannel.class, IOUringSocketChannel.class, IOUringDatagramChannel.class,
-             IOUringEventLoopGroup::new, IOUringEventLoopGroup.class, ChannelUtil.ioUringEventLoopClass());
-
-    private final Class<? extends ServerChannel> serverChannelType;
-    private final Class<? extends SocketChannel> socketChannelType;
-    private final Class<? extends DatagramChannel> datagramChannelType;
-    private final Set<Class<? extends EventLoopGroup>> eventLoopGroupClasses;
-    private final BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> eventLoopGroupConstructor;
-
-    @SafeVarargs
-    TransportType(Class<? extends ServerChannel> serverChannelType,
-                  Class<? extends SocketChannel> socketChannelType,
-                  Class<? extends DatagramChannel> datagramChannelType,
-                  BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> eventLoopGroupConstructor,
-                  Class<? extends EventLoopGroup>... eventLoopGroupClasses) {
-        this.serverChannelType = serverChannelType;
-        this.socketChannelType = socketChannelType;
-        this.datagramChannelType = datagramChannelType;
-        this.eventLoopGroupClasses = ImmutableSet.copyOf(eventLoopGroupClasses);
-        this.eventLoopGroupConstructor = eventLoopGroupConstructor;
+    TransportType(TransportTypeProvider provider) {
+        this.provider = provider;
     }
 
     /**
      * Returns the {@link ServerChannel} class for {@code eventLoopGroup}.
+     *
+     * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
+     *                               its {@link TransportType} is not currently available.
      */
     public static Class<? extends ServerChannel> serverChannelType(EventLoopGroup eventLoopGroup) {
-        return find(eventLoopGroup).serverChannelType;
+        return find(eventLoopGroup).serverChannelType();
     }
 
     /**
      * Returns the {@link ServerChannel} class that is available for this transport type.
+     *
+     * @throws IllegalStateException if this {@link TransportType} is not currently available.
      */
     public Class<? extends ServerChannel> serverChannelType() {
-        return serverChannelType;
+        return provider.serverChannelType();
     }
 
     /**
      * Returns the available {@link SocketChannel} class for {@code eventLoopGroup}.
+     *
+     * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
+     *                               its {@link TransportType} is not currently available.
      */
     public static Class<? extends SocketChannel> socketChannelType(EventLoopGroup eventLoopGroup) {
-        return find(eventLoopGroup).socketChannelType;
+        return find(eventLoopGroup).socketChannelType();
+    }
+
+    /**
+     * Returns the {@link SocketChannel} class that is available for this transport type.
+     *
+     * @throws IllegalStateException if this {@link TransportType} is not currently available.
+     */
+    public Class<? extends SocketChannel> socketChannelType() {
+        return provider.socketChannelType();
     }
 
     /**
      * Returns the available {@link DatagramChannel} class for {@code eventLoopGroup}.
+     *
+     * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
+     *                               its {@link TransportType} is not currently available.
      */
     public static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
-        return find(eventLoopGroup).datagramChannelType;
+        return find(eventLoopGroup).datagramChannelType();
     }
 
     /**
-     * Returns whether the specified {@link EventLoopGroup} supports any {@link TransportType}.
+     * Returns the {@link DatagramChannel} class that is available for this transport type.
+     *
+     * @throws IllegalStateException if this {@link TransportType} is not currently available.
+     */
+    public Class<? extends DatagramChannel> datagramChannelType() {
+        return provider.datagramChannelType();
+    }
+
+    /**
+     * Returns whether the specified {@link EventLoopGroup} is supported by any of the currently available
+     * {@link TransportType}s.
      */
     public static boolean isSupported(EventLoopGroup eventLoopGroup) {
         if (eventLoopGroup instanceof EventLoop) {
@@ -117,7 +113,8 @@ public enum TransportType {
                 return false;
             }
         }
-        return findOrNull(eventLoopGroup) != null;
+        final TransportType found = findOrNull(eventLoopGroup);
+        return found != null && found.isAvailable();
     }
 
     private static TransportType find(EventLoopGroup eventLoopGroup) {
@@ -130,11 +127,12 @@ public enum TransportType {
 
     @Nullable
     private static TransportType findOrNull(EventLoopGroup eventLoopGroup) {
+        final Class<? extends EventLoopGroup> eventLoopGroupType = eventLoopGroup.getClass();
         for (TransportType type : values()) {
-            for (Class<? extends EventLoopGroup> eventLoopGroupClass : type.eventLoopGroupClasses) {
-                if (eventLoopGroupClass.isAssignableFrom(eventLoopGroup.getClass())) {
-                    return type;
-                }
+            if (type.isAvailable() &&
+                (type.provider.eventLoopGroupType().isAssignableFrom(eventLoopGroupType) ||
+                 type.provider.eventLoopType().isAssignableFrom(eventLoopGroupType))) {
+                return type;
             }
         }
         return null;
@@ -152,12 +150,34 @@ public enum TransportType {
     }
 
     /**
+     * Returns whether this {@link TransportType} is currently available.
+     *
+     * @see #unavailabilityCause()
+     */
+    public boolean isAvailable() {
+        return unavailabilityCause() == null;
+    }
+
+    /**
+     * Returns why this {@link TransportType} is not available.
+     *
+     * @return why this {@link TransportType} is not available, or {@code null} if this {@link TransportType}
+     *         is currently available.
+     *
+     * @see #isAvailable()
+     */
+    @Nullable
+    public Throwable unavailabilityCause() {
+        return provider.unavailabilityCause();
+    }
+
+    /**
      * Creates the available {@link EventLoopGroup}.
      */
     public EventLoopGroup newEventLoopGroup(int nThreads,
                                             Function<TransportType, ThreadFactory> threadFactoryFactory) {
         final ThreadFactory threadFactory = threadFactoryFactory.apply(this);
-        return eventLoopGroupConstructor.apply(nThreads, threadFactory);
+        return provider.eventLoopGroupConstructor().apply(nThreads, threadFactory);
     }
 
     private static IllegalStateException unsupportedEventLoopType(EventLoopGroup eventLoopGroup) {

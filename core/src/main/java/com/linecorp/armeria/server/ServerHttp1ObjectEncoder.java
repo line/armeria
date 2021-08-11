@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
@@ -26,6 +24,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.buffer.Unpooled;
@@ -41,20 +40,27 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
-    @Nullable
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
+    private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
 
-    ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
-                             @Nullable KeepAliveHandler keepAliveHandler,
+    private int lastResponseHeadersId;
+
+    ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader) {
         super(ch, protocol);
+        assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
+    }
+
+    public void initiateConnectionShutdown() {
+        shouldSendConnectionCloseHeader = true;
     }
 
     @Override
@@ -68,9 +74,10 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         if (headers.status().isInformational()) {
             return write(id, converted, false);
         }
+        lastResponseHeadersId = id;
 
-        if (keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
-            converted.headers().set(HttpHeaderNames.CONNECTION, "close");
+        if (shouldSendConnectionCloseHeader || keepAliveHandler.needToCloseConnection()) {
+            converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             sentConnectionCloseHeader = true;
         }
         return writeNonInformationalHeaders(id, converted, endStream);
@@ -92,7 +99,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
                 if (statusCode == 304) {
                     // 304 response can have the "content-length" header when it is a response to a conditional
-                    // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
+                    // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
                 } else {
                     outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
                 }
@@ -149,7 +156,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         ArmeriaHttpUtil.toNettyHttp1ServerTrailer(inputHeaders, outputHeaders);
     }
 
-    @Nullable
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
@@ -162,5 +168,10 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     boolean isSentConnectionCloseHeader() {
         return sentConnectionCloseHeader;
+    }
+
+    @Override
+    public boolean isResponseHeadersSent(int id, int streamId) {
+        return id <= lastResponseHeadersId;
     }
 }

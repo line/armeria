@@ -16,42 +16,55 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static java.util.Objects.requireNonNull;
+import javax.annotation.Nullable;
 
-import org.reactivestreams.Subscriber;
+import org.reactivestreams.Publisher;
+
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.multipart.BodyPart;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 final class StreamMessageUtil {
 
-    static final SubscriptionOption[] EMPTY_OPTIONS = {};
-
-    static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
-        if (oldSubscriber instanceof AbortingSubscriber) {
-            return ((AbortingSubscriber<?>) oldSubscriber).cause();
+    static void closeOrAbort(Object obj, @Nullable Throwable cause) {
+        if (obj instanceof StreamMessage) {
+            final StreamMessage<?> streamMessage = (StreamMessage<?>) obj;
+            if (cause == null) {
+                streamMessage.abort();
+            } else {
+                streamMessage.abort(cause);
+            }
+            return;
         }
 
-        return new IllegalStateException("subscribed by other subscriber already");
+        if (obj instanceof Publisher) {
+            ((Publisher<?>) obj).subscribe(AbortingSubscriber.get(cause));
+            return;
+        }
+
+        if (obj instanceof BodyPart) {
+            final StreamMessage<HttpData> content = ((BodyPart) obj).content();
+            if (cause == null) {
+                content.abort();
+            } else {
+                content.abort(cause);
+            }
+            return;
+        }
+
+        PooledObjects.close(obj);
     }
 
-    static boolean containsWithPooledObjects(SubscriptionOption... options) {
-        requireNonNull(options, "options");
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                return true;
-            }
-        }
-
-        return false;
+    static void closeOrAbort(Object obj) {
+        closeOrAbort(obj, null);
     }
 
-    static boolean containsNotifyCancellation(SubscriptionOption... options) {
-        requireNonNull(options, "options");
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                return true;
-            }
+    static <T> T touchOrCopyAndClose(T obj, boolean withPooledObjects) {
+        if (withPooledObjects) {
+            return PooledObjects.touch(obj);
+        } else {
+            return PooledObjects.copyAndClose(obj);
         }
-
-        return false;
     }
 
     private StreamMessageUtil() {}

@@ -11,12 +11,9 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -24,7 +21,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class ProxyService extends AbstractHttpService {
 
     // This is a simplified example. Please refer to
-    // https://tools.ietf.org/html/rfc7230#section-5.7.1 for more information about Via header.
+    // https://datatracker.ietf.org/doc/html/rfc7230#section-5.7.1 for more information about Via header.
     private static final String viaHeaderValue = "HTTP/2.0 Armeria proxy"; // The pseudonym is Armeria proxy.
 
     /**
@@ -119,7 +116,7 @@ public final class ProxyService extends AbstractHttpService {
     }
 
     private static HttpRequest addForwarded(ServiceRequestContext ctx, HttpRequest req) {
-        // This is a simplified example. Please refer to https://tools.ietf.org/html/rfc7239
+        // This is a simplified example. Please refer to https://datatracker.ietf.org/doc/rfc7239/
         // for more information about Forwarded header.
         final StringBuilder sb = new StringBuilder();
         sb.append("for: ").append(ctx.<InetSocketAddress>remoteAddress().getAddress().getHostAddress());
@@ -131,17 +128,8 @@ public final class ProxyService extends AbstractHttpService {
     }
 
     private static HttpResponse addViaHeader(HttpResponse res) {
-        return new FilteredHttpResponse(res) {
-            @Override
-            protected HttpObject filter(HttpObject obj) {
-                // You can remove or add specific headers to a response.
-                if (obj instanceof ResponseHeaders) {
-                    return ((ResponseHeaders) obj).toBuilder()
-                                                  .add(HttpHeaderNames.VIA, viaHeaderValue)
-                                                  .build();
-                }
-                return obj;
-            }
-        };
+        return res.mapHeaders(headers -> headers.toBuilder()
+                                                .add(HttpHeaderNames.VIA, viaHeaderValue)
+                                                .build());
     }
 }

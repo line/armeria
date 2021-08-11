@@ -24,6 +24,10 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+
+import io.netty.util.concurrent.EventExecutor;
+
 public class PublisherBasedStreamMessageVerification extends StreamMessageVerification<Long> {
 
     @Override
@@ -43,7 +47,7 @@ public class PublisherBasedStreamMessageVerification extends StreamMessageVerifi
     public StreamMessage<Long> createAbortedPublisher(long elements) {
         if (elements == 0) {
             final PublisherBasedStreamMessage<Long> stream =
-                    new PublisherBasedStreamMessage<>(s -> { /* noop */ });
+                    new PublisherBasedStreamMessage<>(s -> s.onSubscribe(NoopSubscription.get()));
             stream.abort();
             return stream;
         }
@@ -52,37 +56,43 @@ public class PublisherBasedStreamMessageVerification extends StreamMessageVerifi
         final Publisher<Long> publisher =
                 new StreamMessageWrapper<Long>(createStreamMessage(elements + 1, false)) {
 
-            @Override
-            public void subscribe(Subscriber<? super Long> subscriber) {
-                super.subscribe(new Subscriber<Long>() {
                     @Override
-                    public void onSubscribe(Subscription s) {
-                        subscriber.onSubscribe(s);
-                        if (elements == 0) {
-                            stream.get().abort();
-                        }
+                    public void subscribe(Subscriber<? super Long> subscriber) {
+                        super.subscribe(subscriber(subscriber));
                     }
 
                     @Override
-                    public void onNext(Long value) {
-                        subscriber.onNext(value);
-                        if (value == elements) {
-                            stream.get().abort();
-                        }
+                    public void subscribe(Subscriber<? super Long> subscriber, EventExecutor executor) {
+                        super.subscribe(subscriber(subscriber), executor);
                     }
 
-                    @Override
-                    public void onError(Throwable t) {
-                        subscriber.onError(t);
-                    }
+                    private Subscriber<Long> subscriber(Subscriber<? super Long> subscriber) {
+                        return new Subscriber<Long>() {
+                            @Override
+                            public void onSubscribe(Subscription s) {
+                                subscriber.onSubscribe(s);
+                            }
 
-                    @Override
-                    public void onComplete() {
-                        subscriber.onComplete();
+                            @Override
+                            public void onNext(Long value) {
+                                subscriber.onNext(value);
+                                if (value == elements) {
+                                    stream.get().abort();
+                                }
+                            }
+
+                            @Override
+                            public void onError(Throwable t) {
+                                subscriber.onError(t);
+                            }
+
+                            @Override
+                            public void onComplete() {
+                                subscriber.onComplete();
+                            }
+                        };
                     }
-                });
-            }
-        };
+                };
 
         stream.set(new PublisherBasedStreamMessage<>(publisher));
         return stream.get();

@@ -92,16 +92,16 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *       <li>e.g. {@code "42"}, {@code "string"}, {@code "text/plain; charset=utf-8"}</li>
  *     </ul>
  *   </li>
- *   <li>{@link CacheControl}
+ *   <li>{@link CacheControl} and {@link ContentDisposition}
  *     <ul>
- *       <li>Converted via {@link CacheControl#asHeaderValue() asHeaderValue()}</li>
- *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}</li>
+ *       <li>Converted via {@code asHeaderValue()}</li>
+ *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}, {@code "form-data; name=\"fieldName\""}</li>
  *     </ul>
  *   </li>
  *   <li>{@link Instant}, {@link TemporalAccessor}, {@link Date} and {@link Calendar}
  *     <ul>
  *       <li>Converted into a time and date string as specified in
- *         <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a></li>
+ *         <a href="https://datatracker.ietf.org/doc/html/rfc1123#page-55">RFC1123</a></li>
  *       <li>e.g. {@code Sun, 27 Nov 2016 19:37:15 UTC}</li>
  *     </ul>
  *   </li>
@@ -322,8 +322,10 @@ public interface QueryParams extends QueryParamGetters {
             return of();
         }
 
-        return QueryStringDecoder.decodeParams(TemporaryThreadLocals.get(),
-                                               queryString, maxParams, semicolonAsSeparator);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            return QueryStringDecoder.decodeParams(tempThreadLocals,
+                                                   queryString, maxParams, semicolonAsSeparator);
+        }
     }
 
     /**

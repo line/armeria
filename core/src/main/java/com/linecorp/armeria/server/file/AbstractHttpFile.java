@@ -171,7 +171,7 @@ public abstract class AbstractHttpFile implements HttpFile {
     private ResponseHeaders addCommonHeaders(ResponseHeadersBuilder headers, HttpFileAttributes attrs,
                                              @Nullable String etag) {
         if (contentType != null) {
-            headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+            headers.contentType(contentType);
         }
         if (dateEnabled) {
             headers.setTimeMillis(HttpHeaderNames.DATE, clock.millis());
@@ -251,7 +251,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                     return HttpResponse.of(HttpStatus.NOT_FOUND);
                 }
 
-                // See https://tools.ietf.org/html/rfc7232#section-6 for more information
+                // See https://datatracker.ietf.org/doc/html/rfc7232#section-6 for more information
                 // about how conditional requests are handled.
 
                 // Handle 'if-none-match' header.

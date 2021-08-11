@@ -31,7 +31,7 @@ class DefaultHttpHeadersBuilderTest {
                                                .add("a", "b")
                                                .add("c", ImmutableList.of("d", "e"))
                                                .add("f", "g", "h")
-                                               .add(ImmutableMap.of("i", "j").entrySet())
+                                               .add(ImmutableMap.of("i", "j"))
                                                .build();
         assertThat(headers).containsExactly(
                 Maps.immutableEntry(HttpHeaderNames.of("a"), "b"),
@@ -48,11 +48,11 @@ class DefaultHttpHeadersBuilderTest {
                                                .add("a", "b")
                                                .add("c", ImmutableList.of("d", "e"))
                                                .add("f", "g", "h")
-                                               .add(ImmutableMap.of("i", "j").entrySet())
+                                               .add(ImmutableMap.of("i", "j"))
                                                .set("a", "B")
                                                .set("c", ImmutableList.of("D", "E"))
                                                .set("f", "G", "H")
-                                               .set(ImmutableMap.of("i", "J").entrySet())
+                                               .set(ImmutableMap.of("i", "J"))
                                                .build();
         assertThat(headers).containsExactly(
                 Maps.immutableEntry(HttpHeaderNames.of("a"), "B"),
@@ -179,5 +179,15 @@ class DefaultHttpHeadersBuilderTest {
         final HttpHeadersBuilder builder = HttpHeaders.builder().add("foo", "bar");
         assertThat(builder.build()).isEqualTo(HttpHeaders.of("foo", "bar"));
         assertThat(builder.build()).isEqualTo(HttpHeaders.of("foo", "bar"));
+    }
+
+    @Test
+    void testContentDisposition() {
+        final HttpHeaders headers = HttpHeaders.builder()
+                                               .set("Content-Disposition", "form-data; name=foo")
+                                               .build();
+        final ContentDisposition cd = headers.contentDisposition();
+        assertThat(cd.type()).isEqualTo("form-data");
+        assertThat(cd.name()).isEqualTo("foo");
     }
 }

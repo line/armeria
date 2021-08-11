@@ -45,6 +45,10 @@ public final class MediaTypeNames {
      * {@value #ANY_APPLICATION_TYPE}.
      */
     public static final String ANY_APPLICATION_TYPE = "application/*";
+    /**
+     * {@value #ANY_MULTIPART_TYPE}.
+     */
+    public static final String ANY_MULTIPART_TYPE = "multipart/*";
 
     /* text types */
 
@@ -68,6 +72,10 @@ public final class MediaTypeNames {
      * {@value #I_CALENDAR_UTF_8}.
      */
     public static final String I_CALENDAR_UTF_8 = "text/calendar; charset=utf-8";
+    /**
+     * {@value #PLAIN_TEXT}.
+     */
+    public static final String PLAIN_TEXT = "text/plain";
     /**
      * {@value #PLAIN_TEXT_UTF_8}.
      */
@@ -285,6 +293,14 @@ public final class MediaTypeNames {
      */
     public static final String GEO_JSON = "application/geo+json";
     /**
+     * {@value #GRAPHQL}.
+     */
+    public static final String GRAPHQL = "application/graphql";
+    /**
+     * {@value #GRAPHQL_JSON}.
+     */
+    public static final String GRAPHQL_JSON = "application/graphql+json";
+    /**
      * {@value #GZIP}.
      */
     public static final String GZIP = "application/x-gzip";
@@ -320,6 +336,10 @@ public final class MediaTypeNames {
      * {@value #JSON_SEQ}.
      */
     public static final String JSON_SEQ = "application/json-seq";
+    /**
+     * {@value #JSON_LINES}.
+     */
+    public static final String JSON_LINES = "application/x-ndjson";
     /**
      * {@value #MANIFEST_JSON_UTF_8}.
      */
@@ -467,6 +487,41 @@ public final class MediaTypeNames {
      * {@value #ZIP}.
      */
     public static final String ZIP = "application/zip";
+
+    /* multipart types */
+
+    /**
+     * {@value #MULTIPART_ALTERNATIVE}.
+     */
+    public static final String MULTIPART_ALTERNATIVE = "multipart/alternative";
+    /**
+     * {@value #MULTIPART_DIGEST}.
+     */
+    public static final String MULTIPART_DIGEST = "multipart/digest";
+    /**
+     * {@value #MULTIPART_ENCRYPTED}.
+     */
+    public static final String MULTIPART_ENCRYPTED = "multipart/encrypted";
+    /**
+     * {@value #MULTIPART_FORM_DATA}.
+     */
+    public static final String MULTIPART_FORM_DATA = "multipart/form-data";
+    /**
+     * {@value #MULTIPART_MIXED}.
+     */
+    public static final String MULTIPART_MIXED = "multipart/mixed";
+    /**
+     * {@value #MULTIPART_PARALLEL}.
+     */
+    public static final String MULTIPART_PARALLEL = "multipart/parallel";
+    /**
+     * {@value #MULTIPART_RELATED}.
+     */
+    public static final String MULTIPART_RELATED = "multipart/related";
+    /**
+     * {@value #MULTIPART_SIGNED}.
+     */
+    public static final String MULTIPART_SIGNED = "multipart/signed";
 
     private MediaTypeNames() {}
 }

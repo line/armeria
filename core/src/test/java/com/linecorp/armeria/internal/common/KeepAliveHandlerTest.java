@@ -44,7 +44,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.internal.common.KeepAliveHandler.PingState;
+import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -53,6 +53,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -70,12 +71,16 @@ class KeepAliveHandlerTest {
 
     @BeforeEach
     void setUp() {
+        final EventLoop eventLoop = KeepAliveHandlerTest.eventLoop.get();
         channel = spy(new EmbeddedChannel());
-        when(channel.eventLoop()).thenReturn(eventLoop.get());
+        when(channel.eventLoop()).thenReturn(eventLoop);
         ctx = mock(ChannelHandlerContext.class);
         when(ctx.channel()).thenReturn(channel);
         meterRegistry = new SimpleMeterRegistry();
         keepAliveTimer = MoreMeters.newTimer(meterRegistry, CONNECTION_LIFETIME, ImmutableList.of());
+
+        // Warm up the event loop to reduce timing errors.
+        eventLoop.submit(() -> {}).syncUninterruptibly();
     }
 
     @AfterEach
@@ -87,8 +92,16 @@ class KeepAliveHandlerTest {
     void testIdle() {
         final AtomicInteger counter = new AtomicInteger();
 
-        final KeepAliveHandler idleTimeoutScheduler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, 1000, 0, 0) {
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 1000, 0, 0, 0) {
+
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -109,7 +122,7 @@ class KeepAliveHandlerTest {
 
         idleTimeoutScheduler.initialize(ctx);
         await().timeout(20, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(10));
-        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(15));
+        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25));
         idleTimeoutScheduler.destroy();
     }
 
@@ -117,8 +130,16 @@ class KeepAliveHandlerTest {
     void testPing() {
         final Stopwatch stopwatch = Stopwatch.createStarted();
 
-        final KeepAliveHandler idleTimeoutScheduler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, 0, 1000, 0) {
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 1000, 0, 0) {
+
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -148,8 +169,17 @@ class KeepAliveHandlerTest {
     @Test
     void disableMaxConnectionAge() {
         final long maxConnectionAgeMillis = 0;
-        final KeepAliveHandler keepAliveHandler = new KeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
-                                                                       maxConnectionAgeMillis) {
+        final AbstractKeepAliveHandler
+                keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
+                                                                maxConnectionAgeMillis, 0) {
+            @Override
+            public boolean isHttp2() {
+                return false;
+            }
+
+            @Override
+            public void onPingAck(long data) {}
+
             @Override
             protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                 return null;
@@ -168,14 +198,23 @@ class KeepAliveHandlerTest {
         keepAliveHandler.initialize(ctx);
 
         assertMeter(CONNECTION_LIFETIME + "#count", 0);
-        assertThat(keepAliveHandler.isMaxConnectionAgeExceeded()).isFalse();
+        assertThat(keepAliveHandler.needToCloseConnection()).isFalse();
     }
 
     @Test
     void testMaxConnectionAge() throws InterruptedException {
-        final long maxConnectionAgeMillis = 100;
-        final KeepAliveHandler keepAliveHandler = new KeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
-                                                                       maxConnectionAgeMillis) {
+        final long maxConnectionAgeMillis = 500;
+        final AbstractKeepAliveHandler
+                keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
+                                                                maxConnectionAgeMillis, 0) {
+            @Override
+            public boolean isHttp2() {
+                return false;
+            }
+
+            @Override
+            public void onPingAck(long data) {}
+
             @Override
             protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                 return null;
@@ -193,8 +232,9 @@ class KeepAliveHandlerTest {
         };
         keepAliveHandler.initialize(ctx);
 
-        Thread.sleep(maxConnectionAgeMillis + 100);
-        assertThat(keepAliveHandler.isMaxConnectionAgeExceeded()).isTrue();
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        await().untilAsserted(() -> assertThat(keepAliveHandler.needToCloseConnection()).isTrue());
+        assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isBetween(500L, 1000L);
     }
 
     @CsvSource({
@@ -208,12 +248,24 @@ class KeepAliveHandlerTest {
         final AtomicInteger idleCounter = new AtomicInteger();
         final AtomicInteger pingCounter = new AtomicInteger();
         final long idleTime = "CONNECTION_IDLE".equals(mode) ? connectionIdleTimeout : pingInterval;
-        final Consumer<KeepAliveHandler> activator =
+        final int maxConnectionAgeMillis = 0;
+        final int maxNumRequestsPerConnection = 0;
+        final Consumer<AbstractKeepAliveHandler> activator =
                 "CONNECTION_IDLE".equals(mode) ?
-                KeepAliveHandler::onReadOrWrite : KeepAliveHandler::onPing;
+                AbstractKeepAliveHandler::onReadOrWrite : AbstractKeepAliveHandler::onPing;
 
-        final KeepAliveHandler idleTimeoutScheduler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, connectionIdleTimeout, pingInterval, 0) {
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, connectionIdleTimeout,
+                                             pingInterval, maxConnectionAgeMillis,
+                                             maxNumRequestsPerConnection) {
+
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -260,9 +312,17 @@ class KeepAliveHandlerTest {
         final long maxConnectionAgeMillis = 0;
         final ChannelFuture channelFuture = channel.newPromise();
 
-        final KeepAliveHandler keepAliveHandler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                     maxConnectionAgeMillis) {
+        final AbstractKeepAliveHandler keepAliveHandler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
+                                             maxConnectionAgeMillis, 0) {
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return channelFuture;
@@ -305,9 +365,18 @@ class KeepAliveHandlerTest {
         final long pingInterval = 1000;
         final long maxConnectionAgeMillis = 0;
         final ChannelPromise promise = channel.newPromise();
-        final KeepAliveHandler keepAliveHandler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                     maxConnectionAgeMillis) {
+        final int maxNumRequestsPerConnection = 0;
+        final AbstractKeepAliveHandler keepAliveHandler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
+                                             maxConnectionAgeMillis, maxNumRequestsPerConnection) {
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return promise;
@@ -348,14 +417,23 @@ class KeepAliveHandlerTest {
 
     @ParameterizedTest
     @CsvSource({ "true", "false" })
-    void resetPing(boolean resetPing) throws InterruptedException {
+    void resetPing(boolean resetPing) {
         final long idleTimeout = 10000;
         final long pingInterval = 1000;
         final long maxConnectionAgeMillis = 0;
+        final int maxNumRequestsPerConnection = 0;
         final ChannelPromise promise = channel.newPromise();
-        final KeepAliveHandler keepAliveHandler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                     maxConnectionAgeMillis) {
+        final AbstractKeepAliveHandler keepAliveHandler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
+                                             maxConnectionAgeMillis, maxNumRequestsPerConnection) {
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return promise;

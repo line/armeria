@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -25,31 +23,28 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
-import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
-    private static final ByteBuf MAX_CONNECTION_AGE_DEBUG = Unpooled.wrappedBuffer("max-age".getBytes());
-
-    @Nullable
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-
-    private boolean isGoAwaySent;
+    private boolean hasCalledChannelClose;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                             @Nullable KeepAliveHandler keepAliveHandler,
+                             KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader) {
         super(ctx, encoder);
+        assert keepAliveHandler instanceof Http2ServerKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
@@ -65,16 +60,25 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        if (!isGoAwaySent && keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
-            final int lastStreamId = encoder().connection().remote().lastStreamCreated();
-            encoder().writeGoAway(ctx(), lastStreamId, Http2Error.NO_ERROR.code(),
-                                  MAX_CONNECTION_AGE_DEBUG.retain(), ctx().newPromise());
-            isGoAwaySent = true;
+        // TODO(alexc-db): decouple this from headers write and do it from inside the KeepAliveHandler.
+        if (!hasCalledChannelClose && keepAliveHandler.needToCloseConnection()) {
+            // Initiates channel close, connection will be closed after all streams are closed.
+            ctx().channel().close();
+            hasCalledChannelClose = true;
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
         onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, endStream, ctx().newPromise());
+    }
+
+    @Override
+    public boolean isResponseHeadersSent(int id, int streamId) {
+        final Http2Stream stream = encoder().connection().stream(streamId);
+        if (stream == null) {
+            return false;
+        }
+        return stream.isHeadersSent();
     }
 
     private Http2Headers convertHeaders(HttpHeaders inputHeaders, boolean isTrailersEmpty) {
@@ -96,7 +100,6 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         return outHeaders;
     }
 
-    @Nullable
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
@@ -117,9 +120,6 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     }
 
     private void onKeepAliveReadOrWrite() {
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onReadOrWrite();
-        }
+        keepAliveHandler.onReadOrWrite();
     }
 }

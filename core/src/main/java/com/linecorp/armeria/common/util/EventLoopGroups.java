@@ -44,6 +44,7 @@ import io.netty.util.concurrent.Future;
 public final class EventLoopGroups {
 
     private static final EventLoop directEventLoop = new DirectEventLoop();
+    private static final Runnable NO_OP = () -> {};
 
     /**
      * Returns a newly-created {@link EventLoopGroup}.
@@ -109,6 +110,18 @@ public final class EventLoopGroups {
     }
 
     /**
+     * Warms up all {@link EventLoop}s in the given {@code eventLoopGroup}
+     * by making sure all event loop threads are active.
+     */
+    public static EventLoopGroup warmUp(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
+
+        eventLoopGroup.forEach(executor -> executor.submit(NO_OP));
+
+        return eventLoopGroup;
+    }
+
+    /**
      * Returns a special {@link EventLoop} which executes submitted tasks in the caller thread.
      * Note that this {@link EventLoop} will raise an {@link UnsupportedOperationException} for any operations
      * related with {@link EventLoop} shutdown or {@link Channel} registration.
@@ -120,7 +133,10 @@ public final class EventLoopGroups {
     /**
      * Returns the {@link ServerChannel} class that is available for this {@code eventLoopGroup}, for use in
      * configuring a custom {@link Bootstrap}.
+     *
+     * @deprecated Use {@link TransportType#serverChannelType(EventLoopGroup)}.
      */
+    @Deprecated
     public static Class<? extends ServerChannel> serverChannelType(EventLoopGroup eventLoopGroup) {
         return TransportType.serverChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }
@@ -128,7 +144,10 @@ public final class EventLoopGroups {
     /**
      * Returns the available {@link SocketChannel} class for {@code eventLoopGroup}, for use in configuring a
      * custom {@link Bootstrap}.
+     *
+     * @deprecated Use {@link TransportType#socketChannelType(EventLoopGroup)}.
      */
+    @Deprecated
     public static Class<? extends SocketChannel> socketChannelType(EventLoopGroup eventLoopGroup) {
         return TransportType.socketChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }
@@ -136,7 +155,10 @@ public final class EventLoopGroups {
     /**
      * Returns the available {@link DatagramChannel} class for {@code eventLoopGroup}, for use in configuring a
      * custom {@link Bootstrap}.
+     *
+     * @deprecated Use {@link TransportType#datagramChannelType(EventLoopGroup)}.
      */
+    @Deprecated
     public static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
         return TransportType.datagramChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }

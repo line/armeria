@@ -26,9 +26,11 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -75,7 +77,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -94,7 +95,7 @@ class RetryingClientTest {
     @BeforeAll
     static void beforeAll() {
         // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
-        clientFactory = ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+        clientFactory = ClientFactory.builder().workerGroup(2).build();
     }
 
     @AfterAll
@@ -441,13 +442,17 @@ class RetryingClientTest {
 
     @Test
     void retryWithContentOnResponseTimeout() {
+        final Queue<Integer> queue = new ConcurrentLinkedQueue<>();
         final Backoff backoff = Backoff.fixed(100);
         final RetryRuleWithContent<HttpResponse> strategy =
                 RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    queue.add(1);
                     return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRuleWithContent.onResponse((unused, response) -> {
+                    queue.add(2);
                     return response.aggregate().thenApply(unused0 -> false);
                 })).orElse(RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    queue.add(3);
                     return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
                                    .onException(ResponseTimeoutException.class)
@@ -455,6 +460,8 @@ class RetryingClientTest {
         final WebClient client = client(strategy, 0, 500, 100);
         final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+        // Make sure that all customized RetryRuleWithContents are called.
+        assertThat(queue).containsExactly(1, 2, 3);
     }
 
     @Test
@@ -525,7 +532,7 @@ class RetryingClientTest {
 
         try (ClientFactory clientFactory = ClientFactory.builder()
                                                         .options(RetryingClientTest.clientFactory.options())
-                                                        .workerGroup(EventLoopGroups.newEventLoopGroup(2), true)
+                                                        .workerGroup(2)
                                                         .connectTimeoutMillis(Long.MAX_VALUE)
                                                         .build()) {
             final WebClient client = WebClient.builder("http://127.0.0.1:1")
@@ -573,7 +580,7 @@ class RetryingClientTest {
     @Test
     void shouldGetExceptionWhenFactoryIsClosed() {
         final ClientFactory factory =
-                ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+                ClientFactory.builder().workerGroup(2).build();
 
         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
         final Function<? super HttpClient, RetryingClient> retryingDecorator =

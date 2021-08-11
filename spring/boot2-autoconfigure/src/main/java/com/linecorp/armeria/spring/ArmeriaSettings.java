@@ -22,6 +22,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
 
 import com.codahale.metrics.json.MetricsModule;
@@ -255,6 +256,12 @@ public class ArmeriaSettings {
     }
 
     /**
+     * Whether to auto configure and start the Armeria server.
+     * The default is {@code true}.
+     */
+    private boolean serverEnabled = true;
+
+    /**
      * The ports to listen on for requests. If not specified, will listen on
      * port 8080 for HTTP (not SSL).
      */
@@ -311,6 +318,7 @@ public class ArmeriaSettings {
      * SSL configuration that the {@link Server} uses.
      */
     @Nullable
+    @NestedConfigurationProperty
     private Ssl ssl;
 
     /**

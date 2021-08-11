@@ -179,4 +179,20 @@ public interface Route {
      * Returns the {@link Set} of {@link MediaType}s that this {@link Route} produces.
      */
     Set<MediaType> produces();
+
+    /**
+     * Returns whether this {@link Route} is a fallback, which is matched only when no configured {@link Route}
+     * was matched.
+     */
+    boolean isFallback();
+
+    /**
+     * Returns the {@link Route}s that are supposed to be excluded from this {@link Route}.
+     */
+    List<Route> excludedRoutes();
+
+    /**
+     * Returns a new {@link RouteBuilder} with the values of this {@link Route} instance.
+     */
+    RouteBuilder toBuilder();
 }

@@ -70,7 +70,7 @@ final class HttpHeaderUtil {
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
      * @param remoteAddress a remote endpoint of a channel
      * @param filter the filter which evaluates an {@link InetAddress} can be used as a client address
-     * @see <a href="https://tools.ietf.org/html/rfc7239">Forwarded HTTP Extension</a>
+     * @see <a href="https://datatracker.ietf.org/doc/rfc7239/">Forwarded HTTP Extension</a>
      * @see <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For">X-Forwarded-For</a>
      */
     static ProxiedAddresses determineProxiedAddresses(HttpHeaders headers,
@@ -140,7 +140,7 @@ final class HttpHeaderUtil {
             (firstChar == 'u' && "unknown".equals(address))) {
             // To early return when the address is not an IP address.
             // - an obfuscated identifier which must start with '_'
-            //   - https://tools.ietf.org/html/rfc7239#section-6.3
+            //   - https://datatracker.ietf.org/doc/html/rfc7239#section-6.3
             // - the "unknown" identifier
             return null;
         }
