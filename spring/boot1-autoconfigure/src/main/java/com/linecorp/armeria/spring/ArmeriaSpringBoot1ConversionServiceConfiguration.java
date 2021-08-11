@@ -56,13 +56,4 @@ public class ArmeriaSpringBoot1ConversionServiceConfiguration {
     public StringToDurationConverter armeriaSpringBoot1StringDurationConverter() {
         return new StringToDurationConverter();
     }
-
-    /**
-     * Returns the {@link NumberToDurationConverter} bean.
-     */
-    @Bean
-    @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
-    public NumberToDurationConverter armeriaSpringBoot1NumberDurationConverter() {
-        return new NumberToDurationConverter();
-    }
 }
