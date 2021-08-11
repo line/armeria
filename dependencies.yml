@@ -43,7 +43,7 @@ com.auth0:
 
 # This is only used for examples/graphql-kotlin
 com.expediagroup:
-  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '4.1.1' }
+  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '5.0.0-alpha.3' }
   graphql-kotlin-client-jackson: { version: *GRAPHQL_KOTLIN_VERSION }
   graphql-kotlin-client-serialization: { version: *GRAPHQL_KOTLIN_VERSION }
   graphql-kotlin-schema-generator: { version: *GRAPHQL_KOTLIN_VERSION }
