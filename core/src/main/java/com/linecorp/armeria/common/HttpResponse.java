@@ -639,6 +639,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param clazz the class for decoded response
      */
     default <T> CompletableFuture<T> aggregateAs(HttpStatus expectedStatus, Class<? extends T> clazz) {
+        requireNonNull(expectedStatus, "expectedStatus");
         return aggregateAs(status -> status == expectedStatus, clazz, defaultSubscriberExecutor());
     }
 
@@ -652,6 +653,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param valueTypeRef the type reference for decoded response
      */
     default <T> CompletableFuture<T> aggregateAs(HttpStatus expectedStatus, TypeReference<T> valueTypeRef) {
+        requireNonNull(expectedStatus, "expectedStatus");
         return aggregateAs(status -> status == expectedStatus, valueTypeRef, defaultSubscriberExecutor());
     }
 
@@ -665,6 +667,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param clazz the class for decoded response
      */
     default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass, Class<? extends T> clazz) {
+        requireNonNull(expectedStatusClass, "expectedStatusClass");
         return aggregateAs(status -> expectedStatusClass.contains(status), clazz, defaultSubscriberExecutor());
     }
 
@@ -678,6 +681,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param valueTypeRef the type reference for decoded response
      */
     default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass, TypeReference<T> valueTypeRef) {
+        requireNonNull(expectedStatusClass, "expectedStatusClass");
         return aggregateAs(status -> expectedStatusClass.contains(status), valueTypeRef, defaultSubscriberExecutor());
     }
 
@@ -719,6 +723,9 @@ public interface HttpResponse extends Response, HttpMessage {
     default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
                                                  Class<? extends T> clazz,
                                                  EventExecutor executor) {
+        requireNonNull(httpStatusFilter, "httpStatusFilter");
+        requireNonNull(clazz, "clazz");
+        requireNonNull(executor, "executor");
         return aggregateAs(httpStatusFilter, (content) -> {
             try {
                 return JacksonUtil.newDefaultObjectMapper().readValue(content, clazz);
@@ -740,7 +747,7 @@ public interface HttpResponse extends Response, HttpMessage {
     default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
                                                  TypeReference<T> valueTypeRef,
                                                  EventExecutor executor) {
-        return aggregateAs(httpStatusFilter, (content) -> {
+        return aggregateAs(httpStatusFilter, content -> {
             try {
                 return JacksonUtil.newDefaultObjectMapper().readValue(content, valueTypeRef);
             } catch (JsonProcessingException e) {
@@ -749,11 +756,10 @@ public interface HttpResponse extends Response, HttpMessage {
         }, executor);
     }
 
-    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
-                                                 Function<String, T> fn,
+    default <T> CompletableFuture<T> aggregateAs(Predicate<? super HttpStatus> httpStatusFilter,
+                                                 Function<String, T> jsonDecoder,
                                                  EventExecutor executor) {
-        return aggregate(executor).thenApply(response ->
-        {
+        return aggregate(executor).thenApply(response -> {
             if (httpStatusFilter.test(response.status())) {
                 return fn.apply(response.contentUtf8());
             } else {

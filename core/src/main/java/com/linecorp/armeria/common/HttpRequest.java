@@ -295,7 +295,7 @@ public interface HttpRequest extends Request, HttpMessage {
         try {
             return of(method, path, MediaType.JSON_UTF_8, JacksonUtil.writeValueAsBytes(content));
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Unexpected exception while encoding the content of the request", e);
+            throw new IllegalArgumentException("Failed to encode the content of the request into JSON", e);
         }
     }
 
