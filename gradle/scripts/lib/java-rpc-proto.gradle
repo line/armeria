@@ -14,6 +14,22 @@ configure(projectsWithFlags('java')) {
     if (project.ext.hasSourceDirectory('proto')) {
         apply plugin: com.google.protobuf.gradle.ProtobufPlugin
 
+        configurations {
+            // A workaround for "Could not resolve all files for configuration ':grpc:compileProtoPath'"
+            // - https://github.com/gradle/gradle/issues/12126
+            // - https://github.com/google/protobuf-gradle-plugin/issues/391
+            compileProtoPath {
+                attributes {
+                    attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_API))
+                }
+            }
+            testCompileProtoPath {
+                attributes {
+                    attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage, Usage.JAVA_API))
+                }
+            }
+        }
+
         protobuf {
             generatedFilesBaseDir = project.ext.genSrcDir
             if (managedVersions.containsKey('com.google.protobuf:protoc')) {
@@ -105,6 +121,7 @@ configure(projectsWithFlags('java')) {
 
         // Make sure protoc runs before the resources are copied so that .dsc files are included.
         project.afterEvaluate {
+
             project.sourceSets.each { sourceSet ->
                 def task = tasks.findByName(sourceSet.getTaskName('generate', 'proto'))
                 def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
