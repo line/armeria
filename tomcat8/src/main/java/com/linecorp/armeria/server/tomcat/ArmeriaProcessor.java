@@ -26,8 +26,6 @@ import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 
-import com.linecorp.armeria.internal.server.tomcat.ArmeriaEndpoint;
-import com.linecorp.armeria.internal.server.tomcat.LogWrapper;
 
 /**
  * Provides a fake Processor to provide {@link ActionHook} to request/response.

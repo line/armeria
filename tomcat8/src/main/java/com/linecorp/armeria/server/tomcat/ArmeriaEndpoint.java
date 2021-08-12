@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.tomcat;
+package com.linecorp.armeria.server.tomcat;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -29,9 +29,9 @@ import org.apache.tomcat.util.net.SocketWrapperBase;
 /**
  * A fake {@link AbstractEndpoint}.
  */
-public final class ArmeriaEndpoint extends AbstractEndpoint {
+final class ArmeriaEndpoint extends AbstractEndpoint {
 
-    public static final ArmeriaEndpoint INSTANCE = new ArmeriaEndpoint();
+    static final ArmeriaEndpoint INSTANCE = new ArmeriaEndpoint();
 
     private static final Log log = new LogWrapper(ArmeriaEndpoint.class);
 
