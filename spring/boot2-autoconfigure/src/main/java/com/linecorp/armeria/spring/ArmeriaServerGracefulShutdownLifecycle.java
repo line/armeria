@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.Server;
  */
 final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
 
-    private final Logger logger = LoggerFactory.getLogger(ArmeriaServerGracefulShutdownLifecycle.class);
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerGracefulShutdownLifecycle.class);
 
     private final Server server;
     private volatile boolean running;
