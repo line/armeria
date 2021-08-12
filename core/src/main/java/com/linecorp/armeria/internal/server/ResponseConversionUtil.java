@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A utility class which helps to send a streaming {@link HttpResponse}.
@@ -65,21 +66,22 @@ public final class ResponseConversionUtil {
 
     /**
      * Returns a new {@link HttpResponseWriter} which has a content converted from the collected objects.
-     *
-     * @param publisher publishes objects
+     *  @param publisher publishes objects
      * @param headers to be written to the returned {@link HttpResponseWriter}
      * @param trailers to be written to the returned {@link HttpResponseWriter}
      * @param contentConverter converts the collected objects into a content of the response
+     * @param ctx {@link ServiceRequestContext}
      */
     public static HttpResponseWriter aggregateFrom(Publisher<?> publisher,
                                                    ResponseHeaders headers, HttpHeaders trailers,
-                                                   Function<Object, HttpData> contentConverter) {
+                                                   Function<Object, HttpData> contentConverter,
+                                                   ServiceRequestContext ctx) {
         requireNonNull(publisher, "publisher");
         requireNonNull(headers, "headers");
         requireNonNull(trailers, "trailers");
         requireNonNull(contentConverter, "contentConverter");
 
-        return aggregateFrom(collectFrom(publisher), headers, trailers, contentConverter);
+        return aggregateFrom(collectFrom(publisher, ctx), headers, trailers, contentConverter);
     }
 
     private static HttpResponseWriter aggregateFrom(CompletableFuture<?> future,

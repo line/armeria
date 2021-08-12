@@ -204,7 +204,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             if (result instanceof Publisher) {
                 @SuppressWarnings("unchecked")
                 final Publisher<Object> publisher = (Publisher<Object>) result;
-                return aggregateFrom(publisher, headers, trailers, obj -> toJsonHttpData(obj, charset));
+                return aggregateFrom(publisher, headers, trailers, obj -> toJsonHttpData(obj, charset), ctx);
             }
             if (result instanceof Stream) {
                 @SuppressWarnings("unchecked")

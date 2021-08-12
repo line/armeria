@@ -326,29 +326,21 @@ public final class AnnotatedService implements HttpService {
             case COMPLETION_STAGE:
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
-                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
                     composedFuture = f.thenComposeAsync(
-                            aReq -> cancelOnDownstreamException(
+                            aReq -> cancelOnDownstreamCompleted(
                                     toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
-                                    responseFuture),
+                                    ctx.whenRequestCancelling()),
                             ctx.blockingTaskExecutor());
                 } else {
                     composedFuture = f.thenCompose(
-                            aReq -> cancelOnDownstreamException(
+                            aReq -> cancelOnDownstreamCompleted(
                                     toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()),
-                                    responseFuture));
+                                    ctx.whenRequestCancelling()));
                 }
-                composedFuture.handle((result, cause) -> {
-                    if (cause != null) {
-                        responseFuture.completeExceptionally(cause);
-                    } else {
-                        responseFuture.complete(convertResponse(ctx, null, result, HttpHeaders.of()));
-                    }
-                    return null;
-                });
-                return responseFuture;
+                return composedFuture
+                        .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
                         aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
@@ -460,19 +452,16 @@ public final class AnnotatedService implements HttpService {
     }
 
     /**
-     * Propagates {@link CompletionStage downstream} error to {@link CompletionStage upstream}.
+     * Add callback to cancel {@link CompletionStage upstream} if
+     * {@link CompletionStage downstream} completes earlier.
      */
-    private static CompletionStage<?> cancelOnDownstreamException(
-            CompletionStage<?> upstream, CompletionStage<? extends HttpResponse> downstream) {
-        downstream.handle((ignored, cause) -> {
-            if (cause == null) {
-                return null;
-            }
+    private static CompletionStage<?> cancelOnDownstreamCompleted(
+            CompletionStage<?> upstream, CompletionStage<Throwable> downstream) {
+        downstream.thenAccept(cause -> {
             final CompletableFuture<?> upstreamFuture = upstream.toCompletableFuture();
             if (!upstreamFuture.isDone()) {
                 upstreamFuture.completeExceptionally(cause);
             }
-            return null;
         });
         return upstream;
     }
@@ -543,7 +532,7 @@ public final class AnnotatedService implements HttpService {
                                             HttpHeaders trailers) throws Exception {
             final CompletableFuture<?> f;
             if (result instanceof Publisher) {
-                f = collectFrom((Publisher<Object>) result);
+                f = collectFrom((Publisher<Object>) result, ctx);
             } else if (result instanceof Stream) {
                 f = collectFrom((Stream<Object>) result, ctx.blockingTaskExecutor());
             } else {
@@ -551,20 +540,13 @@ public final class AnnotatedService implements HttpService {
             }
 
             assert f != null;
-            final CompletableFuture<HttpResponse> resFuture = f.thenApply(aggregated -> {
+            return HttpResponse.from(f.thenApply(aggregated -> {
                 try {
                     return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
                 } catch (Exception ex) {
                     return Exceptions.throwUnsafely(ex);
                 }
-            });
-            resFuture.handle((ignored, cause) -> {
-                if (cause != null && !f.isDone()) {
-                    f.completeExceptionally(cause);
-                }
-                return null;
-            });
-            return HttpResponse.from(resFuture);
+            }));
         }
     }
 

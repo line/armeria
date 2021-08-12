@@ -57,7 +57,7 @@ public final class StringResponseConverterFunction implements ResponseConverterF
 
                 // To avoid sending an unfinished text to the client, always aggregate the published strings.
                 if (result instanceof Publisher) {
-                    return aggregateFrom((Publisher<?>) result, headers, trailers, o -> toHttpData(o, charset));
+                    return aggregateFrom((Publisher<?>) result, headers, trailers, o -> toHttpData(o, charset), ctx);
                 }
                 if (result instanceof Stream) {
                     return aggregateFrom((Stream<?>) result, headers, trailers,

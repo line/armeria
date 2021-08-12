@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A utility class which provides functions for collecting objects published from a {@link Publisher} or
@@ -84,19 +85,20 @@ public final class ObjectCollectingUtil {
      * Collects objects published from the specified {@link Publisher}.
      *
      * @param publisher publishes objects
+     * @param ctx {@link ServiceRequestContext}
      * @return a {@link CompletableFuture} which will complete when all published objects are collected
      */
     @SuppressWarnings("unchecked")
-    public static CompletableFuture<Object> collectFrom(Publisher<?> publisher) {
+    public static CompletableFuture<Object> collectFrom(Publisher<?> publisher, ServiceRequestContext ctx) {
         requireNonNull(publisher, "publisher");
         if (publisher instanceof StreamMessage) {
             return (CompletableFuture<Object>) (CompletableFuture<?>) ((StreamMessage<?>) publisher).collect();
         }
         final CompletableFuture<Object> future = new CompletableFuture<>();
         if (MONO_CLASS != null && MONO_CLASS.isAssignableFrom(publisher.getClass())) {
-            publisher.subscribe(new CollectingSingleObjectSubscriber<>(future));
+            publisher.subscribe(new CollectingSingleObjectSubscriber<>(future, ctx));
         } else {
-            publisher.subscribe(new CollectingMultipleObjectsSubscriber<>(future));
+            publisher.subscribe(new CollectingMultipleObjectsSubscriber<>(future, ctx));
         }
         return future;
     }
@@ -106,20 +108,20 @@ public final class ObjectCollectingUtil {
      */
     private abstract static class AbstractCollectingSubscriber<T> implements Subscriber<T> {
         private final CompletableFuture<Object> future;
+        private final ServiceRequestContext ctx;
         private boolean onErrorCalled;
 
-        AbstractCollectingSubscriber(CompletableFuture<Object> future) {
+        AbstractCollectingSubscriber(CompletableFuture<Object> future, ServiceRequestContext ctx) {
             this.future = future;
+            this.ctx = ctx;
         }
 
         @Override
         public void onSubscribe(Subscription s) {
-            future.handle((ignored, cause) -> {
-                if (cause != null && !onErrorCalled) {
-                    // propagate downstream cancellation to upstream.
+            ctx.whenRequestCancelling().thenAccept(cause -> {
+                if (!onErrorCalled) {
                     s.cancel();
                 }
-                return null;
             });
             s.request(Integer.MAX_VALUE);
         }
@@ -135,8 +137,8 @@ public final class ObjectCollectingUtil {
         @Nullable
         private ImmutableList.Builder<T> collector;
 
-        CollectingMultipleObjectsSubscriber(CompletableFuture<Object> future) {
-            super(future);
+        CollectingMultipleObjectsSubscriber(CompletableFuture<Object> future, ServiceRequestContext ctx) {
+            super(future, ctx);
         }
 
         @Override
@@ -157,8 +159,8 @@ public final class ObjectCollectingUtil {
         @Nullable
         private T result;
 
-        CollectingSingleObjectSubscriber(CompletableFuture<Object> future) {
-            super(future);
+        CollectingSingleObjectSubscriber(CompletableFuture<Object> future, ServiceRequestContext ctx) {
+            super(future, ctx);
         }
 
         @Override
