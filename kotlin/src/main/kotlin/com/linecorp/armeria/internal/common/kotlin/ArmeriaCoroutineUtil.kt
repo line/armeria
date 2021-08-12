@@ -15,6 +15,7 @@
  */
 
 @file:JvmName("ArmeriaCoroutineUtil")
+@file:Suppress("unused")
 
 package com.linecorp.armeria.internal.common.kotlin
 
@@ -22,7 +23,10 @@ import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.future.future
+import kotlinx.coroutines.reactive.asPublisher
+import org.reactivestreams.Publisher
 import java.lang.reflect.Method
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
@@ -41,12 +45,24 @@ internal fun callKotlinSuspendingMethod(
     ctx: RequestContext
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not a kotlin function" }
-    val coroutineContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
-    // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
-    val newContext = executorService.asCoroutineDispatcher() + coroutineContext
-    return GlobalScope.future(newContext) {
+    return GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
         kFunction
             .callSuspend(obj, *args)
             .let { if (it == Unit) null else it }
     }
 }
+
+/**
+ * Converts [Flow] into [Publisher].
+ */
+internal fun <T : Any> asPublisher(
+    obj: Flow<T>,
+    executorService: ExecutorService,
+    ctx: RequestContext
+): Publisher<T> {
+    return obj.asPublisher(newCoroutineCtx(executorService, ctx))
+}
+
+private fun newCoroutineCtx(executorService: ExecutorService, ctx: RequestContext) =
+    // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
+    executorService.asCoroutineDispatcher() + (CoroutineContexts.get(ctx) ?: EmptyCoroutineContext)

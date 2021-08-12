@@ -27,6 +27,8 @@ import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Publisher;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -44,7 +46,13 @@ final class KotlinUtil {
     private static final Class<?> CONTINUATION_CLASS;
 
     @Nullable
+    private static final Class<?> KOTLIN_FLOW_CLASS;
+
+    @Nullable
     private static final MethodHandle CALL_KOTLIN_SUSPENDING_METHOD;
+
+    @Nullable
+    private static final MethodHandle AS_PUBLISHER;
 
     @Nullable
     private static final Method IS_SUSPENDING_FUNCTION;
@@ -71,6 +79,25 @@ final class KotlinUtil {
             // ignore
         } finally {
             CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
+        }
+
+        MethodHandle asPublisher = null;
+        try {
+            final Class<?> coroutineUtilClass =
+                    getClass(internalCommonPackageName + ".kotlin.ArmeriaCoroutineUtil");
+
+            asPublisher = MethodHandles.lookup().findStatic(
+                    coroutineUtilClass, "asPublisher",
+                    MethodType.methodType(
+                            Publisher.class,
+                            ImmutableList.of(getClass("kotlinx.coroutines.flow.Flow"),
+                                             ExecutorService.class,
+                                             RequestContext.class))
+            );
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+            // ignore
+        } finally {
+            AS_PUBLISHER = asPublisher;
         }
 
         Method isSuspendingFunction = null;
@@ -115,6 +142,15 @@ final class KotlinUtil {
         } finally {
             CONTINUATION_CLASS = continuationClass;
         }
+
+        Class<?> kotlinFlowClass = null;
+        try {
+            kotlinFlowClass = getClass("kotlinx.coroutines.flow.Flow");
+        } catch (ClassNotFoundException e) {
+            // ignore
+        } finally {
+            KOTLIN_FLOW_CLASS = kotlinFlowClass;
+        }
     }
 
     /**
@@ -124,6 +160,12 @@ final class KotlinUtil {
     static MethodHandle getCallKotlinSuspendingMethod() {
         return CALL_KOTLIN_SUSPENDING_METHOD;
     }
+
+    /**
+     * Returns a method which converts Kotlin Flow into {@link Publisher}.
+     */
+    @Nullable
+    static MethodHandle getAsPublisher() { return AS_PUBLISHER; }
 
     /**
      * Returns true if a method is written in Kotlin.
@@ -160,6 +202,10 @@ final class KotlinUtil {
      */
     static boolean isContinuation(Class<?> type) {
         return CONTINUATION_CLASS != null && CONTINUATION_CLASS.isAssignableFrom(type);
+    }
+
+    static boolean isKotlinFlow(Class<?> type) {
+        return KOTLIN_FLOW_CLASS != null && KOTLIN_FLOW_CLASS.isAssignableFrom(type);
     }
 
     /**

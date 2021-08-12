@@ -32,12 +32,14 @@ import com.linecorp.armeria.server.annotation.HttpResult
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction
 import com.linecorp.armeria.server.annotation.Param
 import com.linecorp.armeria.server.annotation.ProducesJson
+import com.linecorp.armeria.server.annotation.ProducesJsonSequences
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
 import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -102,6 +104,13 @@ class SuspendingAnnotatedServiceTest {
         val result = get("/blocking/baz")
         assertThat(result.status().code()).isEqualTo(200)
         assertThat(result.contentUtf8()).isEqualTo("OK")
+    }
+
+    @Test
+    fun test_flowJsonSequence() {
+        val result = get("/flow/json-seq")
+        assertThat(result.status().code()).isEqualTo(200)
+        assertThat(result.contentUtf8()).isEqualTo("\u001E\"hello\"\n\u001E\"world\"\n")
     }
 
     companion object {
@@ -185,6 +194,14 @@ class SuspendingAnnotatedServiceTest {
                             ServiceRequestContext.current()
                             assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
                             return "OK"
+                        }
+                    })
+                    .annotatedService("/flow", object {
+                        @Get("/json-seq")
+                        @ProducesJsonSequences
+                        fun flowJsonSeq() = flow {
+                            emit("hello")
+                            emit("world")
                         }
                     })
                     .decorator(LoggingService.newDecorator())
