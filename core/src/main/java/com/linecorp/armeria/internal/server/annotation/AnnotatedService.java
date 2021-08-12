@@ -329,13 +329,13 @@ public final class AnnotatedService implements HttpService {
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
                     composedFuture = f.thenComposeAsync(
-                            aReq -> cancelOnDownstreamCompleted(
+                            aReq -> cancelOnRequestCancelling(
                                     toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
                                     ctx.whenRequestCancelling()),
                             ctx.blockingTaskExecutor());
                 } else {
                     composedFuture = f.thenCompose(
-                            aReq -> cancelOnDownstreamCompleted(
+                            aReq -> cancelOnRequestCancelling(
                                     toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()),
                                     ctx.whenRequestCancelling()));
                 }
@@ -452,18 +452,18 @@ public final class AnnotatedService implements HttpService {
     }
 
     /**
-     * Add callback to cancel {@link CompletionStage upstream} if
-     * {@link CompletionStage downstream} completes earlier.
+     * Add a callback to cancel the given {@link CompletionStage stage} if
+     * {@link CompletionStage whenRequestCancelling} completes earlier.
      */
-    private static CompletionStage<?> cancelOnDownstreamCompleted(
-            CompletionStage<?> upstream, CompletionStage<Throwable> downstream) {
-        downstream.thenAccept(cause -> {
-            final CompletableFuture<?> upstreamFuture = upstream.toCompletableFuture();
+    private static CompletionStage<?> cancelOnRequestCancelling(
+            CompletionStage<?> stage, CompletionStage<Throwable> whenRequestCancelling) {
+        whenRequestCancelling.thenAccept(cause -> {
+            final CompletableFuture<?> upstreamFuture = stage.toCompletableFuture();
             if (!upstreamFuture.isDone()) {
                 upstreamFuture.completeExceptionally(cause);
             }
         });
-        return upstream;
+        return stage;
     }
 
     /**
