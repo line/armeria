@@ -92,7 +92,9 @@ public final class ObjectCollectingUtil {
     public static CompletableFuture<Object> collectFrom(Publisher<?> publisher, ServiceRequestContext ctx) {
         requireNonNull(publisher, "publisher");
         if (publisher instanceof StreamMessage) {
-            return (CompletableFuture<Object>) (CompletableFuture<?>) ((StreamMessage<?>) publisher).collect();
+            final StreamMessage<?> stream = (StreamMessage<?>) publisher;
+            ctx.whenRequestCancelling().thenAccept(cause -> stream.abort());
+            return (CompletableFuture<Object>) (CompletableFuture<?>) stream.collect();
         }
         final CompletableFuture<Object> future = new CompletableFuture<>();
         if (MONO_CLASS != null && MONO_CLASS.isAssignableFrom(publisher.getClass())) {
