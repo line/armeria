@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.Server;
  */
 final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger = LoggerFactory.getLogger(ArmeriaServerGracefulShutdownLifecycle.class);
 
     private final Server server;
     private volatile boolean running;
@@ -41,7 +41,6 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
 
     /**
      * Start this component.
-     * Currently AbstractArmeriaAutoConfiguration help starting the server.
      */
     @Override
     public void start() {
@@ -93,7 +92,6 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
     /**
      * Returns true if this Lifecycle component should get started automatically by the container at the time
      * that the containing ApplicationContext gets refreshed.
-     * AbstractArmeriaAutoConfiguration start the server manually, so this implementation return false.
      */
     @Override
     public boolean isAutoStartup() {
