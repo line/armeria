@@ -84,7 +84,8 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
                 // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {
                     if (result instanceof Publisher) {
-                        return aggregateFrom((Publisher<?>) result, headers, trailers, this::toJsonHttpData, ctx);
+                        return aggregateFrom((Publisher<?>) result, headers, trailers,
+                                             this::toJsonHttpData, ctx);
                     }
                     if (result instanceof Stream) {
                         return aggregateFrom((Stream<?>) result, headers, trailers,
