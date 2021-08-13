@@ -35,6 +35,8 @@ final class ArmeriaEndpoint extends AbstractEndpoint {
 
     private static final Log log = new LogWrapper(ArmeriaEndpoint.class);
 
+    private ArmeriaEndpoint() {}
+
     @Override
     protected void createSSLContext(SSLHostConfig sslHostConfig) throws Exception {}
 
@@ -84,6 +86,4 @@ final class ArmeriaEndpoint extends AbstractEndpoint {
 
     @Override
     protected void doCloseServerSocket() throws IOException {}
-
-    private ArmeriaEndpoint() {}
 }
