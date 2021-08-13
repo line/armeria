@@ -1,0 +1,286 @@
+---
+date: 2021-08-17
+---
+
+## 🌟 New features
+
+- A new module `armeria-sangria` integrates with [Sangria GraphQL](https://sangria-graphql.github.io) to let you
+  serve a GraphQL request in Scala. #3703 #3704
+  ```scala
+  val schema: Schema[CharacterRepo, Unit] = Schema(Query)
+  Server.builder()
+        .service("/graphql",
+            SangriaGraphqlService.builder(schema, new CharacterRepo)
+                                 .enableTracing(true)
+                                 .maxQueryDepth(10)
+                                 .build())
+  ```
+- You can now configure <type://WebClient> to automatically follow redirections. #2489 #3641
+  ```java
+  WebClient.builder()
+           .followRedirects()
+           .build();
+  // Customize redirection policy
+  RedirectConfig config = RedirectConfig.builder()
+                                        .maxRedirects(10)
+                                        .allownDomains("foo.com", "bar.com")
+                                        .build();
+  WebClient.builder("https://example.com")
+           .followRedirects(config)
+           .build();
+  ```
+- You can now recover a failed <type://HttpResponse> with a fallback <type://HttpResponse>. It would be useful
+  for handing an error of <type://HttpResponse> in a decorator. #3674
+  ```java
+  HttpResponse response = 
+      HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+  // The failed HttpResponse will be recovered by the fallback function.
+  HttpResponse recovered = 
+      response.recover(cause -> HttpResponse.of("Fallback"));
+  assert recovered.aggregate().join().contentUtf8().equals("Fallback");
+  ```
+- You can now resume a failed <type://StreamMessage> with a fallback <type://StreamMessage>. #3674
+  ```java
+  DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+  stream.write(1);
+  stream.write(2);
+  stream.close(new IllegalStateException("Oops...");
+  StreamMessage<Integer> resumed = 
+      stream.recoverAndResume(cause -> StreamMessage.of(3, 4));
+  assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
+  ```
+- You can now transform an error of <type://StreamMessage> into another using a function. #3668
+  ```java
+  StreamMessage stream = 
+      StreamMessage.aborted(ClosedStreamException.get());
+  StreamMessage transformed = stream.mapError(ex -> {
+    if (ex instanceof ClosedStreamException) {
+      return new IllegalStateException(ex);
+    } else {
+      return ex;
+    }
+  }); 
+  ```
+- You can now automatically encode an object into JSON for a response payload using
+  <type://HttpResponse#ofJson(Object)>. #3662
+  ```java
+  MyObject myObject = ...;
+  HttpResponse.ofJson(myObject);
+  MyError myError = ...;
+  HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, myError);
+  ```
+- You can now fluently inject `io.grpc.ServerInterceptor`s using
+  <type://GrpcServiceBuilder#intercept(Iterable)>.
+  ```java
+  GrpcService.builder()
+             .addService(myService)
+             .intercept(myInterceptror)
+             .build();
+  ``` 
+- You can now easily add `Accept` headers with <type://RequestHeadersBuilder#accept(Iterable)>. #3704
+  ```java
+  RequestHeaders.builder()
+                .accept(MediaType.JSON)
+                .accept(MediaType.PLAIN_TEXT);
+  ```
+- You can now initiate graceful connection shutdown using
+  <type://ServiceRequestContext#initiateConnectionShutdown()>. #3516 #3715
+- You can now specify the default `ObjectMapper` using <type://JacksonObjectMapperProvider>. #3728
+  ```java
+  public class MyObjectMapperProvider 
+      implements JacksonObjectMapperProvider {
+  
+    @Override
+    public ObjectMapper newObjectMapper() {
+      return JsonMapper
+         .builder()
+         .addModules(new KotlinModule())
+         .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+         .build();
+    }
+  }
+  ```
+- You can now serve `application/grpc-web+proto` and `application/grpc-web-text+proto`
+  [protocols](https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2)
+  using <type://AbstractUnaryGrpcService>. #3638 #3716
+- gRPC trailers are available in the <type://RequestContext> for unary gRPC server and client. #3724 #3739
+  ```java
+  UnaryGrpcClient client = ...;
+  try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+      client.execute("/com.example.MyService/UnaryCall", request); 
+      ClientRequestContext ctx = captor.get();
+      HttpHeaders trailers = GrpcWebTrailers.get(ctx); // 👈👈👈
+  }
+  ```
+- You can now compress and decompress content with [Brotli](https://www.brotli.org/) when using
+  <type://EncodingService>, <type://DecodingService> and <type://DecodingClient>.
+- You can now create an <type://HttpResponseException> with a cause. #3674
+- You can now easily capture <typeplural://ServiceRequestContext> using <type://ServerExtension> in tests.
+- You can now suppress the Netty version warning by specifying
+  `-Dcom.linecorp.armeria.warnNettyVersions=false`. #3572 #3766
+
+## 📃 Documentations
+
+- You can now learn how to write a service with Armeria by walking through the
+  [brand-new tutorials](/tutorials). #3420
+  - Special thanks to @freevie who volunteered for this.
+
+## 📈 Improvements
+
+- <type://HttpHeaders> now properly caches well-known HTTP headers' value objects. #3711 #3714
+- <type://ConcurrencyLimitTimeoutException> is now raised when a request times out
+  in <type://ConcurrencyLimitingClient>.
+- <type://OAuth2AuthorizationGrant> no longer uses locks for better performance. #3571 #3618
+
+## 🛠️ Bug fixes
+
+- You no longer see an `IllegalArgumentException` when <type://HttpRequest#aggregate()>
+  and <type://HttpResponse#aggregate()> fail with an exception. #3676 #3684 #3687
+- You no longer see an incomplete <type://RequestLog> when an <type://HttpStatusException>
+  is raised. #3719 #3674
+- You no longer see a `NullPointerException` when an HTTP/1 connection of a client is closed. #3729 #3747
+- You no longer see a `NullPointerException` when a <type://StreamMessage> is aborted. #3731
+- No more unintended leakage of sensitive information when logging a <type://RequestLog>. #3758
+- A request is now correctly reset when <type://ServiceRequestContext#cancel()> is called. #3674
+- You no longer see a `ClassNotFoundException` in the shaded fastutil. #3713
+- You no longer see an <type://EmptyEndpointGroupException> when <typeplural://Endpoint> are completely switched
+  to new <typeplural://Endpoint> in <type://HealthCheckedEndpointGroup>. #3637
+- You can now correctly monitor a <type://BlockingTaskExecutor> with Micrometer. #3710 #3718
+- <type://BlockingTaskExecutor>'s idle threads are now properly terminated after timeout. #3718
+- You no longer see a `ClassNotFoundException` when a <type://TransportType> is initialized. #3717
+- The second <type://RetryRuleWithContent> is now properly applied to decide to retry or not when
+  using <type://RetryingClient>. #3720
+- `requestDurationNanos`, `responseDurationNanos` and `totalDurationNanos` of a child log are properly
+  calculated. #3749
+- An `IllegalArgumentException` raised in annotated service will be correctly logged by
+  <type://LoggingService>. #3674
+- You no longer see <type://ClosedSessionException> when a large content is sent to an invalid path. #3674
+- <type://ServerBuilder#localPort(int,Iterable)> correctly binds both IPv4 and IPv6 
+  loopback addresses. #3725 #3726
+- A `Publisher` or a `CompletableFuture` returned by a service now properly gets a cancellation signal when the
+  request is cancelled. #3690 #3691
+- Brave's `ScopeDecorator`s now correctly propagates a decorated `Scope` context when
+  using <type://BraveService> and <type://BraveClient>. #3408 #3430
+- A <type://Server> in Spring integration is now automatically started by `SmartLifecycle`. #3759 #3762
+- You no longer see <type://CancelledSubscriptionException> when a WebFlux's `WebClient` receives an unexpected
+  `Content-Type` header. #3730 #3750
+- <type://TomcatService> now properly handles an exception with Spring Web's `ExceptionHandler`s. #3447 #3732
+- <type://JettyService> doesn't raise an `EofException` anymore. #3688
+- Kotlin [`jsr305=strict`](https://kotlinlang.org/docs/java-interop.html#compiler-configuration) option no
+  longer raises a false positive error when a null value is returned from where nulls are allowed
+  to return. #3751
+- You no longer see null values when a case class is decoded from a JSON when using annotated services with
+  Scala. 400 Bad Request will be returned instead. #3728
+
+## 🏚️ Deprecations
+
+- `-Dcom.linecorp.armeria.annotatedServiceExceptionVerbosity` and <type://ExceptionVerbosity> has been
+  deprecated. #3674
+  - You can use <type://LoggingService> that automatically logs exceptions using for your convenience; or
+    manually log exceptions using <type://ServerBuilder#exceptionHandler(ExceptionHandler)>.
+- <type://ObservableResponseConverterFunction#&lt;init&gt;(ResponseConverterFunction,ExceptionHandlerFunction)?full>
+  has been deprecated in favor of
+  <type://ObservableResponseConverterFunction#&lt;init&gt;(ResponseConverterFunction)?full>. #3674
+- <type://HttpResponseException#of(HttpStatus)?full> and <type://HttpResponseException#of(int)?full> has been
+  deprecated in favor of <type://HttpStatusException>. #3674
+
+## ☢️ Breaking changes
+
+- <type://ExceptionHandler> now returns <type://HttpResponse> instead of <type://AggregatedHttpResponse>. #3674
+  ```java
+  // Before:
+  ExceptionHandler handler = (ctx, cause) -> {
+      if (cause instanceof IllegalArgumentException) {
+          return AggregatedHttpResponse.of(HttpStatus.BAD_REQUEST);
+      }
+      return null;
+  }
+    
+  // After:
+  ExceptionHandler handler = (ctx, cause) -> {
+      if (cause instanceof IllegalArgumentException) {
+          return HttpResponse.of(HttpStatus.BAD_REQUEST); // 👈👈👈
+      }
+      return null;
+  }
+  ```
+- <type://RequestContext> is added as the first parameter of <type://GrpcStatusFunction>. #3692 #3693
+  ```java
+  // Before:
+  GrpcService.builder()
+             .exceptionMapping((throwable, metadata) -> {
+                 if (throwable instanceof IllegalArgumentException) {
+                     return Status.INVALID_ARGUMENT;
+                 }
+                 return null;
+             });
+  
+  // After:
+  GrpcService.builder()
+             .exceptionMapping((ctx, throwable, metadata) -> { // 👈👈👈
+                 if (throwable instanceof IllegalArgumentException) {
+                     return Status.INVALID_ARGUMENT;
+                 }
+                 return null;
+              });
+  ```
+- `JacksonModuleProvider` has been removed in favor of <type://JacksonObjectMapperProvider>.
+- `ResponseConverterFunctionProvider.createResponseConverterFunction(Type,ResponseConverterFunction,ExceptionHandlerFunction)`
+  has been removed in favor of
+  <type://ResponseConverterFunctionProvider#createResponseConverterFunction(Type,ResponseConverterFunction)?full>
+  . #3674
+- `OAuth2AuthorizationGrant.withAuthorization()` has been removed. #3618
+
+## ⛓ Dependencies
+
+- Dropwizard 2.0.23 → 2.0.24
+- Dropwizard Metrics 4.2.2 → 4.2.3
+- Jackson 2.12.3 → 2.12.4
+- Jetty 9.4.42 → 9.4.23
+- GraphQL-Java 16.2 → 17.1
+- gRPC-Java 1.38.1 → 1.39.0
+- Kotlin 1.5.10 → 1.5.21
+- kotlinx-coroutines-core 1.5.0 → 1.5.1
+- Logback 1.2.3 → 1.2.5
+- Micrometer 1.7.1 → 1.7.2
+- Netty 4.1.65 → 4.1.66
+- netty-tcnative-boringssl-static 2.0.39 → 2.0.40
+- netty-transport-native-io_uring 0.0.5 → 0.0.8
+- java-jwt 3.16.0 → 3.18.1
+- protobuf-java 3.12.0 → 3.17.2
+- Reactor 3.4.7 → 3.4.9
+- RESTeasy 4.6.1 → 4.7.1
+- RxJava 3.0.13 → 3.1.0
+- scala-collection-compat 2.4.4 → 2.5.0
+- ScalaPB 0.11.4 → 0.11.5
+- ScalaPB json4s 0.11.1 → 0.12.0
+- SLF4J 1.7.31 → 1.7.32
+- Spring 5.3.8 → 5.3.9
+- Spring Boot 2.5.2 → 2.5.3
+- ZooKeeper 3.6.2 → 3.6.3
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'anuraaga',
+  'alexc-db',
+  'freevie',
+  'ghkim3221',
+  'heowc',
+  'heka1024',
+  'icepeppermint',
+  'imasahiro',
+  'jrhee17',
+  'jupiny',
+  'karellen-kim',
+  'kezhenxu94',
+  'kojilin',
+  'ks-yim',
+  'ikhoon',
+  'minwoox',
+  'mauhiz',
+  'mynameisjwlee',
+  'sfc-gh-pbennes',
+  'tobias-',
+  'trustin'
+]} />
