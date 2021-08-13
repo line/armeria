@@ -441,6 +441,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
+        log.startRequest();
         responseCancellationScheduler =
                 new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
