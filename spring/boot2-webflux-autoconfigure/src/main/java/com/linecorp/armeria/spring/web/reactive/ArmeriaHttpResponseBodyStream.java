@@ -25,6 +25,7 @@ import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -63,7 +64,15 @@ final class ArmeriaHttpResponseBodyStream extends DefaultSplitHttpResponse {
 
             @SuppressWarnings({ "unchecked", "rawtypes" })
             final Publisher<HttpData> newPublisher =
-                    (Publisher) Mono.fromFuture(whenComplete());
+                    (Publisher) Mono.fromFuture(whenComplete())
+                                    // When 1) an error is raised from WebFlux's WebClient, the WebClient
+                                    // immediately cancels the upstream. If whenComplete() completes with an
+                                    // CancelledSubscriptionException, the actual error raised in 1) will be
+                                    // ignored and users can't see the actual error.
+                                    // See: https://github.com/line/armeria/issues/3730
+                                    .onErrorResume(CancelledSubscriptionException.class::isInstance,
+                                                   cause -> Mono.empty());
+
             if (publisherForLateSubscribersUpdater.compareAndSet(this, null, newPublisher)) {
                 newPublisher.subscribe(s);
             } else {
