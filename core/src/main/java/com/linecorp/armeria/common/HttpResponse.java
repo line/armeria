@@ -157,7 +157,7 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /***
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
-     * delegates to the provided {@link HttpResponse>} by {@link Supplier},
+     * delegates to the provided {@link HttpResponse} by {@link Supplier},
      * beginning publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
      */
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
