@@ -93,7 +93,7 @@ public final class ObjectCollectingUtil {
         requireNonNull(publisher, "publisher");
         if (publisher instanceof StreamMessage) {
             final StreamMessage<?> stream = (StreamMessage<?>) publisher;
-            ctx.whenRequestCancelling().thenAccept(cause -> stream.abort());
+            ctx.whenRequestCancelling().thenAccept(cause -> stream.abort(cause));
             return (CompletableFuture<Object>) (CompletableFuture<?>) stream.collect();
         }
         final CompletableFuture<Object> future = new CompletableFuture<>();
