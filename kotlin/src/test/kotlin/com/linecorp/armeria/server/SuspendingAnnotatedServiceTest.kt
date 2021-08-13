@@ -106,13 +106,6 @@ class SuspendingAnnotatedServiceTest {
         assertThat(result.contentUtf8()).isEqualTo("OK")
     }
 
-    @Test
-    fun test_flowJsonSequence() {
-        val result = get("/flow/json-seq")
-        assertThat(result.status().code()).isEqualTo(200)
-        assertThat(result.contentUtf8()).isEqualTo("\u001E\"hello\"\n\u001E\"world\"\n")
-    }
-
     companion object {
         private val log = LoggerFactory.getLogger(SuspendingAnnotatedServiceTest::class.java)
 
@@ -194,14 +187,6 @@ class SuspendingAnnotatedServiceTest {
                             ServiceRequestContext.current()
                             assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
                             return "OK"
-                        }
-                    })
-                    .annotatedService("/flow", object {
-                        @Get("/json-seq")
-                        @ProducesJsonSequences
-                        fun flowJsonSeq() = flow {
-                            emit("hello")
-                            emit("world")
                         }
                     })
                     .decorator(LoggingService.newDecorator())

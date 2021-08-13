@@ -165,7 +165,9 @@ final class KotlinUtil {
      * Returns a method which converts Kotlin Flow into {@link Publisher}.
      */
     @Nullable
-    static MethodHandle getAsPublisher() { return AS_PUBLISHER; }
+    static MethodHandle getAsPublisher() {
+        return AS_PUBLISHER;
+    }
 
     /**
      * Returns true if a method is written in Kotlin.
