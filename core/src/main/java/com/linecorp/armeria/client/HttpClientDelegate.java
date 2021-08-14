@@ -17,7 +17,9 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -46,7 +48,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements HttpClient {
 
@@ -86,7 +87,20 @@ final class HttpClientDelegate implements HttpClient {
             return HttpResponse.ofFailure(cause);
         }
 
-        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
+        final Endpoint endpointWithPort;
+        final int defaultPort = ctx.sessionProtocol().defaultPort();
+        final String host = extractHostFromAuthority(ctx, req);
+        if (host == null) {
+            endpointWithPort = endpoint.withDefaultPort(defaultPort);
+        } else {
+            // Override the host in endpoint with the extracted host.
+            if (endpoint.hasPort()) {
+                endpointWithPort = Endpoint.of(host, endpoint.port());
+            } else {
+                endpointWithPort = Endpoint.of(host, defaultPort);
+            }
+        }
+
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
@@ -94,59 +108,60 @@ final class HttpClientDelegate implements HttpClient {
 
         if (endpointWithPort.hasIpAddr()) {
             // IP address has been resolved already.
-            acquireConnectionAndExecute(ctx, endpointWithPort, endpointWithPort.ipAddr(),
-                                        req, res, timingsBuilder);
+            acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder);
         } else {
-            // IP address has not been resolved yet.
-            final Future<InetSocketAddress> resolveFuture =
-                    addressResolverGroup.getResolver(eventLoop)
-                                        .resolve(InetSocketAddress.createUnresolved(endpointWithPort.host(),
-                                                                                    endpointWithPort.port()));
-            if (resolveFuture.isDone()) {
-                finishResolve(ctx, endpointWithPort, resolveFuture, req, res, timingsBuilder);
-            } else {
-                resolveFuture.addListener(
-                        (FutureListener<InetSocketAddress>) future ->
-                                finishResolve(ctx, endpointWithPort, future, req, res, timingsBuilder));
-            }
+            resolveAddress(endpointWithPort, ctx).handle((resolved, cause) -> {
+                if (cause == null) {
+                    acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder);
+                } else {
+                    ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
+                    final UnprocessedRequestException wrappedCause = UnprocessedRequestException.of(cause);
+                    handleEarlyRequestException(ctx, req, wrappedCause);
+                    res.close(wrappedCause);
+                }
+                return null;
+            });
         }
 
         return res;
     }
 
-    private void finishResolve(ClientRequestContext ctx, Endpoint endpointWithPort,
-                               Future<InetSocketAddress> resolveFuture, HttpRequest req,
-                               DecodedHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
-        timingsBuilder.dnsResolutionEnd();
+    private CompletableFuture<Endpoint> resolveAddress(Endpoint endpoint, ClientRequestContext ctx) {
+        // IP address has not been resolved yet.
+        assert !endpoint.hasIpAddr() && endpoint.hasPort();
+
+        final Future<InetSocketAddress> resolveFuture =
+                addressResolverGroup.getResolver(ctx.eventLoop().withoutContext())
+                                    .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
+                                                                                endpoint.port()));
         if (resolveFuture.isSuccess()) {
-            final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
-            acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr, req, res, timingsBuilder);
+            final InetAddress address = resolveFuture.getNow().getAddress();
+            return CompletableFuture.completedFuture(endpoint.withIpAddr(address));
         } else {
-            ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-            final UnprocessedRequestException cause = UnprocessedRequestException.of(resolveFuture.cause());
-            handleEarlyRequestException(ctx, req, cause);
-            res.close(cause);
+            final CompletableFuture<Endpoint> endpointFuture = new CompletableFuture<>();
+            resolveFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    final InetAddress address = resolveFuture.getNow().getAddress();
+                    endpointFuture.complete(endpoint.withIpAddr(address));
+                } else {
+                    endpointFuture.completeExceptionally(resolveFuture.cause());
+                }
+            });
+            return endpointFuture;
         }
     }
 
-    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpointWithPort,
-                                             String ipAddr, HttpRequest req, DecodedHttpResponse res,
+    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint,
+                                             HttpRequest req, DecodedHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder) {
-        final EventLoop eventLoop = ctx.eventLoop();
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr,
-                                                                req, res, timingsBuilder));
-            return;
-        }
+        // IP address should be resolved already.
+        assert endpoint.hasIpAddr();
 
-        final String host = extractHost(ctx, req, endpointWithPort);
-        final int port = endpointWithPort.port();
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
 
         final ProxyConfig proxyConfig;
         try {
-            final Endpoint endpoint = Endpoint.of(host, port).withIpAddr(ipAddr);
             proxyConfig = getProxyConfig(protocol, endpoint);
         } catch (Throwable t) {
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
@@ -155,7 +170,7 @@ final class HttpClientDelegate implements HttpClient {
             return;
         }
 
-        final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
+        final PoolKey key = new PoolKey(endpoint.host(), endpoint.ipAddr(), endpoint.port(), proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
@@ -208,22 +223,19 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     @VisibleForTesting
-    static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
-        String host = extractHost(ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY));
+    @Nullable
+    static String extractHostFromAuthority(ClientRequestContext ctx, HttpRequest req) {
+        final String host = extractHostFromAuthority(ctx.additionalRequestHeaders()
+                                                        .get(HttpHeaderNames.AUTHORITY));
         if (host != null) {
             return host;
         }
 
-        host = extractHost(req.authority());
-        if (host != null) {
-            return host;
-        }
-
-        return endpoint.host();
+        return extractHostFromAuthority(req.authority());
     }
 
     @Nullable
-    private static String extractHost(@Nullable String authority) {
+    private static String extractHostFromAuthority(@Nullable String authority) {
         if (Strings.isNullOrEmpty(authority)) {
             return null;
         }
