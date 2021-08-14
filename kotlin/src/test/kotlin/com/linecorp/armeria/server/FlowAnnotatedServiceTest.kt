@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.sse.ServerSentEvent
+import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.Post
 import com.linecorp.armeria.server.annotation.ProducesEventStream
@@ -104,6 +105,13 @@ class FlowAnnotatedServiceTest {
     }
 
     @Test
+    fun test_blockingAnnotation(): Unit = runBlocking {
+        val res = client.get("/flow/blocking-annotation").aggregate().await()
+        assertThat(res.status()).isEqualTo(HttpStatus.OK)
+        assertThat(res.contentUtf8()).isEqualTo("OK")
+    }
+
+    @Test
     fun test_customContext(): Unit = runBlocking {
         val res = client.get("/flow/custom-context").aggregate().await()
         assertThat(res.status()).isEqualTo(HttpStatus.OK)
@@ -164,6 +172,15 @@ class FlowAnnotatedServiceTest {
                                     .data("{\"user_id\":123}")
                                     .build()
                             )
+                        }
+
+                        @Blocking
+                        @Get("/blocking-annotation")
+                        @ProducesText
+                        fun blockingAnnotation(): Flow<String> = flow {
+                            checkNotNull(ServiceRequestContext.currentOrNull())
+                            assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
+                            emit("OK")
                         }
 
                         @Get("/custom-context")
