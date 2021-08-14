@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,7 +33,10 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
@@ -69,6 +73,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private static final Predicate<String> SCHEME_VALIDATOR =
             scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
 
+    private static final Cache<Map.Entry<String, Integer>, Endpoint> cache =
+            Caffeine.newBuilder()
+                    .maximumSize(8192) // TODO(ikhoon): Add a flag if there is a demand for it.
+                    .build();
+
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
      * <ul>
@@ -81,7 +90,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
         final HostAndPort parsed = HostAndPort.fromString(removeUserInfo(authority)).withDefaultPort(0);
-        return create(parsed.getHost(), parsed.getPort());
+        return getOrCreate(parsed.getHost(), parsed.getPort());
     }
 
     /**
@@ -92,7 +101,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint of(String host, int port) {
         validatePort("port", port);
-        return create(host, port);
+        return getOrCreate(host, port);
     }
 
     /**
@@ -101,12 +110,15 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalArgumentException if {@code host} is not a valid host name
      */
     public static Endpoint of(String host) {
-        return create(host, 0);
+        return getOrCreate(host, 0);
+    }
+
+    private static Endpoint getOrCreate(String host, int port) {
+        requireNonNull(host, "host");
+        return cache.get(Maps.immutableEntry(host, port), key -> create(key.getKey(), key.getValue()));
     }
 
     private static Endpoint create(String host, int port) {
-        requireNonNull(host, "host");
-
         if (NetUtil.isValidIpV4Address(host)) {
             return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY);
         }
@@ -127,7 +139,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf("@");
+        final int indexOfDelimiter = authority.lastIndexOf('@');
         if (indexOfDelimiter == -1) {
             return authority;
         }
@@ -151,6 +163,9 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final HostType hostType;
     private final String authority;
     private final String strVal;
+    private final CompletableFuture<Endpoint> selectFuture;
+    private final CompletableFuture<List<Endpoint>> whenReadyFuture;
+    private final int hashCode;
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
         this.host = host;
@@ -158,6 +173,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         this.port = port;
         this.weight = weight;
         this.hostType = hostType;
+
         endpoints = ImmutableList.of(this);
 
         // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
@@ -166,9 +182,12 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         // Pre-generate the authority.
         authority = generateAuthority(host, port, hostType);
-
         // Pre-generate toString() value.
         strVal = generateToString(authority, ipAddr, weight, hostType);
+
+        selectFuture = UnmodifiableFuture.completedFuture(this);
+        whenReadyFuture = UnmodifiableFuture.completedFuture(endpoints);
+        hashCode = (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
     }
 
     private static String generateAuthority(String host, int port, HostType hostType) {
@@ -219,12 +238,12 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                               ScheduledExecutorService executor,
                                               long timeoutMillis) {
-        return UnmodifiableFuture.completedFuture(this);
+        return selectFuture;
     }
 
     @Override
     public CompletableFuture<List<Endpoint>> whenReady() {
-        return CompletableFuture.completedFuture(endpoints);
+        return whenReadyFuture;
     }
 
     /**
@@ -619,7 +638,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public int hashCode() {
-        return (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        return hashCode;
     }
 
     @Override

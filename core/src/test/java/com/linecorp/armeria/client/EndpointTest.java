@@ -416,4 +416,13 @@ class EndpointTest {
         // Weight is not part of comparison.
         assertThat(Endpoint.of("a").withWeight(1)).isEqualByComparingTo(Endpoint.of("a").withWeight(2));
     }
+
+    @Test
+    void cache() {
+        final Endpoint newEndpoint = Endpoint.of("foo", 10);
+        final Endpoint cachedEndpoint = Endpoint.of("foo", 10);
+        assertThat(cachedEndpoint).isSameAs(newEndpoint);
+        final Endpoint differentEndpoint = Endpoint.of("foo");
+        assertThat(differentEndpoint).isNotEqualTo(cachedEndpoint);
+    }
 }
