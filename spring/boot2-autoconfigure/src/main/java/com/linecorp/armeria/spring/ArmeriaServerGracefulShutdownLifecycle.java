@@ -44,12 +44,12 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
      */
     @Override
     public void start() {
-        running = true;
         server.start().handle((result, t) -> {
             if (t != null) {
                 throw new IllegalStateException("Armeria server failed to start", t);
             }
-            return result;
+            running = true;
+            return null;
         }).join();
         logger.info("Armeria server started at ports: {}", server.activePorts());
     }
@@ -67,8 +67,10 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
      */
     @Override
     public void stop(Runnable callback) {
-        running = false;
-        server.stop().whenComplete((unused, throwable) -> callback.run());
+        server.stop().whenComplete((unused, throwable) -> {
+            callback.run();
+            running = false;
+        });
     }
 
     /**
