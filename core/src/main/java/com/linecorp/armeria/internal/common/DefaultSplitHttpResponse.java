@@ -132,6 +132,11 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     }
 
     @Override
+    public EventExecutor defaultSubscriberExecutor() {
+        return upstreamExecutor;
+    }
+
+    @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
