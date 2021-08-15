@@ -90,7 +90,7 @@ final class HttpClientDelegate implements HttpClient {
         final Endpoint endpointWithPort;
         final int defaultPort = ctx.sessionProtocol().defaultPort();
         final String host = extractHostFromAuthority(ctx, req);
-        if (host == null) {
+        if (host == null || host.equals(endpoint.host())) {
             endpointWithPort = endpoint.withDefaultPort(defaultPort);
         } else {
             // Override the host in endpoint with the extracted host.

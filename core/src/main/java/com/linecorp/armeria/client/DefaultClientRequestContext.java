@@ -407,7 +407,7 @@ public final class DefaultClientRequestContext
             if (headersBuilder.get(HttpHeaderNames.HOST) != null) {
                 headersBuilder.set(HttpHeaderNames.HOST, authority);
             } else {
-                headersBuilder.set(HttpHeaderNames.AUTHORITY, authority);
+                headersBuilder.authority(authority);
             }
             unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
