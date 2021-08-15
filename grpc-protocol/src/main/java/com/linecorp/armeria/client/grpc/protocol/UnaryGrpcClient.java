@@ -76,12 +76,12 @@ public final class UnaryGrpcClient {
 
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
+     *
+     * <p>Prefer using a standard client building pattern, e.g.:</p>
+     * <pre>{@code
+     * UnaryGrpcClient client = Clients.builder("gproto+http://127.0.0.1:8080").build(UnaryGrpcClient.class);
+     * }</pre>
      */
-    // TODO(anuraaga): We would ideally use our standard client building pattern, i.e.,
-    // Clients.builder(...).build(UnaryGrpcClient.class), but that requires mapping protocol schemes to media
-    // types, which cannot be duplicated. As this and normal gproto+ clients must use the same media type, we
-    // cannot currently implement this without rethinking / refactoring core and punt for now since this is an
-    // advanced API.
     public UnaryGrpcClient(WebClient webClient) {
         this(webClient, UnaryGrpcSerializationFormats.PROTO);
     }
@@ -90,6 +90,12 @@ public final class UnaryGrpcClient {
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient} and {@link SerializationFormat}.
      * The specified {@link SerializationFormat} should be one of {@code UnaryGrpcSerializationFormats#PROTO},
      * {@code UnaryGrpcSerializationFormats#PROTO_WEB}, or {@code UnaryGrpcSerializationFormats#PROTO_WEB_TEXT}.
+     *
+     * <p>Prefer using a standard client building pattern, e.g.:</p>
+     * <pre>{@code
+     * UnaryGrpcClient client =
+     *     Clients.builder("gproto-web+http://127.0.0.1:8080").build(UnaryGrpcClient.class);
+     * }</pre>
      */
     public UnaryGrpcClient(WebClient webClient, SerializationFormat serializationFormat) {
         if (!SUPPORTED_SERIALIZATION_FORMATS.contains(serializationFormat)) {
