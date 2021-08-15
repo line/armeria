@@ -160,23 +160,24 @@ class HttpResponseTest {
     void aggregateAs() {
         // aggregate as class type
         final Content content = HttpResponse.of(MediaType.JSON_UTF_8, "{\"id\":1}")
-                .aggregateAs(Content.class)
-                .join();
+                                            .aggregateAs(Content.class)
+                                            .join();
         assertThat(content.id).isEqualTo(1);
 
         // aggregate as type reference
         final WrapperContent<Content> wrapperContent = HttpResponse.of(MediaType.JSON_UTF_8,
-                "{\"id\":1,\"name\":\"name\",\"list\":[{\"id\":1},{\"id\":2},{\"id\":3}]}")
-                .aggregateAs(new TypeReference<WrapperContent<Content>>(){})
-                .join();
+                                                                       "{\"id\":1,\"name\":\"name\",\"list\":[{\"id\":1},{\"id\":2},{\"id\":3}]}")
+                                                                   .aggregateAs(
+                                                                           new TypeReference<WrapperContent<Content>>() {})
+                                                                   .join();
         assertThat(wrapperContent.id).isEqualTo(1);
         assertThat(wrapperContent.name).isEqualTo("name");
         assertThat(wrapperContent.list.stream().map(item -> item.id)).isEqualTo(ImmutableList.of(1, 2, 3));
 
         assertThatThrownBy(() ->
-                HttpResponse.of(MediaType.JSON_UTF_8, "{\"UnknownField\":1}")
-                        .aggregateAs(Content.class)
-                        .join());
+                                   HttpResponse.of(MediaType.JSON_UTF_8, "{\"UnknownField\":1}")
+                                               .aggregateAs(Content.class)
+                                               .join());
     }
 
     static class WrapperContent<T> {

@@ -308,12 +308,21 @@ public interface HttpRequest extends Request, HttpMessage {
      * @param content the content of the request
      */
     static HttpRequest ofJson(RequestHeaders headers, Object content) {
+        requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        checkArgument(headers.contentType().isJson(),
-                "contentType: %s (expected: the subtype is 'json' or ends with '+json'.", headers.contentType());
+
+        RequestHeaders validHeaders;
+        if (headers.contentType() == null) {
+            validHeaders = headers.toBuilder().contentType(MediaType.JSON_UTF_8).build();
+        } else {
+            checkArgument(headers.contentType().isJson(),
+                          "contentType: %s (expected: the subtype is 'json' or ends with '+json'.",
+                          headers.contentType());
+            validHeaders = headers;
+        }
 
         try {
-            return of(headers, HttpData.copyOf(JacksonUtil.writeValueAsBytes(content)));
+            return of(validHeaders, HttpData.copyOf(JacksonUtil.writeValueAsBytes(content)));
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Failed to encode the content of the request into JSON", e);
         }

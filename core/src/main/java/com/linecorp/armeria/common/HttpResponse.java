@@ -738,7 +738,7 @@ public interface HttpResponse extends Response, HttpMessage {
                                                  EventExecutor executor) {
         requireNonNull(clazz, "clazz");
 
-        return aggregateAs(httpStatusFilter, (content) -> {
+        return aggregateAs(httpStatusFilter, content -> {
             try {
                 return JacksonUtil.readValue(content, clazz);
             } catch (JsonProcessingException e) {
@@ -763,7 +763,7 @@ public interface HttpResponse extends Response, HttpMessage {
                                                  EventExecutor executor) {
         requireNonNull(valueTypeRef, "valueTypeRef");
 
-        return aggregateAs(httpStatusFilter, (content) -> {
+        return aggregateAs(httpStatusFilter, content -> {
             try {
                 return JacksonUtil.readValue(content, valueTypeRef);
             } catch (JsonProcessingException e) {
@@ -790,7 +790,7 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(jsonDecoder, "jsonDecoder");
         requireNonNull(executor, "executor");
 
-        return aggregate(executor).thenApply((response) -> {
+        return aggregate(executor).thenApply(response -> {
             if (httpStatusFilter.test(response.status())) {
                 return jsonDecoder.apply(response.contentUtf8());
             } else {
