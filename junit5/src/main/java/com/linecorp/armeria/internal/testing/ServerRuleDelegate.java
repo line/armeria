@@ -187,7 +187,7 @@ public abstract class ServerRuleDelegate {
      */
     public Endpoint endpoint(SessionProtocol protocol) {
         ensureStarted();
-        return Endpoint.of("127.0.0.1", port(protocol));
+        return Endpoint.unsafeCreate("127.0.0.1", port(protocol));
     }
 
     /**

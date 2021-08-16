@@ -90,7 +90,7 @@ final class ArmeriaCallFactory implements Factory {
         }
 
         final SessionProtocol protocol = url.isHttps() ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
-        final Endpoint endpoint = Endpoint.of(url.host(), url.port());
+        final Endpoint endpoint = Endpoint.unsafeCreate(url.host(), url.port());
         return nonBaseWebClientFactory.apply(protocol, endpoint);
     }
 

@@ -48,6 +48,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -104,7 +105,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint of(String host, int port) {
         validatePort("port", port);
-        return getOrCreate(host, port);
+        return create(host, port, true);
     }
 
     /**
@@ -113,15 +114,27 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalArgumentException if {@code host} is not a valid host name
      */
     public static Endpoint of(String host) {
-        return getOrCreate(host, 0);
+        return create(host, 0, true);
+    }
+
+    /**
+     * Creates a new host {@link Endpoint} <strong>without</strong> validation.
+     *
+     * <p>Note that you should carefully use this method only when both {@code host} and {@code port} are
+     * already valid.
+     */
+    @UnstableApi
+    public static Endpoint unsafeCreate(String host, int port) {
+        return create(host, port, /* validateHost */ false);
     }
 
     private static Endpoint getOrCreate(String host, int port) {
         requireNonNull(host, "host");
-        return cache.get(Maps.immutableEntry(host, port), key -> create(key.getKey(), key.getValue()));
+        return cache.get(Maps.immutableEntry(host, port),
+                         key -> create(key.getKey(), key.getValue(), true));
     }
 
-    private static Endpoint create(String host, int port) {
+    private static Endpoint create(String host, int port, boolean validateHost) {
         if (NetUtil.isValidIpV4Address(host)) {
             return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY);
         }
@@ -137,8 +150,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY);
         }
 
-        return new Endpoint(InternetDomainName.from(host).toString(),
-                            null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
+        if (validateHost) {
+            host = InternetDomainName.from(host).toString();
+        }
+        return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
     }
 
     private static String removeUserInfo(String authority) {

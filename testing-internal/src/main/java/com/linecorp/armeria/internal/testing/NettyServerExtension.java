@@ -52,7 +52,7 @@ public abstract class NettyServerExtension extends AbstractAllOrEachExtension {
     }
 
     public final Endpoint endpoint() {
-        return Endpoint.of(address().getHostString(), address().getPort());
+        return Endpoint.unsafeCreate(address().getHostString(), address().getPort());
     }
 
     protected abstract void configure(Channel ch) throws Exception;
