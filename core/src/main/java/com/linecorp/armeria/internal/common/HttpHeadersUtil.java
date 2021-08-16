@@ -92,7 +92,6 @@ public final class HttpHeadersUtil {
         return true;
     }
 
-
     public static HttpHeaders mergeTrailers(HttpHeaders headers, HttpHeaders additionalTrailers) {
         if (additionalTrailers.isEmpty()) {
             return headers;

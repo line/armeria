@@ -27,7 +27,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,7 +38,6 @@ import javax.annotation.Nullable;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
@@ -77,7 +75,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private static final Predicate<String> SCHEME_VALIDATOR =
             scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
 
-    private static final Cache<Map.Entry<String, Integer>, Endpoint> cache =
+    private static final Cache<String, Endpoint> cache =
             Caffeine.newBuilder()
                     .maximumSize(8192) // TODO(ikhoon): Add a flag if there is a demand for it.
                     .build();
@@ -93,8 +91,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
-        final HostAndPort parsed = HostAndPort.fromString(removeUserInfo(authority)).withDefaultPort(0);
-        return getOrCreate(parsed.getHost(), parsed.getPort());
+        return cache.get(authority, key -> {
+            final HostAndPort hostAndPort = HostAndPort.fromString(removeUserInfo(key)).withDefaultPort(0);
+            return create(hostAndPort.getHost(), hostAndPort.getPort(), true);
+        });
     }
 
     /**
@@ -126,12 +126,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     @UnstableApi
     public static Endpoint unsafeCreate(String host, int port) {
         return create(host, port, /* validateHost */ false);
-    }
-
-    private static Endpoint getOrCreate(String host, int port) {
-        requireNonNull(host, "host");
-        return cache.get(Maps.immutableEntry(host, port),
-                         key -> create(key.getKey(), key.getValue(), true));
     }
 
     private static Endpoint create(String host, int port, boolean validateHost) {

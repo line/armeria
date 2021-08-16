@@ -113,7 +113,6 @@ class AdditionalAuthorityTest {
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "http://foo:" + serverA.httpPort()));
         assertThat(client.execute(request).aggregate().join().contentUtf8()).isEqualTo(
                 "foo/foo:" + serverA.httpPort());
-
     }
 
     @Test
