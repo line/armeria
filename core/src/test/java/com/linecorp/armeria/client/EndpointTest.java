@@ -421,11 +421,12 @@ class EndpointTest {
 
     @Test
     void cache() {
-        final Endpoint newEndpoint = Endpoint.of("foo", 10);
-        final Endpoint cachedEndpoint = Endpoint.of("foo", 10);
+        final Endpoint newEndpoint = Endpoint.parse("foo:10");
+        final Endpoint cachedEndpoint = Endpoint.parse("foo:10");
         assertThat(cachedEndpoint).isSameAs(newEndpoint);
-        final Endpoint differentEndpoint = Endpoint.of("foo");
-        assertThat(differentEndpoint).isNotEqualTo(cachedEndpoint);
+        final Endpoint differentEndpoint = Endpoint.of("foo", 10);
+        assertThat(differentEndpoint).isNotSameAs(cachedEndpoint);
+        assertThat(differentEndpoint).isEqualTo(cachedEndpoint);
     }
 
     @Test

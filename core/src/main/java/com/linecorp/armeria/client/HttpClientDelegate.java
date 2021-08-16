@@ -94,6 +94,7 @@ final class HttpClientDelegate implements HttpClient {
             acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder);
         } else {
             resolveAddress(endpointWithPort, ctx).handle((resolved, cause) -> {
+                timingsBuilder.dnsResolutionEnd();
                 if (cause == null) {
                     acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder);
                 } else {
