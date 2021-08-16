@@ -236,7 +236,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 httpClient, ctx, endpointGroup, HttpResponse::from,
                 (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
                                                                     .withDescription(cause.getMessage())
-                                                                    .asRuntimeException()));
+                                                                    .asRuntimeException()),
+                /* hasBaseUri */ true);
 
         final HttpStreamDeframer deframer =
                 new HttpStreamDeframer(decompressorRegistry, ctx, this, null, maxInboundMessageSizeBytes);

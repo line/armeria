@@ -182,7 +182,8 @@ public abstract class UserClient<I extends Request, O extends Response>
                 requestOptions, System.nanoTime(), SystemInfo.currentTimeMicros());
 
         return initContextAndExecuteWithFallback(unwrap(), ctx, endpointGroup,
-                                                 futureConverter, errorResponseFactory);
+                                                 futureConverter, errorResponseFactory,
+                                                 !Clients.isUndefinedUri(uri()));
     }
 
     private RequestId nextRequestId() {

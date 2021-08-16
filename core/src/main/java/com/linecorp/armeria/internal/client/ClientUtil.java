@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -44,7 +45,7 @@ public final class ClientUtil {
             DefaultClientRequestContext ctx,
             EndpointGroup endpointGroup,
             Function<CompletableFuture<O>, O> futureConverter,
-            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
+            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, boolean hasBaseUri) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
@@ -55,7 +56,7 @@ public final class ClientUtil {
         boolean initialized = false;
         boolean success = false;
         try {
-            endpointGroup = mapEndpoint(ctx, endpointGroup);
+            endpointGroup = mapEndpoint(ctx, endpointGroup, hasBaseUri);
             final CompletableFuture<Boolean> initFuture = ctx.init(endpointGroup);
             initialized = initFuture.isDone();
             if (initialized) {
@@ -125,9 +126,23 @@ public final class ClientUtil {
         }
     }
 
-    private static EndpointGroup mapEndpoint(ClientRequestContext ctx, EndpointGroup endpointGroup) {
+    private static EndpointGroup mapEndpoint(ClientRequestContext ctx, EndpointGroup endpointGroup,
+                                             boolean hasBaseUri) {
         if (endpointGroup instanceof Endpoint) {
-            return requireNonNull(ctx.options().endpointRemapper().apply((Endpoint) endpointGroup),
+            Endpoint endpoint = (Endpoint) endpointGroup;
+            if (!hasBaseUri) {
+                // If a WebClient was created without a base URI, an authority header could be
+                // the host of an Endpoint.
+                final String authority = ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY);
+                if (authority != null) {
+                    try {
+                        endpoint = Endpoint.parse(authority);
+                    } catch (Exception ignored) {
+                        // Ignore an invalid authority and use the original endpoint.
+                    }
+                }
+            }
+            return requireNonNull(ctx.options().endpointRemapper().apply(endpoint),
                                   "endpointRemapper returned null.");
         } else {
             return endpointGroup;

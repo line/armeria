@@ -23,15 +23,11 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -87,20 +83,7 @@ final class HttpClientDelegate implements HttpClient {
             return HttpResponse.ofFailure(cause);
         }
 
-        final Endpoint endpointWithPort;
-        final int defaultPort = ctx.sessionProtocol().defaultPort();
-        final String host = extractHostFromAuthority(ctx, req);
-        if (host == null || host.equals(endpoint.host())) {
-            endpointWithPort = endpoint.withDefaultPort(defaultPort);
-        } else {
-            // Override the host in endpoint with the extracted host.
-            if (endpoint.hasPort()) {
-                endpointWithPort = Endpoint.of(host, endpoint.port());
-            } else {
-                endpointWithPort = Endpoint.of(host, defaultPort);
-            }
-        }
-
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
@@ -220,50 +203,6 @@ final class HttpClientDelegate implements HttpClient {
         } else {
             ctx.logBuilder().session(null, ctx.sessionProtocol(), connectionTimings);
         }
-    }
-
-    @VisibleForTesting
-    @Nullable
-    static String extractHostFromAuthority(ClientRequestContext ctx, HttpRequest req) {
-        final String host = extractHostFromAuthority(ctx.additionalRequestHeaders()
-                                                        .get(HttpHeaderNames.AUTHORITY));
-        if (host != null) {
-            return host;
-        }
-
-        return extractHostFromAuthority(req.authority());
-    }
-
-    @Nullable
-    private static String extractHostFromAuthority(@Nullable String authority) {
-        if (Strings.isNullOrEmpty(authority)) {
-            return null;
-        }
-
-        if (authority.charAt(0) == '[') {
-            // Surrounded by '[' and ']'
-            final int closingBracketPos = authority.lastIndexOf(']');
-            if (closingBracketPos > 0) {
-                return authority.substring(1, closingBracketPos);
-            } else {
-                // Invalid authority - no matching ']'
-                return null;
-            }
-        }
-
-        // Not surrounded by '[' and ']'
-        final int colonPos = authority.lastIndexOf(':');
-        if (colonPos > 0) {
-            // Strip the port number.
-            return authority.substring(0, colonPos);
-        }
-        if (colonPos < 0) {
-            // authority does not have a port number.
-            return authority;
-        }
-
-        // Invalid authority - ':' is the first character.
-        return null;
     }
 
     private static boolean isValidPath(HttpRequest req) {
