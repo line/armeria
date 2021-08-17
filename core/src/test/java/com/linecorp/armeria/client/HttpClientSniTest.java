@@ -39,7 +39,6 @@ import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class HttpClientSniTest {
@@ -51,7 +50,6 @@ class HttpClientSniTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.decorator(LoggingService.newDecorator());
             sb.virtualHost("a.com")
               .service("/", new SniTestService("a.com"))
               .tlsSelfSigned()

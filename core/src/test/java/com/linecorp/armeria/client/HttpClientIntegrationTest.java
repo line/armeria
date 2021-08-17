@@ -442,7 +442,7 @@ class HttpClientIntegrationTest {
                                                           unused -> MockAddressResolverGroup.localhost())
                                                   .build()) {
 
-            // An authority header should not be overridden on a client with a base URI.
+            // An authority header should not be overridden on a client created with a base URI.
             WebClient client = WebClient.builder(server.httpUri())
                                         .setHeader(HttpHeaderNames.AUTHORITY, "foo:8080")
                                         .factory(factory)
@@ -451,7 +451,7 @@ class HttpClientIntegrationTest {
             AggregatedHttpResponse response = client.get("/authority").aggregate().get();
             assertThat(response.contentUtf8()).isEqualTo("127.0.0.1:" + server.httpPort());
 
-            // An authority header should not be overridden on a client with a base URI.
+            // An authority header should override an Endpoint on a client created with a non-base URI.
             final String additionalAuthority = "foo:" + server.httpPort();
             client = WebClient.builder()
                               .setHeader(HttpHeaderNames.AUTHORITY, additionalAuthority)

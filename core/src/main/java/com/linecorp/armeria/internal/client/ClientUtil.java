@@ -43,7 +43,7 @@ public final class ClientUtil {
             DefaultClientRequestContext ctx,
             EndpointGroup endpointGroup,
             Function<CompletableFuture<O>, O> futureConverter,
-            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, boolean hasBaseUri) {
+            BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
