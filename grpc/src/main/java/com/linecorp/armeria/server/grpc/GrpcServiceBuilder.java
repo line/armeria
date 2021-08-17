@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
@@ -116,6 +117,9 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private GrpcStatusFunction statusFunction;
+
+    @Nullable
+    private ImmutableList.Builder<ServerInterceptor> interceptors;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -259,6 +263,29 @@ public final class GrpcServiceBuilder {
         }
 
         return addService(path, bindableService.bindService(), methodDescriptor);
+    }
+
+    /**
+     * Adds {@linkplain ServerInterceptor server interceptors} into the gRPC service. The last
+     * interceptor will have its {@link ServerInterceptor#interceptCall} called first.
+     *
+     * @param interceptors array of interceptors to apply to the service.
+     */
+    public GrpcServiceBuilder intercept(ServerInterceptor... interceptors) {
+        requireNonNull(interceptors, "interceptors");
+        return intercept(ImmutableList.copyOf(interceptors));
+    }
+
+    /**
+     * Adds {@linkplain ServerInterceptor server interceptors} into the gRPC service. The last
+     * interceptor will have its {@link ServerInterceptor#interceptCall} called first.
+     *
+     * @param interceptors list of interceptors to apply to the service.
+     */
+    public GrpcServiceBuilder intercept(Iterable<? extends ServerInterceptor> interceptors) {
+        requireNonNull(interceptors, "interceptors");
+        this.interceptors().addAll(interceptors);
+        return this;
     }
 
     private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
@@ -597,6 +624,13 @@ public final class GrpcServiceBuilder {
         };
     }
 
+    private ImmutableList.Builder<ServerInterceptor> interceptors() {
+        if (interceptors == null) {
+            interceptors = ImmutableList.builder();
+        }
+        return interceptors;
+    }
+
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
@@ -609,12 +643,15 @@ public final class GrpcServiceBuilder {
         if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
             final ServerInterceptor coroutineContextInterceptor =
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+            interceptors().add(coroutineContextInterceptor);
+        }
+        if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
-                        ServerInterceptors.intercept(entry.service(), coroutineContextInterceptor);
+                        ServerInterceptors.intercept(entry.service(), interceptors.build());
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
             }
             handlerRegistry = newRegistryBuilder.build();

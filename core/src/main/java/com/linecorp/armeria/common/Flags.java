@@ -174,6 +174,8 @@ public final class Flags {
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
             System.getProperty(PREFIX + "requestContextStorageProvider");
 
+    private static final boolean WARN_NETTY_VERSIONS = getBoolean("warnNettyVersions", true);
+
     private static final boolean USE_EPOLL = getBoolean("useEpoll", TransportType.EPOLL.isAvailable(),
                                                         value -> TransportType.EPOLL.isAvailable() || !value);
 
@@ -556,6 +558,18 @@ public final class Flags {
     @Nullable
     public static String requestContextStorageProvider() {
         return REQUEST_CONTEXT_STORAGE_PROVIDER;
+    }
+
+    /**
+     * Returns whether to log a warning message when any Netty version issues are detected, such as
+     * version inconsistencies or missing version information in Netty JARs.
+     *
+     * <p>The default value of this flag is {@code true}, which means a warning message will be logged
+     * if any Netty version issues are detected, which may lead to unexpected behavior. Specify the
+     * {@code -Dcom.linecorp.armeria.warnNettyVersions=false} to disable this flag.</p>
+     */
+    public static boolean warnNettyVersions() {
+        return WARN_NETTY_VERSIONS;
     }
 
     /**
