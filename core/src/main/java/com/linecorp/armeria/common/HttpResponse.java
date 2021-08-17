@@ -163,7 +163,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");
         requireNonNull(delay, "delay");
-        return delayed(responseSupplier.get(), delay, CommonPools.workerGroup().next());
+        return delayed(responseSupplier, delay, CommonPools.workerGroup().next());
     }
 
     /***
@@ -177,7 +177,9 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(responseSupplier, "responseSupplier");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
-        return delayed(responseSupplier.get(), delay, executor);
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.schedule(() -> res.delegate(responseSupplier.get()), delay.toNanos(), TimeUnit.NANOSECONDS);
+        return res;
     }
 
     /**
