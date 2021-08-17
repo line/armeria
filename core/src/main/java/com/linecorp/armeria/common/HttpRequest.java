@@ -322,7 +322,7 @@ public interface HttpRequest extends Request, HttpMessage {
         }
 
         try {
-            return of(validHeaders, HttpData.copyOf(JacksonUtil.writeValueAsBytes(content)));
+            return of(validHeaders, HttpData.wrap(JacksonUtil.writeValueAsBytes(content)));
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Failed to encode the content of the request into JSON", e);
         }
