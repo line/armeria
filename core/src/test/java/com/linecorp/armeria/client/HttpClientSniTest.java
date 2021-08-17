@@ -119,7 +119,7 @@ class HttpClientSniTest {
         try (SafeCloseable unused = Clients.withHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response = client.get("/").aggregate().get();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
+            assertThat(response.contentUtf8()).isEqualTo("b.com: CN=b.com");
         }
     }
 

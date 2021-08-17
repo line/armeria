@@ -177,9 +177,10 @@ public abstract class UserClient<I extends Request, O extends Response>
             rpcReq = (RpcRequest) req;
         }
 
+        final boolean hasBaseUri = !Clients.isUndefinedUri(params.uri());
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 meterRegistry, protocol, id, method, path, query, fragment, options(), httpReq, rpcReq,
-                requestOptions, System.nanoTime(), SystemInfo.currentTimeMicros());
+                requestOptions, System.nanoTime(), SystemInfo.currentTimeMicros(), hasBaseUri);
 
         return initContextAndExecuteWithFallback(unwrap(), ctx, endpointGroup,
                                                  futureConverter, errorResponseFactory,
