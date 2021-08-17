@@ -40,8 +40,15 @@ public final class RequestContextExporterBuilder {
     private final ExportGroupBuilder defaultExportGroupBuilder = ExportGroup.builder();
     @Nullable
     private List<ExportGroup> exportGroups;
+    private String name = "DEFAULT";
 
     RequestContextExporterBuilder() {}
+
+    public RequestContextExporterBuilder name(String name) {
+        requireNonNull(name, "name");
+        this.name = name;
+        return this;
+    }
 
     /**
      * Adds the specified {@link BuiltInProperty} to the export list.
@@ -174,7 +181,7 @@ public final class RequestContextExporterBuilder {
         if (exportGroups == null) {
             final ExportGroup defaultExportGroup = defaultExportGroupBuilder.build();
             return new RequestContextExporter(
-                    defaultExportGroup.builtIns(), defaultExportGroup.attrs(),
+                    name, defaultExportGroup.builtIns(), defaultExportGroup.attrs(),
                     defaultExportGroup.reqHeaders(), defaultExportGroup.resHeaders());
         }
 
@@ -194,7 +201,7 @@ public final class RequestContextExporterBuilder {
         }
 
         return new RequestContextExporter(
-                builtInProperties.build(), attrs.build(), reqHeaders.build(), resHeaders.build()
+                name, builtInProperties.build(), attrs.build(), reqHeaders.build(), resHeaders.build()
         );
     }
 }

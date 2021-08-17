@@ -106,7 +106,7 @@ class RequestContextExporterTest {
 
         // Create an internal state.
         exporter.export(rootCtx);
-        final Object rootState = rootCtx.attr(RequestContextExporter.STATE);
+        final Object rootState = rootCtx.attr(exporter.stateAttributeKey);
         assertThat(rootState).isNotNull();
 
         // Create a child context.
@@ -115,12 +115,12 @@ class RequestContextExporterTest {
             childCtx = ClientRequestContext.of(req);
         }
         assertThat(childCtx.root()).isSameAs(rootCtx);
-        assertThat(childCtx.attr(RequestContextExporter.STATE)).isSameAs(rootState);
-        assertThat(childCtx.ownAttr(RequestContextExporter.STATE)).isNull();
+        assertThat(childCtx.attr(exporter.stateAttributeKey)).isSameAs(rootState);
+        assertThat(childCtx.ownAttr(exporter.stateAttributeKey)).isNull();
 
         // Make sure a new internal state object is created.
         exporter.export(childCtx);
-        final Object childState = childCtx.attr(RequestContextExporter.STATE);
+        final Object childState = childCtx.attr(exporter.stateAttributeKey);
         assertThat(childState).isNotNull().isNotSameAs(rootState);
     }
 
@@ -163,6 +163,27 @@ class RequestContextExporterTest {
         assertThat(export).containsOnlyKeys("request_id", "request_method",
                                             "attrs.attr1", "my_attr2",
                                             "foo", "bar");
+    }
+
+    @Test
+    void multipleExporters() throws Exception {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final RequestContextExporter exporter1 =
+                RequestContextExporter.builder()
+                                      .name("exporter1")
+                                      .attr("attrs.attr1", ATTR1)
+                                      .build();
+        final RequestContextExporter exporter2 =
+                RequestContextExporter.builder()
+                                      .name("exporter2")
+                                      .attr("attrs.attr2", ATTR2)
+                                      .build();
+
+        ctx.setAttr(ATTR1, "foo");
+        assertThat(exporter1.export(ctx)).containsOnlyKeys("attrs.attr1");
+
+        ctx.setAttr(ATTR2, "bar");
+        assertThat(exporter2.export(ctx)).containsOnlyKeys("attrs.attr2");
     }
 
     @Test

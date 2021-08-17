@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
+import com.linecorp.armeria.common.logging.RequestContextExporter;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -67,6 +68,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.read.ListAppender;
 import ch.qos.logback.core.status.Status;
 import ch.qos.logback.core.status.StatusManager;
@@ -243,6 +245,43 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
                            .hasSize(12);
+        } finally {
+            // Revert to the original configuration.
+            final JoranConfigurator configurator = new JoranConfigurator();
+            configurator.setContext(context);
+            context.reset();
+
+            configurator.doConfigure(getClass().getResource("/logback-test.xml"));
+        }
+    }
+
+    @Test
+    void testMultipleExporters() throws Exception {
+        try {
+            final Logger logger = (Logger) LoggerFactory.getLogger("multiple-exporters");
+
+            final JoranConfigurator configurator = new JoranConfigurator();
+            configurator.setContext(context);
+            context.reset();
+
+            configurator.doConfigure(getClass().getResource("testXmlConfig.xml"));
+
+            final RequestContextExportingAppender rcea1 =
+                    (RequestContextExportingAppender) logger.getAppender("RCEA1");
+            final RequestContextExportingAppender rcea2 =
+                    (RequestContextExportingAppender) logger.getAppender("RCEA2");
+
+            rcea1.start();
+            rcea2.start();
+            logger.debug("foo");
+
+            final ServiceRequestContext ctx = newServiceContext("/foo", "name=alice");
+            final RequestLogBuilder log = ctx.logBuilder();
+            log.endRequest();
+            log.endResponse();
+
+            assertThat(rcea1.exporter().export(ctx)).containsOnlyKeys("remote.ip");
+            assertThat(rcea2.exporter().export(ctx)).containsOnlyKeys("remote.port");
         } finally {
             // Revert to the original configuration.
             final JoranConfigurator configurator = new JoranConfigurator();
@@ -595,6 +634,7 @@ class RequestContextExportingAppenderTest {
     @SafeVarargs
     private final List<ILoggingEvent> prepare(Consumer<RequestContextExportingAppender>... configurators) {
         final RequestContextExportingAppender a = new RequestContextExportingAppender();
+        assertThat(a.getName()).isNull();
         for (Consumer<RequestContextExportingAppender> c : configurators) {
             c.accept(a);
         }

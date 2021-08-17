@@ -48,7 +48,7 @@ public final class RequestContextExporter {
     private static final ExportEntry[] EMPTY_EXPORT_ENTRIES = new ExportEntry[0];
 
     @VisibleForTesting
-    static final AttributeKey<State> STATE = AttributeKey.valueOf(RequestContextExporter.class, "STATE");
+    final AttributeKey<State> stateAttributeKey;
 
     /**
      * Returns a newly created {@link RequestContextExporterBuilder}.
@@ -69,11 +69,12 @@ public final class RequestContextExporter {
     @Nullable
     private final ExportEntry<AsciiString>[] resHeaders;
 
-    RequestContextExporter(Set<ExportEntry<BuiltInProperty>> builtInPropertySet,
+    RequestContextExporter(String name,
+                           Set<ExportEntry<BuiltInProperty>> builtInPropertySet,
                            Set<ExportEntry<AttributeKey<?>>> attrs,
                            Set<ExportEntry<AsciiString>> reqHeaders,
                            Set<ExportEntry<AsciiString>> resHeaders) {
-
+        stateAttributeKey = AttributeKey.valueOf(RequestContextExporter.class, name + "_STATE");
         if (!builtInPropertySet.isEmpty()) {
             builtInProperties = new BuiltInProperties();
             builtInPropertyArray = builtInPropertySet.toArray(EMPTY_EXPORT_ENTRIES);
@@ -312,13 +313,13 @@ public final class RequestContextExporter {
     }
 
     private State state(RequestContext ctx) {
-        final State state = ctx.ownAttr(STATE);
+        final State state = ctx.ownAttr(stateAttributeKey);
         if (state != null) {
             return state;
         }
 
         final State newState = new State(numAttrs);
-        ctx.setAttr(STATE, newState);
+        ctx.setAttr(stateAttributeKey, newState);
         return newState;
     }
 

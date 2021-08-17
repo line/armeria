@@ -183,6 +183,12 @@ public final class RequestContextExportingAppender
     }
 
     @Override
+    public void setName(String name) {
+        builder.name(name);
+        super.setName(name);
+    }
+
+    @Override
     protected void append(ILoggingEvent eventObject) {
         if (exporter == null) {
             exporter = builder.build();
