@@ -1,4 +1,4 @@
-import org.gradle.util.GradleVersion;
+import org.gradle.util.GradleVersion
 
 import java.util.concurrent.ConcurrentHashMap
 

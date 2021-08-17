@@ -19,8 +19,6 @@ package com.linecorp.armeria.client.logging;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -68,13 +67,20 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
             @Nullable Logger logger,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable,
+                    ? extends @Nullable Object> responseCauseSanitizer,
             Sampler<? super ClientRequestContext> sampler) {
 
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,

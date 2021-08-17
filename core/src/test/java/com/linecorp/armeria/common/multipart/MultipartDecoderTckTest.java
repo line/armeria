@@ -17,12 +17,11 @@ package com.linecorp.armeria.common.multipart;
 
 import java.util.stream.LongStream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageVerification;
 

@@ -16,11 +16,10 @@
 
 package com.linecorp.armeria.internal.common.auth.oauth2;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 

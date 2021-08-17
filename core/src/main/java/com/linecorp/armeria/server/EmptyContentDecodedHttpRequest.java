@@ -19,14 +19,13 @@ package com.linecorp.armeria.server;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.channel.EventLoop;

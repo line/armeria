@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 @SuppressWarnings("checkstyle:EqualsHashCode")
 class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {

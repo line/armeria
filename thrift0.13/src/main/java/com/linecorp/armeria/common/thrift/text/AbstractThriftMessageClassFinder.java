@@ -34,13 +34,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
 
 abstract class AbstractThriftMessageClassFinder implements Supplier<Class<?>> {

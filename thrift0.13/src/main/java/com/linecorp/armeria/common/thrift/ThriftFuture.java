@@ -20,10 +20,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.async.AsyncMethodCallback;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 /**

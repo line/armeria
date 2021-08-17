@@ -21,10 +21,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

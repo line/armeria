@@ -31,8 +31,6 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.core.xml.XMLObject;
 import org.opensaml.core.xml.io.MarshallingException;
 import org.opensaml.core.xml.util.XMLObjectSupport;
@@ -55,6 +53,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.saml.SamlService.SamlParameters;
 
 import io.netty.handler.codec.http.HttpHeaderValues;

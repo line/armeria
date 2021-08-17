@@ -19,9 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 import com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationSpec;
 

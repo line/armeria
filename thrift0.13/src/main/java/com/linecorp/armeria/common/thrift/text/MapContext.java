@@ -30,9 +30,9 @@
 // =================================================================================================
 package com.linecorp.armeria.common.thrift.text;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.databind.JsonNode;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A map parsing context. Just a PairContext that responds to isMapKey

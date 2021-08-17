@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} raised when accessing a {@link RequestLog} property that's not available yet.

@@ -17,7 +17,7 @@ package com.linecorp.armeria.common;
 
 import java.time.Duration;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Creates a new {@link ServerCacheControl} using the builder pattern.

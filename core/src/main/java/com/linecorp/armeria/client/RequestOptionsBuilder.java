@@ -24,9 +24,9 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 

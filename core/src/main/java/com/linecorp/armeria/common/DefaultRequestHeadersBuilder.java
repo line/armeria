@@ -24,11 +24,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<RequestHeadersBuilder>
         implements RequestHeadersBuilder {

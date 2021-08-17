@@ -19,7 +19,7 @@ package com.linecorp.armeria.client.endpoint;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class EndpointGroupUtil {
 

@@ -22,11 +22,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ExportGroupBuilder.ExportEntry;
 
 import io.netty.util.AsciiString;

@@ -22,8 +22,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
@@ -32,6 +30,7 @@ import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**

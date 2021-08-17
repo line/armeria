@@ -20,12 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -128,7 +127,7 @@ public final class AuthServiceBuilder {
      * Adds a token-based {@link Authorizer}.
      */
     public <T> AuthServiceBuilder addTokenAuthorizer(
-            Function<? super RequestHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
+            Function<? super RequestHeaders, @Nullable T> tokenExtractor, Authorizer<? super T> authorizer) {
         final Authorizer<HttpRequest> requestAuthorizer =
                 new DelegatingHttpRequestAuthorizer<>(tokenExtractor, authorizer);
         add(requestAuthorizer);

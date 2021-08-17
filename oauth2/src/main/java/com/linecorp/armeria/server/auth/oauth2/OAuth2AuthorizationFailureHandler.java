@@ -22,8 +22,6 @@ import static com.linecorp.armeria.server.auth.oauth2.OAuth2AuthorizationErrorRe
 import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer.ERROR_CODE;
 import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer.ERROR_TYPE;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthFailureHandler;

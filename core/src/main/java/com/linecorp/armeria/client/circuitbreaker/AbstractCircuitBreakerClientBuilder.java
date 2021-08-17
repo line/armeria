@@ -19,12 +19,11 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal builder implementation that builds a new {@link AbstractCircuitBreakerClient} or
