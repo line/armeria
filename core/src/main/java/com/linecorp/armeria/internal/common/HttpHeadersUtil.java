@@ -20,7 +20,6 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.ADDITIONAL_RE
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isTrailerDisallowed;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -59,37 +58,10 @@ public final class HttpHeadersUtil {
         for (AsciiString name : additionalHeaders.names()) {
             if (!ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST.contains(name)) {
                 builder.remove(name);
-                if (HttpHeaderNames.AUTHORITY.equals(name)) {
-                    if (!isValidAuthority(additionalHeaders.get(HttpHeaderNames.AUTHORITY))) {
-                        // Ignore an invalid additional authority.
-                        continue;
-                    }
-                }
                 additionalHeaders.forEachValue(name, value -> builder.add(name, value));
             }
         }
         return builder.build();
-    }
-
-    private static boolean isValidAuthority(String authority) {
-        final char firstChar = authority.charAt(0);
-        if (firstChar == '[') {
-            // Surrounded by '[' and ']'
-            final int closingBracketPos = authority.lastIndexOf(']');
-            return closingBracketPos > 0;
-        }
-
-        if (firstChar == ':') {
-            // Invalid authority - ':' is the first character.
-            return false;
-        }
-
-        if (authority.charAt(authority.length() - 1) == ':') {
-            // Invalid authority - ':' is the last character.
-            return false;
-        }
-
-        return true;
     }
 
     public static HttpHeaders mergeTrailers(HttpHeaders headers, HttpHeaders additionalTrailers) {
