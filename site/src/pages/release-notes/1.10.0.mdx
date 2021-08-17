@@ -4,8 +4,8 @@ date: 2021-08-17
 
 ## 🌟 New features
 
-- A new module `armeria-sangria` integrates with [Sangria GraphQL](https://sangria-graphql.github.io) to let you
-  serve a GraphQL request in Scala. #3703 #3704
+- A new module `armeria-sangria` that integrates with [Sangria GraphQL](https://sangria-graphql.github.io) is
+  introduced to let you serve a GraphQL request in Scala. #3703 #3704
   ```scala
   val schema: Schema[CharacterRepo, Unit] = Schema(Query)
   Server.builder()
@@ -30,7 +30,7 @@ date: 2021-08-17
            .build();
   ```
 - You can now recover a failed <type://HttpResponse> with a fallback <type://HttpResponse>. It would be useful
-  for handing an error of <type://HttpResponse> in a decorator. #3674
+  for handling an error of <type://HttpResponse> in a decorator. #3674
   ```java
   HttpResponse response = 
       HttpResponse.ofFailure(new IllegalStateException("Oops..."));
@@ -44,12 +44,13 @@ date: 2021-08-17
   DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
   stream.write(1);
   stream.write(2);
-  stream.close(new IllegalStateException("Oops...");
+  stream.close(new IllegalStateException("Oops..."));
   StreamMessage<Integer> resumed = 
       stream.recoverAndResume(cause -> StreamMessage.of(3, 4));
   assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
   ```
-- You can now transform an error of <type://StreamMessage> into another using a function. #3668
+- You can now transform an error of <type://StreamMessage> into another using
+  <type://StreamMessage#mapError(Function)>. #3668
   ```java
   StreamMessage stream = 
       StreamMessage.aborted(ClosedStreamException.get());
@@ -113,15 +114,15 @@ date: 2021-08-17
   }
   ```
 - You can now compress and decompress content with [Brotli](https://www.brotli.org/) when using
-  <type://EncodingService>, <type://DecodingService> and <type://DecodingClient>.
+  <type://EncodingService>, <type://DecodingService> and <type://DecodingClient>. #3544 #3686
 - You can now create an <type://HttpResponseException> with a cause. #3674
-- You can now easily capture <typeplural://ServiceRequestContext> using <type://ServerExtension> in tests.
-- You can now suppress the Netty version warning by specifying
+- You can now easily capture <typeplural://ServiceRequestContext> using <type://ServerExtension> in tests. #3648
+- You can now suppress the inconsistent Netty version warning by specifying
   `-Dcom.linecorp.armeria.warnNettyVersions=false`. #3572 #3766
 
 ## 📃 Documentations
 
-- You can now learn how to write a service with Armeria by walking through the
+- You can now learn how to write a REST service with Armeria by walking through the
   [brand-new tutorials](/tutorials). #3420
   - Special thanks to @freevie who volunteered for this.
 
@@ -129,7 +130,7 @@ date: 2021-08-17
 
 - <type://HttpHeaders> now properly caches well-known HTTP headers' value objects. #3711 #3714
 - <type://ConcurrencyLimitTimeoutException> is now raised when a request times out
-  in <type://ConcurrencyLimitingClient>.
+  in <type://ConcurrencyLimitingClient>. #3681
 - <type://OAuth2AuthorizationGrant> no longer uses locks for better performance. #3571 #3618
 
 ## 🛠️ Bug fixes
