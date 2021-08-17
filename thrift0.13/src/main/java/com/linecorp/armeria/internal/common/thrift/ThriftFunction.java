@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
@@ -36,6 +34,8 @@ import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessageType;
 
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Provides the metadata of a Thrift service function.

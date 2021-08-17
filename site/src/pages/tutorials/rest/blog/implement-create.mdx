@@ -92,7 +92,7 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
   ```java filename=BlogRequestConverter.java highlight=10-22
   import com.linecorp.armeria.server.ServiceRequestContext;
   import com.linecorp.armeria.common.AggregatedHttpRequest;
-  import javax.annotation.Nullable;
+  import com.linecorp.armeria.common.annotation.Nullable;
   import java.lang.reflect.ParameterizedType;
 
   final class BlogPostRequestConverter implements RequestConverterFunction {

@@ -26,11 +26,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A complete HTTP request whose content is readily available as a single {@link HttpData}.

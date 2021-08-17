@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
@@ -30,6 +29,7 @@ import org.jboss.resteasy.core.AbstractAsynchronousResponse;
 import org.jboss.resteasy.core.SynchronousDispatcher;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

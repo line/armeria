@@ -26,8 +26,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -43,6 +41,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import okhttp3.Call;
 import okhttp3.Callback;

@@ -15,10 +15,10 @@
  */
 package com.linecorp.armeria.internal.common.thrift;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.TConfiguration;
 import org.apache.thrift.transport.TTransportException;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 

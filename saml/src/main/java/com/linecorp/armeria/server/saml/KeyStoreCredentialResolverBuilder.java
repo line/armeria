@@ -29,10 +29,10 @@ import java.security.KeyStore;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder class which creates a new {@link KeyStoreCredentialResolver} instance.

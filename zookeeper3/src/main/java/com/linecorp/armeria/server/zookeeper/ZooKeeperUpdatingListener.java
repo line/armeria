@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.Inet4Address;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.x.discovery.ServiceInstance;
@@ -31,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.zookeeper.ServerSetsInstance;
 import com.linecorp.armeria.server.Server;

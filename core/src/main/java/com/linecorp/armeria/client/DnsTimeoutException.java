@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.client;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link TimeoutException} raised when a response has not been received from a DNS server within timeout.

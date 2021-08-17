@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -35,6 +33,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener;
 
 import io.netty.util.concurrent.DefaultThreadFactory;

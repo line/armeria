@@ -22,8 +22,6 @@ import java.net.IDN;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.InternetDomainName;
 
@@ -31,6 +29,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.EventLoop;

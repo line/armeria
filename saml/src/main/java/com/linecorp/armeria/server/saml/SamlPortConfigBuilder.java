@@ -19,11 +19,10 @@ import static com.linecorp.armeria.server.saml.SamlPortConfig.isValidPort;
 import static com.linecorp.armeria.server.saml.SamlPortConfig.validatePort;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerPort;
 
 /**

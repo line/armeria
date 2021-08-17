@@ -20,10 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Provides the construction parameters of a client.

@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.Default;
 
 /**

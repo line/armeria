@@ -20,10 +20,9 @@ import static io.netty.util.AsciiString.c2b;
 
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.internal.common.util.StringUtil;

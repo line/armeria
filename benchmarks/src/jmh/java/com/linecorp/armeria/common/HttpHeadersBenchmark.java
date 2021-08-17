@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Microbenchmarks of {@link DefaultHttpHeaders} construction.
