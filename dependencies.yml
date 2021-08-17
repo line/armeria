@@ -8,10 +8,10 @@ boms:
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.39.0
-  - io.micrometer:micrometer-bom:1.7.2
+  - io.grpc:grpc-bom:1.40.0
+  - io.micrometer:micrometer-bom:1.7.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.66.Final
+  - io.netty:netty-bom:4.1.67.Final
   - io.zipkin.brave:brave-bom:5.13.3
   - org.eclipse.jetty:jetty-bom:9.4.43.v20210629
   - org.junit:junit-bom:5.7.2
@@ -154,7 +154,7 @@ com.netflix.eureka:
 
 # DGS is used only for testing in it:dgs moulde.
 com.netflix.graphql.dgs:
-  graphql-dgs-client: { version: '4.5.0' }
+  graphql-dgs-client: { version: '4.5.1' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
@@ -198,7 +198,7 @@ com.typesafe.akka:
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '21.6.0'
+    version: '21.8.0'
 
 cz.alenkacz:
   gradle-scalafmt: { version: '1.16.2' }
@@ -371,10 +371,10 @@ net.shibboleth.utilities:
 #      (Switch to the right tag to find out the right version.)
 org.apache.curator:
   curator-recipes:
-    version: &CURATOR_VERSION '5.1.0'
+    version: &CURATOR_VERSION '5.2.0'
     javadocs:
-    - https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.1.0/
-    - https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.1.0/
+    - https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.2.0/
+    - https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.2.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
   curator-x-discovery:
@@ -518,7 +518,7 @@ org.jooq:
   joor: { version: '0.9.14' }
 
 org.jsoup:
-  jsoup: { version: '1.14.1' }
+  jsoup: { version: '1.14.2' }
 
 org.mockito:
   mockito-core: { version: &MOCKITO_VERSION '3.11.2' }
