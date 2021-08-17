@@ -44,6 +44,9 @@ public final class RequestContextExporterBuilder {
 
     RequestContextExporterBuilder() {}
 
+    /**
+     * Sets the specified {@code name} for the {@link RequestContextExporter}.
+     */
     public RequestContextExporterBuilder name(String name) {
         requireNonNull(name, "name");
         this.name = name;
