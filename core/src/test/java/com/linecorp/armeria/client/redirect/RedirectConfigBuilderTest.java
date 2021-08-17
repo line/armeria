@@ -54,17 +54,17 @@ class RedirectConfigBuilderTest {
                                .build();
         BiPredicate<ClientRequestContext, String> filter = config.domainFilter();
         assertThat(filter).isNotSameAs(allowAllDomains);
-        assertThat(filter.test(clientCtx, "http://foo.com")).isTrue();
-        assertThat(filter.test(clientCtx, "http://bar.com")).isTrue();
-        assertThat(filter.test(clientCtx, "http://qux.com")).isFalse();
+        assertThat(filter.test(clientCtx, "foo.com")).isTrue();
+        assertThat(filter.test(clientCtx, "bar.com")).isTrue();
+        assertThat(filter.test(clientCtx, "qux.com")).isFalse();
 
         config = RedirectConfig.builder()
                                .allowDomains((ctx, domain) -> domain.contains("qux.com"))
                                .build();
         filter = config.domainFilter();
-        assertThat(filter.test(clientCtx, "http://foo.com")).isFalse();
-        assertThat(filter.test(clientCtx, "http://bar.com")).isFalse();
-        assertThat(filter.test(clientCtx, "http://qux.com")).isTrue();
+        assertThat(filter.test(clientCtx, "foo.com")).isFalse();
+        assertThat(filter.test(clientCtx, "bar.com")).isFalse();
+        assertThat(filter.test(clientCtx, "qux.com")).isTrue();
 
         config = RedirectConfig.builder()
                                .allowDomains("foo.com")
@@ -73,8 +73,8 @@ class RedirectConfigBuilderTest {
                                .build();
         filter = config.domainFilter();
         assertThat(filter).isNotSameAs(allowAllDomains);
-        assertThat(filter.test(clientCtx, "http://foo.com")).isTrue();
-        assertThat(filter.test(clientCtx, "http://bar.com")).isTrue();
-        assertThat(filter.test(clientCtx, "http://qux.com")).isTrue();
+        assertThat(filter.test(clientCtx, "foo.com")).isTrue();
+        assertThat(filter.test(clientCtx, "bar.com")).isTrue();
+        assertThat(filter.test(clientCtx, "qux.com")).isTrue();
     }
 }

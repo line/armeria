@@ -68,10 +68,9 @@ public final class RedirectConfigBuilder {
      * Sets the {@link SessionProtocol}s that are allowed for automatic redirection.
      * Only {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS} can be set.
      *
-     * <p>If the {@link WebClient} is created <b>without</b> a base URI, the {@link WebClient} executes
-     * automatic redirection regardless of the {@link SessionProtocol} of the redirection URI.
-     * If the {@link WebClient} is created <b>with</b> a base URI, automatic redirection is executed only when
-     * the {@link SessionProtocol#isTls()} is the same to the {@link SessionProtocol#isTls()} of the base URI.
+     * <p>When the allowed {@link SessionProtocol}s are not set, {@link SessionProtocol#HTTPS} is set
+     * by default. If the {@link WebClient} is created <b>with</b> a base URI that has
+     * {@link SessionProtocol#HTTP}, {@link SessionProtocol#HTTP} is also set.
      */
     public RedirectConfigBuilder allowProtocols(SessionProtocol... protocols) {
         requireNonNull(protocols, "protocols");
@@ -82,10 +81,9 @@ public final class RedirectConfigBuilder {
      * Sets the {@link SessionProtocol}s that are allowed for automatic redirection.
      * Only {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS} can be set.
      *
-     * <p>If the {@link WebClient} is created <b>without</b> a base URI, the {@link WebClient} executes
-     * automatic redirection regardless of the {@link SessionProtocol} of the redirection URI.
-     * If the {@link WebClient} is created <b>with</b> a base URI, automatic redirection is executed only when
-     * the {@link SessionProtocol#isTls()} is the same to the {@link SessionProtocol#isTls()} of the base URI.
+     * <p>When the allowed {@link SessionProtocol}s are not set, {@link SessionProtocol#HTTPS} is set
+     * by default. If the {@link WebClient} is created <b>with</b> a base URI that has
+     * {@link SessionProtocol#HTTP}, {@link SessionProtocol#HTTP} is also set.
      */
     public RedirectConfigBuilder allowProtocols(Iterable<SessionProtocol> protocols) {
         requireNonNull(protocols, "protocols");
@@ -195,7 +193,9 @@ public final class RedirectConfigBuilder {
             final Set<String> allowedDomains0 = ImmutableSet.copyOf(allowedDomains);
             return (ctx, domain) -> {
                 for (String d : allowedDomains0) {
-                    if (domain.contains(d)) {
+                    // Use `equals()` to prevent Open Redirects.
+                    // See https://www.acunetix.com/blog/web-security-zone/what-are-open-redirects/
+                    if (domain.equals(d)) {
                         return true;
                     }
                 }

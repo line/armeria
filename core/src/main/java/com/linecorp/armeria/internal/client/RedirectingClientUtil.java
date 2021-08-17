@@ -29,7 +29,7 @@ public final class RedirectingClientUtil {
         if (endpoint == null) {
             return false;
         }
-        return endpoint.host().contains(domain);
+        return endpoint.host().equals(domain);
     };
 
     private RedirectingClientUtil() {}
