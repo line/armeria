@@ -111,18 +111,21 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service../foobar2", HttpStatus.OK);
         TEST_URLS.put("/service/foobar3..", HttpStatus.OK);
 
+        // OK because the following prohibited characters will be percent-encoded.
+        TEST_URLS.put("/service/foo|bar5", HttpStatus.OK);
+        TEST_URLS.put("/service/foo\\bar6", HttpStatus.OK);
+        TEST_URLS.put("/\\\\", HttpStatus.OK);
+        TEST_URLS.put("/\"?\"", HttpStatus.OK);
+        TEST_URLS.put("/service/foo>bar", HttpStatus.OK);
+        TEST_URLS.put("/service/foo<bar", HttpStatus.OK);
+
         // 400 test
         TEST_URLS.put("..", HttpStatus.BAD_REQUEST);
         TEST_URLS.put(".\\", HttpStatus.BAD_REQUEST);
         TEST_URLS.put("something", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/service/foo|bar5", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/service/foo\\bar6", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/\\\\", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/service/foo>bar", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/service/foo<bar", HttpStatus.BAD_REQUEST);
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void testPathOfUrl() throws Exception {
         for (Entry<String, HttpStatus> url : TEST_URLS.entrySet()) {
             urlPathAssertion(url.getValue(), url.getKey());
