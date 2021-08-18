@@ -113,7 +113,7 @@ public final class RedirectConfigBuilder {
 
     /**
      * Sets the domains that are allowed for automatic redirection. If the
-     * {@linkplain URI#getHost() host component} of a redirection URI contains the specified domains,
+     * {@linkplain URI#getHost() host component} of a redirection URI equals to the specified domains,
      * automatic redirection is executed.
      *
      * <p>If the {@link WebClient} is created <b>without</b> a base URI, the {@link WebClient} executes
@@ -127,7 +127,7 @@ public final class RedirectConfigBuilder {
 
     /**
      * Sets the domains that are allowed for automatic redirection. If the
-     * {@linkplain URI#getHost() host component} of a redirection URI contains the specified domains,
+     * {@linkplain URI#getHost() host component} of a redirection URI equals to the specified domains,
      * automatic redirection is executed.
      *
      * <p>If the {@link WebClient} is created <b>without</b> a base URI, the {@link WebClient} executes
