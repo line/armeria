@@ -21,14 +21,13 @@ import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromStream;
 
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

@@ -22,9 +22,9 @@ import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;

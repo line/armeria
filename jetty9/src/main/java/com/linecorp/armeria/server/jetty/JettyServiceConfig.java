@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
@@ -35,6 +33,8 @@ import org.eclipse.jetty.util.component.Container.Listener;
 import org.eclipse.jetty.util.component.LifeCycle;
 
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class JettyServiceConfig {
 

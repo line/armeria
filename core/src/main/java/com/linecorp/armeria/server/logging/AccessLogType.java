@@ -22,12 +22,11 @@ import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirem
 
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AttributeMap;

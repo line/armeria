@@ -27,6 +27,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -43,8 +44,8 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
 
     private final Producer<K, V> producer;
     private final String topic;
-    private final Function<? super RequestLog, ? extends K> keyExtractor;
-    private final Function<? super RequestLog, ? extends V> valueExtractor;
+    private final Function<? super RequestLog, ? extends @Nullable K> keyExtractor;
+    private final Function<? super RequestLog, ? extends @Nullable V> valueExtractor;
 
     /**
      * Creates a new instance.
@@ -56,7 +57,7 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
      *                       to skip logging for the given {@link RequestLog}.
      */
     public KafkaAccessLogWriter(Producer<K, V> producer, String topic,
-                                Function<? super RequestLog, ? extends V> valueExtractor) {
+                                Function<? super RequestLog, ? extends @Nullable V> valueExtractor) {
         this(producer, topic, log -> null, valueExtractor);
     }
 
@@ -73,8 +74,8 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
      *                       to skip logging for the given {@link RequestLog}.
      */
     public KafkaAccessLogWriter(Producer<K, V> producer, String topic,
-                                Function<? super RequestLog, ? extends K> keyExtractor,
-                                Function<? super RequestLog, ? extends V> valueExtractor) {
+                                Function<? super RequestLog, ? extends @Nullable K> keyExtractor,
+                                Function<? super RequestLog, ? extends @Nullable V> valueExtractor) {
         this.producer = requireNonNull(producer, "producer");
         this.topic = requireNonNull(topic, "topic");
         this.keyExtractor = requireNonNull(keyExtractor, "keyExtractor");

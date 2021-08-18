@@ -23,9 +23,9 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class Inet4AddressBlock implements Predicate<InetAddress> {
 

@@ -40,9 +40,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Represents an exception that is a composite of one or more other exceptions. A {@code CompositeException}

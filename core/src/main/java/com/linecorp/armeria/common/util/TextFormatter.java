@@ -25,7 +25,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A utility class to format things as a {@link String} with ease.

@@ -17,10 +17,9 @@ package com.linecorp.armeria.server.auth;
 
 import java.util.concurrent.CompletionStage;
 
-import javax.annotation.Nullable;
-
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class AuthorizerUtil {

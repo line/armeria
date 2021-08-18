@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Splitter;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A specification of a {@link TokenBucket} configuration represented by a string. The string syntax is

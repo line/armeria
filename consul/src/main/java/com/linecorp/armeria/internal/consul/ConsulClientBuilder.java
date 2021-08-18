@@ -22,8 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.consul.ConsulConfigSetters;
 
 public final class ConsulClientBuilder implements ConsulConfigSetters {

@@ -19,11 +19,10 @@ package com.linecorp.armeria.server.graphql.protocol;
 import java.util.Map;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultGraphqlRequest implements GraphqlRequest {
 

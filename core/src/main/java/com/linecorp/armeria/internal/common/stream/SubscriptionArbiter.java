@@ -34,11 +34,11 @@ package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscription;
 
 import com.google.common.math.LongMath;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.EventExecutor;
 

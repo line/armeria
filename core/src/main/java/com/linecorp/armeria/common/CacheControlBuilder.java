@@ -19,7 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.time.Duration;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal builder implementation of {@link CacheControl}. Use {@link ServerCacheControlBuilder} for

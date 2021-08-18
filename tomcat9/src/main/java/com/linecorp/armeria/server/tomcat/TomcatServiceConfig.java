@@ -20,14 +20,14 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.apache.catalina.Realm;
 import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * {@link TomcatService} configuration.

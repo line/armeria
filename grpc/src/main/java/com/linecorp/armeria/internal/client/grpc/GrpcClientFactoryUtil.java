@@ -19,7 +19,7 @@ package com.linecorp.armeria.internal.client.grpc;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.Channel;
 

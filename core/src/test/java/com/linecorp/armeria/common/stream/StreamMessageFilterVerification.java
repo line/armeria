@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 public class StreamMessageFilterVerification extends DefaultStreamMessageVerification {
 

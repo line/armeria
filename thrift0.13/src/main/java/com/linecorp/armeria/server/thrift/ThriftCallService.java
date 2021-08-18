@@ -22,8 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
@@ -40,6 +38,7 @@ import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;

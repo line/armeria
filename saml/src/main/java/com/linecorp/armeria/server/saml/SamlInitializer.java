@@ -15,12 +15,12 @@
  */
 package com.linecorp.armeria.server.saml;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.core.config.InitializationService;
 import org.opensaml.xmlsec.config.impl.JavaCryptoValidationInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A utility class which initializes the OpenSAML library.

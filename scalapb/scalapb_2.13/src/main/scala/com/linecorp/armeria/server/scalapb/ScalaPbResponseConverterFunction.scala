@@ -20,7 +20,7 @@ import _root_.scalapb.json4s.Printer
 import _root_.scalapb.{GeneratedMessage, GeneratedSealedOneof}
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.collect.Iterables
-import com.linecorp.armeria.common.annotation.UnstableApi
+import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -36,11 +36,10 @@ import java.lang.invoke.{MethodHandle, MethodHandles}
 import java.lang.reflect.Method
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.concurrent.Executor
+import java.util.function.{Function => JFunction}
 import java.util.stream.Stream
-import javax.annotation.Nullable
 import org.reactivestreams.Publisher
 import scala.collection.mutable.ArrayBuffer
-import java.util.function.{Function => JFunction}
 
 /**
  * A [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] which creates an

@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
@@ -631,10 +631,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void startRequest(long requestStartTimeNanos, long requestStartTimeMicros) {
-        if (!isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
-            this.requestStartTimeNanos = requestStartTimeNanos;
-            this.requestStartTimeMicros = requestStartTimeMicros;
+        if (isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
+            return;
         }
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
 
         updateFlags(RequestLogProperty.REQUEST_START_TIME);
     }
@@ -1389,9 +1390,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public String toStringRequestOnly(
-            BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders,
+                    ? extends @Nullable Object> headersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> contentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> trailersSanitizer) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1495,9 +1499,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public String toStringResponseOnly(
-            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> headersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+            BiFunction<? super RequestContext, ? super ResponseHeaders,
+                    ? extends @Nullable Object> headersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> contentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> trailersSanitizer) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1595,8 +1602,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return responseStr;
     }
 
-    private <T> String sanitize(BiFunction<? super RequestContext, ? super T, ?> headersSanitizer,
-                                T requestHeaders) {
+    private <T> String sanitize(
+            BiFunction<? super RequestContext, ? super T, ? extends @Nullable Object> headersSanitizer,
+            T requestHeaders) {
         final Object sanitized = headersSanitizer.apply(ctx, requestHeaders);
         return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
@@ -1880,9 +1888,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public String toStringRequestOnly(
-                BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
-                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+                BiFunction<? super RequestContext, ? super RequestHeaders,
+                        ? extends @Nullable Object> headersSanitizer,
+                BiFunction<? super RequestContext, Object,
+                        ? extends @Nullable Object> contentSanitizer,
+                BiFunction<? super RequestContext, ? super HttpHeaders,
+                        ? extends @Nullable Object> trailersSanitizer) {
 
             return DefaultRequestLog.this.toStringRequestOnly(
                     headersSanitizer, contentSanitizer, trailersSanitizer);
@@ -1955,9 +1966,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public String toStringResponseOnly(
-                BiFunction<? super RequestContext, ? super ResponseHeaders, ?> headersSanitizer,
-                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+                BiFunction<? super RequestContext, ? super ResponseHeaders,
+                        ? extends @Nullable Object> headersSanitizer,
+                BiFunction<? super RequestContext, Object,
+                        ? extends @Nullable Object> contentSanitizer,
+                BiFunction<? super RequestContext, ? super HttpHeaders,
+                        ? extends @Nullable Object> trailersSanitizer) {
 
             return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer,
                                                                trailersSanitizer);
