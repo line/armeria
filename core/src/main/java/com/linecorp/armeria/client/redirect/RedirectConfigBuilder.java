@@ -24,8 +24,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiPredicate;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -33,6 +31,7 @@ import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
