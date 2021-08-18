@@ -86,7 +86,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
     @Override
     public boolean isClientTypeSupported(Class<?> clientType) {
-        return !clientType.isAssignableFrom(UnaryGrpcClient.class);
+        return clientType != UnaryGrpcClient.class;
     }
 
     @Override

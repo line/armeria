@@ -77,11 +77,13 @@ public final class UnaryGrpcClient {
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
      *
-     * <p>Prefer using a standard client building pattern, e.g.:</p>
-     * <pre>{@code
-     * UnaryGrpcClient client = Clients.builder("gproto+http://127.0.0.1:8080").build(UnaryGrpcClient.class);
-     * }</pre>
+     * @deprecated Prefer using a standard client building pattern, e.g.:
+     *             <pre>{@code
+     *             UnaryGrpcClient client =
+     *                 Clients.newClient("gproto+http://127.0.0.1:8080", UnaryGrpcClient.class);
+     *             }</pre>
      */
+    @Deprecated
     public UnaryGrpcClient(WebClient webClient) {
         this(webClient, UnaryGrpcSerializationFormats.PROTO);
     }
@@ -91,12 +93,13 @@ public final class UnaryGrpcClient {
      * The specified {@link SerializationFormat} should be one of {@code UnaryGrpcSerializationFormats#PROTO},
      * {@code UnaryGrpcSerializationFormats#PROTO_WEB}, or {@code UnaryGrpcSerializationFormats#PROTO_WEB_TEXT}.
      *
-     * <p>Prefer using a standard client building pattern, e.g.:</p>
-     * <pre>{@code
-     * UnaryGrpcClient client =
-     *     Clients.builder("gproto-web+http://127.0.0.1:8080").build(UnaryGrpcClient.class);
-     * }</pre>
+     * @deprecated Prefer using a standard client building pattern, e.g.:
+     *             <pre>{@code
+     *             UnaryGrpcClient client =
+     *                 Clients.newClient("gproto-web+http://127.0.0.1:8080", UnaryGrpcClient.class);
+     *             }</pre>
      */
+    @Deprecated
     public UnaryGrpcClient(WebClient webClient, SerializationFormat serializationFormat) {
         if (!SUPPORTED_SERIALIZATION_FORMATS.contains(serializationFormat)) {
             throw new IllegalArgumentException("serializationFormat: " + serializationFormat +
