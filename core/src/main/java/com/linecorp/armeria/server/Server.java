@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -604,19 +605,23 @@ public final class Server implements ListenableAsyncCloseable {
         private void finishDoStop(CompletableFuture<Void> future) {
             serverChannels.clear();
 
+            final Set<ScheduledExecutorService> executors = new HashSet<>();
+
             if (config.shutdownBlockingTaskExecutorOnStop()) {
-                shutdownExecutor(config.blockingTaskExecutor());
+                executors.add(config.blockingTaskExecutor());
             }
 
-            Stream.concat(config.virtualHosts()
-                                .stream()
-                                .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
-                                .map(VirtualHost::blockingTaskExecutor),
-                          config.serviceConfigs()
-                                .stream()
-                                .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
-                                .map(ServiceConfig::blockingTaskExecutor))
-                  .forEach(this::shutdownExecutor);
+            executors.addAll(Stream.concat(config.virtualHosts()
+                                                 .stream()
+                                                 .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
+                                                 .map(VirtualHost::blockingTaskExecutor),
+                                           config.serviceConfigs()
+                                                 .stream()
+                                                 .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
+                                                 .map(ServiceConfig::blockingTaskExecutor))
+                                   .collect(Collectors.toSet()));
+
+            shutdownExecutor(executors);
 
             final Builder<AccessLogWriter> builder = ImmutableSet.builder();
             config.virtualHosts()
@@ -683,22 +688,30 @@ public final class Server implements ListenableAsyncCloseable {
             logger.warn("Failed to stop a server: {}", cause.getMessage(), cause);
         }
 
-        private void shutdownExecutor(ScheduledExecutorService executor) {
-            if (executor instanceof UnstoppableScheduledExecutorService) {
-                executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
-            }
-
-            try {
-                executor.shutdown();
-                while (!executor.isTerminated()) {
-                    try {
-                        executor.awaitTermination(1, TimeUnit.DAYS);
-                    } catch (InterruptedException ignore) {
-                        // Do nothing.
-                    }
+        private void shutdownExecutor(Iterable<ScheduledExecutorService> executors) {
+            for (ScheduledExecutorService executor : executors) {
+                if (executor instanceof UnstoppableScheduledExecutorService) {
+                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
                 }
-            } catch (Exception e) {
-                logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
+
+                executor.shutdown();
+            }
+            for (ScheduledExecutorService executor : executors) {
+                if (executor instanceof UnstoppableScheduledExecutorService) {
+                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
+                }
+
+                try {
+                    while (!executor.isTerminated()) {
+                        try {
+                            executor.awaitTermination(1, TimeUnit.DAYS);
+                        } catch (InterruptedException ignore) {
+                            // Do nothing.
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
+                }
             }
         }
     }
