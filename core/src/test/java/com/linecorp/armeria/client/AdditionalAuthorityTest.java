@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -58,6 +58,7 @@ class AdditionalAuthorityTest {
     };
 
     private static WebClient client;
+    private static int serverAPort;
 
     @BeforeAll
     static void beforeAll() {
@@ -70,6 +71,7 @@ class AdditionalAuthorityTest {
         client = WebClient.builder()
                           .factory(clientFactory)
                           .build();
+        serverAPort = serverA.httpPort();
     }
 
     @AfterAll
@@ -81,10 +83,10 @@ class AdditionalAuthorityTest {
     void additionalAuthorityHasHighestPrecedent() {
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
-                                                      "bar:" + serverA.httpPort()))) {
+                                                      "bar:" + serverAPort))) {
 
-            assertThat(client.get("http://foo:" + serverA.httpPort()).aggregate().join().contentUtf8())
-                    .isEqualTo("bar/bar:" + serverA.httpPort());
+            assertThat(client.get("http://foo:" + serverAPort).aggregate().join().contentUtf8())
+                    .isEqualTo("bar/bar:" + serverAPort);
         }
     }
 
@@ -92,10 +94,10 @@ class AdditionalAuthorityTest {
     void requestHeader() {
         final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
                                                                  .scheme("http")
-                                                                 .authority("bar:" + serverA.httpPort())
+                                                                 .authority("bar:" + serverAPort)
                                                                  .build());
         assertThat(client.execute(request).aggregate().join().contentUtf8())
-                .isEqualTo("bar/bar:" + serverA.httpPort());
+                .isEqualTo("bar/bar:" + serverAPort);
     }
 
     @Test
@@ -110,34 +112,34 @@ class AdditionalAuthorityTest {
     @Test
     void absolutePath() {
         final HttpRequest request =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "http://foo:" + serverA.httpPort()));
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "http://foo:" + serverAPort));
         assertThat(client.execute(request).aggregate().join().contentUtf8()).isEqualTo(
-                "foo/foo:" + serverA.httpPort());
+                "foo/foo:" + serverAPort);
     }
 
     @Test
     void shouldIgnoreInvalidAdditionalAuthority() {
-//        // Missing a closing bracket
-//        try (SafeCloseable ignored = Clients.withContextCustomizer(
-//                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "[::1"))) {
-//
-//            // An invalid authority should be ignored.
-//            assertThat(client.get("http://foo:" + serverA.httpPort()).aggregate().join().contentUtf8())
-//                    .isEqualTo("foo/foo:" + serverA.httpPort());
-//        }
-//
-//        // Port only
-//        try (SafeCloseable ignored = Clients.withContextCustomizer(
-//                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, ":8080"))) {
-//
-//            final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
-//                                                                     .scheme("http")
-//                                                                     .authority("bar:" + serverA.httpPort())
-//                                                                     .build());
-//            // If additionalRequestHeader's authority is invalid but req.authority() is valid
-//            assertThat(client.execute(request).aggregate().join().contentUtf8())
-//                    .isEqualTo("bar/bar:" + serverA.httpPort());
-//        }
+        // Missing a closing bracket
+        try (SafeCloseable ignored = Clients.withContextCustomizer(
+                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "[::1"))) {
+
+            // An invalid authority should be ignored.
+            assertThat(client.get("http://foo:" + serverAPort).aggregate().join().contentUtf8())
+                    .isEqualTo("foo/foo:" + serverAPort);
+        }
+
+        // Port only
+        try (SafeCloseable ignored = Clients.withContextCustomizer(
+                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, ":8080"))) {
+
+            final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
+                                                                     .scheme("http")
+                                                                     .authority("bar:" + serverAPort)
+                                                                     .build());
+            // If additionalRequestHeader's authority is invalid but req.authority() is valid
+            assertThat(client.execute(request).aggregate().join().contentUtf8())
+                    .isEqualTo("bar/bar:" + serverAPort);
+        }
 
         // Missing a port number
         try (SafeCloseable ignored = Clients.withContextCustomizer(
@@ -145,36 +147,38 @@ class AdditionalAuthorityTest {
 
             final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
                                                                      .scheme("http")
-                                                                     .authority("bar:" + serverA.httpPort())
+                                                                     .authority("bar:" + serverAPort)
                                                                      .build());
             // If additionalRequestHeader's authority is invalid but req.authority() is valid
             assertThat(client.execute(request).aggregate().join().contentUtf8())
-                    .isEqualTo("bar/bar:" + serverA.httpPort());
+                    .isEqualTo("bar/bar:" + serverAPort);
         }
     }
 
     @Test
     void shouldNotUseAuthorityAsEndpointWithBaseUriWebClient() {
-        final WebClient clientA = WebClient.builder("http://foo:" + serverB.httpPort())
+        final int serverBPort = serverB.httpPort();
+        final WebClient clientA = WebClient.builder("http://foo:" + serverBPort)
                                            .factory(client.options().factory())
                                            .build();
 
         final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
                                                                  .scheme("http")
-                                                                 .authority("bar:" + serverA.httpPort())
+                                                                 .authority("bar:" + serverAPort)
                                                                  .build());
         assertThat(clientA.execute(request).aggregate().join().contentUtf8())
                 // Ignore the authority in the RequestHeaders and use the base URI as an authority header.
-                .isEqualTo("serverB/foo:" + serverB.httpPort());
+                .isEqualTo("serverB/foo:" + serverBPort);
 
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
-                                                      "bar:" + serverA.httpPort()))) {
+                                                      "bar:" + serverAPort))) {
 
             final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/");
             assertThat(clientA.execute(request2).aggregate().join().contentUtf8())
-                    // The authority got overridden to 'bar' though a request was sent to the base URI.
-                    .isEqualTo("serverB/bar:" + serverA.httpPort());
+                    // Ignore the authority in the additional headers and
+                    // use the base URI as an authority header.
+                    .isEqualTo("serverB/foo:" + serverBPort);
         }
     }
 }

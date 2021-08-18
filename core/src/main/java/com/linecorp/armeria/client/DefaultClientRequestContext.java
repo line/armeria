@@ -246,14 +246,16 @@ public final class DefaultClientRequestContext
         assert endpoint == null : endpoint;
         assert !initialized;
         initialized = true;
-        // Note: thread-local customizer must be run before:
-        //       - EndpointSelector.select() so that the customizer can inject the attributes which may be
-        //         required by the EndpointSelector.
-        //       - mapEndpoint() to give an opportunity to override an Endpoint using an additional authority.
-        runThreadLocalContextCustomizers();
 
-        endpointGroup = mapEndpoint(endpointGroup, hasBaseUri);
         try {
+            // Note: thread-local customizer must be run before:
+            //       - EndpointSelector.select() so that the customizer can inject the attributes which may be
+            //         required by the EndpointSelector.
+            //       - mapEndpoint() to give an opportunity to override an Endpoint when using
+            //         an additional authority.
+            runThreadLocalContextCustomizers();
+
+            endpointGroup = mapEndpoint(endpointGroup, hasBaseUri);
             if (endpointGroup instanceof Endpoint) {
                 return initEndpoint((Endpoint) endpointGroup);
             } else {

@@ -91,7 +91,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
         checkArgument(!authority.isEmpty(), "authority is empty");
-        Endpoint endpoint = cache.get(authority, key -> {
+        return cache.get(authority, key -> {
             if (key.charAt(key.length() - 1) == ':') {
                 // HostAndPort.fromString() does not validate an authority that ends with ':' such as "0.0.0.0:"
                 throw new IllegalArgumentException("Missing port number: " + key);
@@ -99,7 +99,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             final HostAndPort hostAndPort = HostAndPort.fromString(removeUserInfo(key)).withDefaultPort(0);
             return create(hostAndPort.getHost(), hostAndPort.getPort(), true);
         });
-        return endpoint;
     }
 
     /**

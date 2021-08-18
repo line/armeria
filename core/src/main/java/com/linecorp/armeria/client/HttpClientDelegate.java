@@ -19,7 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
@@ -92,9 +92,10 @@ final class HttpClientDelegate implements HttpClient {
             // IP address has been resolved already.
             acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder);
         } else {
-            resolveAddress(endpointWithPort, ctx).handle((resolved, cause) -> {
+            resolveAddress(endpointWithPort, ctx, (resolved, cause) -> {
                 timingsBuilder.dnsResolutionEnd();
                 if (cause == null) {
+                    assert resolved != null;
                     acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder);
                 } else {
                     ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
@@ -102,14 +103,15 @@ final class HttpClientDelegate implements HttpClient {
                     handleEarlyRequestException(ctx, req, wrappedCause);
                     res.close(wrappedCause);
                 }
-                return null;
             });
         }
 
         return res;
     }
 
-    private CompletableFuture<Endpoint> resolveAddress(Endpoint endpoint, ClientRequestContext ctx) {
+    private void resolveAddress(Endpoint endpoint, ClientRequestContext ctx,
+                                BiConsumer<@Nullable Endpoint, @Nullable Throwable> onComplete) {
+
         // IP address has not been resolved yet.
         assert !endpoint.hasIpAddr() && endpoint.hasPort();
 
@@ -119,24 +121,34 @@ final class HttpClientDelegate implements HttpClient {
                                                                                 endpoint.port()));
         if (resolveFuture.isSuccess()) {
             final InetAddress address = resolveFuture.getNow().getAddress();
-            return CompletableFuture.completedFuture(endpoint.withIpAddr(address));
+            onComplete.accept(endpoint.withIpAddr(address), null);
         } else {
-            final CompletableFuture<Endpoint> endpointFuture = new CompletableFuture<>();
             resolveFuture.addListener(future -> {
                 if (future.isSuccess()) {
                     final InetAddress address = resolveFuture.getNow().getAddress();
-                    endpointFuture.complete(endpoint.withIpAddr(address));
+                    onComplete.accept(endpoint.withIpAddr(address), null);
                 } else {
-                    endpointFuture.completeExceptionally(resolveFuture.cause());
+                    onComplete.accept(null, resolveFuture.cause());
                 }
             });
-            return endpointFuture;
         }
     }
 
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint,
                                              HttpRequest req, DecodedHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder) {
+        if (ctx.eventLoop().inEventLoop()) {
+            acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+        } else {
+            ctx.eventLoop().execute(() -> {
+                acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+            });
+        }
+    }
+
+    private void acquireConnectionAndExecute0(ClientRequestContext ctx, Endpoint endpoint,
+                                              HttpRequest req, DecodedHttpResponse res,
+                                              ClientConnectionTimingsBuilder timingsBuilder) {
         // IP address should be resolved already.
         assert endpoint.hasIpAddr();
 
