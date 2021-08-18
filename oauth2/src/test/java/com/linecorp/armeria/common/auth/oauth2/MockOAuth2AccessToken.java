@@ -23,7 +23,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 public class MockOAuth2AccessToken {
 

@@ -28,8 +28,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Realm;
 import org.apache.catalina.connector.Connector;
@@ -38,6 +36,8 @@ import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 import org.apache.catalina.realm.NullRealm;
 import org.apache.catalina.startup.Tomcat;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a {@link TomcatService}. Use the factory methods in {@link TomcatService} if you do not override

@@ -21,12 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.time.Clock;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 

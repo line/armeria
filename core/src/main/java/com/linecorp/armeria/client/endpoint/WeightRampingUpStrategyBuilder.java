@@ -22,10 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.channel.EventLoop;

@@ -17,7 +17,7 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Provides a way to unwrap an object in decorator pattern, similar to down-casting in an inheritance pattern.

@@ -29,7 +29,7 @@
  */
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * The base container implementation of {@link QueryParams} and {@link QueryParamsBuilder}.

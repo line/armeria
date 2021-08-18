@@ -22,9 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class RegexPathMappingWithPrefix extends AbstractPathMapping {
 

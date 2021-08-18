@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.retry;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RetryDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff},

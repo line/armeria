@@ -21,14 +21,13 @@ import java.time.Clock;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.CacheControl;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal builder class which helps easier implementation of {@link HttpFileBuilder} or

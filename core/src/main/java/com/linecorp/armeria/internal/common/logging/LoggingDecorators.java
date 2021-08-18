@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -79,9 +80,12 @@ public final class LoggingDecorators {
     public static void logRequest(
             Logger logger, RequestOnlyLog log,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer) {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         if (requestLogLevel.isEnabled(logger)) {
@@ -102,13 +106,20 @@ public final class LoggingDecorators {
             Logger logger, RequestLog log,
             Function<? super RequestLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super ResponseHeaders,
+                    ? extends @Nullable Object> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable,
+                    ? extends @Nullable Object> responseCauseSanitizer) {
 
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
         final Throwable responseCause = log.responseCause();

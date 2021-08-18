@@ -17,11 +17,10 @@ package com.linecorp.armeria.server.annotation;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An interface which helps a user specify an {@link HttpStatus} or {@link ResponseHeaders} for a response

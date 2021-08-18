@@ -18,11 +18,10 @@ package com.linecorp.armeria.common.multipart;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Utility methods to support multipart metadata handling.

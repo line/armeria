@@ -24,6 +24,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -115,55 +116,64 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
 
     @Override
     public LoggingClientBuilder requestHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer) {
         return (LoggingClientBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
     @Override
     public LoggingClientBuilder responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseHeadersSanitizer) {
         return (LoggingClientBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
     @Override
     public LoggingClientBuilder requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer) {
         return (LoggingClientBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
     @Override
     public LoggingClientBuilder responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseTrailersSanitizer) {
         return (LoggingClientBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
     @Override
     public LoggingClientBuilder headersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> headersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> headersSanitizer) {
         return (LoggingClientBuilder) super.headersSanitizer(headersSanitizer);
     }
 
     @Override
     public LoggingClientBuilder requestContentSanitizer(
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer) {
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer) {
         return (LoggingClientBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
     @Override
     public LoggingClientBuilder responseContentSanitizer(
-            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer) {
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> responseContentSanitizer) {
         return (LoggingClientBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
     @Override
     public LoggingClientBuilder contentSanitizer(
-            BiFunction<? super RequestContext, Object, ?> contentSanitizer) {
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> contentSanitizer) {
         return (LoggingClientBuilder) super.contentSanitizer(contentSanitizer);
     }
 
     @Override
     public LoggingClientBuilder responseCauseSanitizer(
-            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer) {
+            BiFunction<? super RequestContext, ? super Throwable,
+                    ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
 }

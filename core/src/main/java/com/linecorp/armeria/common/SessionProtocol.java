@@ -22,11 +22,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.

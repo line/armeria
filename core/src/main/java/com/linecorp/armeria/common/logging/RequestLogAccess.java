@@ -18,10 +18,9 @@ package com.linecorp.armeria.common.logging;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Provides the access to a {@link RequestLog} or {@link RequestOnlyLog}, while ensuring the interested

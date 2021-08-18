@@ -19,8 +19,6 @@ package com.linecorp.armeria.client.encoding;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 
 import com.google.common.base.Ascii;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 

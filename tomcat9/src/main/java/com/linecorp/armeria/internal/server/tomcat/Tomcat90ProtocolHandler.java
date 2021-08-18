@@ -20,13 +20,13 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.ProtocolHandler;
 import org.apache.coyote.UpgradeProtocol;
 import org.apache.tomcat.util.net.SSLHostConfig;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link ProtocolHandler} for Tomcat 8.5 and above.

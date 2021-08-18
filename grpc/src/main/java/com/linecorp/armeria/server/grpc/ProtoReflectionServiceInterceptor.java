@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.Context;
 import io.grpc.Contexts;

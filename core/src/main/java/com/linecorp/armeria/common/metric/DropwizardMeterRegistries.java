@@ -19,10 +19,10 @@ package com.linecorp.armeria.common.metric;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Meter;

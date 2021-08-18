@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} raised when a client received an invalid response.

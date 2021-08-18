@@ -18,10 +18,9 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
