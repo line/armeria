@@ -34,12 +34,9 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
-import static io.netty.util.internal.StringUtil.isNullOrEmpty;
-import static io.netty.util.internal.StringUtil.length;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -134,8 +131,6 @@ public final class ArmeriaHttpUtil {
      * The old {@code "proxy-connection"} header which has been superceded by {@code "connection"}.
      */
     public static final AsciiString HEADER_NAME_PROXY_CONNECTION = AsciiString.cached("proxy-connection");
-
-    private static final URI ROOT = URI.create("/");
 
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/1 to HTTP/2.
@@ -578,16 +573,20 @@ public final class ArmeriaHttpUtil {
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
     public static RequestHeaders toArmeria(ChannelHandlerContext ctx, HttpRequest in,
-                                           ServerConfig cfg) throws URISyntaxException {
-        final URI requestTargetUri = toUri(in);
+                                           ServerConfig cfg, String scheme) throws URISyntaxException {
+
+        final String path = in.uri();
+        if (path.charAt(0) != '/' && !"*".equals(path)) {
+            // We support only origin form and asterisk form.
+            throw new URISyntaxException(path, "neither origin form nor asterisk form");
+        }
 
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
         out.add(HttpHeaderNames.METHOD, in.method().name());
-        out.add(HttpHeaderNames.PATH, toHttp2Path(requestTargetUri));
-
-        addHttp2Scheme(inHeaders, requestTargetUri, out);
+        out.add(HttpHeaderNames.PATH, path);
+        out.add(HttpHeaderNames.SCHEME, scheme);
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
@@ -595,14 +594,9 @@ public final class ArmeriaHttpUtil {
             // The client violates the spec that the request headers must contain a Host header.
             // But we just add Host header to allow the request.
             // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
-            if (isOriginForm(requestTargetUri) || isAsteriskForm(requestTargetUri)) {
-                // requestTargetUri does not contain authority information.
-                final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-                final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-                out.add(HttpHeaderNames.HOST, defaultHostname + ':' + port);
-            } else {
-                out.add(HttpHeaderNames.HOST, stripUserInfo(requestTargetUri.getAuthority()));
-            }
+            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
+            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
+            out.add(HttpHeaderNames.HOST, defaultHostname + ':' + port);
         }
         return out.build();
     }
@@ -676,19 +670,6 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    // TODO(minwoox) Use Netty's validation logic once https://github.com/netty/netty/pull/10380 is merged.
-    private static boolean isOriginForm(URI uri) {
-        return uri.getScheme() == null && !"*".equals(uri.getPath()) &&
-               uri.getHost() == null && uri.getAuthority() == null;
-    }
-
-    // TODO(minwoox) Use Netty's validation logic once https://github.com/netty/netty/pull/10380 is merged.
-    private static boolean isAsteriskForm(URI uri) {
-        return "*".equals(uri.getPath()) && uri.getScheme() == null &&
-               uri.getHost() == null && uri.getAuthority() == null && uri.getQuery() == null &&
-               uri.getFragment() == null;
-    }
-
     private static CharSequenceMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
                                                   int arraySizeHint) {
         final CharSequenceMap result = new CharSequenceMap(arraySizeHint);
@@ -744,45 +725,6 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    private static URI toUri(HttpRequest in) throws URISyntaxException {
-        final String uri = in.uri();
-        if (uri.startsWith("//")) {
-            // Normalize the path that starts with more than one slash into the one with a single slash,
-            // so that java.net.URI does not raise a URISyntaxException.
-            for (int i = 0; i < uri.length(); i++) {
-                if (uri.charAt(i) != '/') {
-                    return new URI(uri.substring(i - 1));
-                }
-            }
-            return ROOT;
-        } else {
-            return new URI(uri);
-        }
-    }
-
-    /**
-     * Generate a HTTP/2 {code :path} from a URI in accordance with
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
-     */
-    private static String toHttp2Path(URI uri) {
-        final StringBuilder pathBuilder = new StringBuilder(
-                length(uri.getRawPath()) + length(uri.getRawQuery()) + length(uri.getRawFragment()) + 2);
-
-        if (!isNullOrEmpty(uri.getRawPath())) {
-            pathBuilder.append(uri.getRawPath());
-        }
-        if (!isNullOrEmpty(uri.getRawQuery())) {
-            pathBuilder.append('?');
-            pathBuilder.append(uri.getRawQuery());
-        }
-        if (!isNullOrEmpty(uri.getRawFragment())) {
-            pathBuilder.append('#');
-            pathBuilder.append(uri.getRawFragment());
-        }
-
-        return pathBuilder.length() != 0 ? pathBuilder.toString() : EMPTY_REQUEST_PATH;
-    }
-
     @VisibleForTesting
     static String stripUserInfo(String authority) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
@@ -793,23 +735,6 @@ public final class ArmeriaHttpUtil {
             throw new IllegalArgumentException("authority: " + authority);
         } else {
             return authority.substring(start);
-        }
-    }
-
-    private static void addHttp2Scheme(io.netty.handler.codec.http.HttpHeaders in, URI uri,
-                                       RequestHeadersBuilder out) {
-        final String value = uri.getScheme();
-        if (value != null) {
-            out.add(HttpHeaderNames.SCHEME, value);
-            return;
-        }
-
-        // Consume the Scheme extension header if present
-        final CharSequence cValue = in.get(ExtensionHeaderNames.SCHEME.text());
-        if (cValue != null) {
-            out.add(HttpHeaderNames.SCHEME, cValue.toString());
-        } else {
-            out.add(HttpHeaderNames.SCHEME, "unknown");
         }
     }
 
