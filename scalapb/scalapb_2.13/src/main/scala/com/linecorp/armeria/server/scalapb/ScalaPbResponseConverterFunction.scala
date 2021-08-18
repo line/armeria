@@ -108,7 +108,7 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
           if (contentType == null) StandardCharsets.UTF_8 else contentType.charset(StandardCharsets.UTF_8)
         result match {
           case publisher: Publisher[_] =>
-            aggregateFrom(publisher, headers, trailers, toJsonHttpData(_, charset))
+            aggregateFrom(publisher, headers, trailers, toJsonHttpData(_, charset), ctx)
           case stream: Stream[_] =>
             aggregateFrom(stream, headers, trailers, toJsonHttpData(_, charset), ctx.blockingTaskExecutor)
           case _ =>

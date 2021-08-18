@@ -328,11 +328,15 @@ public final class AnnotatedService implements HttpService {
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
                     composedFuture = f.thenComposeAsync(
-                            aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
+                            aReq -> cancelOnRequestCancelling(
+                                    toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
+                                    ctx.whenRequestCancelling()),
                             ctx.blockingTaskExecutor());
                 } else {
                     composedFuture = f.thenCompose(
-                            aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()));
+                            aReq -> cancelOnRequestCancelling(
+                                    toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()),
+                                    ctx.whenRequestCancelling()));
                 }
                 return composedFuture
                         .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
@@ -447,6 +451,21 @@ public final class AnnotatedService implements HttpService {
     }
 
     /**
+     * Add a callback to cancel the given {@link CompletionStage stage} if
+     * {@link CompletionStage whenRequestCancelling} completes earlier.
+     */
+    private static CompletionStage<?> cancelOnRequestCancelling(
+            CompletionStage<?> stage, CompletionStage<Throwable> whenRequestCancelling) {
+        whenRequestCancelling.thenAccept(cause -> {
+            final CompletableFuture<?> upstreamFuture = stage.toCompletableFuture();
+            if (!upstreamFuture.isDone()) {
+                upstreamFuture.completeExceptionally(cause);
+            }
+        });
+        return stage;
+    }
+
+    /**
      * An {@link ExceptionHandlerFunction} which wraps a list of {@link ExceptionHandlerFunction}s.
      */
     private static final class CompositeExceptionHandlerFunction implements ExceptionHandlerFunction {
@@ -512,7 +531,7 @@ public final class AnnotatedService implements HttpService {
                                             HttpHeaders trailers) throws Exception {
             final CompletableFuture<?> f;
             if (result instanceof Publisher) {
-                f = collectFrom((Publisher<Object>) result);
+                f = collectFrom((Publisher<Object>) result, ctx);
             } else if (result instanceof Stream) {
                 f = collectFrom((Stream<Object>) result, ctx.blockingTaskExecutor());
             } else {
