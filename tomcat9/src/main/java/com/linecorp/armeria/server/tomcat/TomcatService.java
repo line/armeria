@@ -81,6 +81,8 @@ public abstract class TomcatService implements HttpService {
     private static final MethodHandle OUTPUT_BUFFER_CONSTRUCTOR;
     static final Class<?> PROTOCOL_HANDLER_CLASS;
 
+    private static final MethodHandle PROCESSOR_CONSTRUCTOR;
+
     static {
         final String prefix = TomcatVersion.class.getPackage().getName() + '.';
         final ClassLoader classLoader = TomcatVersion.class.getClassLoader();
@@ -107,6 +109,22 @@ public abstract class TomcatService implements HttpService {
             throw new IllegalStateException(
                     "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
                     "; using a wrong armeria-tomcat JAR?", e);
+        }
+
+        try {
+            final Class<?> processorClass = ArmeriaProcessor.class;
+            if (TomcatVersion.major() >= 9) {
+                PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                        processorClass,
+                        MethodType.methodType(void.class, Adapter.class));
+            } else {
+                PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                        processorClass, MethodType.methodType(void.class));
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(
+                    "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
+                            "; using a wrong armeria-tomcat JAR?", e);
         }
 
         if (TomcatVersion.major() >= 9) {
@@ -357,7 +375,8 @@ public abstract class TomcatService implements HttpService {
                     return null;
                 }
 
-                final Request coyoteReq = convertRequest(ctx, aReq);
+                final ArmeriaProcessor processor = createProcessor(coyoteAdapter);
+                final Request coyoteReq = convertRequest(ctx, aReq, processor.getRequest());
                 if (coyoteReq == null) {
                     if (res.tryWrite(INVALID_AUTHORITY_HEADERS)) {
                         if (res.tryWrite(INVALID_AUTHORITY_DATA)) {
@@ -366,7 +385,7 @@ public abstract class TomcatService implements HttpService {
                     }
                     return null;
                 }
-                final Response coyoteRes = new Response();
+                final Response coyoteRes = coyoteReq.getResponse();
                 coyoteReq.setResponse(coyoteRes);
                 coyoteRes.setRequest(coyoteReq);
 
@@ -424,10 +443,18 @@ public abstract class TomcatService implements HttpService {
         }
     }
 
+    private static ArmeriaProcessor createProcessor(Adapter coyoteAdapter) throws Throwable {
+        if (TomcatVersion.major() >= 9) {
+            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke(coyoteAdapter);
+        } else {
+            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke();
+        }
+    }
+
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req) throws Throwable {
+    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req,
+                                   Request coyoteReq) throws Throwable {
         final String mappedPath = ctx.mappedPath();
-        final Request coyoteReq = new Request();
 
         coyoteReq.scheme().setString(req.scheme());
 
