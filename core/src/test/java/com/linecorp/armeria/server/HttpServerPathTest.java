@@ -24,51 +24,31 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.io.ByteStreams;
 
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.NetUtil;
 
-public class HttpServerPathTest {
+class HttpServerPathTest {
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/service/foo", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-            });
+            sb.service("/service/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
             // '/another/foo/' and '/another/foo' should be differently handled.
-            sb.service("/another/{id}/", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-            }).service("/another/{id}", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.NO_CONTENT);
-                }
-            });
+            sb.service("/another/{id}/", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.service("/another/{id}", (ctx, req) -> HttpResponse.of(HttpStatus.NO_CONTENT));
 
-            sb.serviceUnder("/", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-            });
+            sb.serviceUnder("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
             // Enable access logs to make sure AccessLogWriter does not fail on an invalid path.
             sb.accessLogWriter(AccessLogWriter.common(), false);
@@ -111,7 +91,7 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service../foobar2", HttpStatus.OK);
         TEST_URLS.put("/service/foobar3..", HttpStatus.OK);
 
-        // OK because the following prohibited characters will be percent-encoded.
+        // OK because the prohibited characters will be percent-encoded.
         TEST_URLS.put("/service/foo|bar5", HttpStatus.OK);
         TEST_URLS.put("/service/foo\\bar6", HttpStatus.OK);
         TEST_URLS.put("/\\\\", HttpStatus.OK);
@@ -121,12 +101,15 @@ public class HttpServerPathTest {
 
         // 400 test
         TEST_URLS.put("..", HttpStatus.BAD_REQUEST);
+        TEST_URLS.put("/..", HttpStatus.BAD_REQUEST);
+        TEST_URLS.put("/../", HttpStatus.BAD_REQUEST);
         TEST_URLS.put(".\\", HttpStatus.BAD_REQUEST);
         TEST_URLS.put("something", HttpStatus.BAD_REQUEST);
+        TEST_URLS.put("**", HttpStatus.BAD_REQUEST);
     }
 
     @Test
-    public void testPathOfUrl() throws Exception {
+    void testPathOfUrl() throws Exception {
         for (Entry<String, HttpStatus> url : TEST_URLS.entrySet()) {
             urlPathAssertion(url.getValue(), url.getKey());
         }
