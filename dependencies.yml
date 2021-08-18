@@ -11,7 +11,8 @@ boms:
   - io.grpc:grpc-bom:1.40.0
   - io.micrometer:micrometer-bom:1.7.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.67.Final
+  # TODO(ikhoon): Upgrade Netty version once https://github.com/netty/netty/issues/11591 is fixed.
+  - io.netty:netty-bom:4.1.66.Final
   - io.zipkin.brave:brave-bom:5.13.3
   - org.eclipse.jetty:jetty-bom:9.4.43.v20210629
   - org.junit:junit-bom:5.7.2
@@ -373,8 +374,8 @@ org.apache.curator:
   curator-recipes:
     version: &CURATOR_VERSION '5.2.0'
     javadocs:
-    - https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.2.0/
-    - https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.2.0/
+    - https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.1.0/
+    - https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.1.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
   curator-x-discovery:
