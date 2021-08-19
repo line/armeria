@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -32,7 +33,8 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *
  * @see RedirectConfigBuilder#maxRedirects(int)
  */
-public final class TooManyRedirectsException extends RuntimeException {
+@UnstableApi
+public final class TooManyRedirectsException extends RedirectsException {
 
     private static final long serialVersionUID = 3741211991690338730L;
 

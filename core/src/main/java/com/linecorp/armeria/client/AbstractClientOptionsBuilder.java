@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -340,6 +341,7 @@ public class AbstractClientOptionsBuilder {
     /**
      * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
      */
+    @UnstableApi
     public AbstractClientOptionsBuilder followRedirects() {
         return option(REDIRECT_CONFIG, RedirectConfig.of());
     }
@@ -348,6 +350,7 @@ public class AbstractClientOptionsBuilder {
      * Sets the {@link RedirectConfig} to enable
      * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
      */
+    @UnstableApi
     public AbstractClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {
         return option(REDIRECT_CONFIG, requireNonNull(redirectConfig, "redirectConfig"));
     }

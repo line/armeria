@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An exception indicating that the {@linkplain URI#getScheme()} session protocol} of the redirection URI
@@ -31,7 +32,8 @@ import com.linecorp.armeria.common.SessionProtocol;
  *
  * @see RedirectConfigBuilder#allowProtocols(Iterable)
  */
-public final class UnexpectedProtocolRedirectException extends RuntimeException {
+@UnstableApi
+public final class UnexpectedProtocolRedirectException extends RedirectsException {
 
     private static final long serialVersionUID = -3766002689876499315L;
 

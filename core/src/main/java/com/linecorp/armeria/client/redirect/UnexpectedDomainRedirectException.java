@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An exception indicating that the {@linkplain URI#getHost() host component} of the redirection URI
@@ -27,7 +28,8 @@ import com.linecorp.armeria.common.Flags;
  *
  * @see RedirectConfigBuilder#allowDomains(Iterable)
  */
-public final class UnexpectedDomainRedirectException extends RuntimeException {
+@UnstableApi
+public final class UnexpectedDomainRedirectException extends RedirectsException {
 
     private static final long serialVersionUID = 3127736510630287566L;
 

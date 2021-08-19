@@ -29,7 +29,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">cyclical redirections</a>
  * for more information.
  */
-public final class CyclicRedirectsException extends RuntimeException {
+public final class CyclicRedirectsException extends RedirectsException {
 
     private static final long serialVersionUID = -2969770339558298361L;
 
