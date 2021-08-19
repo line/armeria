@@ -121,12 +121,12 @@ final class HttpClientDelegate implements HttpClient {
                                                                                 endpoint.port()));
         if (resolveFuture.isSuccess()) {
             final InetAddress address = resolveFuture.getNow().getAddress();
-            onComplete.accept(endpoint.withIpAddr(address), null);
+            onComplete.accept(endpoint.withInetAddress(address), null);
         } else {
             resolveFuture.addListener(future -> {
                 if (future.isSuccess()) {
                     final InetAddress address = resolveFuture.getNow().getAddress();
-                    onComplete.accept(endpoint.withIpAddr(address), null);
+                    onComplete.accept(endpoint.withInetAddress(address), null);
                 } else {
                     onComplete.accept(null, resolveFuture.cause());
                 }

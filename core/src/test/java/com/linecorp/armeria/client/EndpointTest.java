@@ -75,7 +75,7 @@ class EndpointTest {
         assertThat(foo.withDefaultPort(42).port()).isEqualTo(42);
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.authority()).isEqualTo("foo.com");
-        assertThat(foo.withIpAddr((String) null)).isSameAs(foo);
+        assertThat(foo.withIpAddr(null)).isSameAs(foo);
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo.com");
 
         assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
@@ -131,10 +131,10 @@ class EndpointTest {
     @Test
     void hostWithIpAddrRemoved() {
         final Endpoint foo = Endpoint.of("foo.com").withIpAddr("192.168.0.1");
-        assertThat(foo.withIpAddr((String) null).ipAddr()).isNull();
-        assertThat(foo.withIpAddr((String) null).ipFamily()).isNull();
-        assertThat(foo.withIpAddr((String) null).hasIpAddr()).isFalse();
-        assertThat(foo.withIpAddr((String) null).toUri("none+http").toString()).isEqualTo("none+http://foo.com");
+        assertThat(foo.withIpAddr(null).ipAddr()).isNull();
+        assertThat(foo.withIpAddr(null).ipFamily()).isNull();
+        assertThat(foo.withIpAddr(null).hasIpAddr()).isFalse();
+        assertThat(foo.withIpAddr(null).toUri("none+http").toString()).isEqualTo("none+http://foo.com");
     }
 
     @Test
@@ -170,7 +170,7 @@ class EndpointTest {
         assertThat(a.hasIpAddr()).isTrue();
         assertThat(a.authority()).isEqualTo("192.168.0.1");
         assertThat(a.toUri("none+http").toString()).isEqualTo("none+http://192.168.0.1");
-        assertThatThrownBy(() -> a.withIpAddr((String) null)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> a.withIpAddr(null)).isInstanceOf(IllegalStateException.class);
         assertThat(a.withIpAddr("192.168.0.1")).isSameAs(a);
         assertThat(a.withIpAddr("192.168.0.2")).isEqualTo(Endpoint.of("192.168.0.2"));
 
@@ -198,7 +198,7 @@ class EndpointTest {
         assertThat(a.hasIpAddr()).isTrue();
         assertThat(a.authority()).isEqualTo("[::1]");
         assertThat(a.toUri("none+http").toString()).isEqualTo("none+http://[::1]");
-        assertThatThrownBy(() -> a.withIpAddr((String) null)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> a.withIpAddr(null)).isInstanceOf(IllegalStateException.class);
         assertThat(a.withIpAddr("::1")).isSameAs(a);
         assertThat(a.withIpAddr("::2")).isEqualTo(Endpoint.of("::2"));
         assertThat(a.withIpAddr("[::1]")).isSameAs(a);
@@ -434,13 +434,13 @@ class EndpointTest {
         final Endpoint endpoint = Endpoint.of("a");
 
         final InetAddress ipv4Address = InetAddress.getByName("1.1.1.1");
-        final Endpoint endpointWithIpv4 = endpoint.withIpAddr(ipv4Address);
+        final Endpoint endpointWithIpv4 = endpoint.withInetAddress(ipv4Address);
         assertThat(endpointWithIpv4.hasIpAddr()).isTrue();
         assertThat(endpointWithIpv4.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
         assertThat(endpointWithIpv4.ipAddr()).isEqualTo("1.1.1.1");
 
         final InetAddress ipv6Address = InetAddress.getByName("[::1]");
-        final Endpoint endpointWithIpv6 = endpoint.withIpAddr(ipv6Address);
+        final Endpoint endpointWithIpv6 = endpoint.withInetAddress(ipv6Address);
         assertThat(endpointWithIpv6.hasIpAddr()).isTrue();
         assertThat(endpointWithIpv6.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(endpointWithIpv6.ipAddr()).isEqualTo("0:0:0:0:0:0:0:1");

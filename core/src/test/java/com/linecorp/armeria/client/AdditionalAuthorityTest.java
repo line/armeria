@@ -80,7 +80,7 @@ class AdditionalAuthorityTest {
     }
 
     @Test
-    void additionalAuthorityHasHighestPrecedent() {
+    void additionalAuthorityHasHighestPrecedence() {
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
                                                       "bar:" + serverAPort))) {
@@ -123,9 +123,11 @@ class AdditionalAuthorityTest {
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "[::1"))) {
 
-            // An invalid authority should be ignored.
-            assertThat(client.get("http://foo:" + serverAPort).aggregate().join().contentUtf8())
-                    .isEqualTo("foo/foo:" + serverAPort);
+            assertThatThrownBy(client.get("http://foo:" + serverAPort).aggregate()::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Invalid bracketed host/port");
         }
 
         // Port only
@@ -136,9 +138,12 @@ class AdditionalAuthorityTest {
                                                                      .scheme("http")
                                                                      .authority("bar:" + serverAPort)
                                                                      .build());
-            // If additionalRequestHeader's authority is invalid but req.authority() is valid
-            assertThat(client.execute(request).aggregate().join().contentUtf8())
-                    .isEqualTo("bar/bar:" + serverAPort);
+
+            assertThatThrownBy(client.execute(request).aggregate()::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Not a valid domain name");
         }
 
         // Missing a port number
@@ -149,9 +154,12 @@ class AdditionalAuthorityTest {
                                                                      .scheme("http")
                                                                      .authority("bar:" + serverAPort)
                                                                      .build());
-            // If additionalRequestHeader's authority is invalid but req.authority() is valid
-            assertThat(client.execute(request).aggregate().join().contentUtf8())
-                    .isEqualTo("bar/bar:" + serverAPort);
+
+            assertThatThrownBy(client.execute(request).aggregate()::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Missing port number");
         }
     }
 

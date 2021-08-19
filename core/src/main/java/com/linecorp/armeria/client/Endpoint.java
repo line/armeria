@@ -465,7 +465,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @return the new endpoint with the specified {@link InetAddress}.
      *         {@code this} if this endpoint has the same IP address.
      */
-    public Endpoint withIpAddr(InetAddress address) {
+    public Endpoint withInetAddress(InetAddress address) {
         requireNonNull(address, "address");
         final String ipAddr = address.getHostAddress();
         if (address instanceof Inet4Address) {

@@ -276,11 +276,7 @@ public final class DefaultClientRequestContext
                 // the host of an Endpoint.
                 final String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
                 if (authority != null) {
-                    try {
-                        endpoint = Endpoint.parse(authority);
-                    } catch (Exception ignored) {
-                        // Ignore an invalid authority and use the original endpoint.
-                    }
+                    endpoint = Endpoint.parse(authority);
                 }
             }
             return requireNonNull(options().endpointRemapper().apply(endpoint),
