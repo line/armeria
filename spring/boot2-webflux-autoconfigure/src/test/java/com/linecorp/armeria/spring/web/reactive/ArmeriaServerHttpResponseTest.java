@@ -338,7 +338,8 @@ class ArmeriaServerHttpResponseTest {
 
         await().untilTrue(completed);
         assertThat(error.get()).isInstanceOf(IllegalArgumentException.class)
-                               .hasMessageContaining("Reactive Streams specification rule 3.9");
+                               .hasMessageContaining(
+                                       "§3.9 violated: positive request amount required but it was 0");
         await().untilAsserted(() -> {
             assertThat(allocatedBuffers).hasSize(1);
             assertThat(allocatedBuffers.peek().getNativeBuffer().refCnt()).isZero();
