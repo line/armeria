@@ -36,6 +36,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.CookieBuilder;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -87,6 +89,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
             final HttpResponse response = HttpResponse.of(
                     Flux.concat(Mono.just(armeriaHeaders.build()), publisher.map(factoryWrapper::toHttpData))
                         .contextWrite(contextView)
+                        .doOnDiscard(HttpData.class, PooledObjects::close)
                         // Publish the response stream on the event loop in order to avoid the possibility of
                         // calling subscription.request() from multiple threads while publishing messages
                         // with onNext signals or starting the subscription with onSubscribe signal.
