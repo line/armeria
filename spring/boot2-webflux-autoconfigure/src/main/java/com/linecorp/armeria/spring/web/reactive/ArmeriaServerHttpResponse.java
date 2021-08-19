@@ -26,6 +26,9 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.NettyDataBuffer;
+import org.springframework.core.io.buffer.PooledDataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.AbstractServerHttpResponse;
@@ -46,11 +49,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * A {@link ServerHttpResponse} implementation for the Armeria HTTP server.
@@ -85,15 +86,12 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
     }
 
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
+        final Flux<HttpData> publisher0 =
+                publisher.map(factoryWrapper::toHttpData)
+                         .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release);
         return Mono.deferContextual(contextView -> {
-            final HttpResponse response = HttpResponse.of(
-                    Flux.concat(Mono.just(armeriaHeaders.build()), publisher.map(factoryWrapper::toHttpData))
-                        .contextWrite(contextView)
-                        .doOnDiscard(HttpData.class, PooledObjects::close)
-                        // Publish the response stream on the event loop in order to avoid the possibility of
-                        // calling subscription.request() from multiple threads while publishing messages
-                        // with onNext signals or starting the subscription with onSubscribe signal.
-                        .publishOn(Schedulers.fromExecutor(ctx.eventLoop())));
+            final HttpResponse response = HttpResponse.of(armeriaHeaders.build(),
+                                                          publisher0.contextWrite(contextView));
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
                        .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||

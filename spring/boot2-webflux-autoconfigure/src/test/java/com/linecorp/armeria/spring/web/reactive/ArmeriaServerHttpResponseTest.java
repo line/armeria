@@ -338,8 +338,7 @@ class ArmeriaServerHttpResponseTest {
 
         await().untilTrue(completed);
         assertThat(error.get()).isInstanceOf(IllegalArgumentException.class)
-                               .hasMessageContaining(
-                                       "§3.9 violated: positive request amount required but it was 0");
+                               .hasMessageContaining("non-positive request signals are illegal");
         await().untilAsserted(() -> {
             assertThat(allocatedBuffers).hasSize(1);
             assertThat(allocatedBuffers.peek().getNativeBuffer().refCnt()).isZero();
