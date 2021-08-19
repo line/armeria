@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.core.io.buffer.PooledDataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -39,7 +38,6 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.CookieBuilder;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -86,12 +84,12 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
     }
 
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
-        final Flux<HttpData> publisher0 =
-                publisher.map(factoryWrapper::toHttpData)
-                         .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release);
         return Mono.deferContextual(contextView -> {
-            final HttpResponse response = HttpResponse.of(armeriaHeaders.build(),
-                                                          publisher0.contextWrite(contextView));
+            final HttpResponse response =
+                    HttpResponse.of(armeriaHeaders.build(),
+                                    publisher.map(factoryWrapper::toHttpData)
+                                             .contextWrite(contextView)
+                                             .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release));
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
                        .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||
