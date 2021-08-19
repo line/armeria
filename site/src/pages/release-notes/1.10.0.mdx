@@ -1,5 +1,5 @@
 ---
-date: 2021-08-17
+date: 2021-08-19
 ---
 
 ## 🌟 New features
@@ -144,6 +144,8 @@ date: 2021-08-17
 - No more unintended leakage of sensitive information when logging a <type://RequestLog>. #3758
 - A request is now correctly reset when <type://ServiceRequestContext#cancel()> is called. #3674
 - You no longer see a `ClassNotFoundException` in the shaded fastutil. #3713
+- Armeria now accepts harmless yet illegal characters in a request path for HTTP/1 connections, like it did for
+  HTTP/2. #3778
 - You no longer see an <type://EmptyEndpointGroupException> when <typeplural://Endpoint> are completely switched
   to new <typeplural://Endpoint> in <type://HealthCheckedEndpointGroup>. #3637
 - You can now correctly monitor a <type://BlockingTaskExecutor> with Micrometer. #3710 #3718
@@ -166,6 +168,7 @@ date: 2021-08-17
 - You no longer see <type://CancelledSubscriptionException> when a WebFlux's `WebClient` receives an unexpected
   `Content-Type` header. #3730 #3750
 - <type://TomcatService> now properly handles an exception with Spring Web's `ExceptionHandler`s. #3447 #3732
+- `ErrorWebExceptionHandler` in WebFlux converts an exception to the response correctly. #3779
 - <type://JettyService> doesn't raise an `EofException` anymore. #3688
 - Kotlin [`jsr305=strict`](https://kotlinlang.org/docs/java-interop.html#compiler-configuration) option no
   longer raises a false positive error when a null value is returned from where nulls are allowed
@@ -245,7 +248,7 @@ date: 2021-08-17
 - kotlinx-coroutines-core 1.5.0 → 1.5.1
 - Logback 1.2.3 → 1.2.5
 - Micrometer 1.7.1 → 1.7.2
-- Netty 4.1.65 → 4.1.67
+- Netty 4.1.65 → 4.1.66
 - netty-tcnative-boringssl-static 2.0.39 → 2.0.40
 - netty-transport-native-io_uring 0.0.5 → 0.0.8
 - java-jwt 3.16.0 → 3.18.1
