@@ -244,20 +244,13 @@ public final class AnnotatedServiceFactory {
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers) {
-        final boolean hasArmeriaKotlinModule = KotlinUtil.getCallKotlinSuspendingMethod() != null;
-        if (!hasArmeriaKotlinModule) {
-            if (KotlinUtil.maybeSuspendingFunction(method)) {
-                throw new IllegalArgumentException(
-                        "Kotlin suspending functions are supported " +
-                        "only when you added 'armeria-kotlin' as a dependency.\n" +
-                        "See https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support " +
-                        "for more information.");
-            }
-            if (KotlinUtil.isKotlinFlow(method.getReturnType())) {
-                throw new IllegalArgumentException(
-                        "Kotlin Flow return type is supported " +
-                        "only when you added 'armeria-kotlin' as a dependency.");
-            }
+
+        if (KotlinUtil.getCallKotlinSuspendingMethod() == null && KotlinUtil.maybeSuspendingFunction(method)) {
+            throw new IllegalArgumentException(
+                    "Kotlin suspending functions are supported " +
+                    "only when you added 'armeria-kotlin' as a dependency.\n" +
+                    "See https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support " +
+                    "for more information.");
         }
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);

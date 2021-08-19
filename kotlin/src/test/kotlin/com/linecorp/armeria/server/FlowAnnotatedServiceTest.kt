@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -46,6 +46,7 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import java.util.concurrent.Executors
@@ -105,6 +106,7 @@ class FlowAnnotatedServiceTest {
     }
 
     @Test
+    @Disabled
     fun test_blockingAnnotation(): Unit = runBlocking {
         val res = client.get("/flow/blocking-annotation").aggregate().await()
         assertThat(res.status()).isEqualTo(HttpStatus.OK)

@@ -25,7 +25,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.future.future
-import kotlinx.coroutines.reactive.asPublisher
 import org.reactivestreams.Publisher
 import java.lang.reflect.Method
 import java.util.concurrent.CompletableFuture

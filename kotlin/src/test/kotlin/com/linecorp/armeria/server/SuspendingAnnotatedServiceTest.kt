@@ -32,14 +32,12 @@ import com.linecorp.armeria.server.annotation.HttpResult
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction
 import com.linecorp.armeria.server.annotation.Param
 import com.linecorp.armeria.server.annotation.ProducesJson
-import com.linecorp.armeria.server.annotation.ProducesJsonSequences
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
 import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

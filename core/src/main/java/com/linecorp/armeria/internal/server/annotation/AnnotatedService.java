@@ -113,8 +113,6 @@ public final class AnnotatedService implements HttpService {
     private final MethodHandle methodHandle;
     @Nullable
     private final MethodHandle callKotlinSuspendingMethod;
-    @Nullable
-    private final MethodHandle asPublisher;
     private final boolean isKotlinSuspendingMethod;
     private final List<AnnotatedValueResolver> resolvers;
 
@@ -176,7 +174,6 @@ public final class AnnotatedService implements HttpService {
             responseType = ResponseType.OTHER_OBJECTS;
         }
         callKotlinSuspendingMethod = KotlinUtil.getCallKotlinSuspendingMethod();
-        asPublisher = KotlinUtil.getAsPublisher();
 
         ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
         if (serviceName == null) {
@@ -406,13 +403,8 @@ public final class AnnotatedService implements HttpService {
         }
 
         try (SafeCloseable ignored = ctx.push()) {
-            if (result != null && KotlinUtil.isKotlinFlow(result.getClass())) {
-                assert asPublisher != null;
-                result = asPublisher.invoke(
-                        result, useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(), ctx);
-            }
             return responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return HttpResponse.ofFailure(cause);
         }
     }
