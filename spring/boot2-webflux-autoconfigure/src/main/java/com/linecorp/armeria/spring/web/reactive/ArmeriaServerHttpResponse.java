@@ -86,6 +86,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
         return Mono.deferContextual(contextView -> {
             final HttpResponse response = HttpResponse.of(
                     Flux.concat(Mono.just(armeriaHeaders.build()), publisher.map(factoryWrapper::toHttpData))
+                        .contextWrite(contextView)
                         // Publish the response stream on the event loop in order to avoid the possibility of
                         // calling subscription.request() from multiple threads while publishing messages
                         // with onNext signals or starting the subscription with onSubscribe signal.
