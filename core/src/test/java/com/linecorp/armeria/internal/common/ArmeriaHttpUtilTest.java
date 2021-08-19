@@ -240,15 +240,6 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void stripUserInfo() {
-        assertThat(ArmeriaHttpUtil.stripUserInfo("foo")).isEqualTo("foo");
-        assertThat(ArmeriaHttpUtil.stripUserInfo("info@foo")).isEqualTo("foo");
-        assertThat(ArmeriaHttpUtil.stripUserInfo("@foo.bar")).isEqualTo("foo.bar");
-        assertThatThrownBy(() -> ArmeriaHttpUtil.stripUserInfo("info@"))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     void addHostHeaderIfMissing() throws URISyntaxException {
         final io.netty.handler.codec.http.HttpHeaders headers = new DefaultHttpHeaders();
         headers.add(HttpHeaderNames.HOST, "bar");

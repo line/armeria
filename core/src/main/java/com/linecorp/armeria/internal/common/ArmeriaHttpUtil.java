@@ -49,7 +49,6 @@ import java.util.function.BiConsumer;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -584,9 +583,9 @@ public final class ArmeriaHttpUtil {
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
-        out.add(HttpHeaderNames.METHOD, in.method().name());
-        out.add(HttpHeaderNames.PATH, path);
-        out.add(HttpHeaderNames.SCHEME, scheme);
+        out.method(HttpMethod.valueOf(in.method().name()))
+           .path(path)
+           .scheme(scheme);
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
@@ -722,19 +721,6 @@ public final class ArmeriaHttpUtil {
                     break;
                 }
             }
-        }
-    }
-
-    @VisibleForTesting
-    static String stripUserInfo(String authority) {
-        // The authority MUST NOT include the deprecated "userinfo" subcomponent
-        final int start = authority.indexOf('@') + 1;
-        if (start == 0) {
-            return authority;
-        } else if (authority.length() == start) {
-            throw new IllegalArgumentException("authority: " + authority);
-        } else {
-            return authority.substring(start);
         }
     }
 
