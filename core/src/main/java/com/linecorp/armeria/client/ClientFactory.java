@@ -145,6 +145,14 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
     Set<Scheme> supportedSchemes();
 
     /**
+     * Verifies that client type {@link Class} is supported by this {@link ClientFactory}.
+     * Can be used to support multiple {@link ClientFactory}s for a single {@link Scheme}.
+     */
+    default boolean isClientTypeSupported(Class<?> clientType) {
+        return true;
+    }
+
+    /**
      * Returns the {@link EventLoopGroup} being used by this {@link ClientFactory}. Can be used to, e.g.,
      * schedule a periodic task without creating a separate event loop. Use {@link #eventLoopSupplier()}
      * instead if what you need is an {@link EventLoop} rather than an {@link EventLoopGroup}.
