@@ -39,6 +39,7 @@ import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
+import org.springframework.http.server.reactive.ChannelSendOperator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
@@ -191,7 +192,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
     @Override
     public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
-        return doCommit(() -> write(Flux.from(body)));
+        return new ChannelSendOperator<>(body, inner -> doCommit(() -> write(Flux.from(body))));
     }
 
     @Override
