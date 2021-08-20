@@ -10,7 +10,8 @@ interface TypeLinkProps {
 }
 
 const TypeLink: React.FC<TypeLinkProps> = (props) => {
-  let simpleName = props.name;
+  // Decode escaped strings such as &lt;init&gt; that represents a constructor.
+  let simpleName = decodeURIComponent(props.name);
   const lastDotIdx = simpleName.lastIndexOf('.');
   if (lastDotIdx >= 0) {
     simpleName = simpleName.substring(lastDotIdx + 1);

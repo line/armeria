@@ -1,12 +1,11 @@
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
+import org.jsoup.Jsoup
 
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import java.util.stream.Collectors
-
-import org.jsoup.Jsoup
 
 buildscript {
     repositories {
@@ -145,7 +144,9 @@ class ApiIndexTask extends DefaultTask {
             result.add([simpleClassName, href])
 
             def doc = Jsoup.parse(path.toFile(), 'UTF-8')
-            doc.select('.method-details, .field-details > .member-list > li > .detail').each {
+            doc.select(""".method-details .member-list .detail,
+                          .field-details .member-list .detail,
+                          .constructor-details .member-list .detail""").each {
                 def methodSignature = it.attr("id")
                 def hrefWithMethod = href + '#' + methodSignature
 
