@@ -338,7 +338,7 @@ class ArmeriaServerHttpResponseTest {
 
         await().untilTrue(completed);
         assertThat(error.get()).isInstanceOf(IllegalArgumentException.class)
-                               .hasMessageContaining("Reactive Streams specification rule 3.9");
+                               .hasMessageContaining("non-positive request signals are illegal");
         await().untilAsserted(() -> {
             assertThat(allocatedBuffers).hasSize(1);
             assertThat(allocatedBuffers.peek().getNativeBuffer().refCnt()).isZero();
