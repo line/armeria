@@ -1354,6 +1354,8 @@ cl.it
 claims
 clan.rip
 cleaning
+clerk.app
+clerkstage.app
 cleverapps.io
 clic2000.net
 click
@@ -4183,6 +4185,7 @@ kia
 kibichuo.okayama.jp
 kicks-ass.net
 kicks-ass.org
+kids
 kids.museum
 kids.us
 kiev.ua
