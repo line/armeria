@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -26,11 +27,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -333,6 +336,23 @@ public class AbstractClientOptionsBuilder {
         requireNonNull(token, "token");
         headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
+    }
+
+    /**
+     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder followRedirects() {
+        return option(REDIRECT_CONFIG, RedirectConfig.of());
+    }
+
+    /**
+     * Sets the {@link RedirectConfig} to enable
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {
+        return option(REDIRECT_CONFIG, requireNonNull(redirectConfig, "redirectConfig"));
     }
 
     /**

@@ -21,6 +21,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -176,5 +177,15 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientOptionsBuilder auth(OAuth2Token token) {
         return (ClientOptionsBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientOptionsBuilder followRedirects() {
+        return (ClientOptionsBuilder) super.followRedirects();
+    }
+
+    @Override
+    public ClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (ClientOptionsBuilder) super.followRedirects(redirectConfig);
     }
 }

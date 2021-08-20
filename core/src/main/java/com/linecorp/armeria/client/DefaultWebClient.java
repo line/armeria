@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -75,12 +76,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
-            String path = uri.getRawPath();
-            if (Strings.isNullOrEmpty(path)) {
-                path = query == null ? "/" : "/?" + query;
-            } else if (query != null) {
-                path = path + '?' + query;
-            }
+            final String path = pathWithQuery(uri, query);
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(path));
             return execute(endpoint, newReq, protocol, requestOptions);
         }
@@ -128,5 +124,15 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     @Override
     public HttpClient unwrap() {
         return (HttpClient) super.unwrap();
+    }
+
+    static String pathWithQuery(URI uri, @Nullable String query) {
+        String path = uri.getRawPath();
+        if (Strings.isNullOrEmpty(path)) {
+            path = query == null ? "/" : "/?" + query;
+        } else if (query != null) {
+            path = path + '?' + query;
+        }
+        return path;
     }
 }

@@ -130,6 +130,26 @@ public enum SessionProtocol {
     }
 
     /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #HTTP}, {@link #H1C} and
+     * {@link #H2C}.
+     *
+     * @see #httpValues()
+     */
+    public boolean isHttp() {
+        return HTTP_VALUES.contains(this);
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #HTTPS}, {@link #H1} and
+     * {@link #H2}.
+     *
+     * @see #httpsValues()
+     */
+    public boolean isHttps() {
+        return HTTPS_VALUES.contains(this);
+    }
+
+    /**
      * Returns {@code true} if and only if this protocol uses TLS as its transport-level security layer.
      */
     public boolean isTls() {

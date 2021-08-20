@@ -44,6 +44,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -407,5 +408,15 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ArmeriaRetrofitBuilder auth(OAuth2Token token) {
         return (ArmeriaRetrofitBuilder) super.auth(token);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder followRedirects() {
+        return (ArmeriaRetrofitBuilder) super.followRedirects();
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (ArmeriaRetrofitBuilder) super.followRedirects(redirectConfig);
     }
 }

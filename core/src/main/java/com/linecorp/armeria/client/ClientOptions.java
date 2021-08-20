@@ -26,11 +26,13 @@ import java.util.function.Supplier;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
@@ -66,6 +68,13 @@ public final class ClientOptions
      */
     public static final ClientOption<Long> MAX_RESPONSE_LENGTH =
             ClientOption.define("MAX_RESPONSE_LENGTH", Flags.defaultMaxResponseLength());
+
+    /**
+     * The redirect configuration.
+     */
+    @UnstableApi
+    public static final ClientOption<RedirectConfig> REDIRECT_CONFIG =
+            ClientOption.define("REDIRECT_CONFIG", RedirectConfig.disabled());
 
     /**
      * The {@link Function} that decorates the client components.
@@ -242,6 +251,14 @@ public final class ClientOptions
      */
     public long maxResponseLength() {
         return get(MAX_RESPONSE_LENGTH);
+    }
+
+    /**
+     * Returns the {@link RedirectConfig}.
+     */
+    @UnstableApi
+    public RedirectConfig redirectConfig() {
+        return get(REDIRECT_CONFIG);
     }
 
     /**

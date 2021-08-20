@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 
@@ -257,7 +256,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
         if (returnedRes.isComplete()) {
             returnedRes.whenComplete().handle((result, cause) -> {
-                final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
+                final Throwable abortCause;
+                if (cause != null) {
+                    abortCause = cause;
+                } else {
+                    abortCause = AbortedStreamException.get();
+                }
                 handleException(ctx, rootReqDuplicator, future, abortCause, initialAttempt);
                 return null;
             });
@@ -278,9 +282,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             duplicateReq = rootReqDuplicator.duplicate(newHeaders.build());
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(),
-                                                                  initialAttempt);
-        ctx.logBuilder().addChild(derivedCtx.log());
+        final ClientRequestContext derivedCtx;
+        try {
+            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
+        } catch (Throwable t) {
+            handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
+            return;
+        }
 
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));

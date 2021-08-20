@@ -15,6 +15,7 @@
  */
 
 package com.linecorp.armeria.client.retry;
+
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.annotation.Nullable;

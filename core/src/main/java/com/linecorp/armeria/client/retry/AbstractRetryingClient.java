@@ -29,19 +29,14 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAccess;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.ClientUtil;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -258,58 +253,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {
-        final RequestId id = ctx.options().requestIdGenerator().get();
-        final EndpointGroup endpointGroup = ctx.endpointGroup();
-        final ClientRequestContext derived;
-        if (endpointGroup != null && !initialAttempt) {
-            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.selectNow(ctx));
-        } else {
-            derived = ctx.newDerivedContext(id, req, rpcReq, ctx.endpoint());
-        }
-
-        final RequestLogAccess parentLog = ctx.log();
-        final RequestLog partial = parentLog.partial();
-        final RequestLogBuilder logBuilder = derived.logBuilder();
-        // serializationFormat is always not null, so this is fine.
-        logBuilder.serializationFormat(partial.serializationFormat());
-        if (parentLog.isAvailable(RequestLogProperty.NAME)) {
-            final String serviceName = partial.serviceName();
-            final String name = partial.name();
-            if (serviceName != null) {
-                logBuilder.name(serviceName, name);
-            } else {
-                logBuilder.name(name);
-            }
-        }
-
-        final RequestLogBuilder parentLogBuilder = ctx.logBuilder();
-        if (parentLogBuilder.isDeferred(RequestLogProperty.REQUEST_CONTENT)) {
-            logBuilder.defer(RequestLogProperty.REQUEST_CONTENT);
-        }
-        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT)
-                 .thenAccept(requestLog -> logBuilder.requestContent(
-                         requestLog.requestContent(), requestLog.rawRequestContent()));
-        if (parentLogBuilder.isDeferred(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
-            logBuilder.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
-        }
-        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)
-                 .thenAccept(requestLog -> logBuilder.requestContentPreview(
-                         requestLog.requestContentPreview()));
-
-        // Propagates the response content only when deferResponseContent is called.
-        if (parentLogBuilder.isDeferred(RequestLogProperty.RESPONSE_CONTENT)) {
-            logBuilder.defer(RequestLogProperty.RESPONSE_CONTENT);
-            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT)
-                     .thenAccept(requestLog -> logBuilder.responseContent(
-                             requestLog.responseContent(), requestLog.rawResponseContent()));
-        }
-        if (parentLogBuilder.isDeferred(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
-            logBuilder.defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
-            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)
-                     .thenAccept(requestLog -> logBuilder.responseContentPreview(
-                             requestLog.responseContentPreview()));
-        }
-        return derived;
+        return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
     }
 
     private static final class State {

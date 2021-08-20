@@ -44,6 +44,7 @@ import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
@@ -377,5 +378,15 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     @Override
     public EurekaEndpointGroupBuilder auth(OAuth2Token token) {
         return (EurekaEndpointGroupBuilder) super.auth(token);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder followRedirects() {
+        return (EurekaEndpointGroupBuilder) super.followRedirects();
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (EurekaEndpointGroupBuilder) super.followRedirects(redirectConfig);
     }
 }

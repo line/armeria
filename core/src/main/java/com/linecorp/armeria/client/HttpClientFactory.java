@@ -39,6 +39,7 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
@@ -284,14 +285,22 @@ final class HttpClientFactory implements ClientFactory {
         final Class<?> clientType = params.clientType();
         validateClientType(clientType);
 
-        final HttpClient delegate = params.options().decoration().decorate(clientDelegate);
+        final ClientOptions options = params.options();
+        final HttpClient delegate = options.decoration().decorate(clientDelegate);
 
         if (clientType == HttpClient.class) {
             return delegate;
         }
 
         if (clientType == WebClient.class) {
-            return new DefaultWebClient(params, delegate, meterRegistry);
+            final RedirectConfig redirectConfig = options.redirectConfig();
+            final HttpClient delegate0;
+            if (redirectConfig == RedirectConfig.disabled()) {
+                delegate0 = delegate;
+            } else {
+                delegate0 = RedirectingClient.newDecorator(params, redirectConfig).apply(delegate);
+            }
+            return new DefaultWebClient(params, delegate0, meterRegistry);
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
