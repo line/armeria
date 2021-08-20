@@ -61,7 +61,7 @@ import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
 
-public class DnsMetricsTest {
+class DnsMetricsTest {
 
     @Test
     void success() {
