@@ -26,7 +26,6 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -180,10 +179,10 @@ public final class PathAndQuery {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("path", path)
-                          .add("query", query)
-                          .toString();
+        if (query == null) {
+            return path;
+        }
+        return path + "?" + query;
     }
 
     @Nullable

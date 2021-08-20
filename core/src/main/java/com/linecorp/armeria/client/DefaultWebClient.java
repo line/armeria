@@ -106,6 +106,10 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             return abortRequestAndReturnFailureResponse(req, cause);
         }
+        final String newPath = pathAndQuery.toString();
+        if (!newPath.equals(req.path())) {
+            req = req.withHeaders(req.headers().toBuilder().path(newPath));
+        }
         return execute(protocol, endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req, requestOptions);
     }
