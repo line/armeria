@@ -315,9 +315,10 @@ public interface HttpRequest extends Request, HttpMessage {
         if (headers.contentType() == null) {
             validHeaders = headers.toBuilder().contentType(MediaType.JSON_UTF_8).build();
         } else {
-            checkArgument(headers.contentType().isJson(),
-                          "contentType: %s (expected: the subtype is 'json' or ends with '+json'.",
-                          headers.contentType());
+            if (!headers.contentType().isJson()) {
+                throw new HttpUnsupportedMediaTypeException(headers.contentType(),
+                                                            ImmutableList.of(MediaType.JSON));
+            }
             validHeaders = headers;
         }
 

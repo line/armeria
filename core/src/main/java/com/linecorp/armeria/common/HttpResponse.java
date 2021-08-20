@@ -38,6 +38,7 @@ import org.reactivestreams.Subscription;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -767,8 +768,8 @@ public interface HttpResponse extends Response, HttpMessage {
             try {
                 return JacksonUtil.readValue(content, valueTypeRef);
             } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException(
-                        "Failed to decode the response body into an instance: " + content, e);
+                throw new HttpResponseContentException(content,
+                                                       "Failed to decode the response body into an instance", e);
             }
         }, executor);
     }
@@ -791,10 +792,15 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(executor, "executor");
 
         return aggregate(executor).thenApply(response -> {
+            if (response.contentType() != null && !response.contentType().isJson()) {
+                throw new HttpUnsupportedMediaTypeException(response.contentType(),
+                                                            ImmutableList.of(MediaType.JSON));
+            }
+
             if (httpStatusFilter.test(response.status())) {
                 return jsonDecoder.apply(response.contentUtf8());
             } else {
-                throw new IllegalStateException("Unexpected status: " + response.status());
+                throw new HttpUnsupportedStatusException(response.status());
             }
         });
     }
