@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -125,6 +126,9 @@ public final class GrpcServiceBuilder {
     @Nullable
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
+    @Nullable
+    private UnframedGrpcErrorHandler grpcTranscodingErrorHandler;
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
     private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
@@ -135,6 +139,8 @@ public final class GrpcServiceBuilder {
             GrpcJsonMarshaller::of;
 
     private boolean enableUnframedRequests;
+
+    private boolean enableGrpcTranscoding;
 
     private boolean useBlockingTaskExecutor;
 
@@ -438,6 +444,42 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
+     *
+     * <p>Limitations:
+     * <ul>
+     *     <li>Only unary methods (single request, single response) are supported.</li>
+     *     <li>
+     *         Message compression is not supported.
+     *         {@link EncodingService} should be used instead for
+     *         transport level encoding.
+     *     </li>
+     *     <li>
+     *         Transcoding will not work if the {@link GrpcService} is configured by
+     *         {@link ServerBuilder#serviceUnder(String, HttpService)}.
+     *     </li>
+     * </ul>
+     *
+     * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
+     */
+    public GrpcServiceBuilder enableGrpcTranscoding(boolean enableGrpcTranscoding) {
+        this.enableGrpcTranscoding = enableGrpcTranscoding;
+        return this;
+    }
+
+    /**
+     * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
+     * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder grpcTranscodingErrorHandler(
+            UnframedGrpcErrorHandler grpcTranscodingErrorHandler) {
+        requireNonNull(grpcTranscodingErrorHandler, "grpcTranscodingErrorHandler");
+        this.grpcTranscodingErrorHandler = grpcTranscodingErrorHandler;
+        return this;
+    }
+
+    /**
      * Sets whether the service executes service methods using the blocking executor. By default, service
      * methods are executed directly on the event loop for implementing fully asynchronous services. If your
      * service uses blocking logic, you should either execute such logic in a separate thread using something
@@ -665,6 +707,10 @@ public final class GrpcServiceBuilder {
             throw new IllegalStateException(
                     "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
         }
+        if (!enableGrpcTranscoding && grpcTranscodingErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'grpcTranscodingErrorHandler' can only be set if gRPC transcoding feature is enabled");
+        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
@@ -686,7 +732,7 @@ public final class GrpcServiceBuilder {
             statusFunction = this.statusFunction;
         }
 
-        final GrpcService grpcService = new FramedGrpcService(
+        GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 handlerRegistry
                         .methods()
@@ -705,11 +751,18 @@ public final class GrpcServiceBuilder {
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes);
-        if (!enableUnframedRequests) {
-            return grpcService;
+        if (enableUnframedRequests) {
+            grpcService = new UnframedGrpcService(
+                    grpcService, handlerRegistry,
+                    unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
+                                                     : UnframedGrpcErrorHandler.of());
         }
-        return new UnframedGrpcService(grpcService, handlerRegistry,
-                                       unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
-                                                                        : UnframedGrpcErrorHandler.of());
+        if (enableGrpcTranscoding) {
+            grpcService = GrpcTranscodingService.of(
+                    grpcService,
+                    grpcTranscodingErrorHandler != null ? grpcTranscodingErrorHandler
+                                                        : UnframedGrpcErrorHandler.ofJson());
+        }
+        return grpcService;
     }
 }

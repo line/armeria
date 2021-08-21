@@ -1,0 +1,87 @@
+// Copyright 2021 LINE Corporation
+//
+// LINE Corporation licenses this file to you under the Apache License,
+// version 2.0 (the "License"); you may not use this file except in compliance
+// with the License. You may obtain a copy of the License at:
+//
+//   https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
+// Tests for HTTP/JSON to gRPC transcoding service.
+
+syntax = "proto3";
+
+package armeria.grpc.testing;
+
+option java_package = "com.linecorp.armeria.grpc.testing";
+
+import "google/api/annotations.proto";
+
+service GrpcTranscodingTestService {
+  rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
+    option (google.api.http) = {
+      get: "/v1/{name=messages/*}"
+    };
+  }
+  rpc GetMessageV2(GetMessageRequestV2) returns (Message) {
+    option (google.api.http) = {
+      get:"/v2/messages/{message_id}"
+    };
+  }
+  rpc GetMessageV3(GetMessageRequestV3) returns (Message) {
+    option (google.api.http) = {
+      get:"/v3/messages/{message_id}"
+    };
+  }
+
+  rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {
+    option (google.api.http) = {
+      patch: "/v1/messages/{message_id}"
+      body: "message"
+    };
+  }
+  rpc UpdateMessageV2(Message) returns (Message) {
+    option (google.api.http) = {
+      patch: "/v2/messages/{message_id}"
+      body: "*"
+    };
+  }
+}
+
+message GetMessageRequestV1 {
+  string name = 1; // Mapped to URL path.
+}
+
+message GetMessageRequestV2 {
+  message SubMessage {
+    string subfield = 1;
+  }
+  string message_id = 1; // Mapped to URL path.
+  int64 revision = 2;    // Mapped to URL query parameter `revision`.
+  SubMessage sub = 3;    // Mapped to URL query parameter `sub.subfield`.
+  MessageType type = 4;  // Mapped to URL query parameter `type`.
+}
+
+message GetMessageRequestV3 {
+  string message_id = 1;          // Mapped to URL path.
+  repeated int64 revision = 2;    // Mapped to URL query parameter `revision`.
+}
+
+message UpdateMessageRequestV1 {
+  string message_id = 1; // mapped to the URL
+  Message message = 2;   // mapped to the body
+}
+
+message Message {
+  string text = 1; // The resource content.
+}
+
+enum MessageType {
+  SIMPLE = 0;
+  DETAIL = 1;
+}

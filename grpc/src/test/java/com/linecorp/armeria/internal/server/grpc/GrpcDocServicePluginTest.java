@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.grpc;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.buildHttpServiceInfos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -30,9 +31,14 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.grpc.testing.GrpcTranscodingTestServiceGrpc;
+import com.linecorp.armeria.grpc.testing.GrpcTranscodingTestServiceGrpc.GrpcTranscodingTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -45,17 +51,20 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
+import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.HttpEndpoint;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
@@ -362,5 +371,111 @@ class GrpcDocServicePluginTest {
         assertThat(structInfo.fields().get(17).name()).isEqualTo("self");
         assertThat(structInfo.fields().get(17).typeSignature().signature())
                 .isEqualTo("armeria.grpc.testing.TestMessage");
+    }
+
+    @Test
+    void httpEndpoint() {
+        final GrpcService grpcService =
+                GrpcService.builder().addService(mock(GrpcTranscodingTestServiceImplBase.class))
+                           .enableGrpcTranscoding(true).build();
+        assertThat(grpcService).isInstanceOf(HttpEndpointSupport.class);
+        final HttpEndpointSupport httpEndpointSupport = (HttpEndpointSupport) grpcService;
+
+        // Expected generated routes. See 'transcoding.proto' file.
+        final List<Route> routes = ImmutableList.of(
+                Route.builder().methods(HttpMethod.GET).path("/v1/messages/:p0").build(),
+                Route.builder().methods(HttpMethod.GET).path("/v2/messages/{message_id}").build(),
+                Route.builder().methods(HttpMethod.GET).path("/v3/messages/{message_id}").build(),
+                Route.builder().methods(HttpMethod.PATCH).path("/v1/messages/{message_id}").build(),
+                Route.builder().methods(HttpMethod.PATCH).path("/v2/messages/{message_id}").build());
+        final List<HttpEndpointSpecification> specs =
+                routes.stream().map(route -> httpEndpointSupport.httpEndpointSpecification(route))
+                      .collect(toImmutableList());
+        assertThat(specs.size()).isEqualTo(routes.size());
+
+        // Get ServiceConfig to build HTTP endpoints.
+        final ServiceConfig serviceConfig = Server.builder().service(grpcService).build()
+                                                  .serviceConfigs().get(0);
+        final List<HttpEndpoint> httpEndpoints =
+                specs.stream().map(spec -> new HttpEndpoint(serviceConfig, spec)).collect(toImmutableList());
+        final List<ServiceInfo> serviceInfos = buildHttpServiceInfos(httpEndpoints);
+
+        // The endpoints are specified in the same service.
+        assertThat(serviceInfos.size()).isOne();
+        final ServiceInfo serviceInfo = serviceInfos.get(0);
+        assertThat(serviceInfo.name()).isEqualTo(GrpcTranscodingTestServiceGrpc.SERVICE_NAME +
+                                                 GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
+
+        final String virtualHostNamePattern = serviceConfig.virtualHost().hostnamePattern();
+
+        // Check HTTP GET method.
+        final MethodInfo getMessageV1 = serviceInfo.methods().stream()
+                                                   .filter(m -> m.name().equals("GetMessageV1"))
+                                                   .findFirst().get();
+        assertThat(getMessageV1.httpMethod()).isEqualTo(HttpMethod.GET);
+        assertThat(getMessageV1.endpoints()).containsAll(ImmutableSet.of(
+                EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:p0")
+                            .availableMimeTypes(MediaType.JSON_UTF_8).build()));
+        assertThat(getMessageV1.parameters()).containsAll(ImmutableList.of(
+                FieldInfo.builder("name", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build()));
+
+        final MethodInfo getMessageV2 = serviceInfo.methods().stream()
+                                                   .filter(m -> m.name().equals("GetMessageV2"))
+                                                   .findFirst().get();
+        assertThat(getMessageV2.httpMethod()).isEqualTo(HttpMethod.GET);
+        assertThat(getMessageV2.endpoints()).containsAll(ImmutableSet.of(
+                EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:message_id")
+                            .availableMimeTypes(MediaType.JSON_UTF_8).build()));
+        assertThat(getMessageV2.parameters()).containsAll(ImmutableList.of(
+                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("revision", TypeSignature.ofBase(JavaType.LONG.name()))
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("sub.subfield", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("type", TypeSignature.ofBase(JavaType.ENUM.name()))
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+
+        final MethodInfo getMessageV3 = serviceInfo.methods().stream()
+                                                   .filter(m -> m.name().equals("GetMessageV3"))
+                                                   .findFirst().get();
+        assertThat(getMessageV3.httpMethod()).isEqualTo(HttpMethod.GET);
+        assertThat(getMessageV3.endpoints()).containsAll(ImmutableSet.of(
+                EndpointInfo.builder(virtualHostNamePattern, "/v3/messages/:message_id")
+                            .availableMimeTypes(MediaType.JSON_UTF_8).build()));
+        assertThat(getMessageV3.parameters()).containsAll(ImmutableList.of(
+                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("revision",
+                                  TypeSignature.ofList(TypeSignature.ofBase(JavaType.LONG.name())))
+                         .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+
+        // Check HTTP PATCH method.
+        final MethodInfo updateMessageV1 = serviceInfo.methods().stream()
+                                                      .filter(m -> m.name().equals("UpdateMessageV1"))
+                                                      .findFirst().get();
+        assertThat(updateMessageV1.httpMethod()).isEqualTo(HttpMethod.PATCH);
+        assertThat(updateMessageV1.endpoints()).containsAll(ImmutableSet.of(
+                EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:message_id")
+                            .availableMimeTypes(MediaType.JSON_UTF_8).build()));
+        assertThat(updateMessageV1.parameters()).containsAll(ImmutableList.of(
+                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+
+        final MethodInfo updateMessageV2 = serviceInfo.methods().stream()
+                                                      .filter(m -> m.name().equals("UpdateMessageV2"))
+                                                      .findFirst().get();
+        assertThat(updateMessageV2.httpMethod()).isEqualTo(HttpMethod.PATCH);
+        assertThat(updateMessageV2.endpoints()).containsAll(ImmutableSet.of(
+                EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:message_id")
+                            .availableMimeTypes(MediaType.JSON_UTF_8).build()));
+        assertThat(updateMessageV2.parameters()).containsAll(ImmutableList.of(
+                FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
+                FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
+                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
     }
 }

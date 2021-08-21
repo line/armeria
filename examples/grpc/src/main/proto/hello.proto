@@ -3,10 +3,25 @@ syntax = "proto3";
 package example.grpc.hello;
 option java_package = "example.armeria.grpc";
 
+import "google/api/annotations.proto";
+
 service HelloService {
-  rpc Hello (HelloRequest) returns (HelloReply) {}
-  rpc LazyHello (HelloRequest) returns (HelloReply) {}
-  rpc BlockingHello (HelloRequest) returns (HelloReply) {}
+  rpc Hello (HelloRequest) returns (HelloReply) {
+    option (google.api.http) = {
+      get: "/hello/{name}"
+    };
+  }
+  rpc LazyHello (HelloRequest) returns (HelloReply) {
+    option (google.api.http) = {
+      post: "/lazy-hello"
+      body: "*"
+    };
+  }
+  rpc BlockingHello (HelloRequest) returns (HelloReply) {
+    option (google.api.http) = {
+      get: "/blocking-hello"
+    };
+  }
   rpc LotsOfReplies (HelloRequest) returns (stream HelloReply) {}
   rpc LotsOfGreetings (stream HelloRequest) returns (HelloReply) {}
   rpc BidiHello (stream HelloRequest) returns (stream HelloReply) {}
