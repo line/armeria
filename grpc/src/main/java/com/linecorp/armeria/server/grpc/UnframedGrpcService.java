@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -38,9 +39,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -49,7 +50,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -84,15 +84,19 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
     private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
+    @Nullable
+    private final Function<HttpHeaders, HttpResponse> unframedErrorResponseMapper;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    UnframedGrpcService(GrpcService delegate, HandlerRegistry registry) {
+    UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
+                        @Nullable Function<HttpHeaders, HttpResponse> unframedErrorResponseMapper) {
         super(delegate);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         delegateGrpcService = delegate;
         methodsByName = registry.methods();
+        this.unframedErrorResponseMapper = unframedErrorResponseMapper;
     }
 
     @Override
@@ -233,7 +237,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                         if (t != null) {
                             res.completeExceptionally(t);
                         } else {
-                            deframeAndRespond(ctx, framedResponse, res);
+                            deframeAndRespond(ctx, framedResponse, res, unframedErrorResponseMapper);
                         }
                     }
                     return null;
@@ -244,36 +248,27 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     static void deframeAndRespond(
             ServiceRequestContext ctx,
             AggregatedHttpResponse grpcResponse,
-            CompletableFuture<HttpResponse> res) {
+            CompletableFuture<HttpResponse> res,
+            @Nullable Function<HttpHeaders, HttpResponse> unframedErrorResponseMapper) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
-
+        final MediaType grpcMediaType = grpcResponse.contentType();
         if (grpcStatus.getCode() != Status.OK.getCode()) {
             PooledObjects.close(grpcResponse.content());
-            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
-            final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
-            message.append(", ").append(httpStatus.reasonPhrase()).append(LINE_SEPARATOR);
-            message.append("Caused by: ").append(LINE_SEPARATOR);
-            message.append("grpc-status: ")
-                   .append(grpcStatusCode)
-                   .append(", ")
-                   .append(grpcStatus.getCode().name());
-            final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
-            if (grpcMessage != null) {
-                message.append(", ").append(grpcMessage);
+            if (unframedErrorResponseMapper != null) {
+                res.complete(unframedErrorResponseMapper.apply(trailers));
+                return;
             }
-
-            final ResponseHeaders headers = ResponseHeaders.builder(httpStatus)
-                                                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                                           .add(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode)
-                                                           .build();
-            res.complete(HttpResponse.of(headers, HttpData.ofUtf8(message.toString())));
+            if (grpcMediaType != null && grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
+                res.complete(UnframedErrorResponseMappers.JSON_UNFRAMED_RESPONSE_MAPPER.apply(trailers));
+                return;
+            }
+            res.complete(UnframedErrorResponseMappers.DEFAULT_UNFRAMED_RESPONSE_MAPPER.apply(trailers));
             return;
         }
 
-        final MediaType grpcMediaType = grpcResponse.contentType();
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
         if (grpcMediaType != null) {

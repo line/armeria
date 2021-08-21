@@ -125,7 +125,8 @@ class UnframedGrpcServiceTest {
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
-        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res);
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res,
+                                              UnframedErrorResponseMappers.DEFAULT_UNFRAMED_RESPONSE_MAPPER);
         assertThat(byteBuf.refCnt()).isZero();
     }
 

@@ -39,11 +39,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -120,6 +121,9 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private ImmutableList.Builder<ServerInterceptor> interceptors;
+
+    @Nullable
+    private Function<HttpHeaders, HttpResponse> unframedErrorResponseMapper;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -285,6 +289,18 @@ public final class GrpcServiceBuilder {
     public GrpcServiceBuilder intercept(Iterable<? extends ServerInterceptor> interceptors) {
         requireNonNull(interceptors, "interceptors");
         this.interceptors().addAll(interceptors);
+        return this;
+    }
+
+    /**
+     * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
+     * service.
+     * @param unframedErrorResponseMapper The function which maps {@link HttpHeaders} to a {@link HttpResponse}.
+     */
+    public GrpcServiceBuilder unframedErrorResponseMapper(
+            Function<HttpHeaders, HttpResponse> unframedErrorResponseMapper) {
+        requireNonNull(unframedErrorResponseMapper, "unframedErrorResponseMapper");
+        this.unframedErrorResponseMapper = unframedErrorResponseMapper;
         return this;
     }
 
@@ -685,6 +701,7 @@ public final class GrpcServiceBuilder {
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes);
-        return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry) : grpcService;
+        return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry,
+                                                                unframedErrorResponseMapper) : grpcService;
     }
 }
