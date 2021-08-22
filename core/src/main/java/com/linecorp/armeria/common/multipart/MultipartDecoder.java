@@ -38,7 +38,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     private static final Logger logger = LoggerFactory.getLogger(MultipartDecoder.class);
 
-    private final StreamMessage<BodyPart> decoded;
+    private final DecodedHttpStreamMessage<BodyPart> decoded;
     private final String boundary;
 
     @Nullable
@@ -52,7 +52,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     @Override
     public void process(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out) throws Exception {
         if (parser == null) {
-            parser = new MimeParser(in, out, boundary);
+            parser = new MimeParser(in, out, boundary, decoded::askUpstreamForElements);
         }
         parser.parse();
     }

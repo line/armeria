@@ -32,6 +32,7 @@ package com.linecorp.armeria.common.multipart;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -80,22 +81,18 @@ final class MimeParser {
      * BnM algorithm: Good Suffix Shift table.
      */
     private final int[] goodSuffixes;
-
-    /**
-     * The current parser state.
-     */
-    private State state = State.START_MESSAGE;
-
     /**
      * The input of multipart data.
      */
     private final HttpDecoderInput in;
-
     /**
      * The output which the parsed {@link BodyPart}s are added to.
      */
     private final HttpDecoderOutput<BodyPart> out;
-
+    /**
+     * The current parser state.
+     */
+    private State state = State.START_MESSAGE;
     /**
      * The builder for the headers of a body part.
      */
@@ -135,15 +132,46 @@ final class MimeParser {
     private boolean closed;
 
     /**
+     * Request HttpData for BodyPart content.
+     */
+    private final Consumer<Long> askUpstreamForElements;
+
+    /**
      * Parses the MIME content.
      */
-    MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary) {
+    MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary,
+               Consumer<Long> askUpstreamForElements) {
         this.in = in;
         this.out = out;
         boundaryBytes = getBytes("--" + boundary);
+        this.askUpstreamForElements = askUpstreamForElements;
         boundaryLength = boundaryBytes.length;
         goodSuffixes = new int[boundaryLength];
         compileBoundaryPattern();
+    }
+
+    private static ByteBuf safeReadBytes(HttpDecoderInput in, int length) {
+        if (length == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        } else {
+            return in.readBytes(length);
+        }
+    }
+
+    /**
+     * Gets the bytes representation of a string.
+     * @param str string to convert
+     * @return byte[]
+     */
+    private static byte[] getBytes(String str) {
+        final char[] chars = str.toCharArray();
+        final int size = chars.length;
+        final byte[] bytes = new byte[size];
+
+        for (int i = 0; i < size; ) {
+            bytes[i] = (byte) chars[i++];
+        }
+        return bytes;
     }
 
     /**
@@ -229,7 +257,14 @@ final class MimeParser {
                         state = State.BODY;
                         startOfLine = true;
 
-                        bodyPartPublisher = new DefaultStreamMessage<>();
+                        bodyPartPublisher = new DefaultStreamMessage<HttpData>() {
+                            @Override
+                            protected void onRequest(long n) {
+                                // Should we limit this to 1? Because downstream can request aggressively
+                                // and ignore the demand number of BodyPart.
+                                askUpstreamForElements.accept(n);
+                            }
+                        };
                         final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
                                                                  .content(bodyPartPublisher)
                                                                  .build();
@@ -395,14 +430,6 @@ final class MimeParser {
         return body;
     }
 
-    private static ByteBuf safeReadBytes(HttpDecoderInput in, int length) {
-        if (length == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        } else {
-            return in.readBytes(length);
-        }
-    }
-
     /**
      * Skips the preamble.
      */
@@ -564,22 +591,6 @@ final class MimeParser {
             return off;
         }
         return -1;
-    }
-
-    /**
-     * Gets the bytes representation of a string.
-     * @param str string to convert
-     * @return byte[]
-     */
-    private static byte[] getBytes(String str) {
-        final char[] chars = str.toCharArray();
-        final int size = chars.length;
-        final byte[] bytes = new byte[size];
-
-        for (int i = 0; i < size;) {
-            bytes[i] = (byte) chars[i++];
-        }
-        return bytes;
     }
 
     /**

@@ -157,12 +157,20 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
         }
     }
 
-    private void askUpstreamForElement() {
+    /**
+     * Directly requests n elements to the {@code streamMessage} that was specified when creating this
+     * {@link StreamMessage}. It is useful when the {@link HttpDecoder} emits another {@link StreamMessage}s.
+     */
+    public void askUpstreamForElements(long n) {
         if (!askedUpstreamForElement) {
             askedUpstreamForElement = true;
             assert upstream != null;
-            upstream.request(1);
+            upstream.request(n);
         }
+    }
+
+    private void askUpstreamForElement() {
+        askUpstreamForElements(1);
     }
 
     private void cancelAndCleanup() {
@@ -242,7 +250,11 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 } else {
                     // Handler didn't produce anything, which means it needs more elements from the upstream
                     // to produce something.
-                    askUpstreamForElement();
+                    if (demand() > 0) {
+                        askUpstreamForElement();
+                    } else {
+                        // The subscriber doesn't request any T type message.
+                    }
                 }
             } catch (Throwable ex) {
                 decoder.processOnError(ex);

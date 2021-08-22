@@ -149,7 +149,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[]{ (byte) 0xff, (byte) 0xd8 },
+                                     new byte[] { (byte) 0xff, (byte) 0xd8 },
                                      ("\n--" + boundary + "--").getBytes());
 
         final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
@@ -237,7 +237,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[]{ (byte) 0xff, (byte) 0xd8 });
+                                     new byte[] { (byte) 0xff, (byte) 0xd8 });
 
         assertThatThrownBy(() -> parse(boundary, chunk1))
                 .isInstanceOf(MimeParsingException.class)
@@ -313,7 +313,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[]{ (byte) 0xff, (byte) 0xd8 },
+                                     new byte[] { (byte) 0xff, (byte) 0xd8 },
                                      ("\n--" + boundary).getBytes());
 
         assertThatThrownBy(() -> parse(boundary, chunk1))
@@ -607,7 +607,7 @@ class MimeParserTest {
     @Test
     void testParserClosed() {
         assertThatThrownBy(() -> {
-            final MimeParser parser = new MimeParser(null, null, "boundary");
+            final MimeParser parser = new MimeParser(null, null, "boundary", null);
             parser.close();
             parser.parse();
         }).isInstanceOf(MimeParsingException.class)
@@ -655,7 +655,8 @@ class MimeParserTest {
     private static List<AggregatedBodyPart> parse(String boundary, List<byte[]> data) {
         final ByteBufDecoderInput input = new ByteBufDecoderInput(ByteBufAllocator.DEFAULT);
         final List<BodyPart> output = new ArrayList<>();
-        final MimeParser parser = new MimeParser(input, output::add, boundary);
+        final MimeParser parser = new MimeParser(input, output::add, boundary, ignored -> {
+        });
         for (byte[] bytes : data) {
             input.add(Unpooled.wrappedBuffer(bytes));
             parser.parse();
