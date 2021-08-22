@@ -81,18 +81,22 @@ final class MimeParser {
      * BnM algorithm: Good Suffix Shift table.
      */
     private final int[] goodSuffixes;
-    /**
-     * The input of multipart data.
-     */
-    private final HttpDecoderInput in;
-    /**
-     * The output which the parsed {@link BodyPart}s are added to.
-     */
-    private final HttpDecoderOutput<BodyPart> out;
+
     /**
      * The current parser state.
      */
     private State state = State.START_MESSAGE;
+
+    /**
+     * The input of multipart data.
+     */
+    private final HttpDecoderInput in;
+
+    /**
+     * The output which the parsed {@link BodyPart}s are added to.
+     */
+    private final HttpDecoderOutput<BodyPart> out;
+
     /**
      * The builder for the headers of a body part.
      */
@@ -134,44 +138,20 @@ final class MimeParser {
     /**
      * Request HttpData for BodyPart content.
      */
-    private final Consumer<Long> askUpstreamForElements;
+    private final Consumer<Long> onBodyPartRequestHttpData;
 
     /**
      * Parses the MIME content.
      */
     MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary,
-               Consumer<Long> askUpstreamForElements) {
+               Consumer<Long> onBodyPartRequestHttpData) {
         this.in = in;
         this.out = out;
         boundaryBytes = getBytes("--" + boundary);
-        this.askUpstreamForElements = askUpstreamForElements;
+        this.onBodyPartRequestHttpData = onBodyPartRequestHttpData;
         boundaryLength = boundaryBytes.length;
         goodSuffixes = new int[boundaryLength];
         compileBoundaryPattern();
-    }
-
-    private static ByteBuf safeReadBytes(HttpDecoderInput in, int length) {
-        if (length == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        } else {
-            return in.readBytes(length);
-        }
-    }
-
-    /**
-     * Gets the bytes representation of a string.
-     * @param str string to convert
-     * @return byte[]
-     */
-    private static byte[] getBytes(String str) {
-        final char[] chars = str.toCharArray();
-        final int size = chars.length;
-        final byte[] bytes = new byte[size];
-
-        for (int i = 0; i < size; ) {
-            bytes[i] = (byte) chars[i++];
-        }
-        return bytes;
     }
 
     /**
@@ -261,8 +241,9 @@ final class MimeParser {
                             @Override
                             protected void onRequest(long n) {
                                 // Should we limit this to 1? Because downstream can request aggressively
-                                // and ignore the demand number of BodyPart.
-                                askUpstreamForElements.accept(n);
+                                // and ignore the demand number of BodyPart. Or how can we control
+                                // this stop when we meet END_PART.
+                                onBodyPartRequestHttpData.accept(n);
                             }
                         };
                         final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
@@ -430,6 +411,14 @@ final class MimeParser {
         return body;
     }
 
+    private static ByteBuf safeReadBytes(HttpDecoderInput in, int length) {
+        if (length == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        } else {
+            return in.readBytes(length);
+        }
+    }
+
     /**
      * Skips the preamble.
      */
@@ -591,6 +580,22 @@ final class MimeParser {
             return off;
         }
         return -1;
+    }
+
+    /**
+     * Gets the bytes representation of a string.
+     * @param str string to convert
+     * @return byte[]
+     */
+    private static byte[] getBytes(String str) {
+        final char[] chars = str.toCharArray();
+        final int size = chars.length;
+        final byte[] bytes = new byte[size];
+
+        for (int i = 0; i < size; ) {
+            bytes[i] = (byte) chars[i++];
+        }
+        return bytes;
     }
 
     /**
