@@ -149,7 +149,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[] { (byte) 0xff, (byte) 0xd8 },
+                                     new byte[]{ (byte) 0xff, (byte) 0xd8 },
                                      ("\n--" + boundary + "--").getBytes());
 
         final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
@@ -237,7 +237,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[] { (byte) 0xff, (byte) 0xd8 });
+                                     new byte[]{ (byte) 0xff, (byte) 0xd8 });
 
         assertThatThrownBy(() -> parse(boundary, chunk1))
                 .isInstanceOf(MimeParsingException.class)
@@ -313,7 +313,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[] { (byte) 0xff, (byte) 0xd8 },
+                                     new byte[]{ (byte) 0xff, (byte) 0xd8 },
                                      ("\n--" + boundary).getBytes());
 
         assertThatThrownBy(() -> parse(boundary, chunk1))
