@@ -32,6 +32,7 @@ class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider 
             return null
         }
         val rawType = returnType.rawType as Class<*>
+        // SharedFlow can't be converted to Publisher since it neither ends nor gets cancelled.
         if (Flow::class.java.isAssignableFrom(rawType) && !SharedFlow::class.java.isAssignableFrom(rawType)) {
             return FlowResponseConverterFunction(responseConverter)
         }
