@@ -59,7 +59,7 @@ In [Step 1. Create a server](/tutorials/rest/blog/create-server), we added a dum
 
 This time, we'll add Armeria's [Documentation service](/docs/server-docservice):
 
-1. In the `newServer()` method, add a <type://DocService> and a request example for [creating blog posts](/tutorials/rest/blog/implenment-create), 
+1. In the `newServer()` method, add a <type://DocService> and a request example for [creating blog posts](/tutorials/rest/blog/implement-create),
    using <type://DocServiceBuilder#exampleRequests(Class,String,Iterable)>. Feel free to add more examples for other service methods.
 
   ```java filename=Main.java highlight=1,6-13
@@ -150,7 +150,7 @@ To test your service methods with the [Documentation service](/docs/server-docse
 
 In this step, we've added an empty blog service and the Documentation service to a server.
 
-Next, at [Step 4. Implement CREATE](/tutorials/rest/blog/implenment-create), we'll finally implement a CREATE 
+Next, at [Step 4. Implement CREATE](/tutorials/rest/blog/implement-create), we'll finally implement a CREATE
 operation to create blog posts.
 
 <TutorialSteps current={3} />
