@@ -504,6 +504,7 @@ org.jetbrains.kotlin:
 org.jetbrains.kotlinx:
   kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.5.0' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
+  # kotlinx-coroutines-reactive is only used as test implementation in :kotlin module
   kotlinx-coroutines-reactive: { version: *KOTLIN_COROUTINE_VERSION }
   # kotlinx-coroutines-reactor is only used for testing :it:spring:boot2-kotlin
   kotlinx-coroutines-reactor: { version: *KOTLIN_COROUTINE_VERSION }

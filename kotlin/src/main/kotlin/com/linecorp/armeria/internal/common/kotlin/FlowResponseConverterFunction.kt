@@ -35,7 +35,7 @@ class FlowResponseConverterFunction(
     ): HttpResponse {
         if (result is Flow<*>) {
             // Reactive Streams doesn't allow emitting null value.
-            val publisher = asPublisher(result.filterNotNull(), ctx.eventLoop(), ctx)
+            val publisher = result.filterNotNull().asPublisher(ctx.eventLoop(), ctx)
             return responseConverter.convertResponse(ctx, headers, publisher, trailers)
         }
         return ResponseConverterFunction.fallthrough()

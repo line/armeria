@@ -35,6 +35,7 @@ import com.linecorp.armeria.server.annotation.ProducesText
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.filter
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitLast
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
@@ -50,6 +52,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
@@ -127,6 +130,18 @@ class FlowAnnotatedServiceTest {
         assertThat(res.contentUtf8()).isEqualTo("OK")
     }
 
+    @Test
+    fun test_cancellation(): Unit = runBlocking {
+        val res = client.get("/flow/cancellation")
+        try {
+            res.awaitLast()
+        } catch (e: Exception) {
+            // do nothing
+        }
+        delay(2000L)
+        assertThat(proceeded.get()).isEqualTo(false)
+    }
+
     companion object {
         @JvmField
         @RegisterExtension
@@ -197,8 +212,17 @@ class FlowAnnotatedServiceTest {
                         @Get("/custom-dispatcher")
                         @ProducesText
                         fun dispatcherContext() = flow {
-                            assertThat(Thread.currentThread().name).isEqualTo("custom-thread")
+                            assertThat(Thread.currentThread().name).contains("custom-thread")
                             emit("OK")
+                        }
+
+                        @Get("/cancellation")
+                        @ProducesJsonSequences
+                        fun cancellation() = flow {
+                            emit("OK")
+                            delay(3000L)
+                            proceeded.set(true)
+                            emit("world")
                         }
                     })
                     decorator(
@@ -213,6 +237,7 @@ class FlowAnnotatedServiceTest {
                                 .asCoroutineDispatcher()
                         }
                     )
+                    requestTimeoutMillis(2000L)
                 }
             }
         }
@@ -227,6 +252,8 @@ class FlowAnnotatedServiceTest {
         }
     }
 }
+
+private val proceeded = AtomicBoolean()
 
 private data class Member(
     val name: String,
