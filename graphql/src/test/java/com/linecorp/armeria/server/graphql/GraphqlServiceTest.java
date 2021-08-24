@@ -66,7 +66,6 @@ class GraphqlServiceTest {
         }
     };
 
-
     private static DataFetcher<String> dataFetcher(String value) {
         return environment -> {
             final ServiceRequestContext ctx = environment.getContext();
@@ -76,6 +75,7 @@ class GraphqlServiceTest {
             return value;
         };
     }
+
     private static DataFetcher<String> errorDataFetcher() {
         return environment -> {
             final ServiceRequestContext ctx = environment.getContext();
