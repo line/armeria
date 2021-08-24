@@ -144,8 +144,9 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install svgbob_cli
+        # The latest version(0.6.0) of svgbob_cli fails to install in self-hosted runners
         run: |
-          sudo yum -y install cargo && cargo install svgbob_cli
+          sudo yum -y install cargo && cargo install svgbob_cli --version 0.5.4
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - id: setup-jdk-16
