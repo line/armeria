@@ -269,6 +269,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
                                                                              shutdownOnStop);
     }
 
+    @Override
+    public VirtualHostServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
+    }
+
     /**
      * Sets the {@link HttpService} and returns the {@link VirtualHostBuilder} that this
      * {@link VirtualHostServiceBindingBuilder} was created from.

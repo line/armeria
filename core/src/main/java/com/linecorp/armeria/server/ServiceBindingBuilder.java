@@ -216,6 +216,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
+    }
+
+    @Override
     public ServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return (ServiceBindingBuilder) super.requestTimeout(requestTimeout);
     }

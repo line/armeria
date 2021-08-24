@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -25,6 +26,7 @@ import java.util.function.Function;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
@@ -118,10 +120,19 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
-                                                     boolean shutdownBlockingTaskExecutorOnStop) {
+                                                     boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
     }
 
     @Override
@@ -157,8 +168,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop,
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
-                                             : defaultShutdownBlockingTaskExecutorOnStop
-        );
+                                             : defaultShutdownBlockingTaskExecutorOnStop);
     }
 
     @Override

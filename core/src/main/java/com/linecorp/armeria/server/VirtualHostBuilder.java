@@ -63,6 +63,7 @@ import com.google.common.io.ByteStreams;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -73,6 +74,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -879,8 +881,23 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                    boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        this.shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;
+    }
+
+    /**
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public VirtualHostBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
     }
 
     /**

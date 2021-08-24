@@ -141,8 +141,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop
-                                 );
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -314,7 +313,7 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns whether the worker {@link Executor} is shut down when the {@link Server} stops.
+     * Returns whether the blocking task {@link Executor} is shut down when the {@link Server} stops.
      *
      * @see VirtualHost#shutdownBlockingTaskExecutorOnStop()
      */

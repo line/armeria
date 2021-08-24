@@ -23,7 +23,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -605,21 +604,20 @@ public final class Server implements ListenableAsyncCloseable {
         private void finishDoStop(CompletableFuture<Void> future) {
             serverChannels.clear();
 
-            final Set<ScheduledExecutorService> executors = new HashSet<>();
+            final Set<ScheduledExecutorService> executors =
+                    Stream.concat(config.virtualHosts()
+                                        .stream()
+                                        .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
+                                        .map(VirtualHost::blockingTaskExecutor),
+                                  config.serviceConfigs()
+                                        .stream()
+                                        .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
+                                        .map(ServiceConfig::blockingTaskExecutor))
+                          .collect(Collectors.toSet());
 
             if (config.shutdownBlockingTaskExecutorOnStop()) {
                 executors.add(config.blockingTaskExecutor());
             }
-
-            executors.addAll(Stream.concat(config.virtualHosts()
-                                                 .stream()
-                                                 .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
-                                                 .map(VirtualHost::blockingTaskExecutor),
-                                           config.serviceConfigs()
-                                                 .stream()
-                                                 .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
-                                                 .map(ServiceConfig::blockingTaskExecutor))
-                                   .collect(Collectors.toSet()));
 
             shutdownExecutor(executors);
 
@@ -696,6 +694,8 @@ public final class Server implements ListenableAsyncCloseable {
 
                 executor.shutdown();
             }
+
+            boolean interrupted = false;
             for (ScheduledExecutorService executor : executors) {
                 if (executor instanceof UnstoppableScheduledExecutorService) {
                     executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
@@ -706,12 +706,15 @@ public final class Server implements ListenableAsyncCloseable {
                         try {
                             executor.awaitTermination(1, TimeUnit.DAYS);
                         } catch (InterruptedException ignore) {
-                            // Do nothing.
+                            interrupted = true;
                         }
                     }
                 } catch (Exception e) {
                     logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
                 }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
             }
         }
     }

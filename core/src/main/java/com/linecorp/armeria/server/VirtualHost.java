@@ -326,7 +326,7 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns whether the worker {@link Executor} is shut down when the {@link Server} stops.
+     * Returns whether the blocking task {@link Executor} is shut down when the {@link Server} stops.
      *
      * @see ServiceConfig#shutdownBlockingTaskExecutorOnStop()
      */

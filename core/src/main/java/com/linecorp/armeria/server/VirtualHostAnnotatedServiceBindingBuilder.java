@@ -249,6 +249,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
+        return this;
+    }
+
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *

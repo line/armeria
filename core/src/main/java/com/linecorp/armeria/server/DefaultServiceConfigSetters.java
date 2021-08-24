@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
@@ -27,6 +28,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -158,10 +160,18 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                      boolean shutdownOnStop) {
-        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor,
-                                                   "ScheduledExecutorService blockingTaskExecutor");
-        this.shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;
+    }
+
+    @Override
+    public ServiceConfigSetters blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
     }
 
     /**

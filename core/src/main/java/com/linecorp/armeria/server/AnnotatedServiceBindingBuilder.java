@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
@@ -29,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
@@ -236,6 +238,15 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
                                                                boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
     }
 
     /**

@@ -121,6 +121,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    @Override
+    public AbstractServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
+        return this;
+    }
+
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
