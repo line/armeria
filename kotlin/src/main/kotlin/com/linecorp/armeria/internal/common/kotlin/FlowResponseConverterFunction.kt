@@ -22,8 +22,19 @@ import com.linecorp.armeria.common.ResponseHeaders
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.filterNotNull
+import org.reactivestreams.Publisher
 
+/**
+ * A [ResponseConverterFunction] which converts the given [Flow] into [Publisher] and subsequently into
+ * [HttpResponse] using [responseConverter].
+ *
+ * It filters only non-null values from the given [Flow] so that it conforms to the reactive-streams specs.
+ *
+ * Converting [SharedFlow] with this converter function should be done with special care since [SharedFlow]
+ * neither ends nor gets cancelled, which makes the converted [HttpResponse] an infinite stream.
+ */
 class FlowResponseConverterFunction(
     private val responseConverter: ResponseConverterFunction
 ) : ResponseConverterFunction {

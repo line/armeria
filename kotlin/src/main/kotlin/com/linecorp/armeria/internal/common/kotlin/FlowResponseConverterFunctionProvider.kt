@@ -19,10 +19,13 @@ package com.linecorp.armeria.internal.common.kotlin
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharedFlow
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
+/**
+ * Provides [FlowResponseConverterFunction] to annotated services.
+ * @see FlowResponseConverterFunction
+ */
 class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider {
     override fun createResponseConverterFunction(
         returnType: Type,
@@ -32,8 +35,7 @@ class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider 
             return null
         }
         val rawType = returnType.rawType as Class<*>
-        // SharedFlow can't be converted to Publisher since it neither ends nor gets cancelled.
-        if (Flow::class.java.isAssignableFrom(rawType) && !SharedFlow::class.java.isAssignableFrom(rawType)) {
+        if (Flow::class.java.isAssignableFrom(rawType)) {
             return FlowResponseConverterFunction(responseConverter)
         }
         return null
