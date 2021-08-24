@@ -75,6 +75,5 @@ final class UnframedErrorResponseMappers {
         return HttpResponse.ofJson(responseHeaders, builder.build());
     };
 
-    private UnframedErrorResponseMappers() {
-    }
+    private UnframedErrorResponseMappers() {}
 }
