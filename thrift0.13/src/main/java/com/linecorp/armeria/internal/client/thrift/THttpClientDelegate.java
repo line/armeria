@@ -41,6 +41,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -287,9 +289,10 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                         decodeException(cause, thriftMethod.declaredExceptions()));
     }
 
-    private static Exception decodeException(Throwable cause,
-                                             @Nullable Class<?>[] declaredThrowableExceptions) {
-        if (cause instanceof RuntimeException || cause instanceof TException) {
+    static Exception decodeException(Throwable cause, @Nullable Class<?>[] declaredThrowableExceptions) {
+        if (cause instanceof TException ||
+            cause instanceof UnprocessedRequestException ||
+            cause instanceof FailFastException) {
             return (Exception) cause;
         }
 

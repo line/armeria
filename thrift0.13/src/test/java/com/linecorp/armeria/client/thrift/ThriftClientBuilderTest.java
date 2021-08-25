@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -70,7 +71,9 @@ class ThriftClientBuilderTest {
                                                      throw new AnticipatedException();
                                                  })
                                                  .build(HelloService.Iface.class);
-        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(AnticipatedException.class);
+        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(TTransportException.class)
+                                                       .getCause()
+                                                       .isInstanceOf(AnticipatedException.class);
         assertThatThrownBy(() -> reqCaptor.join().whenComplete().join())
                 .hasCauseInstanceOf(AbortedStreamException.class);
     }

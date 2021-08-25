@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.internal.client.thrift;
 
+import static com.linecorp.armeria.internal.client.thrift.THttpClientDelegate.decodeException;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static java.util.Objects.requireNonNull;
+
+import org.apache.thrift.transport.TTransportException;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.RpcClient;
@@ -34,8 +37,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 
     DefaultTHttpClient(ClientBuilderParams params, RpcClient delegate, MeterRegistry meterRegistry) {
-        super(params, delegate, meterRegistry,
-              RpcResponse::from, (ctx, cause) -> RpcResponse.ofFailure(cause));
+        super(params, delegate, meterRegistry, RpcResponse::from,
+              (ctx, cause) -> RpcResponse.ofFailure(decodeException(cause, null)));
     }
 
     @Override
@@ -56,7 +59,8 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
         path = concatPaths(uri().getRawPath(), path);
         final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
         if (pathAndQuery == null) {
-            return RpcResponse.ofFailure(new IllegalArgumentException("invalid path: " + path));
+            return RpcResponse.ofFailure(new TTransportException(
+                    new IllegalArgumentException("invalid path: " + path)));
         }
 
         // A thrift path is always good to cache as it cannot have non-fixed parameters.
