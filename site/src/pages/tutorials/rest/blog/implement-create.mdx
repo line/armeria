@@ -124,13 +124,13 @@ In this step, assign the [request converter we customized](#write-a-request-conv
 import com.linecorp.armeria.server.annotation.RequestConverter;
 
 public final class BlogService {
-   ...
-   
-   @Post("/blogs")
-   @RequestConverter(BlogPostRequestConverter.class)
-   public void createBlogPost(BlogPost blogPost) {
-     // Implement blog service
-   }
+  ...
+
+  @Post("/blogs")
+  @RequestConverter(BlogPostRequestConverter.class)
+  public void createBlogPost(BlogPost blogPost) {
+    // Implement blog service
+  }
 }
 ```
 
@@ -164,8 +164,9 @@ Let's return a response for blog post creation:
   public final class BlogService {
     ...
     public HttpResponse createBlogPost(BlogPost blogPost) {
-    ...
+      ...
       return HttpResponse.ofJson(blogPost);
+    }
   }
   ```
 
