@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
-
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +31,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
 import io.netty.channel.EventLoop;
@@ -57,14 +56,14 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
 
     static {
         final ResolvedAddressTypes resolvedAddressTypes;
-        if (NetUtil.isIpV4StackPreferred() || !anyInterfaceSupportsIpV6()) {
-            resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
-        } else {
+        if (SystemInfo.hasIpV6()) {
             if (NetUtil.isIpV6AddressesPreferred()) {
                 resolvedAddressTypes = ResolvedAddressTypes.IPV6_PREFERRED;
             } else {
                 resolvedAddressTypes = ResolvedAddressTypes.IPV4_PREFERRED;
             }
+        } else {
+            resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
         }
 
         defaultDnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);

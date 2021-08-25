@@ -396,7 +396,7 @@ public final class ServerBuilder {
         final long portGroup = ServerPort.nextPortGroup();
         port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST4, port), protocols, portGroup));
 
-        if (!NetUtil.isIpV4StackPreferred()) {
+        if (SystemInfo.hasIpV6()) {
             port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST6, port), protocols, portGroup));
         }
 

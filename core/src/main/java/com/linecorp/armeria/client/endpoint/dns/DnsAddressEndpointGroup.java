@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
 import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
 
 import java.util.List;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
 
 import io.netty.channel.EventLoop;
@@ -106,10 +106,10 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             String hostname, @Nullable ResolvedAddressTypes resolvedAddressTypes) {
 
         if (resolvedAddressTypes == null) {
-            if (NetUtil.isIpV4StackPreferred() || !anyInterfaceSupportsIpV6()) {
-                resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
-            } else {
+            if (SystemInfo.hasIpV6()) {
                 resolvedAddressTypes = ResolvedAddressTypes.IPV4_PREFERRED;
+            } else {
+                resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
             }
         }
 
