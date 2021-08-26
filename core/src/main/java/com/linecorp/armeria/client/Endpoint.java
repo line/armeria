@@ -459,24 +459,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         throw new IllegalArgumentException("ipAddr: " + ipAddr + " (expected: an IP address)");
     }
 
-    /**
-     * Returns a new host endpoint with the specified {@link InetAddress}.
-     *
-     * @return the new endpoint with the specified {@link InetAddress}.
-     *         {@code this} if this endpoint has the same IP address.
-     */
-    public Endpoint withInetAddress(InetAddress address) {
-        requireNonNull(address, "address");
-        final String ipAddr = address.getHostAddress();
-        if (address instanceof Inet4Address) {
-            return withIpAddr(ipAddr, StandardProtocolFamily.INET);
-        } else if (address instanceof Inet6Address) {
-            return withIpAddr(ipAddr, StandardProtocolFamily.INET6);
-        } else {
-            return withIpAddr(ipAddr);
-        }
-    }
-
     private Endpoint withIpAddr(String ipAddr, StandardProtocolFamily ipFamily) {
         if (ipAddr.equals(this.ipAddr)) {
             return this;
@@ -492,6 +474,25 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return new Endpoint(host(), ipAddr, port, weight,
                             ipFamily == StandardProtocolFamily.INET ? HostType.HOSTNAME_AND_IPv4
                                                                     : HostType.HOSTNAME_AND_IPv6);
+    }
+
+    /**
+     * Returns a new host endpoint with the {@linkplain InetAddress#getHostAddress()} IP address} of
+     * the specified {@link InetAddress}.
+     *
+     * @return the new endpoint with the specified {@link InetAddress}.
+     *         {@code this} if this endpoint has the same IP address.
+     */
+    public Endpoint withInetAddress(InetAddress address) {
+        requireNonNull(address, "address");
+        final String ipAddr = address.getHostAddress();
+        if (address instanceof Inet4Address) {
+            return withIpAddr(ipAddr, StandardProtocolFamily.INET);
+        } else if (address instanceof Inet6Address) {
+            return withIpAddr(ipAddr, StandardProtocolFamily.INET6);
+        } else {
+            return withIpAddr(ipAddr);
+        }
     }
 
     private Endpoint withoutIpAddr() {
