@@ -28,6 +28,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
@@ -319,10 +320,17 @@ class HttpClientIntegrationTest {
 
             sb.service("glob:/oneparam/**", (ctx, req) -> {
                 // The client was able to send a request with an escaped path param. Armeria servers always
-                // decode the path so ctx.path == '/oneparam/foo/bar' here.
-                if ("/oneparam/foo%2Fbar".equals(req.headers().path()) &&
-                    "/oneparam/foo/bar".equals(ctx.path())) {
+                // decode the path so ctx.path == '/oneparam/foo' here (without query string).
+                if ("/oneparam/foo?bar".equals(req.headers().path()) &&
+                    "/oneparam/foo".equals(ctx.path())) {
                     return HttpResponse.of("routed");
+                }
+                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            });
+
+            sb.service("/escaping/{name}", (ctx, req) -> {
+                if (Objects.equals(req.path(), ctx.path()) && "/escaping/foo%20bar".equals(req.path())) {
+                    return HttpResponse.of(ctx.pathParam("name"));
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
             });
@@ -667,9 +675,22 @@ class HttpClientIntegrationTest {
     void testEscapedPathParam() throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
 
-        final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/oneparam/foo%3Fbar").aggregate().get();
 
         assertThat(response.contentUtf8()).isEqualTo("routed");
+    }
+
+    @Test
+    void testEscapingPathParam() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse response = client.execute(
+                HttpRequest.builder()
+                           .get("/escaping/{name}")
+                           .pathParam("name", "foo bar")
+                           .build()).aggregate().get();
+
+        assertThat(response.contentUtf8()).isEqualTo("foo bar");
     }
 
     @Test
