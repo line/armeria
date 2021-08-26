@@ -28,7 +28,7 @@ You must have the following files ready for deleting a blog post. You can always
 
 <Warning>
 
-To test deleting a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implenment-create) for instructions.
+To test deleting a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implement-create) for instructions.
 
 </Warning>
 
@@ -122,7 +122,7 @@ What if there is no such post to delete? We can check if the blog exists before 
    import com.fasterxml.jackson.databind.ObjectMapper;
    
    public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
-   private static final ObjectMapper mapper = new ObjectMapper();
+     private static final ObjectMapper mapper = new ObjectMapper();
    }
    ```
 
@@ -153,6 +153,8 @@ What if there is no such post to delete? We can check if the blog exists before 
 4. Assign the exception handler to the `deleteBlogPost()` method by annotating the `deletePost()` method with the <type://@ExceptionHandler> as follows.
 
   ```java filename=BlogService.java highlight=2
+  import com.linecorp.armeria.server.annotation.ExceptionHandler;
+
   @Delete("/blogs/:id")
   @ExceptionHandler(BadRequestExceptionHandler.class)
   public void deleteBlogPost(@Param int id) { ... }

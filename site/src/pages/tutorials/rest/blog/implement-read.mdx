@@ -158,7 +158,7 @@ To retrieve multiple blog posts, copy the following code inside the `getBlogPost
 import java.util.Map.Entry;
 import java.util.Collections;
 import java.util.Comparator;
-import static com.google.common.collect.ImmutableList.toImmutableList;
+import java.util.stream.Collectors;
 
 @Get("/blogs")
 public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
@@ -167,10 +167,10 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
       return blogPosts.entrySet()
                       .stream()
                       .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
-                      .map(Entry::getValue).collect(toImmutableList());
+                      .map(Entry::getValue).collect(Collectors.toList());
   }
   // Ascending
-  return blogPosts.values().stream().collect(toImmutableList());
+  return blogPosts.values().stream().collect(Collectors.toList());
 }
 ```
 
