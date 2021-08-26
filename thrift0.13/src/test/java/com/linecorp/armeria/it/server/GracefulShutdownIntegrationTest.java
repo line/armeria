@@ -26,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -206,7 +207,8 @@ class GracefulShutdownIntegrationTest {
                 latch1.countDown();
                 client.sleep(30000L);
                 completed.set(true);
-            } catch (ClosedSessionException expected) {
+            } catch (TTransportException cause) {
+                assertThat(cause).hasCauseInstanceOf(ClosedSessionException.class);
                 latch2.countDown();
             } catch (Throwable t) {
                 logger.error("Unexpected failure:", t);

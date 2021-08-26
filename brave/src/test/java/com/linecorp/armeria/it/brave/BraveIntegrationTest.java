@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -441,7 +442,8 @@ class BraveIntegrationTest {
     @Test
     void testServerTimesOut() throws Exception {
         assertThatThrownBy(() -> timeoutClient.hello("name"))
-                .isInstanceOf(InvalidResponseHeadersException.class);
+                .isInstanceOf(TTransportException.class)
+                .hasCauseInstanceOf(InvalidResponseHeadersException.class);
         final MutableSpan[] spans = spanHandler.take(2);
 
         final MutableSpan serverSpan = findSpan(spans, "service/timeout");
@@ -465,7 +467,8 @@ class BraveIntegrationTest {
 
     private static void testClientTimesOut(HelloService.Iface client) {
         assertThatThrownBy(() -> client.hello("name"))
-                .isInstanceOf(ResponseTimeoutException.class);
+                .isInstanceOf(TTransportException.class)
+                .hasCauseInstanceOf(ResponseTimeoutException.class);
         final MutableSpan[] spans = spanHandler.take(2);
 
         final MutableSpan serverSpan = findSpan(spans, "service/timeout");

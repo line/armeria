@@ -32,6 +32,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -114,7 +115,9 @@ public class ThriftSerializationFormatsTest {
     public void notAllowed() throws Exception {
         final HelloService.Iface client =
                 Clients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
-        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(InvalidResponseHeadersException.class)
+        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
+                                                         .getCause()
+                                                         .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=415");
     }
 
@@ -134,7 +137,9 @@ public class ThriftSerializationFormatsTest {
                 Clients.builder(server.httpUri(TEXT) + "/hello")
                        .setHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
                        .build(HelloService.Iface.class);
-        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(InvalidResponseHeadersException.class)
+        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
+                                                         .getCause()
+                                                         .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=406");
     }
 
