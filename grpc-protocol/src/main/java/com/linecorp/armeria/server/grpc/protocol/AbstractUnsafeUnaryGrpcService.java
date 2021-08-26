@@ -117,7 +117,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
         req.decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
            .subscribe(singleSubscriber(deframed), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
 
-        final CompletableHttpResponse response = HttpResponse.defer();
+        final CompletableHttpResponse response = HttpResponse.deferred();
         deframed.thenCompose(requestMessage -> {
             try (SafeCloseable ignored = ctx.push()) {
                 return handleMessage(ctx, requestMessage);

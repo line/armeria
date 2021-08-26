@@ -176,7 +176,7 @@ public final class UnaryGrpcClient {
 
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-            final CompletableHttpResponse response = HttpResponse.defer(ctx.eventLoop());
+            final CompletableHttpResponse response = HttpResponse.deferred(ctx.eventLoop());
             req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
                .thenCompose(
                        msg -> {

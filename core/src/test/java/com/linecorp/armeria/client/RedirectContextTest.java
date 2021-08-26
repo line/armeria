@@ -38,7 +38,7 @@ class RedirectContextTest {
 
     @Test
     void buildOriginalUri() {
-        final CompletableHttpResponse response = HttpResponse.defer();
+        final CompletableHttpResponse response = HttpResponse.deferred();
 
         HttpRequest request = request(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "foo"));
         RedirectContext redirectCtx = new RedirectContext(ClientRequestContext.of(request), request,

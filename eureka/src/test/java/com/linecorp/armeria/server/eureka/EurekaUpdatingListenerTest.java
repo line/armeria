@@ -73,7 +73,7 @@ class EurekaUpdatingListenerTest {
                     registerContentCaptor.set(null);
                     return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
                 }
-                final CompletableHttpResponse response = HttpResponse.defer();
+                final CompletableHttpResponse response = HttpResponse.deferred();
                 req.aggregate().handle((aggregatedRes, cause) -> {
                     registerContentCaptor.set(aggregatedRes.content());
                     registerCounter.incrementAndGet();

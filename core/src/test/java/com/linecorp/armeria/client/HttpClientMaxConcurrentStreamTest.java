@@ -66,7 +66,7 @@ public class HttpClientMaxConcurrentStreamTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(PATH, (ctx, req) -> {
-                final CompletableHttpResponse response = HttpResponse.defer();
+                final CompletableHttpResponse response = HttpResponse.deferred();
                 responses.add(response);
                 return response;
             });
@@ -81,7 +81,7 @@ public class HttpClientMaxConcurrentStreamTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(PATH, (ctx, req) -> {
-                final CompletableHttpResponse response = HttpResponse.defer();
+                final CompletableHttpResponse response = HttpResponse.deferred();
                 responses.add(response);
                 return response;
             });

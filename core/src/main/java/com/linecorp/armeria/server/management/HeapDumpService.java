@@ -83,7 +83,7 @@ enum HeapDumpService implements HttpService {
             return HttpResponse.ofFailure(unavailabilityCause);
         }
 
-        final CompletableHttpResponse response = HttpResponse.defer();
+        final CompletableHttpResponse response = HttpResponse.deferred();
         heapDumpExecutor.execute(() -> {
             if (ctx.isCancelled()) {
                 return;

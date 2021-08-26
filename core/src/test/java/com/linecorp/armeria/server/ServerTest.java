@@ -124,7 +124,7 @@ class ServerTest {
             final HttpService lazyResponseNotOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
-                    final CompletableHttpResponse response = HttpResponse.defer();
+                    final CompletableHttpResponse response = HttpResponse.deferred();
                     asyncExecutorGroup.schedule(() -> super.echo(aReq), processDelayMillis,
                                                 TimeUnit.MILLISECONDS)
                                       .addListener((Future<HttpResponse> future) ->

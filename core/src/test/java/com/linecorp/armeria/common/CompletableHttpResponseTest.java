@@ -42,7 +42,7 @@ class CompletableHttpResponseTest {
 
     @Test
     void cancellationPropagatesToUpstream() {
-        final CompletableHttpResponse res = HttpResponse.defer();
+        final CompletableHttpResponse res = HttpResponse.deferred();
         res.subscribe(new Subscriber<HttpObject>() {
             @Override
             public void onSubscribe(Subscription s) {
@@ -67,7 +67,7 @@ class CompletableHttpResponseTest {
 
     @Test
     void shouldAbortLateResponse() {
-        final CompletableHttpResponse res = HttpResponse.defer();
+        final CompletableHttpResponse res = HttpResponse.deferred();
         res.complete(HttpResponse.of(HttpStatus.OK));
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(10);
         buf.writeInt(1);
@@ -84,7 +84,7 @@ class CompletableHttpResponseTest {
 
     @Test
     void shouldAbortResponseAfterCancellation() {
-        final CompletableHttpResponse res = HttpResponse.defer();
+        final CompletableHttpResponse res = HttpResponse.deferred();
         res.completeExceptionally(new ClosedSessionException("closed"));
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(10);
         buf.writeInt(1);
@@ -101,7 +101,7 @@ class CompletableHttpResponseTest {
 
     @Test
     void abortionShouldCompleteResponse() {
-        final CompletableHttpResponse res = HttpResponse.defer();
+        final CompletableHttpResponse res = HttpResponse.deferred();
         final ClosedSessionException cause = new ClosedSessionException("closed");
         res.abort(cause);
         assertThatThrownBy(() -> res.whenComplete().join())
@@ -111,7 +111,7 @@ class CompletableHttpResponseTest {
 
     @Test
     void shouldPropagateAbortCause() {
-        final CompletableHttpResponse res = HttpResponse.defer();
+        final CompletableHttpResponse res = HttpResponse.deferred();
         final ClosedSessionException cause = new ClosedSessionException("closed");
         res.abort(cause);
         final HttpResponse actual = HttpResponse.of(HttpStatus.OK);
@@ -124,7 +124,7 @@ class CompletableHttpResponseTest {
     @Test
     void subscribeBeforeComplete() {
         final List<HttpObject> accumulator = new ArrayList<>();
-        final CompletableHttpResponse res = HttpResponse.defer();
+        final CompletableHttpResponse res = HttpResponse.deferred();
         final AtomicBoolean subscribed = new AtomicBoolean();
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();

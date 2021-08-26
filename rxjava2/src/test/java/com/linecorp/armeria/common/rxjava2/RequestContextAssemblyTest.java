@@ -56,7 +56,7 @@ public class RequestContextAssemblyTest {
                 @Get("/foo")
                 @SuppressWarnings("CheckReturnValue")
                 public HttpResponse foo(ServiceRequestContext ctx, HttpRequest req) {
-                    final CompletableHttpResponse res = HttpResponse.defer();
+                    final CompletableHttpResponse res = HttpResponse.deferred();
                     flowable(10)
                             .map(RequestContextAssemblyTest::checkRequestContext)
                             .flatMapSingle(RequestContextAssemblyTest::single)
@@ -74,7 +74,7 @@ public class RequestContextAssemblyTest {
                 @SuppressWarnings("CheckReturnValue")
                 @Get("/single")
                 public HttpResponse single(ServiceRequestContext ctx, HttpRequest req) {
-                    final CompletableHttpResponse res = HttpResponse.defer();
+                    final CompletableHttpResponse res = HttpResponse.deferred();
                     Single.just("")
                           .flatMap(RequestContextAssemblyTest::single)
                           .subscribe((s, throwable) -> res.complete(HttpResponse.of(HttpStatus.OK)));

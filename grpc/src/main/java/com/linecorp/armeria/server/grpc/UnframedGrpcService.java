@@ -183,7 +183,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
-        final CompletableHttpResponse response = HttpResponse.defer();
+        final CompletableHttpResponse response = HttpResponse.deferred();
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
             try (SafeCloseable ignore = ctx.push()) {
                 if (t != null) {

@@ -147,7 +147,7 @@ class HttpServerTest {
             sb.service("/delay-custom/{delay}", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    final CompletableHttpResponse response = HttpResponse.defer();
+                    final CompletableHttpResponse response = HttpResponse.deferred();
                     ctx.whenRequestCancelling().thenRun(
                             () -> response.complete(
                                     HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
@@ -161,7 +161,7 @@ class HttpServerTest {
             });
 
             sb.service("/delay-custom-deferred/{delay}", (ctx, req) -> {
-                final CompletableHttpResponse response = HttpResponse.defer();
+                final CompletableHttpResponse response = HttpResponse.deferred();
                 ctx.whenRequestCancelling().thenRun(
                         () -> response.complete(HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));

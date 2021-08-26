@@ -326,7 +326,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                                    MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
         }
 
-        final CompletableHttpResponse response = HttpResponse.defer();
+        final CompletableHttpResponse response = HttpResponse.deferred();
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {

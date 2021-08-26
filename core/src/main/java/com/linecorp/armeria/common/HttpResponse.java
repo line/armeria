@@ -84,7 +84,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * was already completed, the late {@link HttpResponse} will be {@linkplain #abort() aborted}.
      */
     @UnstableApi
-    static CompletableHttpResponse defer() {
+    static CompletableHttpResponse deferred() {
         return new CompletableHttpResponse(null);
     }
 
@@ -100,7 +100,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
      */
     @UnstableApi
-    static CompletableHttpResponse defer(EventExecutor subscriberExecutor) {
+    static CompletableHttpResponse deferred(EventExecutor subscriberExecutor) {
         requireNonNull(subscriberExecutor, "subscriberExecutor");
         return new CompletableHttpResponse(subscriberExecutor);
     }
@@ -182,7 +182,7 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
-        final CompletableHttpResponse res = defer();
+        final CompletableHttpResponse res = deferred();
         executor.schedule(() -> res.complete(response), delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }

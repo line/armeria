@@ -85,7 +85,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         }
 
         if (result instanceof Maybe) {
-            final CompletableHttpResponse response = HttpResponse.defer();
+            final CompletableHttpResponse response = HttpResponse.deferred();
             final Disposable disposable = ((Maybe<?>) result).subscribe(
                     o -> response.complete(onSuccess(ctx, headers, o, trailers)),
                     cause -> response.complete(onError(ctx, cause)),
@@ -94,7 +94,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         }
 
         if (result instanceof Single) {
-            final CompletableHttpResponse response = HttpResponse.defer();
+            final CompletableHttpResponse response = HttpResponse.deferred();
             final Disposable disposable = ((Single<?>) result).subscribe(
                     o -> response.complete(onSuccess(ctx, headers, o, trailers)),
                     cause -> response.complete(onError(ctx, cause)));
@@ -102,7 +102,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         }
 
         if (result instanceof Completable) {
-            final CompletableHttpResponse response = HttpResponse.defer();
+            final CompletableHttpResponse response = HttpResponse.deferred();
             final Disposable disposable = ((Completable) result).subscribe(
                     () -> response.complete(onSuccess(ctx, headers, null, trailers)),
                     cause -> response.complete(onError(ctx, cause)));

@@ -345,7 +345,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                  .addRoute(Route.ofCatchAll())
                  .defaultServiceName("SpringWebFlux")
                  .build((ctx, req) -> {
-                     final CompletableHttpResponse response = HttpResponse.defer();
+                     final CompletableHttpResponse response = HttpResponse.deferred();
                      final Disposable disposable = handler.handle(ctx, req, response, serverHeader).subscribe();
                      response.whenComplete().handle((unused, cause) -> {
                          if (cause != null) {

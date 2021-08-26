@@ -117,7 +117,7 @@ class UnframedGrpcServiceTest {
 
     @Test
     void shouldClosePooledObjectsForNonOK() {
-        final CompletableHttpResponse res = HttpResponse.defer();
+        final CompletableHttpResponse res = HttpResponse.deferred();
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
                                                                .add(GrpcHeaderNames.GRPC_STATUS, "1")

@@ -316,7 +316,7 @@ public final class AnnotatedService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
-                final CompletableHttpResponse response = HttpResponse.defer();
+                final CompletableHttpResponse response = HttpResponse.deferred();
                 if (useBlockingTaskExecutor) {
                     f.thenAcceptAsync(aReq -> response.complete((HttpResponse) invoke(ctx, req, aReq)),
                                       ctx.blockingTaskExecutor());
@@ -343,7 +343,7 @@ public final class AnnotatedService implements HttpService {
                 return composedFuture
                         .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
-                final CompletableHttpResponse res = HttpResponse.defer();
+                final CompletableHttpResponse res = HttpResponse.deferred();
                 final Consumer<AggregatedHttpRequest> completeResponse = aReq -> {
                     res.complete(convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of()));
                 };

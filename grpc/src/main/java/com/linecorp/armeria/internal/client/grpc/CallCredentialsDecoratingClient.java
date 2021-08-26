@@ -50,7 +50,7 @@ final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-        final CompletableHttpResponse response = HttpResponse.defer();
+        final CompletableHttpResponse response = HttpResponse.deferred();
 
         final RequestInfo requestInfo = new RequestInfo() {
             @Override

@@ -50,7 +50,7 @@ class ExceptionHandlerTest {
                 throw new IllegalArgumentException("Illegal Argument!");
             });
             sb.service("/responseSubscriber", (ctx, req) -> {
-                final CompletableHttpResponse res = HttpResponse.defer();
+                final CompletableHttpResponse res = HttpResponse.deferred();
                 ctx.eventLoop().schedule(() -> res.completeExceptionally(
                         new UnsupportedOperationException("Unsupported!")), 100, TimeUnit.MILLISECONDS);
                 return res;

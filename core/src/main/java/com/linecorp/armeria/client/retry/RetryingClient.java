@@ -233,7 +233,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final CompletableHttpResponse res = HttpResponse.defer(ctx.eventLoop());
+        final CompletableHttpResponse res = HttpResponse.deferred(ctx.eventLoop());
         final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
         doExecute0(ctx, reqDuplicator, req, res);
         return res;

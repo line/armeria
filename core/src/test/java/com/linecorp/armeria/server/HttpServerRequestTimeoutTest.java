@@ -94,7 +94,7 @@ class HttpServerRequestTimeoutTest {
                   return HttpResponse.streaming();
               })
               .service("/response-sent-later", (ctx, req) -> {
-                  final CompletableHttpResponse response = HttpResponse.defer();
+                  final CompletableHttpResponse response = HttpResponse.deferred();
                   ctx.blockingTaskExecutor().execute(() -> {
                       Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(20));
                       response.complete(HttpResponse.of(200));

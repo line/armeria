@@ -309,7 +309,7 @@ class HttpServerStreamingTest {
 
         @Override
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            final CompletableHttpResponse response = HttpResponse.defer();
+            final CompletableHttpResponse response = HttpResponse.deferred();
             req.subscribe(new StreamConsumer(ctx.eventLoop(), slow) {
                 @Override
                 public void onError(Throwable cause) {
