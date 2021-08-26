@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -109,6 +108,8 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
 
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
     @Nullable
+    private final EventExecutor defaultExecutor;
+    @Nullable
     private Subscription upstreamSubscription;
     private long pendingDemand;
 
@@ -119,10 +120,8 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
     // Updated via subscribedUpdater
     private volatile int subscribed;
 
-    CompletableHttpResponse(@Nullable EventExecutor executor) {
-        if (executor != null) {
-            this.executor = executor;
-        }
+    CompletableHttpResponse(@Nullable EventExecutor defaultExecutor) {
+        this.defaultExecutor = defaultExecutor;
     }
 
     @Override
@@ -197,6 +196,15 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
     }
 
     @Override
+    public EventExecutor defaultSubscriberExecutor() {
+        if (defaultExecutor != null) {
+            return defaultExecutor;
+        } else {
+            return HttpResponse.super.defaultSubscriberExecutor();
+        }
+    }
+
+    @Override
     public CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }
@@ -207,11 +215,10 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        final EventExecutor eventExecutor = firstNonNull(this.executor, executor);
         if (executor.inEventLoop()) {
-            subscribe0(subscriber, eventExecutor, options);
+            subscribe0(subscriber, executor, options);
         } else {
-            eventExecutor.execute(() -> subscribe0(subscriber, eventExecutor, options));
+            executor.execute(() -> subscribe0(subscriber, executor, options));
         }
     }
 
@@ -222,9 +229,7 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
             subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
         } else {
             // Executor should be set before subscriber.onSubscribe(this) is called.
-            if (this.executor == null) {
-                this.executor = executor;
-            }
+            this.executor = executor;
             subscriber.onSubscribe(this);
 
             final HttpResponse upstream = this.upstream;
