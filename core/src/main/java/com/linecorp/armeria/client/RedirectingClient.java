@@ -149,8 +149,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return;
         }
 
-        if (redirectCtx.responseWhenComplete().isDone()) {
-            redirectCtx.responseWhenComplete().handle((result, cause) -> {
+        final CompletableFuture<Void> responseWhenComplete = redirectCtx.response().whenComplete();
+        if (responseWhenComplete.isDone()) {
+            responseWhenComplete.handle((result, cause) -> {
                 final Throwable abortCause;
                 if (cause != null) {
                     abortCause = cause;
@@ -410,7 +411,6 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
         private final ClientRequestContext ctx;
         private final HttpRequest request;
-        private final CompletableFuture<Void> responseWhenComplete;
         private final CompletableHttpResponse response;
         @Nullable
         private Multimap<HttpMethod, String> redirectUris;
@@ -421,16 +421,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                         CompletableHttpResponse response) {
             this.ctx = ctx;
             this.request = request;
-            responseWhenComplete = response.whenComplete();
             this.response = response;
         }
 
         HttpRequest request() {
             return request;
-        }
-
-        CompletableFuture<Void> responseWhenComplete() {
-            return responseWhenComplete;
         }
 
         CompletableHttpResponse response() {
