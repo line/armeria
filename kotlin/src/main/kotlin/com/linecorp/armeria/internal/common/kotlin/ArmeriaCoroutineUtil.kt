@@ -18,7 +18,6 @@
 
 package com.linecorp.armeria.internal.common.kotlin
 
-import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
 import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.GlobalScope
