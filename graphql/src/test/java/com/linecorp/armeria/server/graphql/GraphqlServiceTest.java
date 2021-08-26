@@ -71,7 +71,7 @@ class GraphqlServiceTest {
             final ServiceRequestContext ctx = environment.getContext();
             assertThat(ctx.eventLoop().inEventLoop()).isTrue();
             // Make sure that a ServiceRequestContext is available
-            ServiceRequestContext.current();
+            assertThat(ServiceRequestContext.current()).isSameAs(ctx);
             return value;
         };
     }
