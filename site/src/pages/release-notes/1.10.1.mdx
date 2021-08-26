@@ -1,0 +1,45 @@
+---
+date: 2021-08-27
+---
+
+## 🌟 New features
+
+- You can now easily check if the system has a working IPv6 stack using <type://SystemInfo#hasIpV6()>. #3784
+
+## 📈 Improvements
+
+- The cost of creating an <type://Endpoint> is reduced by cache. #3767 #3772
+
+## 🛠️ Bug fixes
+
+- You no longer see leaks of an <type://HttpResponse> that was occurred when the
+  `CompletableFuture<HttpResponse>`, which is used in <type://HttpResponse#from(CompletableFuture)>,
+  was cancelled. #3796
+- Armeria Thrift client now wraps a RuntimeException with TTransportException except
+  <type://UnprocessedRequestException> and <type://FailFastException>. #3794
+- The value of <type://RequestHeaders#path()> is now properly encoded. #3780 #3781
+- You can now access <type://ServiceRequestContext> via <type://ServiceRequestContext#current()>
+  in a GraphQL service.
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- N/A
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'anuraaga',
+  'ikhoon',
+  'kezhenxu94',
+  'minwoox',
+  'sunken-kang',
+  'trustin'
+]} />
