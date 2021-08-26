@@ -19,6 +19,9 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,6 +33,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
@@ -40,6 +45,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -68,6 +74,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private static final Predicate<String> SCHEME_VALIDATOR =
             scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
 
+    private static final Cache<String, Endpoint> cache =
+            Caffeine.newBuilder()
+                    .maximumSize(8192) // TODO(ikhoon): Add a flag if there is a demand for it.
+                    .build();
+
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
      * <ul>
@@ -79,8 +90,15 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
-        final HostAndPort parsed = HostAndPort.fromString(removeUserInfo(authority)).withDefaultPort(0);
-        return create(parsed.getHost(), parsed.getPort());
+        checkArgument(!authority.isEmpty(), "authority is empty");
+        return cache.get(authority, key -> {
+            if (key.charAt(key.length() - 1) == ':') {
+                // HostAndPort.fromString() does not validate an authority that ends with ':' such as "0.0.0.0:"
+                throw new IllegalArgumentException("Missing port number: " + key);
+            }
+            final HostAndPort hostAndPort = HostAndPort.fromString(removeUserInfo(key)).withDefaultPort(0);
+            return create(hostAndPort.getHost(), hostAndPort.getPort(), true);
+        });
     }
 
     /**
@@ -91,7 +109,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint of(String host, int port) {
         validatePort("port", port);
-        return create(host, port);
+        return create(host, port, true);
     }
 
     /**
@@ -100,12 +118,21 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalArgumentException if {@code host} is not a valid host name
      */
     public static Endpoint of(String host) {
-        return create(host, 0);
+        return create(host, 0, true);
     }
 
-    private static Endpoint create(String host, int port) {
-        requireNonNull(host, "host");
+    /**
+     * Creates a new host {@link Endpoint} <strong>without</strong> validation.
+     *
+     * <p>Note that you should carefully use this method only when both {@code host} and {@code port} are
+     * already valid.
+     */
+    @UnstableApi
+    public static Endpoint unsafeCreate(String host, int port) {
+        return create(host, port, /* validateHost */ false);
+    }
 
+    private static Endpoint create(String host, int port, boolean validateHost) {
         if (NetUtil.isValidIpV4Address(host)) {
             return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY);
         }
@@ -121,12 +148,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY);
         }
 
-        return new Endpoint(InternetDomainName.from(host).toString(),
-                            null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
+        if (validateHost) {
+            host = InternetDomainName.from(host).toString();
+        }
+        return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
     }
 
     private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf("@");
+        final int indexOfDelimiter = authority.lastIndexOf('@');
         if (indexOfDelimiter == -1) {
             return authority;
         }
@@ -151,12 +180,19 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final String authority;
     private final String strVal;
 
+    @Nullable
+    private CompletableFuture<Endpoint> selectFuture;
+    @Nullable
+    private CompletableFuture<List<Endpoint>> whenReadyFuture;
+    private int hashCode;
+
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
         this.host = host;
         this.ipAddr = ipAddr;
         this.port = port;
         this.weight = weight;
         this.hostType = hostType;
+
         endpoints = ImmutableList.of(this);
 
         // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
@@ -165,7 +201,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         // Pre-generate the authority.
         authority = generateAuthority(host, port, hostType);
-
         // Pre-generate toString() value.
         strVal = generateToString(authority, ipAddr, weight, hostType);
     }
@@ -218,18 +253,22 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                               ScheduledExecutorService executor,
                                               long timeoutMillis) {
-        return UnmodifiableFuture.completedFuture(this);
+        if (selectFuture == null) {
+            selectFuture = UnmodifiableFuture.completedFuture(this);
+        }
+        return selectFuture;
     }
 
     @Override
     public CompletableFuture<List<Endpoint>> whenReady() {
-        return CompletableFuture.completedFuture(endpoints);
+        if (whenReadyFuture == null) {
+            whenReadyFuture = CompletableFuture.completedFuture(endpoints);
+        }
+        return whenReadyFuture;
     }
 
     /**
      * Returns the host name of this endpoint.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public String host() {
         return host;
@@ -239,7 +278,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns the IP address of this endpoint.
      *
      * @return the IP address, or {@code null} if the host name is not resolved yet
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     @Nullable
     public String ipAddr() {
@@ -251,7 +289,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * {@code ipAddr() != null}.
      *
      * @return {@code true} if and only if this endpoint has an IP address.
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public boolean hasIpAddr() {
         return ipAddr() != null;
@@ -261,7 +298,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns whether this endpoint's host name is an IP address.
      *
      * @return {@code true} if and only if this endpoint's host name is an IP address
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public boolean isIpAddrOnly() {
         return hostType == HostType.IPv4_ONLY || hostType == HostType.IPv6_ONLY;
@@ -272,7 +308,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *
      * @return the {@link StandardProtocolFamily} of this endpoint's IP address, or
      *         {@code null} if the host name is not resolved yet
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     @Nullable
     public StandardProtocolFamily ipFamily() {
@@ -291,8 +326,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns the port number of this endpoint.
      *
-     * @throws IllegalStateException if this endpoint is not a host but a group, or
-     *                               this endpoint does not have its port specified.
+     * @throws IllegalStateException this endpoint does not have its port specified.
      */
     public int port() {
         if (port == 0) {
@@ -305,8 +339,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns the port number of this endpoint.
      *
      * @param defaultValue the default value to return when this endpoint does not have its port specified
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public int port(int defaultValue) {
         return port != 0 ? port : defaultValue;
@@ -316,7 +348,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns whether this endpoint has a port number specified.
      *
      * @return {@code true} if and only if this endpoint has a port number.
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public boolean hasPort() {
         return port != 0;
@@ -329,8 +360,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @return the new endpoint with the specified port number if this endpoint does not have a port or
      *         it has a different port number than what's specified.
      *         {@code this} if this endpoint has the same port number with the specified one.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withPort(int port) {
         validatePort("port", port);
@@ -399,11 +428,15 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @return the new endpoint with the specified IP address.
      *         {@code this} if this endpoint has the same IP address.
      *
-     * @throws IllegalStateException if this endpoint is not a host but a group
+     * @throws IllegalArgumentException if the specified IP address is invalid
      */
     public Endpoint withIpAddr(@Nullable String ipAddr) {
         if (ipAddr == null) {
             return withoutIpAddr();
+        }
+
+        if (ipAddr.equals(this.ipAddr)) {
+            return this;
         }
 
         if (NetUtil.isValidIpV4Address(ipAddr)) {
@@ -441,6 +474,25 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return new Endpoint(host(), ipAddr, port, weight,
                             ipFamily == StandardProtocolFamily.INET ? HostType.HOSTNAME_AND_IPv4
                                                                     : HostType.HOSTNAME_AND_IPv6);
+    }
+
+    /**
+     * Returns a new host endpoint with the {@linkplain InetAddress#getHostAddress()} IP address} of
+     * the specified {@link InetAddress}.
+     *
+     * @return the new endpoint with the specified {@link InetAddress}.
+     *         {@code this} if this endpoint has the same IP address.
+     */
+    public Endpoint withInetAddress(InetAddress address) {
+        requireNonNull(address, "address");
+        final String ipAddr = address.getHostAddress();
+        if (address instanceof Inet4Address) {
+            return withIpAddr(ipAddr, StandardProtocolFamily.INET);
+        } else if (address instanceof Inet6Address) {
+            return withIpAddr(ipAddr, StandardProtocolFamily.INET6);
+        } else {
+            return withIpAddr(ipAddr);
+        }
     }
 
     private Endpoint withoutIpAddr() {
@@ -618,7 +670,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public int hashCode() {
-        return (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        if (hashCode == 0) {
+            hashCode = (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        }
+        return hashCode;
     }
 
     @Override
