@@ -142,6 +142,11 @@ public final class ArmeriaHttpUtil {
     private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST = new CharSequenceMap();
 
     /**
+     * The set of headers that must not be directly copied when converting response headers.
+     */
+    private static final CharSequenceMap HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST = new CharSequenceMap();
+
+    /**
      * The set of headers that must not be directly copied when converting trailers.
      */
     private static final CharSequenceMap HTTP_TRAILER_DISALLOWED_LIST = new CharSequenceMap();
@@ -170,6 +175,13 @@ public final class ArmeriaHttpUtil {
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
+        // Request Pseudo-Headers are not allowed for response headers.
+        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.AUTHORITY, EMPTY_STRING);
+        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.METHOD, EMPTY_STRING);
+        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
+        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
 
         // https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
         // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1
@@ -209,8 +221,11 @@ public final class ArmeriaHttpUtil {
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
-    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
+    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST =
+            ImmutableSet.<AsciiString>builder()
+                        .addAll(HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.names())
+                        .add(HttpHeaderNames.STATUS)
+                        .build();
 
     public static final String SERVER_HEADER =
             "Armeria/" + Version.get("armeria", ArmeriaHttpUtil.class.getClassLoader())
@@ -725,17 +740,20 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Converts the specified Armeria HTTP/2 response headers into Netty HTTP/2 headers.
+     * Converts the specified Armeria HTTP/2 {@link ResponseHeaders} into Netty HTTP/2 headers.
      *
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
-    public static Http2Headers toNettyHttp2ServerHeaders(HttpHeaders inputHeaders) {
+    public static Http2Headers toNettyHttp2ServerHeaders(ResponseHeaders inputHeaders) {
         final int headerSizeHint = inputHeaders.size() + 2; // server and data headers
         final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
+                continue;
+            }
+            if (HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.contains(name)) {
                 continue;
             }
             outputHeaders.add(name, value);

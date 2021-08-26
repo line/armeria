@@ -148,6 +148,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private boolean sendHeadersCalled;
     private boolean closeCalled;
 
+    private volatile boolean threadBarrier;
+
     private int pendingRequests;
     private volatile int pendingMessages;
 
@@ -337,6 +339,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void close(Status status, Metadata metadata) {
+        closeCall();
         if (ctx.eventLoop().inEventLoop()) {
             doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
         } else {
@@ -347,6 +350,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void close(Throwable exception, Metadata metadata) {
+        closeCall();
         if (ctx.eventLoop().inEventLoop()) {
             doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
         } else {
@@ -354,6 +358,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
             });
         }
+    }
+
+    private void closeCall() {
+        checkState(!closeCalled, "call already closed");
+        closeCalled = true;
     }
 
     private void doClose(Status status, Metadata metadata) {
@@ -370,9 +379,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 return;
             }
         }
-
-        checkState(!closeCalled, "call already closed");
-        closeCalled = true;
 
         final HttpHeaders trailers = statusToTrailers(
                 ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
@@ -523,12 +529,15 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             assert listener != null;
             listener.onHalfClose();
 
-            // Based on the implementation of ServerCalls of gRPC-Java, onReady() is called only by
-            // onHalfClose() of UnaryServerCallListener, which is used for UNARY and SERVER_STREAMING.
-            // https://github.com/grpc/grpc-java/blob/9b73e2365da502a466b01544f102cd487e374428/stub/src/main/java/io/grpc/stub/ServerCalls.java#L188
-            final MethodType methodType = method.getType();
-            if (methodType == MethodType.UNARY || methodType == MethodType.SERVER_STREAMING) {
-                listener.onReady();
+            // A call could be closed while invoking 'listener.onHalfClose()'
+            if (!closeCalled) {
+                final MethodType methodType = method.getType();
+                if (methodType == MethodType.UNARY || methodType == MethodType.SERVER_STREAMING) {
+                    // Based on the implementation of ServerCalls of gRPC-Java, onReady() is called only by
+                    // onHalfClose() of UnaryServerCallListener, which is used for UNARY and SERVER_STREAMING.
+                    // https://github.com/grpc/grpc-java/blob/9b73e2365da502a466b01544f102cd487e374428/stub/src/main/java/io/grpc/stub/ServerCalls.java#L188
+                    listener.onReady();
+                }
             }
         } catch (Throwable t) {
             close(t, new Metadata());

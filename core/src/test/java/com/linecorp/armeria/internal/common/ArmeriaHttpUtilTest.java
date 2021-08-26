@@ -436,6 +436,23 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CONTENT_RANGE, "dummy")
                                           .add(HttpHeaderNames.TRAILER, "dummy")
                                           .build();
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get("foo")).isEqualTo("bar");
+    }
+
+    @Test
+    void excludeDisallowedInResponseHeaders() {
+        final ResponseHeaders in = ResponseHeaders.builder()
+                                              .add(HttpHeaderNames.STATUS, "200")
+                                              .add(HttpHeaderNames.AUTHORITY, "dummy")
+                                              .add(HttpHeaderNames.METHOD, "dummy")
+                                              .add(HttpHeaderNames.PATH, "dummy")
+                                              .add(HttpHeaderNames.SCHEME, "dummy")
+                                              .build();
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get(HttpHeaderNames.STATUS)).isEqualTo("200");
     }
 
     @Test
