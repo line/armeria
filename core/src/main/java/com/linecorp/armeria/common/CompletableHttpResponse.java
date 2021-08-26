@@ -133,7 +133,14 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
         if (success) {
             this.upstream = upstream;
         } else {
-            upstream.abort(new IllegalStateException("upstream set already"));
+            handle((res, cause) -> {
+                if (cause != null) {
+                    upstream.abort(cause);
+                } else {
+                    upstream.abort(new IllegalStateException("upstream set already"));
+                }
+                return null;
+            });
         }
         return success;
     }
@@ -253,10 +260,12 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
         upstream.subscribe(subscriber, executor, options);
         // Propagate the result of response.whenComplete() to completionFuture.
         upstream.whenComplete().handle((unused, cause0) -> {
-            if (cause0 != null) {
-                completionFuture.completeExceptionally(cause0);
-            } else {
-                completionFuture.complete(null);
+            if (!completionFuture.isDone()) {
+                if (cause0 != null) {
+                    completionFuture.completeExceptionally(cause0);
+                } else {
+                    completionFuture.complete(null);
+                }
             }
             return null;
         });
@@ -281,9 +290,13 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
             upstream.abort(cause);
         } else {
             final boolean success = completeExceptionally(cause);
-            if (!success && !isCompletedExceptionally()) {
-                // An HttpResponse has just been completed before exceptionally completing.
-                thenAccept(response -> response.abort(cause));
+            if (success) {
+                completionFuture.completeExceptionally(cause);
+            } else {
+                if (!isCompletedExceptionally()) {
+                    // An HttpResponse has just been completed before exceptionally completing.
+                    thenAccept(response -> response.abort(cause));
+                }
             }
         }
     }
