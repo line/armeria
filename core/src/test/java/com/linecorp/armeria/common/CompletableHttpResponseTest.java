@@ -127,7 +127,7 @@ class CompletableHttpResponseTest {
         final CompletableHttpResponse res = HttpResponse.defer();
         final AtomicBoolean subscribed = new AtomicBoolean();
         final AtomicBoolean completed = new AtomicBoolean();
-        final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();;
+        final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
         res.subscribe(new Subscriber<HttpObject>() {
             @Override
             public void onSubscribe(Subscription s) {

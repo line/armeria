@@ -148,7 +148,7 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
      * Throws an {@link UnsupportedOperationException}.
      * If completed already, cannot be overridden by the specifed {@link HttpResponse}.
      *
-     * @deprecated  Use {@link #complete(HttpResponse)} instead.
+     * @deprecated Use {@link #complete(HttpResponse)} instead.
      */
     @Deprecated
     @Override

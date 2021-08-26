@@ -21,13 +21,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -118,7 +117,7 @@ class UnframedGrpcServiceTest {
 
     @Test
     void shouldClosePooledObjectsForNonOK() {
-        final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+        final CompletableHttpResponse res = HttpResponse.defer();
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
                                                                .add(GrpcHeaderNames.GRPC_STATUS, "1")

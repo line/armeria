@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
@@ -93,12 +94,12 @@ class HttpServerRequestTimeoutTest {
                   return HttpResponse.streaming();
               })
               .service("/response-sent-later", (ctx, req) -> {
-                  final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+                  final CompletableHttpResponse response = HttpResponse.defer();
                   ctx.blockingTaskExecutor().execute(() -> {
                       Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(20));
-                      future.complete(HttpResponse.of(200));
+                      response.complete(HttpResponse.of(200));
                   });
-                  return HttpResponse.from(future);
+                  return response;
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->
                       HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1)))

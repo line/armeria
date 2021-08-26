@@ -94,7 +94,7 @@ enum HeapDumpService implements HttpService {
                     heapDumper = new HeapDumper();
                 } catch (Throwable ex) {
                     unavailabilityCause = ex;
-                    response.complete(HttpResponse.ofFailure(ex));
+                    response.completeExceptionally(ex);
                     return;
                 }
             }
@@ -128,7 +128,7 @@ enum HeapDumpService implements HttpService {
                 if (tempFile != null) {
                     deleteTempFile(tempFile);
                 }
-                response.complete(HttpResponse.ofFailure(cause));
+                response.completeExceptionally(cause);
             }
         });
 

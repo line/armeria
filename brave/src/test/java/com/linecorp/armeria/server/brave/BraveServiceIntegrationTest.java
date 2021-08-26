@@ -29,6 +29,7 @@ import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -115,10 +116,9 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     }
 
     HttpResponse asyncResponse(Consumer<CompletableFuture<HttpResponse>> completeResponse) {
-        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
+        final CompletableHttpResponse res = HttpResponse.defer();
         CommonPools.workerGroup().next().submit(
-                () -> completeResponse.accept(responseFuture));
+                () -> completeResponse.accept(res));
         return res;
     }
 

@@ -33,6 +33,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -72,14 +73,14 @@ class EurekaUpdatingListenerTest {
                     registerContentCaptor.set(null);
                     return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
                 }
-                final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+                final CompletableHttpResponse response = HttpResponse.defer();
                 req.aggregate().handle((aggregatedRes, cause) -> {
                     registerContentCaptor.set(aggregatedRes.content());
                     registerCounter.incrementAndGet();
-                    future.complete(HttpResponse.of(HttpStatus.NO_CONTENT));
+                    response.complete(HttpResponse.of(HttpStatus.NO_CONTENT));
                     return null;
                 });
-                return HttpResponse.from(future);
+                return response;
             });
             sb.service("/apps/" + APP_NAME + '/' + INSTANCE_ID, (ctx, req) -> {
                 req.aggregate();

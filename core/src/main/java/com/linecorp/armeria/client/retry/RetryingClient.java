@@ -21,7 +21,6 @@ import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallbac
 
 import java.time.Duration;
 import java.util.Date;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
@@ -387,7 +386,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
-                                        CompletableFuture<HttpResponse> future, Throwable cause,
+                                        CompletableHttpResponse future, Throwable cause,
                                         boolean endRequestLog) {
         future.completeExceptionally(cause);
         rootReqDuplicator.abort(cause);

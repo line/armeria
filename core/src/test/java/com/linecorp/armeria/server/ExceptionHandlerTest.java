@@ -17,7 +17,6 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -25,6 +24,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -50,10 +50,10 @@ class ExceptionHandlerTest {
                 throw new IllegalArgumentException("Illegal Argument!");
             });
             sb.service("/responseSubscriber", (ctx, req) -> {
-                final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-                ctx.eventLoop().schedule(() -> future.completeExceptionally(
+                final CompletableHttpResponse res = HttpResponse.defer();
+                ctx.eventLoop().schedule(() -> res.completeExceptionally(
                         new UnsupportedOperationException("Unsupported!")), 100, TimeUnit.MILLISECONDS);
-                return HttpResponse.from(future);
+                return res;
             });
             sb.exceptionHandler((ctx, cause) -> {
                 if (cause instanceof RequestTimeoutException) {

@@ -318,9 +318,8 @@ public final class AnnotatedService implements HttpService {
             case HTTP_RESPONSE:
                 final CompletableHttpResponse response = HttpResponse.defer();
                 if (useBlockingTaskExecutor) {
-                    f.thenAcceptAsync(aReq -> {
-                        response.complete((HttpResponse) invoke(ctx, req, aReq));
-                    }, ctx.blockingTaskExecutor());
+                    f.thenAcceptAsync(aReq -> response.complete((HttpResponse) invoke(ctx, req, aReq)),
+                                      ctx.blockingTaskExecutor());
                 } else {
                     f.thenAccept(aReq -> response.complete((HttpResponse) invoke(ctx, req, aReq)));
                 }

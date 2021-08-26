@@ -55,6 +55,7 @@ import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.brave.BraveClient;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -163,8 +164,7 @@ class BraveIntegrationTest {
                                         return null;
                                     }))).collect(toImmutableList()));
 
-                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final CompletableHttpResponse res = HttpResponse.defer();
                     transformAsync(spanAware,
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(
@@ -180,9 +180,9 @@ class BraveIntegrationTest {
                                            )).collect(toImmutableList())),
                                    RequestContext.current().eventLoop())
                             .addListener(() -> {
-                                responseFuture.complete(HttpResponse.of(HttpStatus.OK,
-                                                                        MediaType.PLAIN_TEXT_UTF_8,
-                                                                        "Lee"));
+                                res.complete(HttpResponse.of(HttpStatus.OK,
+                                                             MediaType.PLAIN_TEXT_UTF_8,
+                                                             "Lee"));
                             }, RequestContext.current().eventLoop());
                     return res;
                 }

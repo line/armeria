@@ -66,6 +66,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -130,48 +131,44 @@ class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
-                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
-                                             delayMillis, TimeUnit.MILLISECONDS);
-                    return res;
+                    return HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                Duration.ofMillis(delayMillis),
+                                                ctx.eventLoop());
                 }
             });
 
             sb.service("/delay-deferred/{delay}", (ctx, req) -> {
-                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                final HttpResponse res = HttpResponse.from(responseFuture);
                 final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
-                                         delayMillis, TimeUnit.MILLISECONDS);
-                return res;
+                return HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                            Duration.ofMillis(delayMillis),
+                                            ctx.eventLoop());
             });
 
             sb.service("/delay-custom/{delay}", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final CompletableHttpResponse response = HttpResponse.defer();
                     ctx.whenRequestCancelling().thenRun(
-                            () -> responseFuture.complete(
+                            () -> response.complete(
                                     HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
+                    HttpResponse.delayed(HttpResponse.of(HttpStatus.OK), Duration.ofMillis(delayMillis),
+                                         ctx.eventLoop());
+                    ctx.eventLoop().schedule(() -> response.complete(HttpResponse.of(HttpStatus.OK)),
                                              delayMillis, TimeUnit.MILLISECONDS);
-                    return res;
+                    return response;
                 }
             });
 
             sb.service("/delay-custom-deferred/{delay}", (ctx, req) -> {
-                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                final HttpResponse res = HttpResponse.from(responseFuture);
+                final CompletableHttpResponse response = HttpResponse.defer();
                 ctx.whenRequestCancelling().thenRun(
-                        () -> responseFuture.complete(HttpResponse.of(
+                        () -> response.complete(HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
                 final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
-                ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
+                ctx.eventLoop().schedule(() -> response.complete(HttpResponse.of(HttpStatus.OK)),
                                          delayMillis, TimeUnit.MILLISECONDS);
-                return res;
+                return response;
             });
 
             sb.service("/informed_delay/{delay}", new AbstractHttpService() {

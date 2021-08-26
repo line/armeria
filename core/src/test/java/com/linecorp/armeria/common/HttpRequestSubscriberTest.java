@@ -17,10 +17,10 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -59,12 +59,8 @@ public class HttpRequestSubscriberTest {
             // Returning a response immediately causes a failure of a test with PublisherBasedHttpRequest.
             sb.service("/ok", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
             sb.service("/delayed_ok", (ctx, req) -> {
-                           final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
-                           executor.schedule(() -> f.complete(HttpResponse.of(HttpStatus.OK)),
-                                             100, TimeUnit.MILLISECONDS);
-                           return HttpResponse.from(f);
-                       }
-            );
+                return HttpResponse.delayed(HttpResponse.of(HttpStatus.OK), Duration.ofMillis(100));
+            });
         }
     };
 

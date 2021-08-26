@@ -61,6 +61,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -123,13 +124,12 @@ class ServerTest {
             final HttpService lazyResponseNotOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
-                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
-                    asyncExecutorGroup.schedule(
-                            () -> super.echo(aReq), processDelayMillis, TimeUnit.MILLISECONDS)
+                    final CompletableHttpResponse response = HttpResponse.defer();
+                    asyncExecutorGroup.schedule(() -> super.echo(aReq), processDelayMillis,
+                                                TimeUnit.MILLISECONDS)
                                       .addListener((Future<HttpResponse> future) ->
-                                                           responseFuture.complete(future.getNow()));
-                    return res;
+                                                           response.complete(future.getNow()));
+                    return response;
                 }
             }.decorate(LoggingService.newDecorator());
 

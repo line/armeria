@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -308,12 +309,11 @@ class HttpServerStreamingTest {
 
         @Override
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            final HttpResponse res = HttpResponse.from(responseFuture);
+            final CompletableHttpResponse response = HttpResponse.defer();
             req.subscribe(new StreamConsumer(ctx.eventLoop(), slow) {
                 @Override
                 public void onError(Throwable cause) {
-                    responseFuture.complete(
+                    response.complete(
                             HttpResponse.of(
                                     HttpStatus.INTERNAL_SERVER_ERROR,
                                     MediaType.PLAIN_TEXT_UTF_8,
@@ -322,12 +322,12 @@ class HttpServerStreamingTest {
 
                 @Override
                 public void onComplete() {
-                    responseFuture.complete(
+                    response.complete(
                             HttpResponse.of(
                                     HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "%d", numReceivedBytes()));
                 }
             });
-            return res;
+            return response;
         }
     }
 

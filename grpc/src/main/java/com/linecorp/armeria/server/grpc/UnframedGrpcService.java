@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -202,7 +201,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             ServiceRequestContext ctx,
             RequestHeaders grpcHeaders,
             AggregatedHttpRequest clientRequest,
-            CompletableFuture<HttpResponse> res) {
+            CompletableHttpResponse res) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
@@ -245,7 +244,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     static void deframeAndRespond(
             ServiceRequestContext ctx,
             AggregatedHttpResponse grpcResponse,
-            CompletableFuture<HttpResponse> res) {
+            CompletableHttpResponse res) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -294,7 +293,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     }
 
     private static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
-                                                                CompletableFuture<HttpResponse> res) {
+                                                                CompletableHttpResponse res) {
         return new Subscriber<DeframedMessage>() {
 
             @Override

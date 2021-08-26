@@ -149,9 +149,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return;
         }
 
-        final CompletableFuture<Void> responseWhenComplete = redirectCtx.response().whenComplete();
-        if (responseWhenComplete.isDone()) {
-            responseWhenComplete.handle((result, cause) -> {
+        if (completableResponse.isDone()) {
+            completableResponse.handle((result, cause) -> {
                 final Throwable abortCause;
                 if (cause != null) {
                     abortCause = cause;
@@ -273,10 +272,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     }
 
     private static void endRedirect(ClientRequestContext ctx, HttpRequestDuplicator reqDuplicator,
-                                    CompletableFuture<HttpResponse> responseFuture,
-                                    HttpResponse response) {
+                                    CompletableHttpResponse completableResponse, HttpResponse response) {
         ctx.logBuilder().endResponseWithLastChild();
-        responseFuture.complete(response);
+        completableResponse.complete(response);
         reqDuplicator.close();
     }
 

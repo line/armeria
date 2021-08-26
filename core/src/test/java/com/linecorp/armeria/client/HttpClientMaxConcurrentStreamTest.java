@@ -38,6 +38,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -65,9 +66,9 @@ public class HttpClientMaxConcurrentStreamTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(PATH, (ctx, req) -> {
-                final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
-                responses.add(f);
-                return HttpResponse.from(f);
+                final CompletableHttpResponse response = HttpResponse.defer();
+                responses.add(response);
+                return response;
             });
             sb.http2MaxStreamsPerConnection(MAX_CONCURRENT_STREAMS);
             sb.maxNumConnections(MAX_NUM_CONNECTIONS);
@@ -80,9 +81,9 @@ public class HttpClientMaxConcurrentStreamTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(PATH, (ctx, req) -> {
-                final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
-                responses.add(f);
-                return HttpResponse.from(f);
+                final CompletableHttpResponse response = HttpResponse.defer();
+                responses.add(response);
+                return response;
             });
             sb.http2MaxStreamsPerConnection(1);
             sb.maxNumConnections(MAX_NUM_CONNECTIONS);

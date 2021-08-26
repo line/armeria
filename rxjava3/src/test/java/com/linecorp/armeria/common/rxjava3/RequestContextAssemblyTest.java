@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.rxjava3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -55,7 +55,7 @@ class RequestContextAssemblyTest {
                 @Get("/foo")
                 @SuppressWarnings("CheckReturnValue")
                 public HttpResponse foo(ServiceRequestContext ctx, HttpRequest req) {
-                    final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+                    final CompletableHttpResponse res = HttpResponse.defer();
                     flowable(10)
                             .map(RequestContextAssemblyTest::checkRequestContext)
                             .flatMapSingle(RequestContextAssemblyTest::single)
@@ -67,17 +67,18 @@ class RequestContextAssemblyTest {
                             .flatMapCompletable(RequestContextAssemblyTest::completable)
                             .subscribe(() -> res.complete(HttpResponse.of(HttpStatus.OK)),
                                        res::completeExceptionally);
-                    return HttpResponse.from(res);
+                    return res;
                 }
 
                 @Get("/single")
                 @SuppressWarnings("CheckReturnValue")
                 public HttpResponse single(ServiceRequestContext ctx, HttpRequest req) {
-                    final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+                    final CompletableHttpResponse res = HttpResponse.defer();
+
                     Single.just("")
                           .flatMap(RequestContextAssemblyTest::single)
                           .subscribe((s, throwable) -> res.complete(HttpResponse.of(HttpStatus.OK)));
-                    return HttpResponse.from(res);
+                    return res;
                 }
             });
         }
