@@ -22,8 +22,8 @@ import java.net.IDN;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -52,8 +52,9 @@ abstract class DnsEndpointGroupBuilder {
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     DnsEndpointGroupBuilder(String hostname) {
-        this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
-                                                      IDN.ALLOW_UNASSIGNED));
+        this.hostname = InternetDomainName.from(IDN.toASCII(requireNonNull(hostname, "hostname"),
+                                                            IDN.ALLOW_UNASSIGNED))
+                                          .toString();
     }
 
     final String hostname() {
