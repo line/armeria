@@ -20,18 +20,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.net.ssl.SSLSession;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.RedirectingClient.RedirectContext;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -39,24 +39,24 @@ class RedirectContextTest {
 
     @Test
     void buildOriginalUri() {
-        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        final HttpResponse response = HttpResponse.from(future);
+        HttpStatus status;
+        final CompletableHttpResponse response = HttpResponse.defer();
 
         HttpRequest request = request(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "foo"));
         RedirectContext redirectCtx = new RedirectContext(ClientRequestContext.of(request), request,
-                                                          response, future);
+                                                          response);
         assertThat(redirectCtx.originalUri()).isEqualTo("http://foo:80/path");
 
         request = request(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "foo:8080"));
-        redirectCtx = new RedirectContext(ClientRequestContext.of(request), request, response, future);
+        redirectCtx = new RedirectContext(ClientRequestContext.of(request), request, response);
         assertThat(redirectCtx.originalUri()).isEqualTo("http://foo:8080/path");
 
         request = request(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "[::1]"));
-        redirectCtx = new RedirectContext(ClientRequestContext.of(request), request, response, future);
+        redirectCtx = new RedirectContext(ClientRequestContext.of(request), request, response);
         assertThat(redirectCtx.originalUri()).isEqualTo("http://[::1]:80/path");
 
         request = request(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "[::1]:8080"));
-        redirectCtx = new RedirectContext(ClientRequestContext.of(request), request, response, future);
+        redirectCtx = new RedirectContext(ClientRequestContext.of(request), request, response);
         assertThat(redirectCtx.originalUri()).isEqualTo("http://[::1]:8080/path");
 
         // Use different session protocols.
@@ -64,19 +64,19 @@ class RedirectContextTest {
         redirectCtx = new RedirectContext(ClientRequestContext.builder(request)
                                                               .sessionProtocol(SessionProtocol.H1)
                                                               .sslSession(newSslSession())
-                                                              .build(), request, response, future);
+                                                              .build(), request, response);
         assertThat(redirectCtx.originalUri()).isEqualTo("https://foo:443/path");
 
         request = request(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "foo"));
         redirectCtx = new RedirectContext(ClientRequestContext.builder(request)
                                                               .sessionProtocol(SessionProtocol.H1C)
-                                                              .build(), request, response, future);
+                                                              .build(), request, response);
         assertThat(redirectCtx.originalUri()).isEqualTo("http://foo:80/path");
 
         request = request(HttpHeaders.of());
         redirectCtx = new RedirectContext(ClientRequestContext.builder(request)
                                                               .sessionProtocol(SessionProtocol.H1C)
-                                                              .build(), request, response, future);
+                                                              .build(), request, response);
         // Use endpoint host.
         assertThat(redirectCtx.originalUri()).isEqualTo("http://127.0.0.1:80/path");
     }

@@ -38,6 +38,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
 import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -129,10 +130,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
+        final CompletableHttpResponse res = HttpResponse.defer(ctx.eventLoop());
         final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
-        final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
+        final RedirectContext redirectCtx = new RedirectContext(ctx, req, res);
         execute0(ctx, redirectCtx, reqDuplicator, true);
         return res;
     }
@@ -140,10 +140,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     private void execute0(ClientRequestContext ctx, RedirectContext redirectCtx,
                           HttpRequestDuplicator reqDuplicator, boolean initialAttempt) {
         final CompletableFuture<Void> originalReqWhenComplete = redirectCtx.request().whenComplete();
-        final CompletableFuture<HttpResponse> responseFuture = redirectCtx.responseFuture();
+        final CompletableHttpResponse completableResponse = redirectCtx.response();
         if (originalReqWhenComplete.isCompletedExceptionally()) {
             originalReqWhenComplete.exceptionally(cause -> {
-                handleException(ctx, reqDuplicator, responseFuture, cause, initialAttempt);
+                handleException(ctx, reqDuplicator, completableResponse, cause, initialAttempt);
                 return null;
             });
             return;
@@ -157,7 +157,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 } else {
                     abortCause = AbortedStreamException.get();
                 }
-                handleException(ctx, reqDuplicator, responseFuture, abortCause, initialAttempt);
+                handleException(ctx, reqDuplicator, completableResponse, abortCause, initialAttempt);
                 return null;
             });
             return;
@@ -168,7 +168,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         try {
             derivedCtx = ClientUtil.newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
-            handleException(ctx, reqDuplicator, responseFuture, t, initialAttempt);
+            handleException(ctx, reqDuplicator, completableResponse, t, initialAttempt);
             return;
         }
 
@@ -179,19 +179,19 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 final Throwable cause = log.responseCause();
                 if (cause != null) {
                     abortResponse(response, derivedCtx, cause);
-                    handleException(ctx, reqDuplicator, responseFuture, cause, false);
+                    handleException(ctx, reqDuplicator, completableResponse, cause, false);
                     return;
                 }
             }
 
             final ResponseHeaders responseHeaders = log.responseHeaders();
             if (!redirectStatuses.contains(responseHeaders.status())) {
-                endRedirect(ctx, reqDuplicator, responseFuture, response);
+                endRedirect(ctx, reqDuplicator, completableResponse, response);
                 return;
             }
             final String location = responseHeaders.get(HttpHeaderNames.LOCATION);
             if (isNullOrEmpty(location)) {
-                endRedirect(ctx, reqDuplicator, responseFuture, response);
+                endRedirect(ctx, reqDuplicator, completableResponse, response);
                 return;
             }
 
@@ -203,20 +203,20 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                     final SessionProtocol redirectProtocol = Scheme.parse(redirectUri.getScheme())
                                                                    .sessionProtocol();
                     if (!allowedProtocols.contains(redirectProtocol)) {
-                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                        handleException(ctx, derivedCtx, reqDuplicator, completableResponse, response,
                                         UnexpectedProtocolRedirectException.of(
                                                 redirectProtocol, allowedProtocols));
                         return;
                     }
 
                     if (!domainFilter.test(ctx, redirectUri.getHost())) {
-                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                        handleException(ctx, derivedCtx, reqDuplicator, completableResponse, response,
                                         UnexpectedDomainRedirectException.of(redirectUri.getHost()));
                         return;
                     }
                 }
             } catch (Throwable t) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
+                handleException(ctx, derivedCtx, reqDuplicator, completableResponse, response, t);
                 return;
             }
 
@@ -227,12 +227,12 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             try {
                 redirectFullUri = buildFullUri(ctx, redirectUri, newReqDuplicator.headers());
             } catch (Throwable t) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
+                handleException(ctx, derivedCtx, reqDuplicator, completableResponse, response, t);
                 return;
             }
 
             if (isCyclicRedirects(redirectCtx, redirectFullUri, newReqDuplicator.headers())) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                handleException(ctx, derivedCtx, reqDuplicator, completableResponse, response,
                                 CyclicRedirectsException.of(redirectCtx.originalUri(),
                                                             redirectCtx.redirectUris().values()));
                 return;
@@ -240,7 +240,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
             final Multimap<HttpMethod, String> redirectUris = redirectCtx.redirectUris();
             if (redirectUris.size() > maxRedirects) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
+                handleException(ctx, derivedCtx, reqDuplicator, completableResponse,
                                 response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
                                                                        redirectUris.values()));
                 return;
@@ -281,16 +281,16 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static void handleException(ClientRequestContext ctx, ClientRequestContext derivedCtx,
                                         HttpRequestDuplicator reqDuplicator,
-                                        CompletableFuture<HttpResponse> future, HttpResponse originalRes,
+                                        CompletableHttpResponse response, HttpResponse originalRes,
                                         Throwable cause) {
         abortResponse(originalRes, derivedCtx, cause);
-        handleException(ctx, reqDuplicator, future, cause, false);
+        handleException(ctx, reqDuplicator, response, cause, false);
     }
 
     private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator reqDuplicator,
-                                        CompletableFuture<HttpResponse> future, Throwable cause,
+                                        CompletableHttpResponse response, Throwable cause,
                                         boolean initialAttempt) {
-        future.completeExceptionally(cause);
+        response.completeExceptionally(cause);
         reqDuplicator.abort(cause);
         if (initialAttempt) {
             ctx.logBuilder().endRequest(cause);
@@ -411,18 +411,18 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         private final ClientRequestContext ctx;
         private final HttpRequest request;
         private final CompletableFuture<Void> responseWhenComplete;
-        private final CompletableFuture<HttpResponse> responseFuture;
+        private final CompletableHttpResponse response;
         @Nullable
         private Multimap<HttpMethod, String> redirectUris;
         @Nullable
         private String originalUri;
 
         RedirectContext(ClientRequestContext ctx, HttpRequest request,
-                        HttpResponse response, CompletableFuture<HttpResponse> responseFuture) {
+                        CompletableHttpResponse response) {
             this.ctx = ctx;
             this.request = request;
             responseWhenComplete = response.whenComplete();
-            this.responseFuture = responseFuture;
+            this.response = response;
         }
 
         HttpRequest request() {
@@ -433,8 +433,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return responseWhenComplete;
         }
 
-        CompletableFuture<HttpResponse> responseFuture() {
-            return responseFuture;
+        CompletableHttpResponse response() {
+            return response;
         }
 
         String originalUri() {

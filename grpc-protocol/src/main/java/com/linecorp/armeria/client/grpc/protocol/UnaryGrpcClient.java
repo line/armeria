@@ -208,6 +208,7 @@ public final class UnaryGrpcClient {
                        }
                        // Nothing to deframe.
                        response.complete(msg.toHttpResponse());
+                       return;
                    }
 
                    final ArmeriaMessageDeframer deframer =

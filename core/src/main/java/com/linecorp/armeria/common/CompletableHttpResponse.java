@@ -75,7 +75,7 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
 
         final CompletableHttpResponse response = new CompletableHttpResponse(executor);
         // Propagate exception to the upstream future.
-        response.whenComplete().handle((unused, cause) -> {
+        response.handle((unused, cause) -> {
             final CompletableFuture<? extends HttpResponse> future = stage.toCompletableFuture();
             if (cause != null && !future.isDone()) {
                 if (MONO_TO_FUTURE_CLASS != null && MONO_TO_FUTURE_CLASS.isAssignableFrom(future.getClass())) {
@@ -233,8 +233,8 @@ public final class CompletableHttpResponse extends EventLoopCheckingFuture<HttpR
                 if (executor.inEventLoop()) {
                     subscribeToUpstream(response, cause, forwardingSubscriber, executor, options);
                 } else {
-                    executor.execute(() -> subscribeToUpstream(response, cause, forwardingSubscriber, executor,
-                                                               options));
+                    executor.execute(() -> subscribeToUpstream(response, cause, forwardingSubscriber,
+                                                               executor, options));
                 }
                 return null;
             });
