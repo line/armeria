@@ -136,10 +136,9 @@ class ContentPreviewingClientTest {
     void sanitizeRequestContent() {
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(
-                                 ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
-                                                        .requestContentSanitizer(CONTENT_SANITIZER)
-                                                        .newDecorator())
+                         .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
+                                                           .requestContentSanitizer(CONTENT_SANITIZER)
+                                                           .newDecorator())
                          .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
@@ -160,10 +159,9 @@ class ContentPreviewingClientTest {
     void sanitizeResponseContent() {
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(
-                                 ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
-                                                        .responseContentSanitizer(CONTENT_SANITIZER)
-                                                        .newDecorator())
+                         .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
+                                                           .responseContentSanitizer(CONTENT_SANITIZER)
+                                                           .newDecorator())
                          .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
