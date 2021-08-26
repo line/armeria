@@ -57,6 +57,13 @@ import io.netty.buffer.ByteBuf;
 
 class ContentPreviewingClientTest {
 
+    private static final BiFunction<? super RequestContext, String, ?> CONTENT_SANITIZER =
+            (ctx, content) -> {
+                assertThat(ctx).isNotNull();
+                assertThat(content).isNotNull();
+                return "dummy content sanitizer";
+            };
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -123,6 +130,54 @@ class ContentPreviewingClientTest {
         final RequestLog requestLog = context.log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void sanitizeRequestContent() {
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(
+                                 ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
+                                                        .requestContentSanitizer(CONTENT_SANITIZER)
+                                                        .newDecorator())
+                         .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                    .isEqualTo("Hello Armeria!");
+            ctx = captor.get();
+        }
+
+        final RequestLog requestLog = ctx.log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("dummy content sanitizer");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void sanitizeResponseContent() {
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(
+                                 ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
+                                                        .responseContentSanitizer(CONTENT_SANITIZER)
+                                                        .newDecorator())
+                         .build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                    .isEqualTo("Hello Armeria!");
+            ctx = captor.get();
+        }
+
+        final RequestLog requestLog = ctx.log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
     }
 
     private static Function<? super HttpClient, ContentPreviewingClient> decodingContentPreviewDecorator() {

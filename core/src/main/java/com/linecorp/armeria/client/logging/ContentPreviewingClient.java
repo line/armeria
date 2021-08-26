@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpR
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -29,9 +30,11 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -74,7 +77,7 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
      */
     public static Function<? super HttpClient, ContentPreviewingClient> newDecorator(int maxLength) {
         final ContentPreviewerFactory factory = ContentPreviewerFactory.text(maxLength);
-        return delegate -> new ContentPreviewingClient(delegate, factory);
+        return builder(factory).newDecorator();
     }
 
     /**
@@ -95,7 +98,7 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
     public static Function<? super HttpClient, ContentPreviewingClient> newDecorator(
             int maxLength, Charset defaultCharset) {
         final ContentPreviewerFactory factory = ContentPreviewerFactory.text(maxLength, defaultCharset);
-        return delegate -> new ContentPreviewingClient(delegate, factory);
+        return builder(factory).newDecorator();
     }
 
     /**
@@ -104,18 +107,37 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
      */
     public static Function<? super HttpClient, ContentPreviewingClient> newDecorator(
             ContentPreviewerFactory contentPreviewerFactory) {
-        requireNonNull(contentPreviewerFactory, "contentPreviewerFactory");
-        return delegate -> new ContentPreviewingClient(delegate, contentPreviewerFactory);
+        return builder(contentPreviewerFactory).newDecorator();
+    }
+
+    /**
+     * Returns a newly-created {@link ContentPreviewingClientBuilder}.
+     */
+    public static ContentPreviewingClientBuilder builder(ContentPreviewerFactory contentPreviewerFactory) {
+        return new ContentPreviewingClientBuilder(
+                requireNonNull(contentPreviewerFactory, "contentPreviewerFactory"));
     }
 
     private final ContentPreviewerFactory contentPreviewerFactory;
 
+    private final BiFunction<? super RequestContext, String,
+            ? extends @Nullable Object> requestContentSanitizer;
+    private final BiFunction<? super RequestContext, String,
+            ? extends @Nullable Object> responseContentSanitizer;
+
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    private ContentPreviewingClient(HttpClient delegate, ContentPreviewerFactory contentPreviewerFactory) {
+    ContentPreviewingClient(HttpClient delegate,
+                            ContentPreviewerFactory contentPreviewerFactory,
+                            BiFunction<? super RequestContext, String,
+                                    ? extends @Nullable Object> requestContentSanitizer,
+                            BiFunction<? super RequestContext, String,
+                                    ? extends @Nullable Object> responseContentSanitizer) {
         super(delegate);
         this.contentPreviewerFactory = contentPreviewerFactory;
+        this.requestContentSanitizer = requestContentSanitizer;
+        this.responseContentSanitizer = responseContentSanitizer;
     }
 
     @Override
@@ -127,10 +149,10 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
         ctx.setAttr(SETTING_CONTENT_PREVIEW, true);
         final ContentPreviewer requestContentPreviewer =
                 contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
-        req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);
+        req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestContentSanitizer);
 
         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().execute(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res);
+        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responseContentSanitizer);
     }
 }
