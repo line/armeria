@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -394,7 +393,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     private void decodeAndInvoke(
             ServiceRequestContext ctx, AggregatedHttpRequest req,
-            SerializationFormat serializationFormat, CompletableFuture<HttpResponse> httpRes) {
+            SerializationFormat serializationFormat, CompletableHttpResponse httpRes) {
 
         final int seqId;
         final ThriftFunction f;
@@ -504,7 +503,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     private void invoke(
             ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
-            ThriftFunction func, RpcRequest call, CompletableFuture<HttpResponse> res) {
+            ThriftFunction func, RpcRequest call, CompletableHttpResponse res) {
 
         final RpcResponse reply;
 
@@ -565,7 +564,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private static void handleSuccess(
-            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
+            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableHttpResponse httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Object returnValue) {
 
         final TBase<?, ?> wrappedResult = func.newResult();
@@ -576,13 +575,13 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private static void handleOneWaySuccess(
-            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
+            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableHttpResponse httpRes,
             SerializationFormat serializationFormat) {
         ctx.logBuilder().responseContent(rpcRes, null);
         respond(serializationFormat, HttpData.empty(), httpRes);
     }
 
-    private void handleException(ServiceRequestContext ctx, CompletableFuture<HttpResponse> res,
+    private void handleException(ServiceRequestContext ctx, CompletableHttpResponse res,
                                  SerializationFormat serializationFormat, int seqId,
                                  ThriftFunction func, Throwable cause) {
         final RpcResponse response = handleException(ctx, Exceptions.peel(cause));
@@ -606,7 +605,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private static void handleException(
-            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
+            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableHttpResponse httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
         if (cause instanceof HttpStatusException) {
@@ -631,7 +630,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private static void handlePreDecodeException(
-            ServiceRequestContext ctx, CompletableFuture<HttpResponse> httpRes, Throwable cause,
+            ServiceRequestContext ctx, CompletableHttpResponse httpRes, Throwable cause,
             SerializationFormat serializationFormat, int seqId, String methodName) {
 
         final HttpData content = encodeException(
@@ -640,7 +639,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private static void respond(SerializationFormat serializationFormat,
-                                HttpData content, CompletableFuture<HttpResponse> res) {
+                                HttpData content, CompletableHttpResponse res) {
         res.complete(HttpResponse.of(HttpStatus.OK, serializationFormat.mediaType(), content));
     }
 
