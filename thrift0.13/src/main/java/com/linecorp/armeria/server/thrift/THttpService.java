@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -326,8 +327,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                                    MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
         }
 
-        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
+        final CompletableHttpResponse response = HttpResponse.defer();
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
@@ -340,13 +340,13 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 } else {
                     errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                 }
-                responseFuture.complete(errorRes);
+                response.complete(errorRes);
                 return null;
             }
-            decodeAndInvoke(ctx, aReq, serializationFormat, responseFuture);
+            decodeAndInvoke(ctx, aReq, serializationFormat, response);
             return null;
         }).exceptionally(CompletionActions::log);
-        return res;
+        return response;
     }
 
     @Nullable

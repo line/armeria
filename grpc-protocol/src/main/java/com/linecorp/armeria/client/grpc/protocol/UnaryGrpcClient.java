@@ -35,6 +35,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -175,50 +176,49 @@ public final class UnaryGrpcClient {
 
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(
-                    req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
-                       .thenCompose(
-                               msg -> {
-                                   try (HttpData content = msg.content()) {
-                                       final ByteBuf buf = content.byteBuf();
-                                       final HttpData framed;
-                                       try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                                               ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText)) {
-                                           framed = framer.writePayload(buf);
-                                       }
-
-                                       try {
-                                           return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
-                                                          .aggregateWithPooledObjects(ctx.eventLoop(),
-                                                                                      ctx.alloc());
-                                       } catch (Exception e) {
-                                           throw new ArmeriaStatusException(StatusCodes.INTERNAL,
-                                                                            "Error executing request.");
-                                       }
-                                   }
-                               })
-                       .thenCompose(msg -> {
-                           if (msg.status() != HttpStatus.OK || msg.content().isEmpty()) {
-                               // Status can either be in the headers or trailers depending on error.
-                               if (msg.headers().get(GrpcHeaderNames.GRPC_STATUS) != null) {
-                                   GrpcWebTrailers.set(ctx, msg.headers());
-                               } else {
-                                   GrpcWebTrailers.set(ctx, msg.trailers());
+            final CompletableHttpResponse response = HttpResponse.defer(ctx.eventLoop());
+            req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
+               .thenCompose(
+                       msg -> {
+                           try (HttpData content = msg.content()) {
+                               final ByteBuf buf = content.byteBuf();
+                               final HttpData framed;
+                               try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
+                                       ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText)) {
+                                   framed = framer.writePayload(buf);
                                }
-                               // Nothing to deframe.
-                               return CompletableFuture.completedFuture(msg.toHttpResponse());
-                           }
 
-                           final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                           final ArmeriaMessageDeframer deframer =
-                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE);
-                           msg.toHttpResponse()
-                              .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
-                              .subscribe(new DeframedMessageSubscriber(
-                                                 ctx, msg, serializationFormat, responseFuture),
-                                         ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-                           return responseFuture;
-                       }), ctx.eventLoop());
+                               try {
+                                   return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
+                                                  .aggregateWithPooledObjects(ctx.eventLoop(),
+                                                                              ctx.alloc());
+                               } catch (Exception e) {
+                                   throw new ArmeriaStatusException(StatusCodes.INTERNAL,
+                                                                    "Error executing request.");
+                               }
+                           }
+                       })
+               .thenAccept(msg -> {
+                   if (msg.status() != HttpStatus.OK || msg.content().isEmpty()) {
+                       // Status can either be in the headers or trailers depending on error.
+                       if (msg.headers().get(GrpcHeaderNames.GRPC_STATUS) != null) {
+                           GrpcWebTrailers.set(ctx, msg.headers());
+                       } else {
+                           GrpcWebTrailers.set(ctx, msg.trailers());
+                       }
+                       // Nothing to deframe.
+                       response.complete(msg.toHttpResponse());
+                   }
+
+                   final ArmeriaMessageDeframer deframer =
+                           new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+                   msg.toHttpResponse()
+                      .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
+                      .subscribe(new DeframedMessageSubscriber(
+                                         ctx, msg, serializationFormat, response),
+                                 ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+               });
+            return response;
         }
     }
 
@@ -226,7 +226,7 @@ public final class UnaryGrpcClient {
         private final ClientRequestContext ctx;
         private final AggregatedHttpResponse response;
         private final SerializationFormat serializationFormat;
-        private final CompletableFuture<HttpResponse> responseFuture;
+        private final CompletableHttpResponse responseFuture;
         private final boolean isGrpcWeb;
 
         private HttpData content = HttpData.empty();
@@ -240,7 +240,7 @@ public final class UnaryGrpcClient {
         private DeframedMessageSubscriber(ClientRequestContext ctx,
                                           AggregatedHttpResponse response,
                                           SerializationFormat serializationFormat,
-                                          CompletableFuture<HttpResponse> responseFuture) {
+                                          CompletableHttpResponse responseFuture) {
             this.ctx = ctx;
             this.response = response;
             this.serializationFormat = serializationFormat;

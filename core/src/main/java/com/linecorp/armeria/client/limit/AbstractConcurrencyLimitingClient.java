@@ -188,11 +188,11 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     /**
      * Implement this method to return a new {@link Response} which delegates to the {@link Response}
      * the specified {@link CompletionStage} is completed with. For example, you could use
-     * {@link HttpResponse#from(CompletionStage, EventExecutor)}:
+     * {@link HttpResponse#from(CompletionStage)}:
      * <pre>{@code
      * protected HttpResponse newDeferredResponse(
      *         ClientRequestContext ctx, CompletionStage<HttpResponse> resFuture) {
-     *     return HttpResponse.from(resFuture, ctx.eventLoop());
+     *     return HttpResponse.from(resFuture);
      * }
      * }</pre>
      */

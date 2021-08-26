@@ -77,6 +77,35 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a {@link CompletableHttpResponse} that delegates the {@link HttpResponse} completed with
+     * {@link CompletableHttpResponse#complete(HttpResponse)}.
+     *
+     * <p>Note that if an {@link HttpResponse} is set after the returned {@link CompletableHttpResponse}
+     * was already completed, the late {@link HttpResponse} will be {@linkplain #abort() aborted}.
+     */
+    @UnstableApi
+    static CompletableHttpResponse defer() {
+        return new CompletableHttpResponse(null);
+    }
+
+    /**
+     * Creates a {@link CompletableHttpResponse} that delegates the {@link HttpResponse} completed with
+     * {@link CompletableHttpResponse#complete(HttpResponse)}.
+     *
+     * <p>Note that if an {@link HttpResponse} is set after the returned {@link CompletableHttpResponse}
+     * was already completed, the late {@link HttpResponse} will be {@linkplain #abort() aborted}.
+     *
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    @UnstableApi
+    static CompletableHttpResponse defer(EventExecutor subscriberExecutor) {
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        return new CompletableHttpResponse(subscriberExecutor);
+    }
+
+    /**
      * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
      * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
      * closed with the same cause as well.
@@ -85,9 +114,11 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        res.delegateWhenComplete(stage);
-        return res;
+
+        if (stage instanceof HttpResponse) {
+            return (HttpResponse) stage;
+        }
+        return CompletableHttpResponse.of(stage, null);
     }
 
     /**
@@ -104,9 +135,11 @@ public interface HttpResponse extends Response, HttpMessage {
                              EventExecutor subscriberExecutor) {
         requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
-        final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
-        res.delegateWhenComplete(stage);
-        return res;
+
+        if (stage instanceof HttpResponse) {
+            return (HttpResponse) stage;
+        }
+        return CompletableHttpResponse.of(stage, subscriberExecutor);
     }
 
     /**
@@ -149,8 +182,8 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.schedule(() -> res.delegate(response), delay.toNanos(), TimeUnit.NANOSECONDS);
+        final CompletableHttpResponse res = defer();
+        executor.schedule(() -> res.complete(response), delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }
 

@@ -27,6 +27,7 @@ import java.util.concurrent.CompletionStage;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -116,45 +117,49 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
         req.decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
            .subscribe(singleSubscriber(deframed), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
 
-        final CompletableFuture<HttpResponse> responseFuture =
-                deframed.thenCompose(requestMessage -> {
-                    try (SafeCloseable ignored = ctx.push()) {
-                        return handleMessage(ctx, requestMessage);
-                    }
-                }).thenApply(responseMessage -> {
-                    final HttpHeadersBuilder trailersBuilder = HttpHeaders.builder();
-                    GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
-                    final HttpHeaders trailers = trailersBuilder.build();
-                    GrpcWebTrailers.set(ctx, trailers);
-                    final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                            ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText);
-                    final HttpData content = framer.writePayload(responseMessage);
-                    final ResponseHeaders responseHeaders = RESPONSE_HEADERS_MAP.get(serializationFormat);
-                    if (UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
-                        // Send trailer as a part of the body for gRPC-web.
-                        final HttpData serializedTrailers = framer.writePayload(
-                                GrpcTrailersUtil.serializeTrailersAsMessage(ctx.alloc(), trailers), true);
-                        return HttpResponse.of(responseHeaders, content, serializedTrailers);
-                    }
-                    return HttpResponse.of(responseHeaders, content, trailers);
-                }).exceptionally(t -> {
-                    // Send Trailers-Only → HTTP-Status Content-Type Trailers.
-                    final ResponseHeadersBuilder trailersBuilder = ResponseHeaders
-                            .builder(HttpStatus.OK).contentType(serializationFormat.mediaType());
-                    if (t instanceof ArmeriaStatusException) {
-                        final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
-                        GrpcTrailersUtil.addStatusMessageToTrailers(
-                                trailersBuilder, statusException.getCode(), statusException.getMessage());
-                    } else {
-                        GrpcTrailersUtil.addStatusMessageToTrailers(
-                                trailersBuilder, StatusCodes.INTERNAL, t.getMessage());
-                    }
-                    final ResponseHeaders trailers = trailersBuilder.build();
-                    GrpcWebTrailers.set(ctx, trailers);
-                    return HttpResponse.of(trailers);
-                });
+        final CompletableHttpResponse response = HttpResponse.defer();
+        deframed.thenCompose(requestMessage -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                return handleMessage(ctx, requestMessage);
+            }
+        }).handle((responseMessage, cause) -> {
+            if (cause == null) {
+                final HttpHeadersBuilder trailersBuilder = HttpHeaders.builder();
+                GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
+                final HttpHeaders trailers = trailersBuilder.build();
+                GrpcWebTrailers.set(ctx, trailers);
+                final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
+                        ctx.alloc(), Integer.MAX_VALUE, isGrpcWebText);
+                final HttpData content = framer.writePayload(responseMessage);
+                final ResponseHeaders responseHeaders = RESPONSE_HEADERS_MAP.get(serializationFormat);
+                if (UnaryGrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
+                    // Send trailer as a part of the body for gRPC-web.
+                    final HttpData serializedTrailers = framer.writePayload(
+                            GrpcTrailersUtil.serializeTrailersAsMessage(ctx.alloc(), trailers), true);
+                    response.complete(HttpResponse.of(responseHeaders, content, serializedTrailers));
+                } else {
+                    response.complete(HttpResponse.of(responseHeaders, content, trailers));
+                }
+            } else {
+                // Send Trailers-Only → HTTP-Status Content-Type Trailers.
+                final ResponseHeadersBuilder trailersBuilder = ResponseHeaders
+                        .builder(HttpStatus.OK).contentType(serializationFormat.mediaType());
+                if (cause instanceof ArmeriaStatusException) {
+                    final ArmeriaStatusException statusException = (ArmeriaStatusException) cause;
+                    GrpcTrailersUtil.addStatusMessageToTrailers(
+                            trailersBuilder, statusException.getCode(), statusException.getMessage());
+                } else {
+                    GrpcTrailersUtil.addStatusMessageToTrailers(
+                            trailersBuilder, StatusCodes.INTERNAL, cause.getMessage());
+                }
+                final ResponseHeaders trailers = trailersBuilder.build();
+                GrpcWebTrailers.set(ctx, trailers);
+                response.complete(HttpResponse.of(trailers));
+            }
+            return null;
+        });
 
-        return HttpResponse.from(responseFuture);
+        return response;
     }
 
     private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {

@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.Test;
@@ -35,9 +34,7 @@ class DeferredHttpResponseTest {
 
     @Test
     void cancellationPropagatesToUpstream() {
-        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        res.delegateWhenComplete(future);
+        final CompletableHttpResponse res = HttpResponse.defer();
         res.subscribe(new Subscriber<HttpObject>() {
             @Override
             public void onSubscribe(Subscription s) {
@@ -54,8 +51,8 @@ class DeferredHttpResponseTest {
             public void onComplete() {}
         }, ImmediateEventExecutor.INSTANCE);
 
-        await().untilAsserted(() -> assertThat(future.isCompletedExceptionally()).isTrue());
-        assertThatExceptionOfType(ExecutionException.class).isThrownBy(future::get)
+        await().untilAsserted(() -> assertThat(res.isCompletedExceptionally()).isTrue());
+        assertThatExceptionOfType(ExecutionException.class).isThrownBy(res::get)
                 .havingCause().isInstanceOf(CancelledSubscriptionException.class);
     }
 }

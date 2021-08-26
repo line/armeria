@@ -31,7 +31,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.reactivestreams.Publisher;
@@ -42,6 +42,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -315,13 +316,15 @@ public final class AnnotatedService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
+                final CompletableHttpResponse response = HttpResponse.defer();
                 if (useBlockingTaskExecutor) {
-                    return f.thenApplyAsync(aReq -> (HttpResponse) invoke(ctx, req, aReq),
-                                            ctx.blockingTaskExecutor());
+                    f.thenAcceptAsync(aReq -> {
+                        response.complete((HttpResponse) invoke(ctx, req, aReq));
+                    }, ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(aReq -> (HttpResponse) invoke(ctx, req, aReq));
+                    f.thenAccept(aReq -> response.complete((HttpResponse) invoke(ctx, req, aReq)));
                 }
-
+                return response;
             case COMPLETION_STAGE:
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
@@ -341,13 +344,17 @@ public final class AnnotatedService implements HttpService {
                 return composedFuture
                         .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
-                final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
-                        aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
+                final CompletableHttpResponse res = HttpResponse.defer();
+                final Consumer<AggregatedHttpRequest> completeResponse = aReq -> {
+                    res.complete(convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of()));
+                };
+
                 if (useBlockingTaskExecutor) {
-                    return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
+                    f.thenAcceptAsync(completeResponse, ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(defaultApplyFunction);
+                    f.thenAccept(completeResponse);
                 }
+                return res;
         }
     }
 

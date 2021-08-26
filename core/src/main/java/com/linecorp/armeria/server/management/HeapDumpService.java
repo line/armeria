@@ -41,13 +41,13 @@ import java.lang.management.PlatformManagedObject;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -83,7 +83,7 @@ enum HeapDumpService implements HttpService {
             return HttpResponse.ofFailure(unavailabilityCause);
         }
 
-        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final CompletableHttpResponse response = HttpResponse.defer();
         heapDumpExecutor.execute(() -> {
             if (ctx.isCancelled()) {
                 return;
@@ -94,7 +94,7 @@ enum HeapDumpService implements HttpService {
                     heapDumper = new HeapDumper();
                 } catch (Throwable ex) {
                     unavailabilityCause = ex;
-                    responseFuture.complete(HttpResponse.ofFailure(ex));
+                    response.complete(HttpResponse.ofFailure(ex));
                     return;
                 }
             }
@@ -118,7 +118,7 @@ enum HeapDumpService implements HttpService {
 
                 final File heapDumpFile = tempFile;
                 final HttpResponse httpResponse = httpFile.asService().serve(ctx, req);
-                responseFuture.complete(httpResponse);
+                response.complete(httpResponse);
                 httpResponse.whenComplete().handleAsync((unused1, unused2) -> {
                     deleteTempFile(heapDumpFile);
                     return null;
@@ -128,11 +128,11 @@ enum HeapDumpService implements HttpService {
                 if (tempFile != null) {
                     deleteTempFile(tempFile);
                 }
-                responseFuture.complete(HttpResponse.ofFailure(cause));
+                response.complete(HttpResponse.ofFailure(cause));
             }
         });
 
-        return HttpResponse.from(responseFuture);
+        return response;
     }
 
     private static File createTempFile(String fileName) throws IOException {

@@ -16,12 +16,11 @@
 
 package com.linecorp.armeria.internal.client.grpc;
 
-import java.util.concurrent.CompletableFuture;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
@@ -51,7 +50,7 @@ final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<HttpResponse> response = new CompletableFuture<>();
+        final CompletableHttpResponse response = HttpResponse.defer();
 
         final RequestInfo requestInfo = new RequestInfo() {
             @Override
@@ -106,6 +105,6 @@ final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
                     }
                 });
 
-        return HttpResponse.from(response);
+        return response;
     }
 }

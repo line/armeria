@@ -28,7 +28,6 @@ import java.net.InetSocketAddress;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -52,6 +51,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -345,9 +345,8 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                  .addRoute(Route.ofCatchAll())
                  .defaultServiceName("SpringWebFlux")
                  .build((ctx, req) -> {
-                     final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-                     final HttpResponse response = HttpResponse.from(future);
-                     final Disposable disposable = handler.handle(ctx, req, future, serverHeader).subscribe();
+                     final CompletableHttpResponse response = HttpResponse.defer();
+                     final Disposable disposable = handler.handle(ctx, req, response, serverHeader).subscribe();
                      response.whenComplete().handle((unused, cause) -> {
                          if (cause != null) {
                              if (ctx.method() != HttpMethod.HEAD) {

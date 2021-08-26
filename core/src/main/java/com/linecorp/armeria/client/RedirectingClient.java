@@ -130,7 +130,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
+        final HttpResponse res = HttpResponse.from(responseFuture);
         final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
         final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
         execute0(ctx, redirectCtx, reqDuplicator, true);

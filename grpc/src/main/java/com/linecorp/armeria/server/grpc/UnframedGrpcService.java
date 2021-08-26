@@ -30,6 +30,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -183,18 +184,18 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
-        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final CompletableHttpResponse response = HttpResponse.defer();
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
             try (SafeCloseable ignore = ctx.push()) {
                 if (t != null) {
-                    responseFuture.completeExceptionally(t);
+                    response.completeExceptionally(t);
                 } else {
-                    frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
+                    frameAndServe(ctx, grpcHeaders.build(), clientRequest, response);
                 }
             }
             return null;
         });
-        return HttpResponse.from(responseFuture);
+        return response;
     }
 
     private void frameAndServe(

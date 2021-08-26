@@ -17,8 +17,7 @@ package com.linecorp.armeria.server.rxjava2;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
-
+import com.linecorp.armeria.common.CompletableHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -86,28 +85,28 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         }
 
         if (result instanceof Maybe) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+            final CompletableHttpResponse response = HttpResponse.defer();
             final Disposable disposable = ((Maybe<?>) result).subscribe(
-                    o -> future.complete(onSuccess(ctx, headers, o, trailers)),
-                    cause -> future.complete(onError(ctx, cause)),
-                    () -> future.complete(onSuccess(ctx, headers, null, trailers)));
-            return respond(future, disposable);
+                    o -> response.complete(onSuccess(ctx, headers, o, trailers)),
+                    cause -> response.complete(onError(ctx, cause)),
+                    () -> response.complete(onSuccess(ctx, headers, null, trailers)));
+            return respond(response, disposable);
         }
 
         if (result instanceof Single) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+            final CompletableHttpResponse response = HttpResponse.defer();
             final Disposable disposable = ((Single<?>) result).subscribe(
-                    o -> future.complete(onSuccess(ctx, headers, o, trailers)),
-                    cause -> future.complete(onError(ctx, cause)));
-            return respond(future, disposable);
+                    o -> response.complete(onSuccess(ctx, headers, o, trailers)),
+                    cause -> response.complete(onError(ctx, cause)));
+            return respond(response, disposable);
         }
 
         if (result instanceof Completable) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+            final CompletableHttpResponse response = HttpResponse.defer();
             final Disposable disposable = ((Completable) result).subscribe(
-                    () -> future.complete(onSuccess(ctx, headers, null, trailers)),
-                    cause -> future.complete(onError(ctx, cause)));
-            return respond(future, disposable);
+                    () -> response.complete(onSuccess(ctx, headers, null, trailers)),
+                    cause -> response.complete(onError(ctx, cause)));
+            return respond(response, disposable);
         }
 
         return ResponseConverterFunction.fallthrough();
@@ -133,8 +132,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         }
     }
 
-    private static HttpResponse respond(CompletableFuture<HttpResponse> future, Disposable disposable) {
-        final HttpResponse response = HttpResponse.from(future);
+    private static HttpResponse respond(CompletableHttpResponse response, Disposable disposable) {
         response.whenComplete().exceptionally(cause -> {
             disposable.dispose();
             return null;
