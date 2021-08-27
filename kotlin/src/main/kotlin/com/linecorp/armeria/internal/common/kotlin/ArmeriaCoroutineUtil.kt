@@ -59,7 +59,7 @@ internal fun callKotlinSuspendingMethod(
     }
 
     // Propagate cancellation to upstream.
-    ctx.whenRequestCancelling().thenAccept { cause ->
+    ctx.whenRequestCancelled().thenAccept { cause ->
         if (!future.isDone) {
             future.completeExceptionally(cause)
         }
