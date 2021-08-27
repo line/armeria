@@ -18,8 +18,7 @@ package com.linecorp.armeria.internal.testing;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.SimpleChannelHandler.ThrowingBiConsumer;
 import com.linecorp.armeria.internal.testing.SimpleChannelHandler.ThrowingTriConsumer;
 

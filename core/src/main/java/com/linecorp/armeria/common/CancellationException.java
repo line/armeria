@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} raised when a requested invocation is forced to stop before its completion.

@@ -17,12 +17,12 @@ package com.linecorp.armeria.server.saml;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.saml.saml2.core.NameIDPolicy;
 import org.opensaml.security.credential.Credential;
 
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A configuration for an identity provider.

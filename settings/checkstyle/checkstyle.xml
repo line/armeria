@@ -102,6 +102,12 @@
     <property name="format" value="for\s*(?:\(\s+;|\(;\s+;|\(;;\s+\))"/>
     <property name="message" value="unnecessary spaces in for (;;)"/>
   </module>
+  <!-- Avoid @javax.annotation.Nullable annotation -->
+  <module name="RegexpSingleline">
+    <property name="id" value="LegacyNullableAnnotation"/>
+    <property name="format" value="javax.annotation.Nullable"/>
+    <property name="message" value="Use com.linecorp.armeria.common.annotation.Nullable instead."/>
+  </module>
 
   <module name="JavadocPackage"/>
 

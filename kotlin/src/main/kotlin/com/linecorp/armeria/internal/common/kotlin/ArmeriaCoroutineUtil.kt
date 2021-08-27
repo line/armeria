@@ -19,8 +19,9 @@
 
 package com.linecorp.armeria.internal.common.kotlin
 
-import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil
+import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -41,14 +42,29 @@ internal fun callKotlinSuspendingMethod(
     obj: Any,
     args: Array<Any>,
     executorService: ExecutorService,
-    ctx: RequestContext
+    ctx: ServiceRequestContext
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not a kotlin function" }
-    return GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
-        kFunction
+    val future = GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
+        val response = kFunction
             .callSuspend(obj, *args)
             .let { if (it == Unit) null else it }
+
+        if (response != null && ctx.isCancelled) {
+            // A request has been canceled. Release the response resources to prevent leaks.
+            StreamMessageUtil.closeOrAbort(response)
+        }
+        response
     }
+
+    // Propagate cancellation to upstream.
+    ctx.whenRequestCancelled().thenAccept { cause ->
+        if (!future.isDone) {
+            future.completeExceptionally(cause)
+        }
+    }
+
+    return future
 }
 
 /**
@@ -57,9 +73,9 @@ internal fun callKotlinSuspendingMethod(
  */
 internal fun <T : Any> Flow<T>.asPublisher(
     executorService: ExecutorService,
-    ctx: RequestContext
+    ctx: ServiceRequestContext
 ): Publisher<T> = FlowCollectingPublisher(this, newCoroutineCtx(executorService, ctx))
 
-private fun newCoroutineCtx(executorService: ExecutorService, ctx: RequestContext) =
+private fun newCoroutineCtx(executorService: ExecutorService, ctx: ServiceRequestContext) =
     // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
     executorService.asCoroutineDispatcher() + (CoroutineContexts.get(ctx) ?: EmptyCoroutineContext)

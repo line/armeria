@@ -92,7 +92,7 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
   ```java filename=BlogRequestConverter.java highlight=10-22
   import com.linecorp.armeria.server.ServiceRequestContext;
   import com.linecorp.armeria.common.AggregatedHttpRequest;
-  import javax.annotation.Nullable;
+  import com.linecorp.armeria.common.annotation.Nullable;
   import java.lang.reflect.ParameterizedType;
 
   final class BlogPostRequestConverter implements RequestConverterFunction {
@@ -124,13 +124,13 @@ In this step, assign the [request converter we customized](#write-a-request-conv
 import com.linecorp.armeria.server.annotation.RequestConverter;
 
 public final class BlogService {
-   ...
-   
-   @Post("/blogs")
-   @RequestConverter(BlogPostRequestConverter.class)
-   public void createBlogPost(BlogPost blogPost) {
-     // Implement blog service
-   }
+  ...
+
+  @Post("/blogs")
+  @RequestConverter(BlogPostRequestConverter.class)
+  public void createBlogPost(BlogPost blogPost) {
+    // Implement blog service
+  }
 }
 ```
 
@@ -164,8 +164,9 @@ Let's return a response for blog post creation:
   public final class BlogService {
     ...
     public HttpResponse createBlogPost(BlogPost blogPost) {
-    ...
+      ...
       return HttpResponse.ofJson(blogPost);
+    }
   }
   ```
 
@@ -193,7 +194,7 @@ You can test this also with Armeria's [Documentation service](/docs/server-docse
 
 In this step, we've written a method to implement a CREATE operation and used Armeria's annotations; <type://@Post> and <type://@RequestConverter>.
 
-Next, at [Step 5. Implement READ](/tutorials/rest/blog/implenment-read), we'll implement a READ operation to read a 
+Next, at [Step 5. Implement READ](/tutorials/rest/blog/implement-read), we'll implement a READ operation to read a
 single post and also multiple posts.
 
 <TutorialSteps current={4} />

@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import org.apache.thrift.transport.TTransportException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -85,6 +86,8 @@ public class ThrottlingRpcServiceTest {
                 Clients.newClient(server.httpUri(BINARY) + "/thrift-never", HelloService.Iface.class);
 
         assertThatThrownBy(() -> client.hello("foo"))
+                .isInstanceOf(TTransportException.class)
+                .getCause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
                 });

@@ -26,8 +26,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.IDN;
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.ServerSocket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,15 +41,16 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
+
+import io.netty.util.NetUtil;
 
 /**
  * Provides utilities for accessing the information about the current system and process.
@@ -164,6 +169,16 @@ public final class SystemInfo {
             throw new IllegalStateException("Failed to retrieve the current PID.");
         }
         return Pid.PID;
+    }
+
+    /**
+     * Returns {@code true} if the system has at least one working IPv6 network interface and
+     * the {@code java.net.preferIPv4Stack} system property is not enabled.
+     *
+     * @see NetUtil#isIpV4StackPreferred()
+     */
+    public static boolean hasIpV6() {
+        return HasIpV6.HAS_IPV6;
     }
 
     /**
@@ -484,6 +499,69 @@ public final class SystemInfo {
                 return true;
             }
             return predicates.test(address);
+        }
+    }
+
+    private static final class HasIpV6 {
+        static final boolean HAS_IPV6;
+
+        static {
+            boolean hasIpV6 = true;
+            if (NetUtil.isIpV4StackPreferred()) {
+                hasIpV6 = false;
+                logger.info("IPv6: disabled (java.net.preferIPv4Stack=true)");
+            } else if (isLinux()) {
+                final String sysfsPath = "/proc/sys/net/ipv6/conf/all/disable_ipv6";
+                try {
+                    final List<String> lines = Files.readAllLines(Paths.get(sysfsPath));
+                    if (!lines.isEmpty() && !"0".equals(lines.get(0))) {
+                        hasIpV6 = false;
+                        logger.info("IPv6: disabled (from {})", sysfsPath);
+                    }
+                } catch (Throwable t) {
+                    logger.debug("Failed to read {}", sysfsPath, t);
+                }
+            }
+
+            if (hasIpV6 && hasNoIpV6NetworkInterface()) {
+                hasIpV6 = false;
+                logger.info("IPv6: disabled (no IPv6 network interface)");
+            }
+
+            if (hasIpV6) {
+                try (ServerSocket ss = new ServerSocket()) {
+                    ss.bind(new InetSocketAddress(NetUtil.LOCALHOST6, 0));
+                } catch (IOException ignored) {
+                    hasIpV6 = false;
+                    logger.info("IPv6: disabled (unable to listen on ::1)");
+                }
+            }
+
+            HAS_IPV6 = hasIpV6;
+        }
+
+        /**
+         * Returns {@code true} if no {@link NetworkInterface} supports {@code IPv6}, {@code false} otherwise.
+         */
+        private static boolean hasNoIpV6NetworkInterface() {
+            try {
+                final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                while (interfaces.hasMoreElements()) {
+                    final NetworkInterface iface = interfaces.nextElement();
+                    final Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                    while (addresses.hasMoreElements()) {
+                        final InetAddress inetAddress = addresses.nextElement();
+                        if (inetAddress instanceof Inet6Address && !inetAddress.isAnyLocalAddress() &&
+                            !inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress()) {
+                            return false;
+                        }
+                    }
+                }
+            } catch (SocketException e) {
+                logger.debug("Unable to detect if the machine has an IPv6 network interface", e);
+                return false;
+            }
+            return true;
         }
     }
 }

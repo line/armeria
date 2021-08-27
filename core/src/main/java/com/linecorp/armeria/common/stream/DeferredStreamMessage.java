@@ -25,11 +25,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
 
@@ -105,9 +104,6 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @Nullable
     private volatile Throwable abortCause;
 
-    // Only accessed from subscription's executor.
-    private boolean cancelPending;
-
     /**
      * Sets the upstream {@link StreamMessage} which will actually publish the stream.
      *
@@ -118,7 +114,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         requireNonNull(upstream, "upstream");
 
         if (!upstreamUpdater.compareAndSet(this, null, upstream)) {
-            throw new IllegalStateException("upstream set already");
+            final IllegalStateException exception = new IllegalStateException("upstream set already");
+            upstream.abort(exception);
+            throw exception;
         }
 
         final Throwable abortCause = this.abortCause;
@@ -249,7 +247,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
                 }
             }
         } else {
-            cancelPending = true;
+            abort(CancelledSubscriptionException.get());
         }
     }
 
@@ -382,10 +380,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         @Override
         public void onSubscribe(Subscription subscription) {
             upstreamSubscription = subscription;
-
-            if (cancelPending) {
-                upstreamSubscription.cancel();
-            } else if (pendingDemand > 0) {
+            if (pendingDemand > 0) {
                 upstreamSubscription.request(pendingDemand);
                 pendingDemand = 0;
             }

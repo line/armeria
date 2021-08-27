@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.common.stream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class AbortingSubscriber<T> implements Subscriber<T> {
 

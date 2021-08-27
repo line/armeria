@@ -30,10 +30,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a new {@link OAuth1aToken}.

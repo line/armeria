@@ -111,9 +111,16 @@ class LoggingClientTest {
 
         final ClientRequestContext ctx = ClientRequestContext.of(req);
 
-        // use default logger
-        final LoggingClient defaultLoggerClient =
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains("test.com");
+
+        final LoggingClient client =
                 LoggingClient.builder()
+                             .logger(logger)
                              .requestLogLevel(LogLevel.INFO)
                              .successfulResponseLogLevel(LogLevel.INFO)
                              .requestHeadersSanitizer(RegexBasedSanitizer.of(
@@ -121,13 +128,20 @@ class LoggingClientTest {
                                      Pattern.compile("com")))
                              .build(delegate);
 
-        // Pre sanitize step
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
-        defaultLoggerClient.execute(ctx, req);
-        // After the sanitize
-        assertThat(ctx.logBuilder().toString()).doesNotContain("trustin");
-        assertThat(ctx.logBuilder().toString()).doesNotContain("com");
+        client.execute(ctx, req);
+
+        // After the sanitization.
+        verify(logger, times(2)).isInfoEnabled();
+
+        // verify request log
+        verify(logger).info(eq("{} Request: {}"), eq(ctx),
+                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+
+        // verify response log
+        verify(logger).info(eq("{} Response: {}"), eq(ctx),
+                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -139,20 +153,35 @@ class LoggingClientTest {
         final ClientRequestContext ctx = ClientRequestContext.of(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
 
-        // use default logger
-        final LoggingClient defaultLoggerClient =
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
+
+        final LoggingClient client =
                 LoggingClient.builder()
+                             .logger(logger)
                              .requestLogLevel(LogLevel.INFO)
                              .successfulResponseLogLevel(LogLevel.INFO)
                              .requestContentSanitizer(RegexBasedSanitizer.of(
-                                     Pattern.compile("\\d{3}[-\\.\\s]\\d{3}[-\\.\\s]\\d{4}")))
+                                     Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
                              .build(delegate);
 
-        // Before sanitize content
-        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
-        defaultLoggerClient.execute(ctx, req);
-        // Ensure sanitize the request content of the phone number 333-490-4499
-        assertThat(ctx.logBuilder().toString()).doesNotContain("333-490-4499");
+        client.execute(ctx, req);
+
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
+        verify(logger, times(2)).isInfoEnabled();
+
+        // verify request log
+        verify(logger).info(eq("{} Request: {}"), eq(ctx),
+                            argThat((String text) -> !text.contains("333-490-4499")));
+
+        // verify response log
+        verify(logger).info(eq("{} Response: {}"), eq(ctx),
+                            argThat((String text) -> !text.contains("333-490-4499")));
+
+        verifyNoMoreInteractions(logger);
     }
 
     @Test

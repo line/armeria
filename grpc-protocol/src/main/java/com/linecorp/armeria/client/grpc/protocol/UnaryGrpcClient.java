@@ -22,8 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -46,6 +44,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -81,12 +80,14 @@ public final class UnaryGrpcClient {
 
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
+     *
+     * @deprecated Prefer using a standard client building pattern, e.g.:
+     *             <pre>{@code
+     *             UnaryGrpcClient client =
+     *                 Clients.newClient("gproto+http://127.0.0.1:8080", UnaryGrpcClient.class);
+     *             }</pre>
      */
-    // TODO(anuraaga): We would ideally use our standard client building pattern, i.e.,
-    // Clients.builder(...).build(UnaryGrpcClient.class), but that requires mapping protocol schemes to media
-    // types, which cannot be duplicated. As this and normal gproto+ clients must use the same media type, we
-    // cannot currently implement this without rethinking / refactoring core and punt for now since this is an
-    // advanced API.
+    @Deprecated
     public UnaryGrpcClient(WebClient webClient) {
         this(webClient, UnaryGrpcSerializationFormats.PROTO);
     }
@@ -95,7 +96,14 @@ public final class UnaryGrpcClient {
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient} and {@link SerializationFormat}.
      * The specified {@link SerializationFormat} should be one of {@code UnaryGrpcSerializationFormats#PROTO},
      * {@code UnaryGrpcSerializationFormats#PROTO_WEB}, or {@code UnaryGrpcSerializationFormats#PROTO_WEB_TEXT}.
+     *
+     * @deprecated Prefer using a standard client building pattern, e.g.:
+     *             <pre>{@code
+     *             UnaryGrpcClient client =
+     *                 Clients.newClient("gproto-web+http://127.0.0.1:8080", UnaryGrpcClient.class);
+     *             }</pre>
      */
+    @Deprecated
     public UnaryGrpcClient(WebClient webClient, SerializationFormat serializationFormat) {
         if (!SUPPORTED_SERIALIZATION_FORMATS.contains(serializationFormat)) {
             throw new IllegalArgumentException("serializationFormat: " + serializationFormat +

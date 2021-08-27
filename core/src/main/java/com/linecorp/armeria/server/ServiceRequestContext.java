@@ -31,7 +31,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import com.google.errorprone.annotations.MustBeClosed;
 
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -106,7 +106,8 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @Nullable
     static <T> T mapCurrent(
-            Function<? super ServiceRequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
+            Function<? super ServiceRequestContext, T> mapper,
+            @Nullable Supplier<@Nullable T> defaultValueSupplier) {
 
         final ServiceRequestContext ctx = currentOrNull();
         if (ctx != null) {

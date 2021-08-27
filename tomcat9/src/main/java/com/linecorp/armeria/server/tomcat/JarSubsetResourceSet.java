@@ -41,12 +41,11 @@ import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import javax.annotation.Nullable;
-
 import org.apache.catalina.WebResourceRoot;
 import org.apache.catalina.webresources.AbstractArchiveResourceSet;
 import org.apache.catalina.webresources.JarResourceSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class JarSubsetResourceSet extends JarResourceSet {

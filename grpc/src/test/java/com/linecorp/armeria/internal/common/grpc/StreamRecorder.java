@@ -52,10 +52,10 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.ExperimentalApi;
 import io.grpc.stub.StreamObserver;

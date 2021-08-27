@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import java.net.URISyntaxException;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +33,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
@@ -63,7 +62,6 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -201,12 +199,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
-                    nettyHeaders.set(ExtensionHeaderNames.SCHEME.text(), scheme);
-
                     // Close the request early when it is sure that there will be
                     // neither content nor trailers.
                     final EventLoop eventLoop = ctx.channel().eventLoop();
-                    final RequestHeaders armeriaRequestHeaders = ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg);
+                    final RequestHeaders armeriaRequestHeaders =
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
                         this.req = req = new EmptyContentDecodedHttpRequest(

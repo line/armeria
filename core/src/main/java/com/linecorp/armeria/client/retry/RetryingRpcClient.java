@@ -160,7 +160,6 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         }
 
         final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
-        ctx.logBuilder().addChild(derivedCtx.log());
 
         if (!initialAttempt) {
             derivedCtx.mutateAdditionalRequestHeaders(

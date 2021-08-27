@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
@@ -220,8 +219,10 @@ public interface RequestLog extends RequestOnlyLog {
      *                         the {@link BiFunction} is what is actually logged as content.
      */
     default String toStringResponseOnly(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> headersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> contentSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> headersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> contentSanitizer) {
         return toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
     }
 
@@ -235,7 +236,11 @@ public interface RequestLog extends RequestOnlyLog {
      * @param trailersSanitizer a {@link BiFunction} for sanitizing HTTP trailers for logging. The result of
      *                          the {@link BiFunction} is what is actually logged as trailers.
      */
-    String toStringResponseOnly(BiFunction<? super RequestContext, ? super ResponseHeaders, ?> headersSanitizer,
-                                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-                                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer);
+    String toStringResponseOnly(
+            BiFunction<? super RequestContext, ? super ResponseHeaders,
+                    ? extends @Nullable Object> headersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> contentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> trailersSanitizer);
 }

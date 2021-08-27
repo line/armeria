@@ -59,6 +59,8 @@ class GraphqlServiceBlockingTest {
         return environment -> {
             final ServiceRequestContext ctx = environment.getContext();
             assertThat(ctx.eventLoop().inEventLoop()).isFalse();
+            // Make sure that a ServiceRequestContext is available
+            assertThat(ServiceRequestContext.current()).isSameAs(ctx);
             return value;
         };
     }

@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultAggregatedHttpRequest extends AbstractAggregatedHttpMessage
         implements AggregatedHttpRequest {

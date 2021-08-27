@@ -50,8 +50,6 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Ascii;
@@ -65,6 +63,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Represents an <a href="https://en.wikipedia.org/wiki/Internet_media_type">Internet Media Type</a>

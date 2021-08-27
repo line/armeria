@@ -795,6 +795,7 @@ bi.it
 bialowieza.pl
 bialystok.pl
 bib.br
+bib.ve
 bibai.hokkaido.jp
 bible
 bible.museum
@@ -1354,6 +1355,8 @@ cl.it
 claims
 clan.rip
 cleaning
+clerk.app
+clerkstage.app
 cleverapps.io
 clic2000.net
 click
@@ -2058,6 +2061,7 @@ ecn.br
 eco
 eco.br
 ecologia.bo
+ecommerce-shop.pl
 economia.bo
 ed.ao
 ed.ci
@@ -2228,6 +2232,9 @@ elburg.museum
 elementor.cloud
 elementor.cool
 elk.pl
+elluciancrmadvance.com
+elluciancrmadvise.com
+elluciancrmrecruit.com
 elvendrell.museum
 elverum.no
 email
@@ -3388,6 +3395,7 @@ homes
 homesecuritymac.com
 homesecuritypc.com
 homesense
+homesklep.pl
 homeunix.com
 homeunix.net
 homeunix.org
@@ -4183,6 +4191,7 @@ kia
 kibichuo.okayama.jp
 kicks-ass.net
 kicks-ass.org
+kids
 kids.museum
 kids.us
 kiev.ua
@@ -5756,6 +5765,7 @@ nom.pl
 nom.re
 nom.ro
 nom.tm
+nom.ve
 nom.za
 nombre.bo
 nome.pt
@@ -6621,6 +6631,7 @@ rana.no
 randaberg.no
 rankoshi.hokkaido.jp
 ranzan.saitama.jp
+rar.ve
 ras.ru
 rauma.no
 ravendb.community

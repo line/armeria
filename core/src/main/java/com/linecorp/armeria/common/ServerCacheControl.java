@@ -22,10 +22,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Directives for HTTP caching mechanisms in responses.

@@ -33,7 +33,7 @@ package com.linecorp.armeria.spring;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;

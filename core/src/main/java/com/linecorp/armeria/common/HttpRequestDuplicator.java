@@ -52,6 +52,11 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 public interface HttpRequestDuplicator extends StreamMessageDuplicator<HttpObject> {
 
     /**
+     * Returns the {@link RequestHeaders}.
+     */
+    RequestHeaders headers();
+
+    /**
      * Returns a new {@link HttpRequest} that publishes the same {@link HttpData}s and
      * {@linkplain HttpHeaders trailers} as the {@link HttpRequest} that this duplicator is created from.
      */

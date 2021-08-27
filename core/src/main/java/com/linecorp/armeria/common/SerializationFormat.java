@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +37,8 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Serialization format of a remote procedure call and its reply.

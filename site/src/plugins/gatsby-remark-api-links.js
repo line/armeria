@@ -21,7 +21,9 @@ const transformer = (markdownAST) => {
       option = node.url.substring(optionIndex);
     }
     // Exclude option string from typeName
-    const typeName = node.url.substring(prefixLength, optionIndex);
+    let typeName = node.url.substring(prefixLength, optionIndex);
+    // Decode escaped string such as &lt;init&gt; that represents a constructor.
+    typeName = decodeURIComponent(typeName);
     const href = typeName.startsWith('@')
       ? apiIndex[typeName.substring(1)]
       : apiIndex[typeName];
