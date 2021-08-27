@@ -18,7 +18,6 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.junit.Test;
@@ -30,6 +29,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationPriorityTest.TestConfiguration;

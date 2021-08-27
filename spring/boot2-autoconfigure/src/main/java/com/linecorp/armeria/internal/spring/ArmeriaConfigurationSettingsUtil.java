@@ -20,10 +20,9 @@ import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.pars
 
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.ArmeriaSettings;
