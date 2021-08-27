@@ -67,6 +67,7 @@ class FlowCollectingPublisherTest {
     @Test
     fun test_backPressureOnFlow() {
         val queue: BlockingQueue<Any> = LinkedTransferQueue()
+        val executor = Executors.newSingleThreadScheduledExecutor()
 
         FlowCollectingPublisher(
             flow {
@@ -84,9 +85,7 @@ class FlowCollectingPublisherTest {
             }
 
             override fun onNext(t: Int) {
-                Executors.newSingleThreadScheduledExecutor().schedule({
-                    subscription.request(1L)
-                }, 2, TimeUnit.SECONDS)
+                executor.schedule({ subscription.request(1L) }, 2, TimeUnit.SECONDS)
             }
 
             override fun onError(t: Throwable) {}
@@ -94,20 +93,21 @@ class FlowCollectingPublisherTest {
             override fun onComplete() {}
         })
 
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(0)
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isNull()
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(1)
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isNull()
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(2)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(0)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(1)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(2)
     }
 
     @Test
     fun test_backPressuresWithBuffer() {
         val queue: BlockingQueue<Any> = LinkedTransferQueue()
+        val executor = Executors.newSingleThreadScheduledExecutor()
 
         FlowCollectingPublisher(
             flow {
-                (0 until 5).forEach {
+                (0 until 7).forEach {
                     emit(it)
                     queue.add(it)
                 }
@@ -121,9 +121,7 @@ class FlowCollectingPublisherTest {
             }
 
             override fun onNext(t: Int) {
-                Executors.newSingleThreadScheduledExecutor().schedule({
-                    subscription.request(1L)
-                }, 2, TimeUnit.SECONDS)
+                executor.schedule({ subscription.request(1L) }, 2, TimeUnit.SECONDS)
             }
 
             override fun onError(t: Throwable) {}
@@ -131,13 +129,13 @@ class FlowCollectingPublisherTest {
             override fun onComplete() {}
         })
 
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(0)
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(1)
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(2)
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isNull()
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(3)
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isNull()
-        assertThat(queue.poll(1, TimeUnit.SECONDS)).isEqualTo(4)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(0)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(1)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(2)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(3)
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
+        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(4)
     }
 
     @Test
