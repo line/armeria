@@ -30,7 +30,7 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * [Publisher] implementation which emits values collected from [Flow].
- * Reactive streams back-pressure works on to its back [flow]
+ * Reactive streams back-pressure works on its backing [flow] too.
  */
 internal class FlowCollectingPublisher<T : Any>(
     private val flow: Flow<T>,
@@ -45,8 +45,10 @@ internal class FlowCollectingPublisher<T : Any>(
                     delegate.whenConsumed().await()
                 }
                 delegate.close()
-            } catch (e: Exception) {
-                delegate.close(e)
+            } catch (e: Throwable) {
+                if (!delegate.isComplete) {
+                    delegate.close(e)
+                }
             }
         }
         delegate.whenComplete().handle { _, cause ->

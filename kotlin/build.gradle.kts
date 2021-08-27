@@ -6,6 +6,4 @@ dependencies {
     // kotlin
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
 }

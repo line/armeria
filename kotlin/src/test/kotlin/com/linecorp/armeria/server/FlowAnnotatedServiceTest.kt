@@ -18,16 +18,11 @@ package com.linecorp.armeria.server
 
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.HttpData
-import com.linecorp.armeria.common.HttpHeaders
-import com.linecorp.armeria.common.HttpMethod
-import com.linecorp.armeria.common.HttpObject
-import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.sse.ServerSentEvent
 import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.annotation.Get
-import com.linecorp.armeria.server.annotation.Post
 import com.linecorp.armeria.server.annotation.ProducesEventStream
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences
 import com.linecorp.armeria.server.annotation.ProducesOctetStream
@@ -37,58 +32,36 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collectIndexed
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.reactive.asFlow
-import kotlinx.coroutines.reactive.awaitLast
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.reactivestreams.Subscriber
+import org.reactivestreams.Subscription
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.coroutineContext
 
-class FlowAnnotatedServiceTest {
-
+internal class FlowAnnotatedServiceTest {
     @Test
     fun test_byteStreaming() = runBlocking {
-        val req = HttpRequest.streaming(HttpMethod.POST, "/flow/byte-streaming")
-        val res = client.execute(req)
-
-        // stream data to server.
-        launch {
-            req.write(HttpData.ofUtf8("hello"))
-            req.whenConsumed().await()
-            req.write(HttpData.ofUtf8("world"))
-            req.whenConsumed().await()
-            req.close()
-        }
-        res shouldProduce listOf("hello", "world")
+        client.get("/flow/byte-streaming") shouldProduce listOf("hello", "world", "")
     }
 
     @Test
     fun test_jsonStreaming_string() = runBlocking {
-        val req = HttpRequest.streaming(HttpMethod.POST, "/flow/json-string-streaming")
-        val res = client.execute(req)
-
-        // stream data to server.
-        launch {
-            req.write(HttpData.ofUtf8("hello"))
-            req.whenConsumed().await()
-            req.write(HttpData.ofUtf8("world"))
-            req.whenConsumed().await()
-            req.close()
-        }
-        res shouldProduce listOf("\u001E\"hello\"\n", "\u001E\"world\"\n")
+        client.get("/flow/json-string-streaming") shouldProduce listOf(
+            "\u001E\"hello\"\n", "\u001E\"world\"\n", ""
+        )
     }
 
     @Test
@@ -96,7 +69,8 @@ class FlowAnnotatedServiceTest {
         client.get("/flow/json-obj-streaming") shouldProduce listOf(
             "\u001E{\"name\":\"foo\",\"age\":10}\n",
             "\u001E{\"name\":\"bar\",\"age\":20}\n",
-            "\u001E{\"name\":\"baz\",\"age\":30}\n"
+            "\u001E{\"name\":\"baz\",\"age\":30}\n",
+            ""
         )
     }
 
@@ -104,7 +78,8 @@ class FlowAnnotatedServiceTest {
     fun test_eventStreaming() = runBlocking {
         client.get("/flow/event-streaming") shouldProduce listOf(
             "id:1\n" + "event:MESSAGE_DELIVERED\n" + "data:{\"message_id\":1}\n" + "\n",
-            "id:2\n" + "event:FOLLOW_REQUEST\n" + "data:{\"user_id\":123}\n" + "\n"
+            "id:2\n" + "event:FOLLOW_REQUEST\n" + "data:{\"user_id\":123}\n" + "\n",
+            ""
         )
     }
 
@@ -131,15 +106,14 @@ class FlowAnnotatedServiceTest {
     }
 
     @Test
-    fun test_cancellation(): Unit = runBlocking {
-        val res = client.get("/flow/cancellation")
+    fun test_cancellation() {
         try {
-            res.awaitLast()
+            client.get("/flow/cancellation").aggregate().get()
         } catch (e: Exception) {
             // do nothing
         }
-        delay(2000L)
-        assertThat(proceeded.get()).isEqualTo(false)
+        Thread.sleep(3000L)
+        assertThat(cancelled.get()).isTrue
     }
 
     companion object {
@@ -150,17 +124,19 @@ class FlowAnnotatedServiceTest {
                 @Suppress("unused")
                 sb.apply {
                     annotatedService("/flow", object {
-                        @Post("/byte-streaming")
+                        @Get("/byte-streaming")
                         @ProducesOctetStream
-                        fun byteStreaming(req: HttpRequest): Flow<HttpObject> =
-                            req.asFlow().filter { it !is HttpHeaders }
+                        fun byteStreaming(): Flow<ByteArray> = flow {
+                            emit("hello".toByteArray())
+                            emit("world".toByteArray())
+                        }
 
-                        @Post("/json-string-streaming")
+                        @Get("/json-string-streaming")
                         @ProducesJsonSequences
-                        fun jsonStreamingString(req: HttpRequest): Flow<String> =
-                            req.asFlow()
-                                .filter { it !is HttpHeaders }
-                                .map { (it as HttpData).toStringUtf8() }
+                        fun jsonStreamingString(): Flow<String> = flow {
+                            emit("hello")
+                            emit("world")
+                        }
 
                         @Get("/json-obj-streaming")
                         @ProducesJsonSequences
@@ -219,10 +195,13 @@ class FlowAnnotatedServiceTest {
                         @Get("/cancellation")
                         @ProducesJsonSequences
                         fun cancellation() = flow {
-                            emit("OK")
-                            delay(3000L)
-                            proceeded.set(true)
-                            emit("world")
+                            try {
+                                emit("OK")
+                                delay(2500L)
+                                emit("world")
+                            } catch (e: CancellationException) {
+                                cancelled.set(true)
+                            }
                         }
                     })
                     decorator(
@@ -253,7 +232,7 @@ class FlowAnnotatedServiceTest {
     }
 }
 
-private val proceeded = AtomicBoolean()
+private val cancelled = AtomicBoolean()
 
 private data class Member(
     val name: String,
@@ -267,10 +246,33 @@ private data class User(
     companion object Key : CoroutineContext.Key<User>
 }
 
-private suspend infix fun HttpResponse.shouldProduce(stream: List<String>): Unit =
-    this.asFlow()
-        .filter { it !is HttpHeaders }
-        .collectIndexed { i, value ->
-            val expected = stream.getOrNull(i) ?: ""
-            assertThat((value as HttpData).toStringUtf8()).isEqualTo(expected)
+internal infix fun HttpResponse.shouldProduce(expected: List<String>) {
+    val stream = expected.toMutableList()
+    val latch = CountDownLatch(1)
+    val cause = AtomicReference<Throwable?>()
+
+    this.split().body().subscribe(object : Subscriber<HttpData> {
+        lateinit var subscription: Subscription
+
+        override fun onSubscribe(s: Subscription) {
+            subscription = s
+            s.request(Long.MAX_VALUE)
         }
+
+        override fun onNext(t: HttpData) {
+            assertThat(t.toStringUtf8()).isEqualTo(stream.removeAt(0))
+        }
+
+        override fun onError(t: Throwable) {
+            cause.set(t)
+            subscription.cancel()
+            latch.countDown()
+        }
+
+        override fun onComplete() {
+            latch.countDown()
+        }
+    })
+    latch.await()
+    cause.get()?.also { throw it }
+}

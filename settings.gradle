@@ -65,7 +65,7 @@ includeWithFlags ':consul',                              'java', 'publish', 'rel
 includeWithFlags ':javadoc',                             'java', 'publish', 'no_aggregation'
 
 // Unpublished Java projects
-includeWithFlags ':benchmarks',                     'java'
+includeWithFlags ':benchmarks',                     'java', 'kotlin'
 includeWithFlags ':it:builders',                    'java'
 includeWithFlags ':it:context-storage',             'java'
 includeWithFlags ':it:dgs',                         'java'
