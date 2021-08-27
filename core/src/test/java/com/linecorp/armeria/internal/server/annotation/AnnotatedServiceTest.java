@@ -16,12 +16,10 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,7 +28,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.http.NameValuePair;
@@ -84,23 +81,12 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Produces;
-import com.linecorp.armeria.server.annotation.ProducesJson;
-import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 class AnnotatedServiceTest {
-
-    static final AtomicInteger singleValuePublisherCancelCallCounter = new AtomicInteger();
-
-    static final AtomicInteger multiValuePublisherCancelCallCounter = new AtomicInteger();
-
-    static final AtomicInteger futureCancelCallCounter = new AtomicInteger();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -146,11 +132,6 @@ class AnnotatedServiceTest {
 
             sb.annotatedService("/12", new MyAnnotatedService12(),
                                 LoggingService.newDecorator());
-
-            sb.annotatedService("/13", new MyAnnotatedService13(),
-                                LoggingService.newDecorator());
-
-            sb.requestTimeoutMillis(1000L);
         }
     };
 
@@ -736,54 +717,6 @@ class AnnotatedServiceTest {
         }
     }
 
-    public static class MyAnnotatedService13 {
-
-        private static final Mono<String> delayedMonoRes =
-                Mono.just("hello, world!")
-                    .delayElement(Duration.ofSeconds(5L))
-                    .doOnCancel(singleValuePublisherCancelCallCounter::incrementAndGet);
-
-        private static final Flux<String> delayedFluxRes =
-                Flux.just("hello", "world")
-                    .delaySubscription(Duration.ofSeconds(5L))
-                    .doOnCancel(multiValuePublisherCancelCallCounter::incrementAndGet);
-
-        @Get("/single-value-pub")
-        public Mono<String> singleValuePub() {
-            return delayedMonoRes;
-        }
-
-        @Get("/single-value-pub-json")
-        @ProducesJson
-        public Mono<String> singleValuePubJson() {
-            return delayedMonoRes;
-        }
-
-        @Get("/multi-value-pub")
-        public Flux<String> multiValuePub() {
-            return delayedFluxRes;
-        }
-
-        @Get("/multi-value-pub-json")
-        @ProducesJson
-        public Flux<String> multiValuePubJson() {
-            return delayedFluxRes;
-        }
-
-        @Get("/multi-value-pub-json-seq")
-        @ProducesJsonSequences
-        public Flux<String> multiValuePubJsonSeq() {
-            return delayedFluxRes;
-        }
-
-        @Get("/future")
-        public CompletableFuture<String> future() {
-            final CompletableFuture<String> future = new CompletableFuture<>();
-            future.whenComplete((ignored, cause) -> futureCancelCallCounter.incrementAndGet());
-            return future;
-        }
-    }
-
     @Test
     void testAnnotatedService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -1131,31 +1064,6 @@ class AnnotatedServiceTest {
         }
     }
 
-    @Test
-    void testCancellationPropagation() {
-        final WebClient client = WebClient.of(server.httpUri());
-        AggregatedHttpResponse res;
-
-        res = client.get("/13/single-value-pub").aggregate().join();
-        validateCancellation(res, singleValuePublisherCancelCallCounter);
-        res = client.get("/13/multi-value-pub").aggregate().join();
-        validateCancellation(res, multiValuePublisherCancelCallCounter);
-        res = client.get("/13/future").aggregate().join();
-        validateCancellation(res, futureCancelCallCounter);
-
-        resetCancelCallCounters(); // Reset cancellation call counter.
-
-        res = client.get("/13/single-value-pub-json").aggregate().join();
-        validateCancellation(res, singleValuePublisherCancelCallCounter);
-        res = client.get("/13/multi-value-pub-json").aggregate().join();
-        validateCancellation(res, multiValuePublisherCancelCallCounter);
-
-        resetCancelCallCounters();
-
-        res = client.get("/13/multi-value-pub-json-seq").aggregate().join();
-        validateCancellation(res, multiValuePublisherCancelCallCounter);
-    }
-
     private enum UserLevel {
         LV1,
         LV2
@@ -1300,16 +1208,5 @@ class AnnotatedServiceTest {
         if (ServiceRequestContext.current().request() != req) {
             throw new RuntimeException("HttpRequest instances are not same!");
         }
-    }
-
-    static void validateCancellation(AggregatedHttpResponse res, AtomicInteger cancelCallCounter) {
-        await().untilAsserted(() -> assertThat(cancelCallCounter.get()).isOne());
-        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-    }
-
-    static void resetCancelCallCounters() {
-        singleValuePublisherCancelCallCounter.set(0);
-        multiValuePublisherCancelCallCounter.set(0);
-        futureCancelCallCounter.set(0);
     }
 }
