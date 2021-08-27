@@ -253,13 +253,13 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
-        final MediaType grpcMediaType = grpcResponse.contentType();
         if (grpcStatus.getCode() != Status.OK.getCode()) {
             PooledObjects.close(grpcResponse.content());
             res.complete(unframedGrpcErrorHandler.handler(ctx, grpcStatus, grpcResponse));
             return;
         }
 
+        final MediaType grpcMediaType = grpcResponse.contentType();
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
         if (grpcMediaType != null) {
