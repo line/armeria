@@ -248,7 +248,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             ServiceRequestContext ctx,
             AggregatedHttpResponse grpcResponse,
             CompletableFuture<HttpResponse> res,
-            @Nullable UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+            UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
