@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.common.ResponseHeaders
+import com.linecorp.armeria.common.stream.AbortedStreamException
 import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.annotation.Delete
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
@@ -41,11 +42,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.slf4j.LoggerFactory
+import java.util.concurrent.CompletionException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.coroutineContext
 
 class SuspendingAnnotatedServiceTest {
@@ -110,12 +114,22 @@ class SuspendingAnnotatedServiceTest {
     @Test
     fun test_downstreamCancellation() {
         get("/downstream-cancellation/long-running-suspend-fun")
-        await().untilAsserted { assertThat(cancellationCallCounter.get()).isOne() }
+        await().untilAsserted { assertThat(cancellationCallCounter).hasValue(1) }
+
+        get("/downstream-cancellation/long-running-suspend-fun-ignore-exception")
+        await().untilAsserted { assertThat(cancellationCallCounter).hasValue(2) }
+        val serverResponse = httpResponseRef.get()
+        assertThat(serverResponse.isComplete).isTrue
+        // Make sure that the server response was released.
+        assertThatThrownBy { serverResponse.whenComplete().join() }
+            .isInstanceOf(CompletionException::class.java)
+            .hasCauseInstanceOf(AbortedStreamException::class.java)
     }
 
     companion object {
         private val log = LoggerFactory.getLogger(SuspendingAnnotatedServiceTest::class.java)
         private val cancellationCallCounter = AtomicInteger()
+        private val httpResponseRef = AtomicReference<HttpResponse>()
 
         @JvmField
         @RegisterExtension
@@ -207,6 +221,18 @@ class SuspendingAnnotatedServiceTest {
                                 throw e
                             }
                             return "OK"
+                        }
+
+                        @Get("/long-running-suspend-fun-ignore-exception")
+                        suspend fun unsafeLongRunningSuspendFun(): HttpResponse {
+                            try {
+                                delay(10000L)
+                            } catch (ignored: CancellationException) {
+                                cancellationCallCounter.incrementAndGet()
+                            }
+                            val response = HttpResponse.of("OK")
+                            httpResponseRef.set(response)
+                            return response
                         }
                     })
                     .decorator(LoggingService.newDecorator())

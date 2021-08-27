@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,19 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.BodyPart;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-final class StreamMessageUtil {
+public final class StreamMessageUtil {
 
-    static void closeOrAbort(Object obj, @Nullable Throwable cause) {
+    public static void closeOrAbort(Object obj, @Nullable Throwable cause) {
         if (obj instanceof StreamMessage) {
             final StreamMessage<?> streamMessage = (StreamMessage<?>) obj;
             if (cause == null) {
@@ -38,7 +41,7 @@ final class StreamMessageUtil {
         }
 
         if (obj instanceof Publisher) {
-            ((Publisher<?>) obj).subscribe(AbortingSubscriber.get(cause));
+            ((Publisher<?>) obj).subscribe(CancelingSubscriber.INSTANCE);
             return;
         }
 
@@ -57,11 +60,11 @@ final class StreamMessageUtil {
         }
     }
 
-    static void closeOrAbort(Object obj) {
+    public static void closeOrAbort(Object obj) {
         closeOrAbort(obj, null);
     }
 
-    static <T> T touchOrCopyAndClose(T obj, boolean withPooledObjects) {
+    public static <T> T touchOrCopyAndClose(T obj, boolean withPooledObjects) {
         if (withPooledObjects) {
             return PooledObjects.touch(obj);
         } else {
@@ -70,4 +73,23 @@ final class StreamMessageUtil {
     }
 
     private StreamMessageUtil() {}
+
+    private enum CancelingSubscriber implements Subscriber<Object> {
+
+        INSTANCE;
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            s.cancel();
+        }
+
+        @Override
+        public void onNext(Object o) {}
+
+        @Override
+        public void onError(Throwable cause) {}
+
+        @Override
+        public void onComplete() {}
+    }
 }

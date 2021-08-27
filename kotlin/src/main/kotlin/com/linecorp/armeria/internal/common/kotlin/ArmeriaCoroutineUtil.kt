@@ -19,6 +19,7 @@
 package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil
 import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -44,16 +45,25 @@ internal fun callKotlinSuspendingMethod(
     val coroutineContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
     // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
     val newContext = executorService.asCoroutineDispatcher() + coroutineContext
+
     val future = GlobalScope.future(newContext) {
-        kFunction
+        val response = kFunction
             .callSuspend(obj, *args)
             .let { if (it == Unit) null else it }
+
+        if (response != null && ctx.isCancelled) {
+            // A request has been canceled. Release the response resources to prevent leaks.
+            StreamMessageUtil.closeOrAbort(response)
+        }
+        response
     }
+
+    // Propagate cancellation to upstream.
     ctx.whenRequestCancelling().thenAccept { cause ->
-        // Try to cancel Kotlin Coroutines when a request is canceled
         if (!future.isDone) {
             future.completeExceptionally(cause)
         }
     }
+
     return future
 }
