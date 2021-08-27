@@ -41,7 +41,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
-import graphql.schema.StaticDataFetcher;
 
 class GraphqlServiceTest {
 
@@ -55,7 +54,7 @@ class GraphqlServiceTest {
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
-                                      final StaticDataFetcher bar = new StaticDataFetcher("bar");
+                                      final DataFetcher bar = dataFetcher("bar");
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("foo", bar));
                                       final DataFetcher<String> error = errorDataFetcher();
@@ -66,6 +65,16 @@ class GraphqlServiceTest {
             sb.service("/graphql", service);
         }
     };
+
+    private static DataFetcher<String> dataFetcher(String value) {
+        return environment -> {
+            final ServiceRequestContext ctx = environment.getContext();
+            assertThat(ctx.eventLoop().inEventLoop()).isTrue();
+            // Make sure that a ServiceRequestContext is available
+            assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+            return value;
+        };
+    }
 
     private static DataFetcher<String> errorDataFetcher() {
         return environment -> {

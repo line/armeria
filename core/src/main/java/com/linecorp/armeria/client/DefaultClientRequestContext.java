@@ -109,6 +109,7 @@ public final class DefaultClientRequestContext
     @Nullable
     private final ServiceRequestContext root;
 
+    private final boolean hasBaseUri;
     private final ClientOptions options;
     private final RequestLogBuilder log;
     private final CancellationScheduler responseCancellationScheduler;
@@ -152,7 +153,7 @@ public final class DefaultClientRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
+             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros, false);
     }
 
     /**
@@ -167,17 +168,19 @@ public final class DefaultClientRequestContext
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     * @param hasBaseUri whether a {@link Client} which initiates this {@link ClientRequestContext} was
+     *                   created with a base {@link URI}.
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions,
-            long requestStartTimeNanos, long requestStartTimeMicros) {
+            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
         this(null, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, requestOptions,
              serviceRequestContext(), /* responseCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros);
+             requestStartTimeNanos, requestStartTimeMicros, hasBaseUri);
     }
 
     private DefaultClientRequestContext(
@@ -186,10 +189,11 @@ public final class DefaultClientRequestContext
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
-            long requestStartTimeNanos, long requestStartTimeMicros) {
+            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
         this.eventLoop = eventLoop;
+        this.hasBaseUri = hasBaseUri;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
         this.root = root;
@@ -248,6 +252,14 @@ public final class DefaultClientRequestContext
         initialized = true;
 
         try {
+            // Note: thread-local customizer must be run before:
+            //       - EndpointSelector.select() so that the customizer can inject the attributes which may be
+            //         required by the EndpointSelector.
+            //       - mapEndpoint() to give an opportunity to override an Endpoint when using
+            //         an additional authority.
+            runThreadLocalContextCustomizers();
+
+            endpointGroup = mapEndpoint(endpointGroup, hasBaseUri);
             if (endpointGroup instanceof Endpoint) {
                 return initEndpoint((Endpoint) endpointGroup);
             } else {
@@ -260,20 +272,33 @@ public final class DefaultClientRequestContext
         }
     }
 
+    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup, boolean hasBaseUri) {
+        if (endpointGroup instanceof Endpoint) {
+            Endpoint endpoint = (Endpoint) endpointGroup;
+            if (!hasBaseUri) {
+                // If a WebClient was created without a base URI, an authority header could be
+                // the host of an Endpoint.
+                final String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+                if (authority != null) {
+                    endpoint = Endpoint.parse(authority);
+                }
+            }
+            return requireNonNull(options().endpointRemapper().apply(endpoint),
+                                  "endpointRemapper returned null.");
+        } else {
+            return endpointGroup;
+        }
+    }
+
     private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         endpointGroup = null;
         updateEndpoint(endpoint);
-        runThreadLocalContextCustomizers();
         acquireEventLoop(endpoint);
         return initFuture(true, null);
     }
 
     private CompletableFuture<Boolean> initEndpointGroup(EndpointGroup endpointGroup) {
         this.endpointGroup = endpointGroup;
-        // Note: thread-local customizer must be run before EndpointSelector.select()
-        //       so that the customizer can inject the attributes which may be required
-        //       by the EndpointSelector.
-        runThreadLocalContextCustomizers();
         final Endpoint endpoint = endpointGroup.selectNow(this);
         if (endpoint != null) {
             updateEndpoint(endpoint);
@@ -412,7 +437,7 @@ public final class DefaultClientRequestContext
             if (headersBuilder.get(HttpHeaderNames.HOST) != null) {
                 headersBuilder.set(HttpHeaderNames.HOST, authority);
             } else {
-                headersBuilder.set(HttpHeaderNames.AUTHORITY, authority);
+                headersBuilder.authority(authority);
             }
             unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
@@ -440,6 +465,7 @@ public final class DefaultClientRequestContext
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
         eventLoop = ctx.eventLoop().withoutContext();
+        hasBaseUri = ctx.hasBaseUri;
         options = ctx.options();
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);

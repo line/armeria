@@ -189,7 +189,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
                 ipAddr = NetUtil.bytesToIpAddress(addrBytes);
             }
 
-            final Endpoint endpoint = port != 0 ? Endpoint.of(hostname, port) : Endpoint.of(hostname);
+            final Endpoint endpoint = Endpoint.unsafeCreate(hostname, port);
             builder.add(endpoint.withIpAddr(ipAddr));
         }
 

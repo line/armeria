@@ -17,17 +17,15 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
+import java.util.function.BiConsumer;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -45,7 +43,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements HttpClient {
 
@@ -93,59 +90,73 @@ final class HttpClientDelegate implements HttpClient {
 
         if (endpointWithPort.hasIpAddr()) {
             // IP address has been resolved already.
-            acquireConnectionAndExecute(ctx, endpointWithPort, endpointWithPort.ipAddr(),
-                                        req, res, timingsBuilder);
+            acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder);
         } else {
-            // IP address has not been resolved yet.
-            final Future<InetSocketAddress> resolveFuture =
-                    addressResolverGroup.getResolver(eventLoop)
-                                        .resolve(InetSocketAddress.createUnresolved(endpointWithPort.host(),
-                                                                                    endpointWithPort.port()));
-            if (resolveFuture.isDone()) {
-                finishResolve(ctx, endpointWithPort, resolveFuture, req, res, timingsBuilder);
-            } else {
-                resolveFuture.addListener(
-                        (FutureListener<InetSocketAddress>) future ->
-                                finishResolve(ctx, endpointWithPort, future, req, res, timingsBuilder));
-            }
+            resolveAddress(endpointWithPort, ctx, (resolved, cause) -> {
+                timingsBuilder.dnsResolutionEnd();
+                if (cause == null) {
+                    assert resolved != null;
+                    acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder);
+                } else {
+                    ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
+                    final UnprocessedRequestException wrappedCause = UnprocessedRequestException.of(cause);
+                    handleEarlyRequestException(ctx, req, wrappedCause);
+                    res.close(wrappedCause);
+                }
+            });
         }
 
         return res;
     }
 
-    private void finishResolve(ClientRequestContext ctx, Endpoint endpointWithPort,
-                               Future<InetSocketAddress> resolveFuture, HttpRequest req,
-                               DecodedHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
-        timingsBuilder.dnsResolutionEnd();
+    private void resolveAddress(Endpoint endpoint, ClientRequestContext ctx,
+                                BiConsumer<@Nullable Endpoint, @Nullable Throwable> onComplete) {
+
+        // IP address has not been resolved yet.
+        assert !endpoint.hasIpAddr() && endpoint.hasPort();
+
+        final Future<InetSocketAddress> resolveFuture =
+                addressResolverGroup.getResolver(ctx.eventLoop().withoutContext())
+                                    .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
+                                                                                endpoint.port()));
         if (resolveFuture.isSuccess()) {
-            final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
-            acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr, req, res, timingsBuilder);
+            final InetAddress address = resolveFuture.getNow().getAddress();
+            onComplete.accept(endpoint.withInetAddress(address), null);
         } else {
-            ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-            final UnprocessedRequestException cause = UnprocessedRequestException.of(resolveFuture.cause());
-            handleEarlyRequestException(ctx, req, cause);
-            res.close(cause);
+            resolveFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    final InetAddress address = resolveFuture.getNow().getAddress();
+                    onComplete.accept(endpoint.withInetAddress(address), null);
+                } else {
+                    onComplete.accept(null, resolveFuture.cause());
+                }
+            });
         }
     }
 
-    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpointWithPort,
-                                             String ipAddr, HttpRequest req, DecodedHttpResponse res,
+    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint,
+                                             HttpRequest req, DecodedHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder) {
-        final EventLoop eventLoop = ctx.eventLoop();
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr,
-                                                                req, res, timingsBuilder));
-            return;
+        if (ctx.eventLoop().inEventLoop()) {
+            acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+        } else {
+            ctx.eventLoop().execute(() -> {
+                acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+            });
         }
+    }
 
-        final String host = extractHost(ctx, req, endpointWithPort);
-        final int port = endpointWithPort.port();
+    private void acquireConnectionAndExecute0(ClientRequestContext ctx, Endpoint endpoint,
+                                              HttpRequest req, DecodedHttpResponse res,
+                                              ClientConnectionTimingsBuilder timingsBuilder) {
+        // IP address should be resolved already.
+        assert endpoint.hasIpAddr();
+
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
 
         final ProxyConfig proxyConfig;
         try {
-            final Endpoint endpoint = Endpoint.of(host, port).withIpAddr(ipAddr);
             proxyConfig = getProxyConfig(protocol, endpoint);
         } catch (Throwable t) {
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
@@ -154,7 +165,7 @@ final class HttpClientDelegate implements HttpClient {
             return;
         }
 
-        final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
+        final PoolKey key = new PoolKey(endpoint.host(), endpoint.ipAddr(), endpoint.port(), proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
@@ -204,53 +215,6 @@ final class HttpClientDelegate implements HttpClient {
         } else {
             ctx.logBuilder().session(null, ctx.sessionProtocol(), connectionTimings);
         }
-    }
-
-    @VisibleForTesting
-    static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
-        String host = extractHost(ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY));
-        if (host != null) {
-            return host;
-        }
-
-        host = extractHost(req.authority());
-        if (host != null) {
-            return host;
-        }
-
-        return endpoint.host();
-    }
-
-    @Nullable
-    private static String extractHost(@Nullable String authority) {
-        if (Strings.isNullOrEmpty(authority)) {
-            return null;
-        }
-
-        if (authority.charAt(0) == '[') {
-            // Surrounded by '[' and ']'
-            final int closingBracketPos = authority.lastIndexOf(']');
-            if (closingBracketPos > 0) {
-                return authority.substring(1, closingBracketPos);
-            } else {
-                // Invalid authority - no matching ']'
-                return null;
-            }
-        }
-
-        // Not surrounded by '[' and ']'
-        final int colonPos = authority.lastIndexOf(':');
-        if (colonPos > 0) {
-            // Strip the port number.
-            return authority.substring(0, colonPos);
-        }
-        if (colonPos < 0) {
-            // authority does not have a port number.
-            return authority;
-        }
-
-        // Invalid authority - ':' is the first character.
-        return null;
     }
 
     private static boolean isValidPath(HttpRequest req) {
