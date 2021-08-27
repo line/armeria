@@ -18,15 +18,16 @@ package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.common.stream.DefaultStreamMessage
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.handleCoroutineException
 import kotlinx.coroutines.launch
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * [Publisher] implementation which emits values collected from [Flow].
@@ -36,6 +37,7 @@ internal class FlowCollectingPublisher<T : Any>(
     private val flow: Flow<T>,
     private val context: CoroutineContext = EmptyCoroutineContext
 ) : Publisher<T> {
+    @OptIn(InternalCoroutinesApi::class)
     override fun subscribe(s: Subscriber<in T>) {
         val delegate = DefaultStreamMessage<T>()
         val job = GlobalScope.launch(context) {
@@ -45,15 +47,16 @@ internal class FlowCollectingPublisher<T : Any>(
                     delegate.whenConsumed().await()
                 }
                 delegate.close()
-            } catch (e: Throwable) {
+            } catch (cause: Throwable) {
                 if (!delegate.isComplete) {
-                    delegate.close(e)
+                    delegate.close(cause)
+                } else {
+                    // Last ditch report
+                    handleCoroutineException(context, cause)
                 }
             }
         }
-        delegate.whenComplete().handle { _, cause ->
-            job.cancel(CancellationException(cause))
-        }
+        delegate.whenComplete().handle { _, _ -> job.cancel() }
         delegate.subscribe(s)
     }
 }
