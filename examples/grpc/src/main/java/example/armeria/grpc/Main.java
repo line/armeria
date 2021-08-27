@@ -10,6 +10,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.grpc.UnframedGrpcErrorHandler;
 
 import example.armeria.grpc.Hello.HelloRequest;
 import io.grpc.protobuf.services.ProtoReflectionService;
@@ -50,6 +51,7 @@ public final class Main {
                            // See https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md
                            .addService(ProtoReflectionService.newInstance())
                            .supportedSerializationFormats(GrpcSerializationFormats.values())
+                           .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.ofJson())
                            .enableUnframedRequests(true)
                            // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
                            // methods in the blockingTaskExecutor thread pool.

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -125,8 +126,7 @@ class UnframedGrpcServiceTest {
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
-        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res,
-                                              UnframedErrorResponseMappers.DEFAULT_UNFRAMED_RESPONSE_MAPPER);
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of());
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -139,5 +139,18 @@ class UnframedGrpcServiceTest {
                                                         GrpcSerializationFormats.values())
                                                 .enableUnframedRequests(true)
                                                 .build();
+    }
+
+    @Test
+    void shouldThrowExceptionIfUnframedRequestHandlerAddedButUnframedRequestsAreDisabled() {
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                GrpcService.builder()
+                           .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                           .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                           .supportedSerializationFormats(GrpcSerializationFormats.values())
+                           .enableUnframedRequests(false)
+                           .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
+                           .build());
+        assertThat(exception).hasMessage("'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
     }
 }

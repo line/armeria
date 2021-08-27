@@ -43,7 +43,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -123,7 +122,7 @@ public final class GrpcServiceBuilder {
     private ImmutableList.Builder<ServerInterceptor> interceptors;
 
     @Nullable
-    private Function<HttpHeaders, HttpResponse> unframedErrorResponseMapper;
+    private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -295,12 +294,11 @@ public final class GrpcServiceBuilder {
     /**
      * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
      * service.
-     * @param unframedErrorResponseMapper The function which maps {@link HttpHeaders} to a {@link HttpResponse}.
+     * @param unframedGrpcErrorHandler The function which maps the error response to a {@link HttpResponse}.
      */
-    public GrpcServiceBuilder unframedErrorResponseMapper(
-            Function<HttpHeaders, HttpResponse> unframedErrorResponseMapper) {
-        requireNonNull(unframedErrorResponseMapper, "unframedErrorResponseMapper");
-        this.unframedErrorResponseMapper = unframedErrorResponseMapper;
+    public GrpcServiceBuilder unframedGrpcErrorHandler(UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
+        this.unframedGrpcErrorHandler = unframedGrpcErrorHandler;
         return this;
     }
 
@@ -661,6 +659,13 @@ public final class GrpcServiceBuilder {
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
             interceptors().add(coroutineContextInterceptor);
         }
+        if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+        }
+        if (unframedGrpcErrorHandler == null) {
+            unframedGrpcErrorHandler = UnframedGrpcErrorHandler.of();
+        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
@@ -702,6 +707,6 @@ public final class GrpcServiceBuilder {
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry,
-                                                                unframedErrorResponseMapper) : grpcService;
+                                                                unframedGrpcErrorHandler) : grpcService;
     }
 }
