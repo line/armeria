@@ -73,6 +73,28 @@ public final class ContentPreviewingClientBuilder {
     }
 
     /**
+     * Sets the {@link BiFunction} to use to sanitize request and response content preview. It is common to
+     * have the {@link BiFunction} that removes sensitive content, such as an address, before logging.
+     * If unset, will not sanitize response content preview.
+     * This method is a shortcut for:
+     * <pre>{@code
+     * builder.requestContentSanitizer(contentSanitizer);
+     * builder.responseContentSanitizer(contentSanitizer);
+     * }</pre>
+     *
+     * @see #requestContentSanitizer(BiFunction)
+     * @see #responseContentSanitizer(BiFunction)
+     */
+    public ContentPreviewingClientBuilder contentSanitizer(
+            BiFunction<? super RequestContext, String,
+                    ? extends @Nullable Object> contentSanitizer) {
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        this.requestContentSanitizer = contentSanitizer;
+        this.responseContentSanitizer = contentSanitizer;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link ContentPreviewingClient} decorating {@code delegate} based on the
      * properties of this builder.
      */

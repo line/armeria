@@ -117,6 +117,12 @@ class ContentPreviewingServiceTest {
                                                  .responseContentSanitizer(CONTENT_SANITIZER)
                                                  .newDecorator());
 
+            sb.service("/contentSanitizer", httpService);
+            sb.decorator("/contentSanitizer",
+                         ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
+                                                 .contentSanitizer(CONTENT_SANITIZER)
+                                                 .newDecorator());
+
             sb.decoratorUnder("/", (delegate, ctx, req) -> {
                 contextCaptor.set(ctx);
                 return delegate.serve(ctx, req);
@@ -246,6 +252,18 @@ class ContentPreviewingServiceTest {
                 .isEqualTo("Hello Armeria!");
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
+    }
+
+    @Test
+    void sanitizeContentPreview() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/contentSanitizer",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                .isEqualTo("Hello Armeria!");
+        final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("dummy content sanitizer");
         assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
     }
 
