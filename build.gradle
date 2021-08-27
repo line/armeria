@@ -5,7 +5,7 @@ plugins {
     id 'cz.alenkacz.gradle.scalafmt' version '1.16.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.5.30' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.5.21' apply false
     id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
 
     id 'net.ltgt.errorprone' version '2.0.2' apply false
