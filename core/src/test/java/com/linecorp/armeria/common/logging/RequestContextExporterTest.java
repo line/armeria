@@ -170,12 +170,10 @@ class RequestContextExporterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final RequestContextExporter exporter1 =
                 RequestContextExporter.builder()
-                                      .name("exporter1")
                                       .attr("attrs.attr1", ATTR1)
                                       .build();
         final RequestContextExporter exporter2 =
                 RequestContextExporter.builder()
-                                      .name("exporter2")
                                       .attr("attrs.attr2", ATTR2)
                                       .build();
 
