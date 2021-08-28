@@ -110,7 +110,7 @@ class HelloServiceTest {
     @ParameterizedTest
     @MethodSource("uris")
     fun shouldReportCloseExactlyOnceWithNonOK(uri: String) {
-        val closedCalled = AtomicInteger()
+        val closeCalled = AtomicInteger()
         val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             .withInterceptors(object : ClientInterceptor {
                 override fun <I, O> interceptCall(method: MethodDescriptor<I, O>?,
@@ -120,7 +120,7 @@ class HelloServiceTest {
                         override fun start(responseListener: Listener<O>?, headers: Metadata) {
                             super.start(object : SimpleForwardingClientCallListener<O>(responseListener) {
                                 override fun onClose(status: Status?, trailers: Metadata?) {
-                                    closedCalled.incrementAndGet()
+                                    closeCalled.incrementAndGet()
                                     super.onClose(status, trailers)
                                 }
                             }, headers);
@@ -137,7 +137,7 @@ class HelloServiceTest {
         }
 
         // Make sure that a call is exactly closed once.
-        assertThat(closedCalled).hasValue(1)
+        assertThat(closeCalled).hasValue(1)
     }
 
     companion object {
