@@ -632,7 +632,6 @@ class RequestContextExportingAppenderTest {
     @SafeVarargs
     private final List<ILoggingEvent> prepare(Consumer<RequestContextExportingAppender>... configurators) {
         final RequestContextExportingAppender a = new RequestContextExportingAppender();
-        assertThat(a.getName()).isNull();
         for (Consumer<RequestContextExportingAppender> c : configurators) {
             c.accept(a);
         }
