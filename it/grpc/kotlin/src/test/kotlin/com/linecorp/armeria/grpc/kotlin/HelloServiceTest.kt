@@ -113,17 +113,19 @@ class HelloServiceTest {
         val closeCalled = AtomicInteger()
         val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             .withInterceptors(object : ClientInterceptor {
-                override fun <I, O> interceptCall(method: MethodDescriptor<I, O>?,
-                                                  callOptions: CallOptions?,
-                                                  next: Channel): ClientCall<I, O> {
-                    return object : SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
-                        override fun start(responseListener: Listener<O>?, headers: Metadata) {
+                override fun <I, O> interceptCall(
+                    method: MethodDescriptor<I, O>,
+                    options: CallOptions,
+                    next: Channel
+                ): ClientCall<I, O> {
+                    return object : SimpleForwardingClientCall<I, O>(next.newCall(method, options)) {
+                        override fun start(responseListener: Listener<O>, headers: Metadata) {
                             super.start(object : SimpleForwardingClientCallListener<O>(responseListener) {
-                                override fun onClose(status: Status?, trailers: Metadata?) {
+                                override fun onClose(status: Status, trailers: Metadata) {
                                     closeCalled.incrementAndGet()
                                     super.onClose(status, trailers)
                                 }
-                            }, headers);
+                            }, headers)
                         }
                     }
                 }

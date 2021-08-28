@@ -292,7 +292,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (closed) {
             return;
         }
-        closed = true;
         Status status = Status.CANCELLED;
         if (message != null) {
             status = status.withDescription(message);
@@ -442,9 +441,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status, Metadata metadata) {
-        if (closed) {
-            return;
-        }
         close(status, metadata);
     }
 
