@@ -48,7 +48,7 @@ public final class RequestContextExporter {
     @SuppressWarnings("rawtypes")
     private static final ExportEntry[] EMPTY_EXPORT_ENTRIES = new ExportEntry[0];
 
-    private static final AtomicLong ID_GENERATOR = new AtomicLong();
+    private static final AtomicLong EXPORTER_ID_GENERATOR = new AtomicLong();
 
     @VisibleForTesting
     final AttributeKey<State> stateAttributeKey;
@@ -77,7 +77,7 @@ public final class RequestContextExporter {
                            Set<ExportEntry<AsciiString>> reqHeaders,
                            Set<ExportEntry<AsciiString>> resHeaders) {
         stateAttributeKey = AttributeKey.valueOf(RequestContextExporter.class,
-                                                 "STATE_" + ID_GENERATOR.incrementAndGet());
+                                                 "STATE_" + EXPORTER_ID_GENERATOR.incrementAndGet());
         if (!builtInPropertySet.isEmpty()) {
             builtInProperties = new BuiltInProperties();
             builtInPropertyArray = builtInPropertySet.toArray(EMPTY_EXPORT_ENTRIES);
