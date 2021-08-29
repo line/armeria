@@ -17,13 +17,13 @@
 package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.common.stream.DefaultStreamMessage
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.AbstractCoroutine
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.handleCoroutineException
-import kotlinx.coroutines.launch
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
 import kotlin.coroutines.CoroutineContext
@@ -33,30 +33,29 @@ import kotlin.coroutines.EmptyCoroutineContext
  * [Publisher] implementation which emits values collected from [Flow].
  * Reactive streams back-pressure works on its backing [flow] too.
  */
+@OptIn(InternalCoroutinesApi::class)
 internal class FlowCollectingPublisher<T : Any>(
     private val flow: Flow<T>,
-    private val context: CoroutineContext = EmptyCoroutineContext
-) : Publisher<T> {
-    @OptIn(InternalCoroutinesApi::class)
+    context: CoroutineContext = EmptyCoroutineContext
+) : Publisher<T>, AbstractCoroutine<Unit>(context, initParentJob = false, active = true) {
+    private val delegate = DefaultStreamMessage<T>()
+
     override fun subscribe(s: Subscriber<in T>) {
-        val delegate = DefaultStreamMessage<T>()
-        val job = GlobalScope.launch(context) {
-            try {
-                flow.collect {
-                    delegate.write(it)
-                    delegate.whenConsumed().await()
-                }
-                delegate.close()
-            } catch (cause: Throwable) {
-                if (!delegate.isComplete) {
-                    delegate.close(cause)
-                } else {
-                    // Last ditch report
-                    handleCoroutineException(context, cause)
-                }
+        this.start(CoroutineStart.DEFAULT, this) {
+            flow.collect {
+                delegate.write(it)
+                delegate.whenConsumed().await()
             }
+            delegate.close()
         }
-        delegate.whenComplete().handle { _, _ -> job.cancel() }
+        delegate.whenComplete().handle { _, _ -> cancel() }
         delegate.subscribe(s)
+    }
+
+    override fun onCancelled(cause: Throwable, handled: Boolean) {
+        if (!delegate.tryClose(cause) && !handled) {
+            // Last ditch report
+            handleCoroutineException(context, cause)
+        }
     }
 }
