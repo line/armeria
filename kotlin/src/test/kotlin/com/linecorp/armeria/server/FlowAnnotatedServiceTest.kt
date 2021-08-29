@@ -126,21 +126,21 @@ internal class FlowAnnotatedServiceTest {
                     annotatedService("/flow", object {
                         @Get("/byte-streaming")
                         @ProducesOctetStream
-                        fun byteStreaming(): Flow<ByteArray> = flow {
+                        suspend fun byteStreaming(): Flow<ByteArray> = flow {
                             emit("hello".toByteArray())
                             emit("world".toByteArray())
                         }
 
                         @Get("/json-string-streaming")
                         @ProducesJsonSequences
-                        fun jsonStreamingString(): Flow<String> = flow {
+                        suspend fun jsonStreamingString(): Flow<String> = flow {
                             emit("hello")
                             emit("world")
                         }
 
                         @Get("/json-obj-streaming")
                         @ProducesJsonSequences
-                        fun jsonStreamingObj(): Flow<Member> = flow {
+                        suspend fun jsonStreamingObj(): Flow<Member> = flow {
                             emit(Member(name = "foo", age = 10))
                             emit(Member(name = "bar", age = 20))
                             emit(Member(name = "baz", age = 30))
@@ -148,7 +148,7 @@ internal class FlowAnnotatedServiceTest {
 
                         @Get("/event-streaming")
                         @ProducesEventStream
-                        fun eventStreaming(): Flow<ServerSentEvent> = flow {
+                        suspend fun eventStreaming(): Flow<ServerSentEvent> = flow {
                             emit(
                                 ServerSentEvent
                                     .builder()
@@ -170,7 +170,7 @@ internal class FlowAnnotatedServiceTest {
                         @Blocking
                         @Get("/blocking-annotation")
                         @ProducesText
-                        fun blockingAnnotation(): Flow<String> = flow {
+                        suspend fun blockingAnnotation(): Flow<String> = flow {
                             checkNotNull(ServiceRequestContext.currentOrNull())
                             assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
                             emit("OK")
@@ -178,7 +178,7 @@ internal class FlowAnnotatedServiceTest {
 
                         @Get("/custom-context")
                         @ProducesText
-                        fun userContext() = flow {
+                        suspend fun userContext() = flow {
                             val user = checkNotNull(coroutineContext[User])
                             assertThat(user.name).isEqualTo("Armeria")
                             assertThat(user.role).isEqualTo("Admin")
@@ -187,14 +187,14 @@ internal class FlowAnnotatedServiceTest {
 
                         @Get("/custom-dispatcher")
                         @ProducesText
-                        fun dispatcherContext() = flow {
+                        suspend fun dispatcherContext() = flow {
                             assertThat(Thread.currentThread().name).contains("custom-thread")
                             emit("OK")
                         }
 
                         @Get("/cancellation")
                         @ProducesJsonSequences
-                        fun cancellation() = flow {
+                        suspend fun cancellation() = flow {
                             try {
                                 emit("OK")
                                 delay(2500L)

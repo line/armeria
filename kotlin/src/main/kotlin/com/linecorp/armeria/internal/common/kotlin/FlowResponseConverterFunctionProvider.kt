@@ -30,14 +30,21 @@ class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider 
     override fun createResponseConverterFunction(
         returnType: Type,
         responseConverter: ResponseConverterFunction
-    ): ResponseConverterFunction? {
-        if (returnType !is ParameterizedType) {
-            return null
+    ): ResponseConverterFunction? =
+        returnType
+            .toClass()
+            .let {
+                if (Flow::class.java.isAssignableFrom(it)) {
+                    FlowResponseConverterFunction(responseConverter)
+                } else {
+                    null
+                }
+            }
+
+    private fun Type.toClass(): Class<*>? =
+        when (this) {
+            is ParameterizedType -> this.rawType as Class<*>
+            is Class<*> -> this
+            else -> null
         }
-        val rawType = returnType.rawType as Class<*>
-        if (Flow::class.java.isAssignableFrom(rawType)) {
-            return FlowResponseConverterFunction(responseConverter)
-        }
-        return null
-    }
 }

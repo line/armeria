@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static java.util.Objects.requireNonNull;
+
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -28,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -50,6 +54,9 @@ final class KotlinUtil {
 
     @Nullable
     private static final Method IS_RETURN_TYPE_UNIT;
+
+    @Nullable
+    private static final Method K_FUNCTION_RETURN_TYPE;
 
     static {
         MethodHandle callKotlinSuspendingMethod = null;
@@ -74,17 +81,20 @@ final class KotlinUtil {
 
         Method isSuspendingFunction = null;
         Method isReturnTypeUnit = null;
+        Method kFunctionReturnType = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
 
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
+            kFunctionReturnType = kotlinUtilClass.getMethod("kFunctionReturnType", Method.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
             IS_SUSPENDING_FUNCTION = isSuspendingFunction;
             IS_RETURN_TYPE_UNIT = isReturnTypeUnit;
+            K_FUNCTION_RETURN_TYPE = kFunctionReturnType;
         }
 
         boolean isKotlinReflectionPresent = false;
@@ -171,6 +181,16 @@ final class KotlinUtil {
                    (boolean) IS_RETURN_TYPE_UNIT.invoke(null, method);
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    static Type kFunctionReturnType(Method method) {
+        assert K_FUNCTION_RETURN_TYPE != null;
+        requireNonNull(K_FUNCTION_RETURN_TYPE, "K_FUNCTION_RETURN_TYPE");
+        try {
+            return (Type) K_FUNCTION_RETURN_TYPE.invoke(null, method);
+        } catch (Exception e) {
+            return Exceptions.throwUnsafely(e);
         }
     }
 
