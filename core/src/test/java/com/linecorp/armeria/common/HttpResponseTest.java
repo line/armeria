@@ -156,7 +156,40 @@ class HttpResponseTest {
     }
 
     @Test
-    void delayedHttpResponseSchedulingUsingCurrentEventLoopOrCommonPools() {
+    void delayedHttpResponseWithAggregatedHttpResponseUsingCurrentEventLoopOrCommonPools() {
+        final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse, Duration.ofSeconds(1));
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void delayedHttpResponseWithAggregatedHttpResponseUsingScheduledExecutorService() {
+        final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse,
+                                                      Duration.ofSeconds(1),
+                                                      Executors.newSingleThreadScheduledExecutor());
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseUsingCurrentEventLoopOrCommonPools() {
+        final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                      Duration.ofSeconds(1));
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseUsingScheduledExecutorService() {
+        final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                      Duration.ofSeconds(1),
+                                                      Executors.newSingleThreadScheduledExecutor());
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseSupplierCurrentEventLoopOrCommonPools() {
         final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
         final HttpResponse res = HttpResponse.delayed(responseSupplier,
                                                       Duration.ofSeconds(1));
@@ -165,7 +198,7 @@ class HttpResponseTest {
     }
 
     @Test
-    void delayedHttpResponseSchedulingUsingScheduledExecutorService() {
+    void delayedHttpResponseWithHttpResponseSupplierUsingScheduledExecutorService() {
         final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
         final HttpResponse res = HttpResponse.delayed(responseSupplier,
                                                       Duration.ofSeconds(1),
