@@ -19,6 +19,10 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.function.Supplier;
+
 import org.junit.jupiter.api.Test;
 
 class HttpResponseTest {
@@ -149,5 +153,24 @@ class HttpResponseTest {
         assertThatThrownBy(() -> HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "locationFor : %s",
             null))
             .isInstanceOf(NullPointerException.class).hasMessageContaining("args");
+    }
+
+    @Test
+    void delayedHttpResponseSchedulingUsingCurrentEventLoopOrCommonPools() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.delayed(responseSupplier,
+                                                      Duration.ofSeconds(1));
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void delayedHttpResponseSchedulingUsingScheduledExecutorService() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.delayed(responseSupplier,
+                                                      Duration.ofSeconds(1),
+                                                      Executors.newSingleThreadScheduledExecutor());
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
     }
 }

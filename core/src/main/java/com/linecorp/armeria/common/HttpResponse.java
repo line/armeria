@@ -139,7 +139,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(HttpResponse response, Duration delay) {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
-        return delayed(response, delay, CommonPools.workerGroup().next());
+        return delayed(() -> response, delay);
     }
 
     /**
@@ -150,9 +150,7 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.schedule(() -> res.delegate(response), delay.toNanos(), TimeUnit.NANOSECONDS);
-        return res;
+        return delayed(() -> response, delay, executor);
     }
 
     /***
@@ -163,7 +161,9 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");
         requireNonNull(delay, "delay");
-        return delayed(responseSupplier, delay, CommonPools.workerGroup().next());
+        return delayed(responseSupplier, delay,
+                       RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                 CommonPools.workerGroup()::next));
     }
 
     /***
