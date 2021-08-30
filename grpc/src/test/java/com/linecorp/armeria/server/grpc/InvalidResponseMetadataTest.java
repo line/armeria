@@ -144,9 +144,10 @@ class InvalidResponseMetadataTest {
             }
 
             /**
-             * Handles an {@link Exception} with a {@link Metadata} received from request.
-             * Armeria server MUST filter out pseudo request headers from the {@link Metadata} when writing
-             * response headers. Otherwise, the upstream gRPC-Java client raises the following exception:
+             * Handles an {@link Exception} with a {@link Metadata} received from a request.
+             * Armeria server MUST filter out pseudo request headers from the response {@link Metadata} when
+             * writing response headers.
+             * Otherwise, the upstream gRPC-Java client raises the following exception:
              * {@code Http2Exception$StreamException: Mix of request and response pseudo-headers.}
              */
             private void handleExceptionWithRequestMetadata(Exception exception,
