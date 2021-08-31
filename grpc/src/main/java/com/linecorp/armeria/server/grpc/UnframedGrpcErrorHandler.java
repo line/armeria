@@ -20,6 +20,38 @@ public interface UnframedGrpcErrorHandler {
 
     static UnframedGrpcErrorHandler of() {
         return (ctx, status, response) -> {
+            final MediaType grpcMediaType = response.contentType();
+            if (grpcMediaType != null && grpcMediaType.isJson()) {
+                return ofJson().handler(ctx, status, response);
+            } else {
+                return ofPlain().handler(ctx, status, response);
+            }
+        };
+    }
+
+    static UnframedGrpcErrorHandler ofJson() {
+        return (ctx, status, response) -> {
+            final HttpHeaders headers = !response.trailers().isEmpty() ?
+                                        response.trailers() : response.headers();
+            final String grpcStatusCode = headers.get(GrpcHeaderNames.GRPC_STATUS);
+            final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
+            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
+            final ImmutableMap.Builder<String, Object> builder =
+                    ImmutableMap.<String, Object>builder().put("code", grpcStatus.getCode().name());
+            final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+            if (grpcMessage != null) {
+                builder.put("message", grpcMessage);
+            }
+            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
+                                                                   .contentType(MediaType.JSON_UTF_8)
+                                                                   .add(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode)
+                                                                   .build();
+            return HttpResponse.ofJson(responseHeaders, builder.build());
+        };
+    }
+
+    static UnframedGrpcErrorHandler ofPlain() {
+        return (ctx, status, response) -> {
             final HttpHeaders headers = !response.trailers().isEmpty() ?
                                         response.trailers() : response.headers();
             final String grpcStatusCode = headers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -42,27 +74,6 @@ public interface UnframedGrpcErrorHandler {
                                                                         grpcStatusCode)
                                                                    .build();
             return HttpResponse.of(responseHeaders, HttpData.ofUtf8(message.toString()));
-        };
-    }
-
-    static UnframedGrpcErrorHandler ofJson() {
-        return (ctx, status, response) -> {
-            final HttpHeaders headers = !response.trailers().isEmpty() ?
-                                        response.trailers() : response.headers();
-            final String grpcStatusCode = headers.get(GrpcHeaderNames.GRPC_STATUS);
-            final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
-            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
-            final ImmutableMap.Builder<String, Object> builder =
-                    ImmutableMap.<String, Object>builder().put("code", grpcStatus.getCode().name());
-            final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
-            if (grpcMessage != null) {
-                builder.put("message", grpcMessage);
-            }
-            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
-                                                                   .contentType(MediaType.JSON_UTF_8)
-                                                                   .add(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode)
-                                                                   .build();
-            return HttpResponse.ofJson(responseHeaders, builder.build());
         };
     }
 
