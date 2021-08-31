@@ -147,7 +147,7 @@ class FlowCollectingPublisherTest {
                 try {
                     emit("onNext")
                 } catch (t: CancellationException) {
-                    queue.add(t)
+                    queue.add("cancellationException")
                 } finally {
                     throw RuntimeException()
                 }
@@ -171,12 +171,12 @@ class FlowCollectingPublisherTest {
             }
 
             override fun onError(t: Throwable) {
-                queue.add(t) // never reaches here
+                queue.add("onError") // never reaches here
             }
         })
         assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("onSubscribe")
         assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("onNext")
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isInstanceOf(CancellationException::class.java)
+        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("cancellationException")
         assertThat(queue.poll(3, TimeUnit.SECONDS)).isNull()
     }
 
