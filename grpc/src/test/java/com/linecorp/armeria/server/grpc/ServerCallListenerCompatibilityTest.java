@@ -370,9 +370,8 @@ class ServerCallListenerCompatibilityTest {
 
             @Override
             public String toString() {
-                return "Armeria(service:" + service.getClass().getSimpleName() + ", blocking:" +
-                       useBlocking +
-                       ", client-timeout: " + useClientTimeout + ')';
+                return "Armeria(service:" + service.getClass().getSimpleName() +
+                       ", blocking:" + useBlocking + ", client-timeout: " + useClientTimeout + ')';
             }
         };
     }
