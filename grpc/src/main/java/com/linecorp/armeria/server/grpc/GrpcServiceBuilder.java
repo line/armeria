@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -122,6 +123,7 @@ public final class GrpcServiceBuilder {
     private ImmutableList.Builder<ServerInterceptor> interceptors;
 
     @Nullable
+    @UnstableApi
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
@@ -296,6 +298,7 @@ public final class GrpcServiceBuilder {
      * service.
      * @param unframedGrpcErrorHandler The function which maps the error response to a {@link HttpResponse}.
      */
+    @UnstableApi
     public GrpcServiceBuilder unframedGrpcErrorHandler(UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
         this.unframedGrpcErrorHandler = unframedGrpcErrorHandler;

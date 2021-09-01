@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -256,7 +255,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
             PooledObjects.close(grpcResponse.content());
-            res.complete(unframedGrpcErrorHandler.handler(ctx, grpcStatus, grpcResponse));
+            res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse));
             return;
         }
 
