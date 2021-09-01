@@ -162,8 +162,8 @@ class HttpResponseTest {
     void delayedHttpResponseWithAggregatedHttpResponseUsingCurrentEventLoopOrCommonPools() {
         final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
         final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse, Duration.ofSeconds(1L));
-
         final Stopwatch stopwatch = Stopwatch.createStarted();
+        
         assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
         assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
                 .isGreaterThanOrEqualTo(1L);
@@ -175,8 +175,8 @@ class HttpResponseTest {
         final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse,
                                                       Duration.ofSeconds(1L),
                                                       Executors.newSingleThreadScheduledExecutor());
-
         final Stopwatch stopwatch = Stopwatch.createStarted();
+
         assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
         assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
                 .isGreaterThanOrEqualTo(1L);
@@ -213,8 +213,8 @@ class HttpResponseTest {
         final HttpResponse res = HttpResponse.delayed(responseSupplier,
                                                       Duration.ofSeconds(1L));
         final Stopwatch stopwatch = Stopwatch.createStarted();
-
         final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
         assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
                 .isGreaterThanOrEqualTo(1L);
