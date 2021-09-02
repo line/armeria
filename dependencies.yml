@@ -8,7 +8,7 @@ boms:
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.40.0
+  - io.grpc:grpc-bom:1.40.1
   - io.micrometer:micrometer-bom:1.7.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   # TODO(ikhoon): Upgrade Netty version once https://github.com/netty/netty/issues/11591 is fixed.
@@ -91,7 +91,7 @@ com.google.dagger:
   dagger-producers: { version: *DAGGER_VERSION }
 
 com.google.errorprone:
-  error_prone_core: { version: &ERRORPRONE_VERSION '2.8.1' }
+  error_prone_core: { version: &ERRORPRONE_VERSION '2.9.0' }
   error_prone_annotations: { version: *ERRORPRONE_VERSION }
 
 com.google.guava:
@@ -155,7 +155,7 @@ com.netflix.eureka:
 
 # DGS is used only for testing in it:dgs moulde.
 com.netflix.graphql.dgs:
-  graphql-dgs-client: { version: '4.5.1' }
+  graphql-dgs-client: { version: '4.6.0' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
@@ -164,7 +164,7 @@ com.puppycrawl.tools:
   checkstyle: { version: '8.45.1' }
 
 com.salesforce.servicelibs:
-  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.1.0' }
+  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.2.0' }
   reactor-grpc-stub: { version: *REACTVIVE_GRPC_VERSION }
 
 com.spotify:
@@ -192,7 +192,7 @@ com.thesamet.scalapb:
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
-  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.15' }
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.16' }
   akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
   akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
@@ -361,7 +361,7 @@ me.champeau.jmh:
   jmh-gradle-plugin: { version: '0.6.5' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.27.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.28.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.shibboleth.utilities:
@@ -524,7 +524,7 @@ org.jsoup:
   jsoup: { version: '1.14.2' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.11.2' }
+  mockito-core: { version: &MOCKITO_VERSION '3.12.4' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -596,7 +596,7 @@ org.springframework:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.5.3'
+    version: &SPRING_BOOT_VERSION '2.5.4'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

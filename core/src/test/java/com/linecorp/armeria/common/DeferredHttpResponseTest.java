@@ -17,17 +17,12 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -54,8 +49,8 @@ class DeferredHttpResponseTest {
             public void onComplete() {}
         }, ImmediateEventExecutor.INSTANCE);
 
-        await().untilAsserted(() -> assertThat(future.isCompletedExceptionally()).isTrue());
-        assertThatExceptionOfType(ExecutionException.class).isThrownBy(future::get)
-                .havingCause().isInstanceOf(CancelledSubscriptionException.class);
+        // Should not cancel the upstream CompletableFuture.
+        // A HttpResponse could be leaked if it is set after completion.
+        assertThat(future).isNotDone();
     }
 }

@@ -114,7 +114,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         requireNonNull(upstream, "upstream");
 
         if (!upstreamUpdater.compareAndSet(this, null, upstream)) {
-            throw new IllegalStateException("upstream set already");
+            final IllegalStateException exception = new IllegalStateException("upstream set already");
+            upstream.abort(exception);
+            throw exception;
         }
 
         @Nullable

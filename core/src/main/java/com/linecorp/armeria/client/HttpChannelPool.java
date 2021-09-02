@@ -435,7 +435,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
                 final ProxyConfigSelector proxyConfigSelector = clientFactory.proxyConfigSelector();
-                proxyConfigSelector.connectFailed(protocol, Endpoint.of(poolKey.host, poolKey.port),
+                proxyConfigSelector.connectFailed(protocol, Endpoint.unsafeCreate(poolKey.host, poolKey.port),
                                                   proxyAddress, UnprocessedRequestException.of(cause));
             }
         } catch (Throwable t) {

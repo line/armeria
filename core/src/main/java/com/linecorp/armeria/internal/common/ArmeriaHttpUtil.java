@@ -207,7 +207,7 @@ public final class ArmeriaHttpUtil {
     }
 
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
+            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY);
 
     static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);

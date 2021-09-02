@@ -95,7 +95,7 @@ final class HttpHealthChecker implements AsyncCloseable {
         final RequestHeaders headers;
         final RequestHeadersBuilder builder =
                 RequestHeaders.builder(useGet ? HttpMethod.GET : HttpMethod.HEAD, path)
-                              .add(HttpHeaderNames.AUTHORITY, authority);
+                              .authority(authority);
         if (maxLongPollingSeconds > 0) {
             headers = builder.add(HttpHeaderNames.IF_NONE_MATCH, wasHealthy ? "\"healthy\"" : "\"unhealthy\"")
                              .add(HttpHeaderNames.PREFER, "wait=" + maxLongPollingSeconds)

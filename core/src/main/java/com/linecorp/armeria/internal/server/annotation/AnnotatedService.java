@@ -330,15 +330,11 @@ public final class AnnotatedService implements HttpService {
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
                     composedFuture = f.thenComposeAsync(
-                            aReq -> cancelOnRequestCancelling(
-                                    toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
-                                    ctx.whenRequestCancelling()),
+                            aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
                             ctx.blockingTaskExecutor());
                 } else {
                     composedFuture = f.thenCompose(
-                            aReq -> cancelOnRequestCancelling(
-                                    toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()),
-                                    ctx.whenRequestCancelling()));
+                            aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()));
                 }
                 return composedFuture
                         .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
@@ -450,21 +446,6 @@ public final class AnnotatedService implements HttpService {
             return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
-    }
-
-    /**
-     * Add a callback to cancel the given {@link CompletionStage stage} if
-     * {@link CompletionStage whenRequestCancelling} completes earlier.
-     */
-    private static CompletionStage<?> cancelOnRequestCancelling(
-            CompletionStage<?> stage, CompletionStage<Throwable> whenRequestCancelling) {
-        whenRequestCancelling.thenAccept(cause -> {
-            final CompletableFuture<?> upstreamFuture = stage.toCompletableFuture();
-            if (!upstreamFuture.isDone()) {
-                upstreamFuture.completeExceptionally(cause);
-            }
-        });
-        return stage;
     }
 
     /**

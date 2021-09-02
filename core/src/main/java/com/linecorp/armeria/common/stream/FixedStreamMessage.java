@@ -17,9 +17,9 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;

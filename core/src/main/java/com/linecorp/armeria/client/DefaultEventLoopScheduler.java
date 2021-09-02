@@ -146,8 +146,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
                                          @Nullable Endpoint endpoint) {
         if (endpoint == null) {
             // Use a fake endpoint if no endpoint was selected from the endpointGroup.
-            endpoint = Endpoint.of(
-                    "armeria-group-" + Integer.toHexString(System.identityHashCode(endpointGroup)));
+            endpoint = Endpoint.unsafeCreate(
+                    "armeria-group-" + Integer.toHexString(System.identityHashCode(endpointGroup)), 0);
         }
 
         final String firstTryHost;

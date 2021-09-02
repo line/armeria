@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -90,49 +91,54 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         }
 
         if (contentType.isJson()) {
-            return HttpResponse.from(request.aggregate().thenApply(req -> {
-                final String body = req.contentUtf8();
-                if (Strings.isNullOrEmpty(body)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                           "Missing request body");
-                }
+            return HttpResponse.from(request.aggregate(ctx.eventLoop()).thenApply(req -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    final String body = req.contentUtf8();
+                    if (Strings.isNullOrEmpty(body)) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                               "Missing request body");
+                    }
 
-                final Map<String, Object> requestMap;
-                try {
-                    requestMap = parseJsonString(body);
-                } catch (JsonProcessingException ex) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                           "Failed to parse a JSON document: " + body);
-                }
+                    final Map<String, Object> requestMap;
+                    try {
+                        requestMap = parseJsonString(body);
+                    } catch (JsonProcessingException ex) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                               "Failed to parse a JSON document: " + body);
+                    }
 
-                final String query = (String) requestMap.get("query");
-                if (Strings.isNullOrEmpty(query)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
-                }
-                final String operationName = (String) requestMap.get("operationName");
-                final Map<String, Object> variables = toMap(requestMap.get("variables"));
-                final Map<String, Object> extensions = toMap(requestMap.get("extensions"));
+                    final String query = (String) requestMap.get("query");
+                    if (Strings.isNullOrEmpty(query)) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
+                    }
+                    final String operationName = (String) requestMap.get("operationName");
+                    final Map<String, Object> variables = toMap(requestMap.get("variables"));
+                    final Map<String, Object> extensions = toMap(requestMap.get("extensions"));
 
-                try {
-                    return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions,
-                                                                 produceType(req.headers())));
-                } catch (Exception ex) {
-                    return HttpResponse.ofFailure(ex);
+                    try {
+                        return executeGraphql(ctx,
+                                              GraphqlRequest.of(query, operationName, variables, extensions,
+                                                                produceType(req.headers())));
+                    } catch (Exception ex) {
+                        return HttpResponse.ofFailure(ex);
+                    }
                 }
             }));
         }
 
         if (contentType.is(MediaType.GRAPHQL)) {
-            return HttpResponse.from(request.aggregate().thenApply(req -> {
-                final String query = req.contentUtf8();
-                if (Strings.isNullOrEmpty(query)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
-                }
+            return HttpResponse.from(request.aggregate(ctx.eventLoop()).thenApply(req -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    final String query = req.contentUtf8();
+                    if (Strings.isNullOrEmpty(query)) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
+                    }
 
-                try {
-                    return executeGraphql(ctx, GraphqlRequest.of(query));
-                } catch (Exception ex) {
-                    return HttpResponse.ofFailure(ex);
+                    try {
+                        return executeGraphql(ctx, GraphqlRequest.of(query));
+                    } catch (Exception ex) {
+                        return HttpResponse.ofFailure(ex);
+                    }
                 }
             }));
         }

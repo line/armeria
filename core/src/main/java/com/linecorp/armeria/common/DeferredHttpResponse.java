@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -32,25 +31,6 @@ import io.netty.util.concurrent.EventExecutor;
  * an {@link HttpResponse} will not be instantiated early.
  */
 final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
-
-    /**
-     * The {@link Class} instance of {@code reactor.core.publisher.MonoToCompletableFuture} of
-     * <a href="https://projectreactor.io/">Project Reactor</a>.
-     */
-    @Nullable
-    private static final Class<?> MONO_TO_FUTURE_CLASS;
-
-    static {
-        @Nullable Class<?> monoToFuture = null;
-        try {
-            monoToFuture = Class.forName("reactor.core.publisher.MonoToCompletableFuture",
-                                         true, DeferredHttpResponse.class.getClassLoader());
-        } catch (ClassNotFoundException e) {
-            // Do nothing.
-        } finally {
-            MONO_TO_FUTURE_CLASS = monoToFuture;
-        }
-    }
 
     @Nullable
     private final EventExecutor executor;
@@ -69,28 +49,9 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
 
     void delegateWhenComplete(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
-
-        // Propagate exception to the upstream future.
-        whenComplete().handle((unused, cause) -> {
-            final CompletableFuture<? extends HttpResponse> future = stage.toCompletableFuture();
-            if (cause != null && !future.isDone()) {
-                if (MONO_TO_FUTURE_CLASS != null && MONO_TO_FUTURE_CLASS.isAssignableFrom(future.getClass())) {
-                    // A workaround for 'MonoToCompletableFuture' not propagating cancellation to the upstream
-                    // publisher when it completes exceptionally.
-                    future.cancel(true);
-                } else {
-                    future.completeExceptionally(cause);
-                }
-            }
-            return null;
-        });
         stage.handle((delegate, thrown) -> {
             if (thrown != null) {
-                if (!whenComplete().isDone()) {
-                    close(Exceptions.peel(thrown));
-                } else {
-                    return null;
-                }
+                close(Exceptions.peel(thrown));
             } else if (delegate == null) {
                 close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {

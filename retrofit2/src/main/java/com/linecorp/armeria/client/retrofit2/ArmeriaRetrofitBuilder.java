@@ -220,9 +220,10 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
                                                  .build();
 
         if (nonBaseClientFactory == null) {
-            nonBaseClientFactory = (p, url) -> WebClient.builder(p, Endpoint.of(url.host(), url.port()))
-                                                        .options(retrofitOptions)
-                                                        .build();
+            nonBaseClientFactory =
+                    (p, url) -> WebClient.builder(p, Endpoint.unsafeCreate(url.host(), url.port()))
+                                         .options(retrofitOptions)
+                                         .build();
         }
 
         retrofitBuilder.callFactory(new ArmeriaCallFactory(

@@ -193,6 +193,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 null,
                 RequestOptions.of(),
                 System.nanoTime(),
-                SystemInfo.currentTimeMicros());
+                SystemInfo.currentTimeMicros(),
+                /* hasBaseUri */ true);
     }
 }

@@ -25,7 +25,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
@@ -61,7 +60,6 @@ public final class ClientUtil {
         boolean initialized = false;
         boolean success = false;
         try {
-            endpointGroup = mapEndpoint(ctx, endpointGroup);
             final CompletableFuture<Boolean> initFuture = ctx.init(endpointGroup);
             initialized = initFuture.isDone();
             if (initialized) {
@@ -128,15 +126,6 @@ public final class ClientUtil {
 
             // No need to call `fail()` because failed by `DefaultRequestContext.init()` already.
             return errorResponseFactory.apply(ctx, cause);
-        }
-    }
-
-    private static EndpointGroup mapEndpoint(ClientRequestContext ctx, EndpointGroup endpointGroup) {
-        if (endpointGroup instanceof Endpoint) {
-            return requireNonNull(ctx.options().endpointRemapper().apply((Endpoint) endpointGroup),
-                                  "endpointRemapper returned null.");
-        } else {
-            return endpointGroup;
         }
     }
 
