@@ -112,8 +112,11 @@ class UnframedGrpcServiceTest {
         });
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpResponse res = response.aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().isEmpty()).isTrue();
+        assertThat(res.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
+        assertThat(res.contentUtf8())
+                .isEqualTo("http-status: 499, Client Closed Request\n" +
+                           "Caused by: \n" +
+                           "grpc-status: 1, CANCELLED, Completed without a response");
     }
 
     @Test

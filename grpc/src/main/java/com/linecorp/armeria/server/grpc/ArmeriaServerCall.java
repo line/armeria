@@ -379,8 +379,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             completed = false;
         } else if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse == null) {
             // A call that should send a message incompletely finished.
-            logger.warn("{} Completed without a response. status: {}, metadata: {}", ctx, status, metadata);
-            status = Status.CANCELLED;
+            final String description = "Completed without a response";
+            logger.warn("{} {} status: {}, metadata: {}", ctx, description, status, metadata);
+            status = Status.CANCELLED.withDescription(description);
             completed = false;
         }
 
