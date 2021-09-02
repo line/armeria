@@ -74,7 +74,7 @@ class ServerCallListenerCompatibilityTest {
     @ArgumentsSource(ServiceProvider.class)
     @ParameterizedTest
     void unaryCall(List<ReleasableHolder<TestServiceBlockingStub>> clients) throws InterruptedException {
-        @Nullable Throwable exception = null;
+        @Nullable StatusRuntimeException oldException = null;
         @Nullable List<String> events = null;
         for (int i = 0; i < clients.size(); i++) {
             final ReleasableHolder<TestServiceBlockingStub> resource = clients.get(i);
@@ -84,15 +84,24 @@ class ServerCallListenerCompatibilityTest {
                 try {
                     client.emptyCall(Empty.getDefaultInstance());
                 } catch (Throwable ex) {
-                    final StatusRuntimeException statusException = (StatusRuntimeException) ex;
+                    final StatusRuntimeException newException = (StatusRuntimeException) ex;
                     if (i == 0) {
-                        exception = statusException;
+                        oldException = newException;
                     } else {
-                        assertThat(exception).isNotNull();
-                        assertThat(statusException).isInstanceOf(exception.getClass());
-                        if (statusException.getStatus().getCode() != Code.DEADLINE_EXCEEDED) {
-                            // A description about a deadline might have a different time decision.
-                            assertThat(statusException.getMessage()).isEqualTo(exception.getMessage());
+                        assertThat(oldException).isNotNull();
+                        assertThat(newException).isInstanceOf(oldException.getClass());
+                        final Status status = newException.getStatus();
+                        final Code code = status.getCode();
+                        if (code == Code.DEADLINE_EXCEEDED ||
+                            (code == Code.CANCELLED &&
+                             "Completed without a response".equals(status.getDescription()))) {
+                            // Don't compare the descriptions when:
+                            // - a response is incompletely finished, the upstream error does not contain
+                            //   description.
+                            // - a description about DEADLINE_EXCEEDED might have different deadlines
+                            //   depending on OS scheduling and network conditions.
+                        } else {
+                            assertThat(newException.getMessage()).isEqualTo(oldException.getMessage());
                         }
                     }
                 }
