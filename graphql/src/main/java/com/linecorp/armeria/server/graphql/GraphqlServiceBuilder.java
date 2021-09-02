@@ -20,7 +20,10 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.net.URISyntaxException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;
@@ -31,13 +34,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.GraphQLSchema.Builder;
 import graphql.schema.GraphQLTypeVisitor;
 import graphql.schema.SchemaTransformer;
 import graphql.schema.idl.RuntimeWiring;
@@ -55,7 +61,7 @@ public final class GraphqlServiceBuilder {
 
     private static final List<String> DEFAULT_SCHEMA_FILE_NAMES = ImmutableList.of("schema.graphqls",
                                                                                    "schema.graphql");
-    private final ImmutableList.Builder<File> schemaFiles = ImmutableList.builder();
+    private final ImmutableList.Builder<URL> schemaURLs = ImmutableList.builder();
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =
             ImmutableList.builder();
@@ -67,6 +73,9 @@ public final class GraphqlServiceBuilder {
             ImmutableList.builder();
 
     private boolean useBlockingTaskExecutor;
+
+    @Nullable
+    private GraphQLSchema schema;
 
     GraphqlServiceBuilder() {}
 
@@ -83,7 +92,40 @@ public final class GraphqlServiceBuilder {
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
     public GraphqlServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
-        this.schemaFiles.addAll(requireNonNull(schemaFiles, "schemaFiles"));
+        requireNonNull(schemaFiles, "schemaFiles");
+        return schemaURL(Streams.stream(schemaFiles)
+                                .map(file -> {
+                                    try {
+                                        return file.toURI().toURL();
+                                    } catch (MalformedURLException e) {
+                                        throw new UncheckedIOException(e);
+                                    }
+                                }).collect(toImmutableList()));
+    }
+
+    /**
+     * Adds the schema {@link URL}s.
+     * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     */
+    public GraphqlServiceBuilder schemaURL(URL... schemaURLs) {
+        return schemaURL(ImmutableList.copyOf(requireNonNull(schemaURLs, "schemaURLs")));
+    }
+
+    /**
+     * Adds the schema {@link URL}s.
+     * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     */
+    public GraphqlServiceBuilder schemaURL(Iterable<URL> schemaURLs) {
+        this.schemaURLs.addAll(requireNonNull(schemaURLs, "schemaURLs"));
+        return this;
+    }
+
+    /**
+     * Adds the {@link GraphQLSchema}.
+     * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     */
+    public GraphqlServiceBuilder schema(GraphQLSchema schema) {
+        this.schema = requireNonNull(schema, "schema");
         return this;
     }
 
@@ -179,15 +221,7 @@ public final class GraphqlServiceBuilder {
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
-        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaFiles.build());
-
-        final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfigurators.build());
-        GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring);
-        final List<GraphQLTypeVisitor> typeVisitors = this.typeVisitors.build();
-        for (GraphQLTypeVisitor typeVisitor : typeVisitors) {
-            schema = SchemaTransformer.transformSchema(schema, typeVisitor);
-        }
-
+        final GraphQLSchema schema = schema();
         GraphQL.Builder builder = GraphQL.newGraphQL(schema);
         final List<Instrumentation> instrumentations = this.instrumentations.build();
         if (!instrumentations.isEmpty()) {
@@ -208,18 +242,39 @@ public final class GraphqlServiceBuilder {
         return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
     }
 
-    private static TypeDefinitionRegistry typeDefinitionRegistry(List<File> schemaFiles) {
+    private GraphQLSchema schema() {
+        if (schema != null) {
+            return schema;
+        }
+
+        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaURLs.build());
+        final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfigurators.build());
+        GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring);
+        final List<GraphQLTypeVisitor> typeVisitors = this.typeVisitors.build();
+        for (GraphQLTypeVisitor typeVisitor : typeVisitors) {
+            schema = SchemaTransformer.transformSchema(schema, typeVisitor);
+        }
+        return schema;
+    }
+
+    private static TypeDefinitionRegistry typeDefinitionRegistry(List<URL> schemaURLs) {
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
         final SchemaParser parser = new SchemaParser();
-        if (schemaFiles.isEmpty()) {
-            schemaFiles = defaultSchemaFiles();
+        if (schemaURLs.isEmpty()) {
+            schemaURLs = defaultSchemaURLs();
         }
-        if (schemaFiles.isEmpty()) {
+        if (schemaURLs.isEmpty()) {
             throw new IllegalStateException("Not found schema file(s)");
         }
 
-        logger.info("Found schema files: {}", schemaFiles);
-        schemaFiles.forEach(file -> registry.merge(parser.parse(file)));
+        logger.info("Found schema files: {}", schemaURLs);
+        schemaURLs.forEach(url -> {
+            try (InputStream inputStream = url.openStream()) {
+                registry.merge(parser.parse(inputStream));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        });
         return registry;
     }
 
@@ -230,21 +285,12 @@ public final class GraphqlServiceBuilder {
         return runtimeWiringBuilder.build();
     }
 
-    private static List<File> defaultSchemaFiles() {
+    private static List<URL> defaultSchemaURLs() {
         final ClassLoader classLoader = GraphqlServiceBuilder.class.getClassLoader();
         return DEFAULT_SCHEMA_FILE_NAMES
                 .stream()
                 .map(classLoader::getResource)
                 .filter(Objects::nonNull)
-                .map(GraphqlServiceBuilder::toFile)
                 .collect(toImmutableList());
-    }
-
-    private static File toFile(URL url) {
-        try {
-            return new File(url.toURI());
-        } catch (URISyntaxException ignored) {
-            return new File(url.getPath());
-        }
     }
 }

@@ -20,13 +20,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.File;
+import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 
 import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderFactory;
 import org.junit.jupiter.api.Test;
 
 import graphql.execution.instrumentation.SimpleInstrumentation;
+import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.schema.idl.RuntimeWiring;
+import graphql.schema.idl.SchemaGenerator;
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
 
 class GraphqlServiceBuilderTest {
 
@@ -45,12 +52,34 @@ class GraphqlServiceBuilderTest {
     }
 
     @Test
+    void specifySchemaURL() throws Exception {
+        final URL graphqlSchemaURL = getClass().getResource("/test.graphqls");
+        final GraphqlService service = new GraphqlServiceBuilder().schemaURL(graphqlSchemaURL).build();
+        assertThat(service).isNotNull();
+    }
+
+    @Test
+    void specifySchema() throws Exception {
+        final File graphqlSchemaFile =
+                new File(getClass().getResource("/test.graphqls").toURI());
+        final TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry();
+        final SchemaParser parser = new SchemaParser();
+        typeDefinitionRegistry.merge(parser.parse(graphqlSchemaFile));
+
+        final GraphQLSchema schema =
+                new SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry,
+                                                           RuntimeWiring.newRuntimeWiring().build());
+        final GraphqlService service = new GraphqlServiceBuilder().schema(schema).build();
+        assertThat(service).isNotNull();
+    }
+
+    @Test
     void successful() throws Exception {
         final File graphqlSchemaFile =
                 new File(getClass().getResource("/test.graphqls").toURI());
         final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
         final DataLoader<String, String> dataLoader =
-                DataLoader.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
+                DataLoaderFactory.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
         final GraphqlService service = builder.schemaFile(graphqlSchemaFile)
                                               .instrumentation(SimpleInstrumentation.INSTANCE)
                                               .configureDataLoaderRegistry(dlr -> {
@@ -58,7 +87,8 @@ class GraphqlServiceBuilderTest {
                                               })
                                               .runtimeWiring(it -> {
                                                   // noop
-                                              }).typeVisitors(new GraphQLTypeVisitorStub())
+                                              })
+                                              .typeVisitors(new GraphQLTypeVisitorStub())
                                               .configureGraphql(it -> {
                                                   // noop
                                               }).build();
