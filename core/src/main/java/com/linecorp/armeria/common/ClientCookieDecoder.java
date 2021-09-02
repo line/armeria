@@ -68,7 +68,7 @@ final class ClientCookieDecoder {
         final int headerLen = header.length();
         assert headerLen != 0 : headerLen;
 
-        CookieBuilder builder = null;
+        @Nullable CookieBuilder builder = null;
 
         loop: for (int i = 0;;) {
 
@@ -189,6 +189,7 @@ final class ClientCookieDecoder {
     private static void parse4(CookieBuilder builder, String header,
                                int nameStart, int valueStart, int valueEnd) {
         if (header.regionMatches(true, nameStart, CookieHeaderNames.PATH, 0, 4)) {
+            @Nullable
             final String path = computeValue(header, valueStart, valueEnd);
             if (path != null) {
                 builder.path(path);
@@ -199,6 +200,7 @@ final class ClientCookieDecoder {
     private static void parse6(CookieBuilder builder, String header,
                                int nameStart, int valueStart, int valueEnd) {
         if (header.regionMatches(true, nameStart, CookieHeaderNames.DOMAIN, 0, 5)) {
+            @Nullable
             final String domain = computeValue(header, valueStart, valueEnd);
             if (domain != null) {
                 builder.domain(domain);
@@ -222,6 +224,7 @@ final class ClientCookieDecoder {
             builder.expiresStart = valueStart;
             builder.expiresEnd = valueEnd;
         } else if (header.regionMatches(true, nameStart, CookieHeaderNames.MAX_AGE, 0, 7)) {
+            @Nullable
             final String maxAge = computeValue(header, valueStart, valueEnd);
             if (maxAge != null) {
                 setMaxAge(builder, maxAge);

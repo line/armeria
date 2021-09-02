@@ -360,6 +360,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private boolean cancelTimeout() {
+        @Nullable
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
         if (timeoutFuture == null) {
             return true;

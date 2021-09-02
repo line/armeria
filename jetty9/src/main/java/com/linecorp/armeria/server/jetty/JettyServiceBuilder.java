@@ -250,6 +250,7 @@ public final class JettyServiceBuilder {
             config.handlerWrappers().forEach(server::insertHandler);
             config.attrs().forEach(server::setAttribute);
             config.beans().forEach(bean -> {
+                @Nullable
                 final Boolean managed = bean.isManaged();
                 if (managed == null) {
                     server.addBean(bean.bean());

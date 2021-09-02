@@ -136,11 +136,13 @@ abstract class StringMultimapBuilder<
 
     @Nullable
     public final String get(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.get(name) : null;
     }
 
     public final String get(IN_NAME name, String defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.get(name, defaultValue)
                                : requireNonNull(defaultValue, "defaultValue");
@@ -148,194 +150,230 @@ abstract class StringMultimapBuilder<
 
     @Nullable
     public final String getLast(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLast(name) : null;
     }
 
     public final String getLast(IN_NAME name, String defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLast(name, defaultValue)
                                : requireNonNull(defaultValue, "defaultValue");
     }
 
     public final List<String> getAll(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getAll(name) : ImmutableList.of();
     }
 
     @Nullable
     public final Boolean getBoolean(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getBoolean(name) : null;
     }
 
     public final boolean getBoolean(IN_NAME name, boolean defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getBoolean(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Boolean getLastBoolean(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastBoolean(name) : null;
     }
 
     public final boolean getLastBoolean(IN_NAME name, boolean defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastBoolean(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Integer getInt(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getInt(name) : null;
     }
 
     public final int getInt(IN_NAME name, int defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getInt(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Integer getLastInt(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastInt(name) : null;
     }
 
     public final int getLastInt(IN_NAME name, int defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastInt(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Long getLong(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLong(name) : null;
     }
 
     public final long getLong(IN_NAME name, long defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLong(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Long getLastLong(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastLong(name) : null;
     }
 
     public final long getLastLong(IN_NAME name, long defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastLong(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Float getFloat(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getFloat(name) : null;
     }
 
     public final float getFloat(IN_NAME name, float defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getFloat(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Float getLastFloat(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastFloat(name) : null;
     }
 
     public final float getLastFloat(IN_NAME name, float defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastFloat(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Double getDouble(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getDouble(name) : null;
     }
 
     public final double getDouble(IN_NAME name, double defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getDouble(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Double getLastDouble(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastDouble(name) : null;
     }
 
     public final double getLastDouble(IN_NAME name, double defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastDouble(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Long getTimeMillis(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getTimeMillis(name) : null;
     }
 
     public final long getTimeMillis(IN_NAME name, long defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getTimeMillis(name, defaultValue) : defaultValue;
     }
 
     @Nullable
     public final Long getLastTimeMillis(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastTimeMillis(name) : null;
     }
 
     public final long getLastTimeMillis(IN_NAME name, long defaultValue) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.getLastTimeMillis(name, defaultValue) : defaultValue;
     }
 
     public final boolean contains(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.contains(name) : false;
     }
 
     public final boolean contains(IN_NAME name, String value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.contains(name, value) : false;
     }
 
     public final boolean containsObject(IN_NAME name, Object value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.containsObject(name, value) : false;
     }
 
     public final boolean containsBoolean(IN_NAME name, boolean value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.containsBoolean(name, value) : false;
     }
 
     public final boolean containsInt(IN_NAME name, int value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.containsInt(name, value) : false;
     }
 
     public final boolean containsLong(IN_NAME name, long value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.containsLong(name, value) : false;
     }
 
     public final boolean containsFloat(IN_NAME name, float value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.containsFloat(name, value) : false;
     }
 
     public final boolean containsDouble(IN_NAME name, double value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.containsDouble(name, value) : false;
     }
 
     public final boolean containsTimeMillis(IN_NAME name, long value) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.containsTimeMillis(name, value) : false;
     }
@@ -355,21 +393,25 @@ abstract class StringMultimapBuilder<
     }
 
     public final Set<NAME> names() {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.names() : ImmutableSet.of();
     }
 
     public final Iterator<Entry<NAME, String>> iterator() {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.iterator() : Collections.emptyIterator();
     }
 
     public final Iterator<String> valueIterator(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.valueIterator(name) : Collections.emptyIterator();
     }
 
     public final void forEach(BiConsumer<NAME, String> action) {
+        @Nullable
         final CONTAINER getters = getters();
         if (getters != null) {
             getters.forEach(action);
@@ -377,6 +419,7 @@ abstract class StringMultimapBuilder<
     }
 
     public final void forEachValue(IN_NAME name, Consumer<String> action) {
+        @Nullable
         final CONTAINER getters = getters();
         if (getters != null) {
             getters.forEachValue(name, action);
@@ -384,11 +427,13 @@ abstract class StringMultimapBuilder<
     }
 
     public final Stream<Entry<NAME, String>> stream() {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.stream() : Stream.empty();
     }
 
     public final Stream<String> valueStream(IN_NAME name) {
+        @Nullable
         final CONTAINER getters = getters();
         return getters != null ? getters.valueStream(name) : Stream.empty();
     }

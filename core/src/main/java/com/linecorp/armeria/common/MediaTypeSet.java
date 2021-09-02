@@ -200,7 +200,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
     public MediaType match(Iterable<MediaType> ranges) {
         requireNonNull(ranges, "ranges");
 
-        MediaType match = null;
+        @Nullable MediaType match = null;
         float matchQ = Float.NEGATIVE_INFINITY;    // higher = better
         int matchNumWildcards = Integer.MAX_VALUE; // lower = better
         int matchNumParams = Integer.MIN_VALUE;    // higher = better

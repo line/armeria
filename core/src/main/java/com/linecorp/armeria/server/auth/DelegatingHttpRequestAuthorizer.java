@@ -46,6 +46,7 @@ final class DelegatingHttpRequestAuthorizer<T> extends AbstractAuthorizerWithHan
     @Override
     public CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
                                                                            @Nullable HttpRequest request) {
+        @Nullable
         final T token = tokenExtractor.apply(requireNonNull(request, "request").headers());
         return delegate.authorizeAndSupplyHandlers(ctx, token);
     }

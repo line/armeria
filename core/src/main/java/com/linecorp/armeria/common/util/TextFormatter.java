@@ -195,8 +195,11 @@ public final class TextFormatter {
         }
 
         final InetSocketAddress isa = (InetSocketAddress) addr;
+        @Nullable
         final String host = isa.getHostString();
+        @Nullable
         final InetAddress resolvedAddr = isa.getAddress();
+        @Nullable
         final String ip = resolvedAddr != null ? resolvedAddr.getHostAddress() : null;
         if (host != null) {
             if (ip != null) {

@@ -40,6 +40,7 @@ public final class ObservableResponseConverterFunctionProvider implements Respon
     public ResponseConverterFunction createResponseConverterFunction(
             Type returnType,
             ResponseConverterFunction responseConverter) {
+        @Nullable
         final Class<?> clazz = typeToClass(returnType);
         if (clazz != null && isSupportedClass(clazz)) {
             ensureNoMoreObservableSource(returnType, returnType);

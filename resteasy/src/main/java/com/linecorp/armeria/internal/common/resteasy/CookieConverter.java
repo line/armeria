@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.ext.RuntimeDelegate;
 
 import com.google.common.collect.Streams;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
@@ -194,12 +196,13 @@ public final class CookieConverter {
      * See org.jboss.resteasy.plugins.delegates.NewCookieHeaderDelegate
      */
     private static final class NewCookieHeaderDelegate
-            implements RuntimeDelegate.HeaderDelegate<javax.ws.rs.core.NewCookie> {
+            implements RuntimeDelegate.HeaderDelegate<NewCookie> {
 
         private static final NewCookieHeaderDelegate INSTANCE = new NewCookieHeaderDelegate();
 
         @Override
-        public javax.ws.rs.core.NewCookie fromString(String headerValue) {
+        public NewCookie fromString(String headerValue) {
+            @Nullable
             final Cookie cookie = Cookie.fromSetCookieHeader(headerValue);
             requireNonNull(cookie, headerValue);
             final CookieConverter converter = new CookieConverter(cookie);
@@ -207,7 +210,7 @@ public final class CookieConverter {
         }
 
         @Override
-        public String toString(javax.ws.rs.core.NewCookie setCookie) {
+        public String toString(NewCookie setCookie) {
             final CookieConverter converter = new CookieConverter(setCookie);
             return converter.toSetCookieHeader();
         }

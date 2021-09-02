@@ -207,6 +207,7 @@ public final class ChannelUtil {
             return null;
         }
 
+        @Nullable
         final SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
         return sslHandler != null ? sslHandler.engine().getSession() : null;
     }

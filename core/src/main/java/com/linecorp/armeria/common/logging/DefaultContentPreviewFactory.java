@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 
@@ -73,8 +74,10 @@ final class DefaultContentPreviewFactory implements ContentPreviewerFactory {
             }
         }
 
+        @Nullable
         final MediaType contentType = headers.contentType();
         if (contentType != null) {
+            @Nullable
             final Charset charset = contentType.charset();
             if (charset != null) {
                 return new TextContentPreviewer(maxLength, charset);
@@ -92,6 +95,7 @@ final class DefaultContentPreviewFactory implements ContentPreviewerFactory {
     }
 
     private Charset charset(HttpHeaders headers) {
+        @Nullable
         final MediaType contentType = headers.contentType();
         if (contentType != null) {
             return contentType.charset(defaultCharset);

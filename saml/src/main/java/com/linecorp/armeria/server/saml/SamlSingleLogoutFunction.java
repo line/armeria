@@ -96,12 +96,14 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
             final String endpointUri = endpoint.toUriString(portConfig.scheme().uriText(),
                                                             defaultHostname, portConfig.port());
             final LogoutRequest logoutRequest = messageContext.getMessage();
+            assert logoutRequest != null;
             final SamlIdentityProviderConfig idp = validateAndGetIdPConfig(logoutRequest, endpointUri);
 
             if (endpoint.bindingProtocol() == SamlBindingProtocol.HTTP_POST) {
                 validateSignature(idp.signingCredential(), logoutRequest);
             }
 
+            @Nullable
             final SamlEndpoint sloResEndpoint = idp.sloResEndpoint();
             if (sloResEndpoint == null) {
                 // No response URL. Just return 200 OK.

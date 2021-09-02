@@ -123,7 +123,7 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         if (client.getState() != CuratorFrameworkState.STARTED) {
             client.start();
         }
-
+        @Nullable
         final String pathForDiscovery = discoverySpec.path();
         final String path = isNullOrEmpty(pathForDiscovery) ? znodePath : znodePath + pathForDiscovery;
         try {
@@ -139,12 +139,14 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         pathChildrenCache.getListenable().addListener((c, event) -> {
             switch (event.getType()) {
                 case CHILD_ADDED:
+                    @Nullable
                     final Endpoint addedEndpoint = endpoint(spec, event);
                     if (addedEndpoint != null) {
                         addEndpoint(addedEndpoint);
                     }
                     break;
                 case CHILD_REMOVED:
+                    @Nullable
                     final Endpoint removedEndpoint = endpoint(spec, event);
                     if (removedEndpoint != null) {
                         removeEndpoint(removedEndpoint);

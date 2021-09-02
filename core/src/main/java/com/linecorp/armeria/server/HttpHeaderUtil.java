@@ -118,11 +118,13 @@ final class HttpHeaderUtil {
             return;
         }
         for (String value : CSV_SPLITTER.split(headerValue)) {
+            @Nullable
             final String v = valueConverter.apply(value);
             if (Strings.isNullOrEmpty(v)) {
                 continue;
             }
             try {
+                @Nullable
                 final InetSocketAddress addr = createInetSocketAddress(v);
                 if (addr != null && filter.test(addr.getAddress())) {
                     accumulator.add(addr);

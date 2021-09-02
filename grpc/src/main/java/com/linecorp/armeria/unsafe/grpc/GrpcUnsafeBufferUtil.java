@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
@@ -45,7 +46,7 @@ public final class GrpcUnsafeBufferUtil {
      * {@link #releaseBuffer(Object, RequestContext)}.
      */
     public static void storeBuffer(ByteBuf buf, Object message, RequestContext ctx) {
-        IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
+        @Nullable IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
         if (buffers == null) {
             buffers = new IdentityHashMap<>();
             ctx.setAttr(BUFFERS, buffers);
@@ -57,6 +58,7 @@ public final class GrpcUnsafeBufferUtil {
      * Releases the {@link ByteBuf} backing the specified {@link Message}.
      */
     public static void releaseBuffer(Object message, RequestContext ctx) {
+        @Nullable
         final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
         if (buffers == null) {
             return;

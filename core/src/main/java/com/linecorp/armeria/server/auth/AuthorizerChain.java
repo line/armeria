@@ -117,7 +117,9 @@ final class AuthorizerChain<T> extends AbstractAuthorizerWithHandlers<T> {
                             AuthorizationStatus.ofSuccess(result.successHandler()));
                 }
                 // handle failure result
+                @Nullable
                 final AuthFailureHandler failureHandler;
+                @Nullable
                 final AuthFailureHandler nextFailureHandler = result.failureHandler();
                 switch (selectionStrategy) {
                     case FIRST:

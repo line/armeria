@@ -114,6 +114,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
             final byte[] txt = new byte[txtLen];
             content.readBytes(txt);
 
+            @Nullable
             final Endpoint endpoint;
             try {
                 endpoint = mapping.apply(txt);

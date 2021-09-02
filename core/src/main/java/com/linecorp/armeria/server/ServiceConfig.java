@@ -99,6 +99,7 @@ public final class ServiceConfig {
 
     private static Set<TransientServiceOption> extractTransientServiceOptions(HttpService service) {
         @SuppressWarnings("rawtypes")
+        @Nullable
         final TransientService transientService = service.as(TransientService.class);
         if (transientService == null) {
             return TransientServiceOption.allOf();

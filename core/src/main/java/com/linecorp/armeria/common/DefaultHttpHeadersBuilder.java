@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class DefaultHttpHeadersBuilder
         extends AbstractHttpHeadersBuilder<DefaultHttpHeadersBuilder>
         implements HttpHeadersBuilder {
@@ -27,6 +29,7 @@ final class DefaultHttpHeadersBuilder
 
     @Override
     public HttpHeaders build() {
+        @Nullable
         final HttpHeadersBase delegate = delegate();
         if (delegate != null) {
             if (delegate.isEmpty()) {
@@ -36,6 +39,7 @@ final class DefaultHttpHeadersBuilder
             }
         }
 
+        @Nullable
         final HttpHeadersBase parent = parent();
         if (parent != null) {
             if (parent instanceof HttpHeaders) {

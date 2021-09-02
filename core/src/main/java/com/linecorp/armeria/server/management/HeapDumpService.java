@@ -99,7 +99,7 @@ enum HeapDumpService implements HttpService {
                 }
             }
 
-            File tempFile = null;
+            @Nullable File tempFile = null;
             try {
                 final QueryParams queryParams = QueryParams.fromQueryString(ctx.query());
                 final boolean live = queryParams.contains("live", "true");

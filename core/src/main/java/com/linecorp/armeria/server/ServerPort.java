@@ -248,7 +248,7 @@ public final class ServerPort implements Comparable<ServerPort> {
 
     @Override
     public String toString() {
-        String strVal = this.strVal;
+        @Nullable String strVal = this.strVal;
         if (strVal == null) {
             this.strVal = strVal = toString(getClass(), localAddress(), protocols(), portGroup());
         }

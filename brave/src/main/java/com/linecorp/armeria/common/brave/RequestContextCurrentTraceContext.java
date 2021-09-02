@@ -136,6 +136,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     @Override
     @Nullable
     public TraceContext get() {
+        @Nullable
         final RequestContext ctx = getRequestContextOrWarnOnce();
         if (ctx == null) {
             return THREAD_LOCAL_CONTEXT.get();
@@ -144,6 +145,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         if (ctx.eventLoop().inEventLoop()) {
             return traceContext(ctx);
         } else {
+            @Nullable
             final TraceContext threadLocalContext = THREAD_LOCAL_CONTEXT.get();
             if (threadLocalContext != null) {
                 return threadLocalContext;
@@ -160,6 +162,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return Scope.NOOP;
         }
 
+        @Nullable
         final RequestContext ctx = getRequestContextOrWarnOnce();
 
         if (ctx != null && ctx.eventLoop().inEventLoop()) {
@@ -174,7 +177,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     @UnstableApi
     @Override
-    public Scope decorateScope(TraceContext context, Scope scope) {
+    public Scope decorateScope(@Nullable TraceContext context, Scope scope) {
         // If a `Scope` is decorated, `ScopeDecorator`s populate some contexts as such as MDC, which are stored
         // to a thread-local. The activated contexts will be removed when `decoratedScope.close()` is called.
         // If `Scope.NOOP` is specified, CurrentTraceContext.decorateScope() performs nothing.
@@ -192,6 +195,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
+        @Nullable
         final TraceContext previous = traceContext(ctx);
         setTraceContext(ctx, currentSpan);
 
@@ -206,6 +210,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             @Override
             public void close() {
                 // re-lookup the attribute to avoid holding a reference to the request if this scope is leaked
+                @Nullable
                 final RequestContext ctx = getRequestContextOrWarnOnce();
                 if (ctx != null) {
                     setTraceContext(ctx, previous);

@@ -61,6 +61,7 @@ public final class SamlAssertionConsumerConfigBuilder {
      * Builds a {@link SamlAssertionConsumerConfig}.
      */
     SamlAssertionConsumerConfig build() {
+        // TODO(minwoox): take the endpoint in the constructor.
         return new SamlAssertionConsumerConfig(endpoint, isDefault);
     }
 }

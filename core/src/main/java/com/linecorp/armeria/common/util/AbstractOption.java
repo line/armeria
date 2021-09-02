@@ -30,6 +30,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A configuration option.
@@ -62,7 +63,7 @@ public abstract class AbstractOption<
      */
     protected static <T extends Set<?>> T allOptions(Class<?> type) {
         requireNonNull(type, "type");
-        final Pool pool = map.get(type);
+        @Nullable final Pool pool = map.get(type);
         if (pool == null) {
             @SuppressWarnings("unchecked")
             final T cast = (T) ImmutableSet.of();
@@ -84,7 +85,7 @@ public abstract class AbstractOption<
         requireNonNull(type, "type");
         requireNonNull(name, "name");
 
-        final Pool pool = map.get(type);
+        @Nullable final Pool pool = map.get(type);
         if (pool == null) {
             throw new NoSuchElementException(
                     '\'' + type.getName() + '#' + name + "' does not exist.");

@@ -97,6 +97,7 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
         }
 
         onPing();
+        @Nullable
         final Future<?> shutdownFuture = shutdownFuture();
         if (shutdownFuture != null) {
             final boolean isCancelled = shutdownFuture.cancel(false);

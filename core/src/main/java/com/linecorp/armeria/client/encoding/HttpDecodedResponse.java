@@ -63,6 +63,7 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
             final HttpHeaders headers = (HttpHeaders) obj;
 
             // Skip informational headers.
+            @Nullable
             final String status = headers.get(HttpHeaderNames.STATUS);
             if (ArmeriaHttpUtil.isInformational(status)) {
                 return obj;
@@ -80,6 +81,7 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
 
             headersReceived = true;
 
+            @Nullable
             final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
             if (contentEncoding != null) {
                 final StreamDecoderFactory decoderFactory =
@@ -108,6 +110,7 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+        @Nullable
         final HttpData lastData = closeResponseDecoder();
         if (lastData == null) {
             return;
@@ -121,6 +124,7 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        @Nullable
         final HttpData lastData = closeResponseDecoder();
         if (lastData != null) {
             lastData.close();
@@ -130,6 +134,7 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
 
     @Override
     protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+        @Nullable
         final HttpData lastData = closeResponseDecoder();
         if (lastData != null) {
             lastData.close();

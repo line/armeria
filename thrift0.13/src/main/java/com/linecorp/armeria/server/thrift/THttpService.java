@@ -315,6 +315,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
 
+        @Nullable
         final SerializationFormat serializationFormat = determineSerializationFormat(req);
         if (serializationFormat == null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -352,8 +353,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     @Nullable
     private SerializationFormat determineSerializationFormat(HttpRequest req) {
         final HttpHeaders headers = req.headers();
+        @Nullable
         final MediaType contentType = headers.contentType();
-
+        @Nullable
         final SerializationFormat serializationFormat;
         if (contentType != null) {
             serializationFormat = findSerializationFormat(contentType);
@@ -452,6 +454,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             }
 
             // Ensure that such a method exists.
+            @Nullable
             final ThriftServiceEntry entry = entries().get(serviceName);
             f = entry != null ? entry.metadata.function(methodName) : null;
             if (f == null) {

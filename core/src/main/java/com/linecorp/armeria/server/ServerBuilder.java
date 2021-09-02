@@ -1659,7 +1659,9 @@ public final class ServerBuilder {
                                    .map(vhb -> vhb.build(virtualHostTemplate))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
+        @Nullable
         final Mapping<String, SslContext> sslContexts;
+        @Nullable
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
         final Collection<ServerPort> ports;
 
@@ -1699,6 +1701,7 @@ public final class ServerBuilder {
             final DomainMappingBuilder<SslContext>
                     mappingBuilder = new DomainMappingBuilder<>(defaultSslContext);
             for (VirtualHost h : virtualHosts) {
+                @Nullable
                 final SslContext sslCtx = h.sslContext();
                 if (sslCtx != null) {
                     mappingBuilder.add(h.hostnamePattern(), sslCtx);
@@ -1787,12 +1790,14 @@ public final class ServerBuilder {
     @Nullable
     private static SslContext findDefaultSslContext(VirtualHost defaultVirtualHost,
                                                     List<VirtualHost> virtualHosts) {
+        @Nullable
         final SslContext defaultSslContext = defaultVirtualHost.sslContext();
         if (defaultSslContext != null) {
             return defaultSslContext;
         }
 
         for (int i = virtualHosts.size() - 1; i >= 0; i--) {
+            @Nullable
             final SslContext sslContext = virtualHosts.get(i).sslContext();
             if (sslContext != null) {
                 return sslContext;

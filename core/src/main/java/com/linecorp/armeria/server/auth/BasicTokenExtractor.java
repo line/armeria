@@ -58,6 +58,7 @@ final class BasicTokenExtractor implements Function<RequestHeaders, BasicToken> 
     @Nullable
     @Override
     public BasicToken apply(RequestHeaders headers) {
+        @Nullable
         final String authorization = requireNonNull(headers, "headers").get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;

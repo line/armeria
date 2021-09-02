@@ -199,6 +199,7 @@ public final class ResteasyService<T> implements HttpService {
             // manage SecurityContext
             final SecurityContext securityContext;
             if (securityDomain != null) {
+                @Nullable
                 final BasicToken basicToken = AuthTokenExtractors.basic().apply(request.requestHeaders());
                 if (basicToken == null) {
                     // no Basic Authorization present, e.g. "Authorization: Basic YWxhZGRpbjpvcGVuc2VzYW1l"

@@ -53,6 +53,7 @@ final class OAuth2TokenExtractor implements Function<RequestHeaders, OAuth2Token
     @Nullable
     @Override
     public OAuth2Token apply(RequestHeaders headers) {
+        @Nullable
         final String authorization = requireNonNull(headers, "headers").get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;

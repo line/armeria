@@ -121,9 +121,11 @@ public final class ThriftCallService implements RpcService {
         }
 
         // Ensure that such a service exists.
+        @Nullable
         final ThriftServiceEntry e = entries.get(serviceName);
         if (e != null) {
             // Ensure that such a method exists.
+            @Nullable
             final ThriftFunction f = e.metadata.function(method);
             if (f != null) {
                 if (f.implementation() != null) {

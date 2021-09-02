@@ -56,7 +56,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final QueryParams queryString = QueryParams.fromQueryString(ctx.query());
-        String query = queryString.get("query");
+        @Nullable String query = queryString.get("query");
         if (Strings.isNullOrEmpty(query)) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
         }
@@ -67,7 +67,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                    "Mutation is not allowed");
         }
 
-        final String operationName = queryString.get("operationName");
+        @Nullable final String operationName = queryString.get("operationName");
         final Map<String, Object> variables;
         final Map<String, Object> extensions;
         try {
@@ -84,7 +84,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest request) throws Exception {
-        final MediaType contentType = request.contentType();
+        @Nullable final MediaType contentType = request.contentType();
         if (contentType == null) {
             return unsupportedMediaType();
         }

@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.PublicSuffix;
 
 import io.netty.util.NetUtil;
@@ -46,8 +47,8 @@ final class AcceptOriginCookiePolicy implements CookiePolicy {
     public boolean accept(URI uri, Cookie cookie) {
         requireNonNull(uri, "uri");
         requireNonNull(cookie, "cookie");
-        final String domain = cookie.domain();
-        final String host = uri.getHost();
+        @Nullable final String domain = cookie.domain();
+        @Nullable final String host = uri.getHost();
         if (domain == null || host == null) {
             return false;
         }

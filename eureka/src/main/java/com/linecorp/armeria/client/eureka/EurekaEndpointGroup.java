@@ -225,6 +225,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         closed = true;
+        @Nullable
         final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
@@ -373,7 +374,6 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     private static Endpoint endpoint(InstanceInfo instanceInfo, boolean secureVip) {
-        final String hostname = instanceInfo.getHostName();
         final PortWrapper portWrapper = instanceInfo.getPort();
         final int port;
         if (secureVip || !portWrapper.isEnabled()) {
@@ -382,8 +382,10 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
             port = portWrapper.getPort();
         }
 
+        final String hostname = instanceInfo.getHostName();
         assert hostname != null;
         Endpoint endpoint = Endpoint.of(hostname, port);
+        @Nullable
         final String ipAddr = instanceInfo.getIpAddr();
         if (ipAddr != null && hostname != ipAddr) {
             endpoint = endpoint.withIpAddr(ipAddr);

@@ -59,7 +59,7 @@ public abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<G
                                                         QueryParams requestFormData) {
         // if scope was added to the request the response may not include the scope
         // in such case - use the requested scope for the token
-        final String scope = requestFormData.get(SCOPE);
+        @Nullable final String scope = requestFormData.get(SCOPE);
         return GrantedOAuth2AccessToken.parse(response.contentUtf8(), scope);
     }
 }

@@ -43,6 +43,7 @@ final class HttpEncoders {
 
     @Nullable
     static HttpEncodingType getWrapperForRequest(HttpRequest request) {
+        @Nullable
         final String acceptEncoding = request.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptEncoding == null) {
             return null;

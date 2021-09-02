@@ -47,6 +47,7 @@ public final class ByteArrayResponseConverterFunction implements ResponseConvert
                                         ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailers) throws Exception {
+        @Nullable
         final MediaType contentType = headers.contentType();
         if (contentType != null) {
             // @Produces("application/binary") or @ProducesBinary

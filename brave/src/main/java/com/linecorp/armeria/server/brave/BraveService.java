@@ -22,6 +22,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
@@ -130,6 +131,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
             assert wireReceiveTimeNanos != null;
             SpanTags.logWireReceive(span, wireReceiveTimeNanos, log);
 
+            @Nullable
             final Long wireSendTimeNanos = log.responseFirstBytesTransferredTimeNanos();
             if (wireSendTimeNanos != null) {
                 SpanTags.logWireSend(span, wireSendTimeNanos, log);

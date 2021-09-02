@@ -30,6 +30,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpService;
@@ -85,6 +86,7 @@ public final class DecodingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        @Nullable
         final String contentEncoding = req.headers().get(HttpHeaderNames.CONTENT_ENCODING);
         if (contentEncoding == null) {
             // If the request does not contain [Content-Encoding] header,

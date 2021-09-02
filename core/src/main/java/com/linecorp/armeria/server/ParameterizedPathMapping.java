@@ -107,6 +107,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
         final List<String> paramNames = new ArrayList<>();
         for (String token : PATH_SPLITTER.split(pathPattern)) {
+            @Nullable
             final String paramName = paramName(token);
             if (paramName == null) {
                 // If the given token is a constant, do not manipulate it.

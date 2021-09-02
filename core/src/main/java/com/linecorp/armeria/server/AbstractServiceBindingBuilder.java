@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -116,6 +117,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
+        @Nullable
         final ServiceWithRoutes<?, ?> serviceWithRoutes = service.as(ServiceWithRoutes.class);
         final Set<Route> fallbackRoutes =
                 firstNonNull(serviceWithRoutes != null ? serviceWithRoutes.routes() : null,

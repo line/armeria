@@ -75,6 +75,7 @@ public interface ClientRequestContext extends RequestContext {
      */
     @Nullable
     static ClientRequestContext currentOrNull() {
+        @Nullable
         final RequestContext ctx = RequestContext.currentOrNull();
         if (ctx instanceof ClientRequestContext) {
             return (ClientRequestContext) ctx;
@@ -94,7 +95,7 @@ public interface ClientRequestContext extends RequestContext {
     @Nullable
     static <T> T mapCurrent(
             Function<? super ClientRequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
-
+        @Nullable
         final ClientRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
@@ -213,6 +214,7 @@ public interface ClientRequestContext extends RequestContext {
     @Override
     @MustBeClosed
     default SafeCloseable push() {
+        @Nullable
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
@@ -223,6 +225,7 @@ public interface ClientRequestContext extends RequestContext {
             return RequestContextUtil.invokeHookAndPop(this, null);
         }
 
+        @Nullable
         final ServiceRequestContext root = root();
         if (oldCtx.root() == root) {
             return RequestContextUtil.invokeHookAndPop(this, oldCtx);

@@ -106,7 +106,8 @@ public final class GrpcMessageMarshaller<I, O> {
     }
 
     public I deserializeRequest(DeframedMessage message, boolean grpcWebText) throws IOException {
-        InputStream messageStream = message.stream();
+        @Nullable InputStream messageStream = message.stream();
+        @Nullable
         final ByteBuf buf = message.buf();
         if (buf != null) {
             try {
@@ -128,6 +129,7 @@ public final class GrpcMessageMarshaller<I, O> {
                 }
             }
         }
+        assert messageStream != null;
         try (InputStream msg = messageStream) {
             if (isProto) {
                 return method.parseRequest(msg);
@@ -158,7 +160,8 @@ public final class GrpcMessageMarshaller<I, O> {
     }
 
     public O deserializeResponse(DeframedMessage message, boolean grpcWebText) throws IOException {
-        InputStream messageStream = message.stream();
+        @Nullable InputStream messageStream = message.stream();
+        @Nullable
         final ByteBuf buf = message.buf();
         if (buf != null) {
             try {
@@ -181,6 +184,7 @@ public final class GrpcMessageMarshaller<I, O> {
                 }
             }
         }
+        assert messageStream != null;
         try (InputStream msg = messageStream) {
             if (isProto) {
                 return method.parseResponse(msg);

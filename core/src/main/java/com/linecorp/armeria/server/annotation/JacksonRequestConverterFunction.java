@@ -94,6 +94,7 @@ public final class JacksonRequestConverterFunction implements RequestConverterFu
             ServiceRequestContext ctx, AggregatedHttpRequest request, Class<?> expectedResultType,
             @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
 
+        @Nullable
         final MediaType contentType = request.contentType();
         if (contentType != null && contentType.isJson()) {
             if (expectedResultType == TreeNode.class ||
@@ -105,6 +106,7 @@ public final class JacksonRequestConverterFunction implements RequestConverterFu
                 }
             }
 
+            @Nullable
             final ObjectReader reader = getObjectReader(expectedResultType,
                                                         expectedParameterizedResultType);
             if (reader != null) {

@@ -400,11 +400,12 @@ public final class ArmeriaHttpUtil {
      * Parses the specified HTTP header directives and invokes the specified {@code callback}
      * with the directive names and values.
      */
-    public static void parseDirectives(String directives, BiConsumer<String, String> callback) {
+    public static void parseDirectives(String directives, BiConsumer<String, @Nullable String> callback) {
         final int len = directives.length();
         for (int i = 0; i < len;) {
             final int nameStart = i;
             final String name;
+            @Nullable
             final String value;
 
             // Find the name.
@@ -540,7 +541,7 @@ public final class ArmeriaHttpUtil {
         builder.sizeHint(headers.size());
         builder.endOfStream(endOfStream);
 
-        StringJoiner cookieJoiner = null;
+        @Nullable StringJoiner cookieJoiner = null;
         for (Entry<CharSequence, CharSequence> e : headers) {
             final AsciiString name = HttpHeaderNames.of(e.getKey());
             final CharSequence value = e.getValue();
@@ -636,7 +637,7 @@ public final class ArmeriaHttpUtil {
         // but still allowing for "enough" space in the map to reduce the chance of hash code collision.
         final CharSequenceMap connectionDisallowedList =
                 toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
-        StringJoiner cookieJoiner = null;
+        @Nullable StringJoiner cookieJoiner = null;
         while (iter.hasNext()) {
             final Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = HttpHeaderNames.of(entry.getKey()).toLowerCase();
@@ -887,11 +888,12 @@ public final class ArmeriaHttpUtil {
     private static void toNettyHttp1Client(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming, boolean isTrailer) {
-        StringJoiner cookieJoiner = null;
+        @Nullable StringJoiner cookieJoiner = null;
 
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
+            @Nullable
             final AsciiString translatedName = REQUEST_HEADER_TRANSLATIONS.get(name);
             if (translatedName != null && !inputHeaders.contains(translatedName)) {
                 outputHeaders.add(translatedName, value);

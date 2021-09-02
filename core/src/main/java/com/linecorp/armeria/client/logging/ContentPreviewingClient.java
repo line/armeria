@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -120,6 +121,7 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        @Nullable
         final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
         if (Boolean.TRUE.equals(settingContentPreview)) {
             return unwrap().execute(ctx, req);

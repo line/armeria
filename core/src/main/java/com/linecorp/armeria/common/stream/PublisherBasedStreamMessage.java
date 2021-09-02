@@ -175,6 +175,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     private void abort0(Throwable cause) {
+        @Nullable
         final AbortableSubscriber subscriber = this.subscriber;
         if (subscriber != null) {
             subscriber.abort(cause);

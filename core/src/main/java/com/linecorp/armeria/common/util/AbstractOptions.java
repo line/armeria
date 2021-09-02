@@ -23,6 +23,8 @@ import java.util.Map;
 
 import com.google.common.collect.Iterators;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
 
 /**
@@ -105,7 +107,7 @@ public abstract class AbstractOptions<
             @SuppressWarnings("unchecked")
             final U newValue = (U) value;
             final T option = newValue.option();
-            final U oldValue = map.putIfAbsent(option, newValue);
+            @Nullable final U oldValue = map.putIfAbsent(option, newValue);
             if (oldValue != null) {
                 map.put(option, option.merge(oldValue, newValue));
             }
@@ -120,7 +122,7 @@ public abstract class AbstractOptions<
      */
     public final <V> V get(AbstractOption<?, ?, V> option) {
         requireNonNull(option, "option");
-        final U optionValue = valueMap.get(option);
+        @Nullable final U optionValue = valueMap.get(option);
         if (optionValue == null) {
             return option.defaultValue();
         }

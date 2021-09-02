@@ -94,6 +94,7 @@ final class DefaultRoute implements Route {
 
     @Override
     public RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator) {
+        @Nullable
         final RoutingResultBuilder builder = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
         if (builder == null) {
             return RoutingResult.empty();
@@ -111,6 +112,7 @@ final class DefaultRoute implements Route {
             return emptyOrCorsPreflightResult(routingCtx, builder);
         }
 
+        @Nullable
         final MediaType contentType = routingCtx.contentType();
         boolean contentTypeMatched = false;
         if (contentType == null) {

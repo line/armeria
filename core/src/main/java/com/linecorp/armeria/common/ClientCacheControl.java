@@ -53,8 +53,8 @@ public final class ClientCacheControl extends CacheControl {
                                                                   .maxStaleSeconds(Integer.MAX_VALUE)
                                                                   .build();
 
-    private static final Map<String, BiConsumer<ClientCacheControlBuilder, String>> DIRECTIVES =
-            ImmutableMap.<String, BiConsumer<ClientCacheControlBuilder, String>>builder()
+    private static final Map<String, BiConsumer<ClientCacheControlBuilder, @Nullable String>> DIRECTIVES =
+            ImmutableMap.<String, BiConsumer<ClientCacheControlBuilder, @Nullable String>>builder()
                     .put("no-cache", (b, v) -> b.noCache())
                     .put("no-store", (b, v) -> b.noStore())
                     .put("no-transform", (b, v) -> b.noTransform())
@@ -116,7 +116,7 @@ public final class ClientCacheControl extends CacheControl {
         final ClientCacheControlBuilder builder = builder();
         for (String d : directives) {
             parseDirectives(d, (name, value) -> {
-                final BiConsumer<ClientCacheControlBuilder, String> action = DIRECTIVES.get(name);
+                final BiConsumer<ClientCacheControlBuilder, @Nullable String> action = DIRECTIVES.get(name);
                 if (action != null) {
                     action.accept(builder, value);
                 }

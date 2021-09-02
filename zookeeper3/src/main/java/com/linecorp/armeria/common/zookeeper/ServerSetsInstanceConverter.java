@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class ServerSetsInstanceConverter {
 
@@ -73,6 +74,7 @@ final class ServerSetsInstanceConverter {
             // The status from ServerSets will be removed so we always use "ALIVE".
             // See https://github.com/twitter/finagle/blob/finagle-20.5.0/finagle-serversets/src/main/thrift/com/twitter/thrift/endpoint.thrift#L100
             gen.writeStringField(STATUS, ALIVE);
+            @Nullable
             final Integer shardId = value.shardId();
             if (shardId != null) {
                 gen.writeNumberField(SHARD, shardId);
@@ -128,6 +130,7 @@ final class ServerSetsInstanceConverter {
             }
 
             final JsonNode shardNode = tree.get(SHARD);
+            @Nullable
             final Integer shardId = shardNode == null ? null : shardNode.asInt();
 
             final ImmutableMap.Builder<String, String> metadataBuilder = ImmutableMap.builder();

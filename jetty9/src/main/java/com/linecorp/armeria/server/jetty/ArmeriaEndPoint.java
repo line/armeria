@@ -69,6 +69,7 @@ final class ArmeriaEndPoint implements EndPoint {
 
     @Override
     public InetSocketAddress getLocalAddress() {
+        @Nullable
         final InetSocketAddress localAddress = this.localAddress;
         if (localAddress != null) {
             return localAddress;

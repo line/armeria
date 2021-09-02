@@ -127,6 +127,7 @@ public final class ArmeriaConfigurationUtil {
                          settings.getGracefulShutdownTimeoutMillis());
         }
 
+        @Nullable
         final String healthCheckPath = settings.getHealthCheckPath();
         if (!Strings.isNullOrEmpty(healthCheckPath)) {
             final HealthCheckServiceBuilder builder = HealthCheckService.builder().checkers(healthCheckers);
@@ -182,6 +183,7 @@ public final class ArmeriaConfigurationUtil {
             configureTls(server, settings.getSsl());
         }
 
+        @Nullable
         final String docsPath = settings.getDocsPath();
         if (!Strings.isNullOrEmpty(docsPath)) {
             final DocServiceBuilder docServiceBuilder = DocService.builder();
@@ -189,7 +191,7 @@ public final class ArmeriaConfigurationUtil {
             server.serviceUnder(docsPath, docServiceBuilder.build());
         }
 
-        final ArmeriaSettings.Compression compression = settings.getCompression();
+        final ArmeriaSettings.@Nullable Compression compression = settings.getCompression();
         if (compression != null && compression.isEnabled()) {
             final int minBytesToForceChunkedAndEncoding =
                     Ints.saturatedCast(parseDataSize(compression.getMinResponseSize()));
@@ -241,20 +243,23 @@ public final class ArmeriaConfigurationUtil {
             sb.tls(keyManagerFactory);
             sb.tlsCustomizer(sslContextBuilder -> {
                 sslContextBuilder.trustManager(trustManagerFactory);
-
+                @Nullable
                 final SslProvider sslProvider = ssl.getProvider();
                 if (sslProvider != null) {
                     sslContextBuilder.sslProvider(sslProvider);
                 }
+                @Nullable
                 final List<String> enabledProtocols = ssl.getEnabledProtocols();
                 if (enabledProtocols != null) {
                     sslContextBuilder.protocols(enabledProtocols.toArray(EMPTY_PROTOCOL_NAMES));
                 }
+                @Nullable
                 final List<String> ciphers = ssl.getCiphers();
                 if (ciphers != null) {
                     sslContextBuilder.ciphers(ImmutableList.copyOf(ciphers),
                                               SupportedCipherSuiteFilter.INSTANCE);
                 }
+                @Nullable
                 final ClientAuth clientAuth = ssl.getClientAuth();
                 if (clientAuth != null) {
                     sslContextBuilder.clientAuth(clientAuth);
@@ -280,7 +285,7 @@ public final class ArmeriaConfigurationUtil {
             keyManagerFactory = new CustomAliasKeyManagerFactory(keyManagerFactory, ssl.getKeyAlias());
         }
 
-        String keyPassword = ssl.getKeyPassword();
+        @Nullable String keyPassword = ssl.getKeyPassword();
         if (keyPassword == null) {
             keyPassword = ssl.getKeyStorePassword();
         }

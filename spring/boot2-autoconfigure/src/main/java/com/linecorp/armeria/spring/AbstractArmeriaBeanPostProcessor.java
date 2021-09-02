@@ -122,7 +122,8 @@ abstract class AbstractArmeriaBeanPostProcessor {
                                 "LocalArmeriaPort annotation is not supported on a static method: " +
                                 method.getName());
                     }
-                    final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+                    @Nullable final PropertyDescriptor pd =
+                            BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
                     currElements.add(new LocalArmeriaPortElement(method, bridgedMethod, pd));
                 } else if (bridgedMethod.isAnnotationPresent(LocalArmeriaPorts.class)) {
                     if (Modifier.isStatic(method.getModifiers())) {
@@ -130,7 +131,8 @@ abstract class AbstractArmeriaBeanPostProcessor {
                                 "LocalArmeriaPorts annotation is not supported on a static method: " +
                                 method.getName());
                     }
-                    final PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+                    @Nullable final PropertyDescriptor pd =
+                            BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
                     currElements.add(new LocalArmeriaPortsElement(method, pd));
                 }
             });
@@ -164,7 +166,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
             super(member, pd);
             final LocalArmeriaPort localArmeriaPort = ae.getAnnotation(LocalArmeriaPort.class);
             final SessionProtocol protocol = localArmeriaPort.value();
-            Server server = getServer();
+            @Nullable Server server = getServer();
             if (server == null) {
                 server = beanFactory.getBean(Server.class);
                 setServer(server);
@@ -197,7 +199,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
 
         private LocalArmeriaPortsElement(Member member, @Nullable PropertyDescriptor pd) {
             super(member, pd);
-            Server server = getServer();
+            @Nullable Server server = getServer();
             if (server == null) {
                 server = beanFactory.getBean(Server.class);
                 setServer(server);

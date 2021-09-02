@@ -138,7 +138,9 @@ class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
         }
 
         // obtain ERROR_CODE and ERROR_TYPE from the context set by OAuth2TokenIntrospectionAuthorizer
+        @Nullable
         final Integer errorCode = ctx.attr(ERROR_CODE);
+        @Nullable
         final String errorType = ctx.attr(ERROR_TYPE);
         if (errorCode == null) {
             // something else happened - do not authorize

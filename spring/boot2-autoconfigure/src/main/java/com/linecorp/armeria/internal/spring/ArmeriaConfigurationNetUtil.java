@@ -29,6 +29,7 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
@@ -47,7 +48,9 @@ public final class ArmeriaConfigurationNetUtil {
         requireNonNull(server, "server");
         requireNonNull(ports, "ports");
         ports.forEach(p -> {
+            @Nullable
             final String ip = p.getIp();
+            @Nullable
             final String iface = p.getIface();
             final int port = p.getPort();
             final List<SessionProtocol> protocols = firstNonNull(p.getProtocols(),

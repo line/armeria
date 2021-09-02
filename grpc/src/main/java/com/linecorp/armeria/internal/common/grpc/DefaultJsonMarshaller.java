@@ -46,7 +46,9 @@ public final class DefaultJsonMarshaller implements GrpcJsonMarshaller {
     public <T> T deserializeMessage(Marshaller<T> marshaller, InputStream is) throws IOException {
         final PrototypeMarshaller<T> prototypeMarshaller = (PrototypeMarshaller<T>) marshaller;
         final Message prototype = (Message) prototypeMarshaller.getMessagePrototype();
+        assert prototype != null;
         final Message.Builder builder = prototype.newBuilderForType();
+        assert builder != null;
         delegate.mergeValue(is, builder);
         @SuppressWarnings("unchecked")
         final T cast = (T) builder.build();

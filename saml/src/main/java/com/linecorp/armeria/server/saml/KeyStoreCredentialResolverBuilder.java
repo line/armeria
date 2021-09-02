@@ -128,7 +128,7 @@ public final class KeyStoreCredentialResolverBuilder {
             return new FileInputStream(file);
         }
 
-        ClassLoader classLoader = this.classLoader;
+        @Nullable ClassLoader classLoader = this.classLoader;
         if (classLoader == null) {
             classLoader = Thread.currentThread().getContextClassLoader();
         }

@@ -50,7 +50,10 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perMethod(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perMethod().build((host, method, path) -> factory.apply(method));
+        return builder().perMethod().build((host, method, path) -> {
+            assert method != null;
+            return factory.apply(method);
+        });
     }
 
     /**
@@ -60,7 +63,10 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perHost(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perHost().build((host, method, path) -> factory.apply(host));
+        return builder().perHost().build((host, method, path) -> {
+            assert host != null;
+            return factory.apply(host);
+        });
     }
 
     /**
@@ -70,7 +76,10 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perPath(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perPath().build((host, method, path) -> factory.apply(path));
+        return builder().perPath().build((host, method, path) -> {
+            assert path != null;
+            return factory.apply(path);
+        });
     }
 
     /**
@@ -83,7 +92,11 @@ public interface CircuitBreakerMapping {
     static CircuitBreakerMapping perHostAndMethod(
             BiFunction<String, String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perHost().perMethod().build((host, method, path) -> factory.apply(host, method));
+        return builder().perHost().perMethod().build((host, method, path) -> {
+            assert host != null;
+            assert method != null;
+            return factory.apply(host, method);
+        });
     }
 
     /**

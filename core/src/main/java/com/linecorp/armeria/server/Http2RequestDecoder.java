@@ -106,7 +106,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead(true);
-        DecodedHttpRequest req = requests.get(streamId);
+        @Nullable DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             // Validate the method.
             final CharSequence methodText = headers.method();
@@ -205,6 +205,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public void onStreamClosed(Http2Stream stream) {
         goAwayHandler.onStreamClosed(channel, stream);
 
+        @Nullable
         final DecodedHttpRequest req = requests.remove(stream.id());
         if (req != null) {
             // Ignored if the stream has already been closed.

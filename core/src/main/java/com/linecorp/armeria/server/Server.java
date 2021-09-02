@@ -196,7 +196,7 @@ public final class Server implements ListenableAsyncCloseable {
 
     @Nullable
     private ServerPort activePort0(@Nullable SessionProtocol protocol) {
-        ServerPort candidate = null;
+        @Nullable ServerPort candidate = null;
         synchronized (activePorts) {
             for (ServerPort serverPort : activePorts.values()) {
                 if (protocol == null || serverPort.hasProtocol(protocol)) {

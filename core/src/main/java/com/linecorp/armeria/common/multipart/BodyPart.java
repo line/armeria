@@ -146,6 +146,7 @@ public interface BodyPart {
      */
     @Nullable
     default String name() {
+        @Nullable
         final ContentDisposition contentDisposition = headers().contentDisposition();
         if (contentDisposition != null) {
             return contentDisposition.name();
@@ -162,6 +163,7 @@ public interface BodyPart {
      */
     @Nullable
     default String filename() {
+        @Nullable
         final ContentDisposition contentDisposition = headers().contentDisposition();
         if (contentDisposition != null) {
             return contentDisposition.filename();

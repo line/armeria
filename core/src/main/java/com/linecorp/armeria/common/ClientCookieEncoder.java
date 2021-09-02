@@ -42,6 +42,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.util.internal.InternalThreadLocalMap;
 
 /**
@@ -77,7 +79,9 @@ final class ClientCookieEncoder {
      * order of creation time, as recommended by RFC 6265.
      */
     private static final Comparator<Cookie> COOKIE_COMPARATOR = (c1, c2) -> {
+        @Nullable
         final String path1 = c1.path();
+        @Nullable
         final String path2 = c2.path();
         // Cookies with unspecified path default to the path of the request. We don't
         // know the request path here, but we assume that the length of an unspecified

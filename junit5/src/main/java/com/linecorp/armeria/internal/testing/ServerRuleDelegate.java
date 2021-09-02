@@ -104,6 +104,7 @@ public abstract class ServerRuleDelegate {
      * @return the {@link CompletableFuture} that will complete when the {@link Server} is stopped.
      */
     public CompletableFuture<Void> stop() {
+        @Nullable
         final Server server = this.server.getAndSet(null);
         if (server == null || server.activePorts().isEmpty()) {
             return CompletableFuture.completedFuture(null);
@@ -172,6 +173,7 @@ public abstract class ServerRuleDelegate {
     }
 
     private boolean hasSessionProtocol(SessionProtocol protocol) {
+        @Nullable
         final Server server = this.server.get();
         return server != null &&
                server.activePorts().values().stream()

@@ -85,7 +85,7 @@ public final class KotlinGrpcClientStubFactory implements GrpcClientStubFactory 
 
     @Override
     public Object newClientStub(Class<?> clientType, Channel channel) {
-        Constructor<?> constructor = null;
+        @Nullable Constructor<?> constructor = null;
 
         for (Constructor<?> ctor : clientType.getConstructors()) {
             final Class<?>[] methodParameterTypes = ctor.getParameterTypes();

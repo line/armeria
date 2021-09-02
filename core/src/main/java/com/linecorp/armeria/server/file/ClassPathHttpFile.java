@@ -58,7 +58,7 @@ final class ClassPathHttpFile extends StreamingHttpFile<InputStream> {
     }
 
     @Override
-    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+    public CompletableFuture<@Nullable HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
 
         if (attrsFuture != null) {

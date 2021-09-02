@@ -130,6 +130,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         try {
             subscriber.onSubscribe(this);
 
+            @Nullable
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
                 onError(abortCause);
@@ -156,6 +157,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         requireNonNull(options, "options");
         final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
         if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+            @Nullable
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
                 collectingFuture.completeExceptionally(abortCause);

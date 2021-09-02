@@ -378,7 +378,7 @@ public final class SamlServiceProviderBuilder {
         }
 
         final ImmutableMap.Builder<String, SamlIdentityProviderConfig> idpConfigs = ImmutableMap.builder();
-        SamlIdentityProviderConfig defaultIdpConfig = null;
+        @Nullable SamlIdentityProviderConfig defaultIdpConfig = null;
         for (final SamlIdentityProviderConfigBuilder builder : idpConfigBuilders) {
             if (builder.acsEndpoint() != null && !acsEndpoints.contains(builder.acsEndpoint())) {
                 throw new IllegalStateException("unspecified access consumer service at " +
@@ -445,6 +445,7 @@ public final class SamlServiceProviderBuilder {
         }
         try {
             final Signature signature = Signature.getInstance(jcaAlgorithmID);
+            @Nullable
             final PrivateKey key = credential.getPrivateKey();
             if (key != null) {
                 signature.initSign(key);

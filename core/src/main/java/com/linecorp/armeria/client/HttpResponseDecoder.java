@@ -105,6 +105,7 @@ abstract class HttpResponseDecoder {
             return null;
         }
 
+        @Nullable
         final HttpResponseWrapper removed = responses.remove(id);
         if (removed != null) {
             unfinishedResponses--;
@@ -357,7 +358,7 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnNotTimedOut) {
 
-            CancellationScheduler responseCancellationScheduler = null;
+            @Nullable CancellationScheduler responseCancellationScheduler = null;
             if (ctx instanceof DefaultClientRequestContext) {
                 responseCancellationScheduler =
                         ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
@@ -371,6 +372,7 @@ abstract class HttpResponseDecoder {
                 actionOnNotTimedOut.accept(cause);
                 return;
             }
+            assert ctx != null;
 
             if (delegate.isOpen()) {
                 closeAction(cause);
@@ -387,11 +389,10 @@ abstract class HttpResponseDecoder {
             }
 
             final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
-            if (ctx != null) {
-                final String authority = ctx.request().authority();
-                if (authority != null) {
-                    logMsg.append(" to ").append(authority);
-                }
+            @Nullable
+            final String authority = ctx.request().authority();
+            if (authority != null) {
+                logMsg.append(" to ").append(authority);
             }
 
             logger.warn(logMsg.append(':').toString(), cause);

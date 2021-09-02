@@ -353,6 +353,7 @@ public final class Clients {
      */
     @Nullable
     public static <T> T unwrap(Object client, Class<T> type) {
+        @Nullable
         final ClientBuilderParams params = ClientFactory.ofDefault().clientBuilderParams(client);
         if (params == null) {
             return null;

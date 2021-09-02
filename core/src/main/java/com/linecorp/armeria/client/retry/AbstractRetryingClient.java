@@ -211,6 +211,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");
         final State state = ctx.attr(STATE);
+        assert state != null;
         final int currentAttemptNo = state.currentAttemptNoWith(backoff);
 
         if (currentAttemptNo < 0) {
@@ -238,7 +239,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * {@link ClientRequestContext}.
      */
     protected static int getTotalAttempts(ClientRequestContext ctx) {
-        final State state = ctx.attr(STATE);
+        @Nullable final State state = ctx.attr(STATE);
         if (state == null) {
             return 0;
         }

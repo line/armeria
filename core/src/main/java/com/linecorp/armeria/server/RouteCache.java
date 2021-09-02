@@ -117,6 +117,7 @@ final class RouteCache {
 
         @Override
         public Routed<V> find(RoutingContext routingCtx) {
+            @Nullable
             final V cached = findCache.getIfPresent(routingCtx);
             if (cached != null) {
                 // RoutingResult may be different to each other for every requests, so we cannot
@@ -135,6 +136,7 @@ final class RouteCache {
 
         @Override
         public List<Routed<V>> findAll(RoutingContext routingCtx) {
+            @Nullable
             final List<V> cachedList = findAllCache.getIfPresent(routingCtx);
             if (cachedList != null) {
                 return filterRoutes(cachedList, routingCtx);

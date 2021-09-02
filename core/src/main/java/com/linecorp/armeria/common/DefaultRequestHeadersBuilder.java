@@ -41,6 +41,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
 
     @Override
     public RequestHeaders build() {
+        @Nullable
         final HttpHeadersBase delegate = delegate();
         if (delegate != null) {
             checkState(delegate.contains(HttpHeaderNames.METHOD), ":method header does not exist.");
@@ -48,6 +49,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
             return new DefaultRequestHeaders(promoteDelegate());
         }
 
+        @Nullable
         final HttpHeadersBase parent = parent();
         if (parent != null) {
             if (parent instanceof RequestHeaders) {
@@ -99,6 +101,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Nullable
     @Override
     public String scheme() {
+        @Nullable
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.scheme() : null;
     }
@@ -112,6 +115,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Nullable
     @Override
     public String authority() {
+        @Nullable
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.authority() : null;
     }
@@ -125,6 +129,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     @Nullable
     public List<LanguageRange> acceptLanguages() {
+        @Nullable
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.acceptLanguages() : null;
     }
@@ -140,6 +145,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Nullable
     @Override
     public Locale selectLocale(Iterable<Locale> supportedLocales) {
+        @Nullable
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.selectLocale(supportedLocales) : null;
     }
@@ -152,6 +158,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
 
     @Override
     public Cookies cookies() {
+        @Nullable
         final HttpHeadersBase getters = getters();
         if (getters == null) {
             return Cookies.of();
@@ -174,6 +181,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
 
     @Override
     public List<MediaType> accept() {
+        @Nullable
         final HttpHeadersBase getters = getters();
         if (getters == null) {
             return ImmutableList.of();

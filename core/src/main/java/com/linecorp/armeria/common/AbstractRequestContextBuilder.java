@@ -145,13 +145,13 @@ public abstract class AbstractRequestContextBuilder {
     private static SessionProtocol getSessionProtocol(URI uri) {
         final String schemeStr = uri.getScheme();
         if (schemeStr != null && schemeStr.indexOf('+') < 0) {
-            final SessionProtocol parsed = SessionProtocol.find(schemeStr);
+            @Nullable final SessionProtocol parsed = SessionProtocol.find(schemeStr);
             if (parsed == null) {
                 throw newInvalidSchemeException(uri);
             }
             return parsed;
         } else {
-            final Scheme parsed = Scheme.tryParse(schemeStr);
+            @Nullable final Scheme parsed = Scheme.tryParse(schemeStr);
             if (parsed == null) {
                 throw newInvalidSchemeException(uri);
             }

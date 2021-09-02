@@ -70,7 +70,7 @@ public final class RequestContextUtil {
         final String providerFqcn = Flags.requestContextStorageProvider();
         if (!providers.isEmpty()) {
 
-            RequestContextStorageProvider provider = null;
+            @Nullable RequestContextStorageProvider provider = null;
             if (providers.size() > 1) {
                 if (providerFqcn == null) {
                     throw new IllegalStateException(
@@ -200,6 +200,7 @@ public final class RequestContextUtil {
      */
     @MustBeClosed
     public static SafeCloseable pop() {
+        @Nullable
         final RequestContext oldCtx = requestContextStorage.currentOrNull();
         if (oldCtx == null) {
             return noopSafeCloseable();
@@ -225,6 +226,7 @@ public final class RequestContextUtil {
     public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
 
+        @Nullable
         final SafeCloseable closeable = invokeHook(current);
         if (closeable == null) {
             return () -> requestContextStorage.pop(current, toRestore);
@@ -238,6 +240,7 @@ public final class RequestContextUtil {
 
     @Nullable
     private static SafeCloseable invokeHook(RequestContext ctx) {
+        @Nullable
         final Supplier<? extends SafeCloseable> hook;
         if (ctx instanceof DefaultServiceRequestContext) {
             hook = ((DefaultServiceRequestContext) ctx).hook();

@@ -100,7 +100,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         final MethodHandles.Lookup publicLookup = MethodHandles.publicLookup();
         final MethodType mt = methodType(void.class);
 
-        MethodHandle methodHandle;
+        @Nullable MethodHandle methodHandle;
         try {
             methodHandle = publicLookup.findConstructor(ProtobufRequestConverterFunction.class, mt);
         } catch (NoSuchMethodException | IllegalAccessException e) {
@@ -145,6 +145,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                                  Class<?> expectedResultType,
                                  @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
 
+        @Nullable
         final MediaType contentType = request.contentType();
         final Charset charset = contentType == null ? StandardCharsets.UTF_8
                                                     : contentType.charset(StandardCharsets.UTF_8);

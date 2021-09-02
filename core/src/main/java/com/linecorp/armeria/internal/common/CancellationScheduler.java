@@ -125,6 +125,7 @@ public final class CancellationScheduler {
             state = State.INACTIVE;
         }
         for (;;) {
+            @Nullable
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, noopPendingTask)) {
                 if (pendingTask != null) {
@@ -348,6 +349,7 @@ public final class CancellationScheduler {
     }
 
     public CompletableFuture<Throwable> whenCancelling() {
+        @Nullable
         final CancellationFuture whenCancelling = this.whenCancelling;
         if (whenCancelling != null) {
             return whenCancelling;
@@ -361,6 +363,7 @@ public final class CancellationScheduler {
     }
 
     public CompletableFuture<Throwable> whenCancelled() {
+        @Nullable
         final CancellationFuture whenCancelled = this.whenCancelled;
         if (whenCancelled != null) {
             return whenCancelled;
@@ -375,6 +378,7 @@ public final class CancellationScheduler {
 
     @Deprecated
     public CompletableFuture<Void> whenTimingOut() {
+        @Nullable
         final TimeoutFuture whenTimingOut = this.whenTimingOut;
         if (whenTimingOut != null) {
             return whenTimingOut;
@@ -394,6 +398,7 @@ public final class CancellationScheduler {
 
     @Deprecated
     public CompletableFuture<Void> whenTimedOut() {
+        @Nullable
         final TimeoutFuture whenTimedOut = this.whenTimedOut;
         if (whenTimedOut != null) {
             return whenTimedOut;

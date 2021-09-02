@@ -64,11 +64,13 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public long demand() {
+        @Nullable
         final OuterSubscriber<T> outerSubscriber = this.outerSubscriber;
         if (outerSubscriber == null) {
             return 0;
         }
 
+        @Nullable
         final StreamMessage<? extends T> currentPublisher = outerSubscriber.currentStreamMessage;
         if (currentPublisher == null) {
             return 0;
@@ -108,6 +110,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void abort(Throwable cause) {
         sources.abort(cause);
+        @Nullable
         final OuterSubscriber<T> outerSubscriber = this.outerSubscriber;
         if (outerSubscriber != null) {
             outerSubscriber.abort(cause);
@@ -165,6 +168,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void abort(Throwable cause) {
+            @Nullable
             final StreamMessage<? extends T> currentStreamMessage = this.currentStreamMessage;
             if (currentStreamMessage != null) {
                 currentStreamMessage.abort(cause);
@@ -294,6 +298,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 if (outerSubscriber != null) {
+                    @Nullable
                     final Subscription upstream = outerSubscriber.upstream;
                     if (upstream != null) {
                         upstream.cancel();

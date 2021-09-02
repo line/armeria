@@ -92,12 +92,14 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         if (isOpen()) {
             return false;
         }
+        @Nullable
         final PathSubscription pathSubscription = this.pathSubscription;
         return pathSubscription == null || pathSubscription.position == 0;
     }
 
     @Override
     public long demand() {
+        @Nullable
         final PathSubscription pathSubscription = this.pathSubscription;
         if (pathSubscription != null) {
             return pathSubscription.requested;
@@ -133,10 +135,12 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
     private void subscribe0(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                             SubscriptionOption... options) {
+        @Nullable
         final ExecutorService blockingTaskExecutor;
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
         } else {
+            @Nullable
             final ServiceRequestContext serviceRequestContext = ServiceRequestContext.currentOrNull();
             if (serviceRequestContext != null) {
                 blockingTaskExecutor = serviceRequestContext.blockingTaskExecutor();
@@ -144,7 +148,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                 blockingTaskExecutor = null;
             }
         }
-        AsynchronousFileChannel fileChannel = null;
+        @Nullable AsynchronousFileChannel fileChannel = null;
         boolean success = false;
         try {
             // The default thread pool is used if blockingTaskExecutor is null
@@ -196,6 +200,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
 
+        @Nullable
         final PathSubscription pathSubscription = this.pathSubscription;
         if (pathSubscription != null) {
             pathSubscription.maybeCloseFileChannel();

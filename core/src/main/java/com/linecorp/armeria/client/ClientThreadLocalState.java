@@ -29,7 +29,8 @@ import io.netty.util.concurrent.FastThreadLocal;
 
 final class ClientThreadLocalState {
 
-    private static final FastThreadLocal<ClientThreadLocalState> threadLocalState = new FastThreadLocal<>();
+    private static final FastThreadLocal<@Nullable ClientThreadLocalState> threadLocalState =
+            new FastThreadLocal<>();
 
     @Nullable
     static ClientThreadLocalState get() {
@@ -37,7 +38,7 @@ final class ClientThreadLocalState {
     }
 
     static ClientThreadLocalState maybeCreate() {
-        ClientThreadLocalState state = threadLocalState.get();
+        @Nullable ClientThreadLocalState state = threadLocalState.get();
         if (state == null) {
             state = new ClientThreadLocalState();
             threadLocalState.set(state);
@@ -75,6 +76,7 @@ final class ClientThreadLocalState {
     }
 
     ClientRequestContextCaptor newContextCaptor() {
+        @Nullable
         final DefaultClientRequestContextCaptor oldPendingContextCaptor = pendingContextCaptor;
         return pendingContextCaptor = new DefaultClientRequestContextCaptor(oldPendingContextCaptor);
     }
@@ -91,6 +93,7 @@ final class ClientThreadLocalState {
             return;
         }
 
+        @Nullable
         final ClientThreadLocalState actualState = threadLocalState.get();
         if (actualState != this) {
             reportThreadSafetyViolation();

@@ -219,6 +219,7 @@ final class CookieUtil {
         }
 
         final CharSequence wrappedValue = CharBuffer.wrap(header, valueBegin, valueEnd);
+        @Nullable
         final CharSequence unwrappedValue = unwrapValue(wrappedValue);
         if (unwrappedValue == null) {
             logger.debug("Skipping cookie because starting quotes are not properly balanced in '{}'",
@@ -257,6 +258,7 @@ final class CookieUtil {
         do {
             final String v = it.next();
             requireNonNull(v, "setCookieHeaders contains null.");
+            @Nullable
             final Cookie cookie = Cookie.fromSetCookieHeader(strict, v);
             if (cookie != null) {
                 builder.add(cookie);

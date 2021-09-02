@@ -438,6 +438,7 @@ class AnnotatedServiceRequestConverterTest {
             return age;
         }
 
+        @Nullable
         @JsonProperty
         public Gender getGender() {
             return gender;
@@ -449,16 +450,19 @@ class AnnotatedServiceRequestConverterTest {
             this.gender = gender;
         }
 
+        @Nullable
         @JsonProperty
         public String getUserName() {
             return userName;
         }
 
+        @Nullable
         @JsonProperty
         public List<String> getPermissions() {
             return permissions;
         }
 
+        @Nullable
         @JsonProperty
         public String getClientName() {
             return clientName;

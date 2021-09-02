@@ -47,13 +47,13 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
     }
 
     public final long contentLength() {
-        final HttpHeadersBase getters = getters();
+        @Nullable final HttpHeadersBase getters = getters();
         return getters != null ? getters.contentLength() : -1;
     }
 
     @Nullable
     public final MediaType contentType() {
-        final HttpHeadersBase getters = getters();
+        @Nullable final HttpHeadersBase getters = getters();
         return getters != null ? getters.contentType() : null;
     }
 
@@ -64,7 +64,7 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
 
     @Nullable
     public final ContentDisposition contentDisposition() {
-        final HttpHeadersBase getters = getters();
+        @Nullable final HttpHeadersBase getters = getters();
         return getters != null ? getters.contentDisposition() : null;
     }
 
@@ -76,7 +76,7 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
     // Getters
 
     public final boolean isEndOfStream() {
-        final HttpHeadersBase getters = getters();
+        @Nullable final HttpHeadersBase getters = getters();
         return getters != null ? getters.isEndOfStream() : false;
     }
 

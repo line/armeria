@@ -59,6 +59,7 @@ public enum BuiltInProperty {
      * is not established yet.
      */
     REMOTE_HOST("remote.host", log -> {
+        @Nullable
         final InetSocketAddress addr = log.context().remoteAddress();
         return addr != null ? addr.getHostString() : null;
     }),
@@ -67,6 +68,7 @@ public enum BuiltInProperty {
      * is not established yet.
      */
     REMOTE_IP("remote.ip", log -> {
+        @Nullable
         final InetSocketAddress addr = log.context().remoteAddress();
         return addr != null ? addr.getAddress().getHostAddress() : null;
     }),
@@ -75,6 +77,7 @@ public enum BuiltInProperty {
      * is not established yet.
      */
     REMOTE_PORT("remote.port", log -> {
+        @Nullable
         final InetSocketAddress addr = log.context().remoteAddress();
         return addr != null ? StringUtil.toString(addr.getPort()) : null;
     }),
@@ -83,6 +86,7 @@ public enum BuiltInProperty {
      * is not established yet.
      */
     LOCAL_HOST("local.host", log -> {
+        @Nullable
         final InetSocketAddress addr = log.context().localAddress();
         return addr != null ? addr.getHostString() : null;
     }),
@@ -91,6 +95,7 @@ public enum BuiltInProperty {
      * is not established yet.
      */
     LOCAL_IP("local.ip", log -> {
+        @Nullable
         final InetSocketAddress addr = log.context().localAddress();
         return addr != null ? addr.getAddress().getHostAddress() : null;
     }),
@@ -99,6 +104,7 @@ public enum BuiltInProperty {
      * is not established yet.
      */
     LOCAL_PORT("local.port", log -> {
+        @Nullable
         final InetSocketAddress addr = log.context().localAddress();
         return addr != null ? StringUtil.toString(addr.getPort()) : null;
     }),
@@ -108,6 +114,7 @@ public enum BuiltInProperty {
      */
     CLIENT_IP("client.ip", log -> {
         final RequestContext ctx = log.context();
+        @Nullable
         final InetAddress caddr =
                 ctx instanceof ServiceRequestContext ? ((ServiceRequestContext) ctx).clientAddress() : null;
         return caddr != null ? caddr.getHostAddress() : null;
@@ -161,6 +168,7 @@ public enum BuiltInProperty {
      * {@code null} if {@link RequestContext#root()} returns {@code null}.
      */
     REQ_ROOT_ID("req.root_id", log -> {
+        @Nullable
         final ServiceRequestContext rootCtx = log.context().root();
         return rootCtx != null ? rootCtx.id().text() : null;
     }),
@@ -230,6 +238,7 @@ public enum BuiltInProperty {
      */
     REQ_CONTENT("req.content", log -> {
         if (log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+            @Nullable
             final Object requestContent = log.requestContent();
             if (requestContent instanceof RpcRequest) {
                 return String.valueOf(((RpcRequest) requestContent).params());
@@ -282,6 +291,7 @@ public enum BuiltInProperty {
      */
     RES_CONTENT("res.content", log -> {
         if (log.isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
+            @Nullable
             final Object responseContent = log.responseContent();
             if (responseContent instanceof RpcResponse) {
                 final RpcResponse rpcRes = (RpcResponse) responseContent;
@@ -302,6 +312,7 @@ public enum BuiltInProperty {
      * the connection is not a TLS connection.
      */
     TLS_SESSION_ID("tls.session_id", log -> {
+        @Nullable
         final SSLSession s = log.context().sslSession();
         if (s != null) {
             final byte[] id = s.getId();
@@ -318,6 +329,7 @@ public enum BuiltInProperty {
      * {@code "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"}.
      */
     TLS_CIPHER("tls.cipher", log -> {
+        @Nullable
         final SSLSession s = log.context().sslSession();
         return s != null ? s.getCipherSuite() : null;
     }),
@@ -328,6 +340,7 @@ public enum BuiltInProperty {
      * {@code "TLSv1.2"}.
      */
     TLS_PROTO("tls.proto", log -> {
+        @Nullable
         final SSLSession s = log.context().sslSession();
         return s != null ? s.getProtocol() : null;
     });
@@ -372,14 +385,17 @@ public enum BuiltInProperty {
     private static String getAuthority(RequestLog log) {
         final RequestContext ctx = log.context();
         if (log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
+            @Nullable
             final String authority = getAuthority0(ctx, log.requestHeaders());
             if (authority != null) {
                 return authority;
             }
         }
 
+        @Nullable
         final HttpRequest origReq = ctx.request();
         if (origReq != null) {
+            @Nullable
             final String authority = getAuthority0(ctx, origReq.headers());
             if (authority != null) {
                 return authority;
@@ -398,6 +414,7 @@ public enum BuiltInProperty {
             }
         } else {
             final ClientRequestContext cCtx = (ClientRequestContext) ctx;
+            @Nullable
             final Endpoint endpoint = cCtx.endpoint();
             if (endpoint == null) {
                 authority = "UNKNOWN";
@@ -416,7 +433,7 @@ public enum BuiltInProperty {
 
     @Nullable
     private static String getAuthority0(RequestContext ctx, HttpHeaders headers) {
-        String authority = headers.get(HttpHeaderNames.AUTHORITY);
+        @Nullable String authority = headers.get(HttpHeaderNames.AUTHORITY);
         if (authority != null) {
             final Pattern portPattern = ctx.sessionProtocol().isTls() ? PORT_443 : PORT_80;
             final Matcher m = portPattern.matcher(authority);
@@ -430,9 +447,9 @@ public enum BuiltInProperty {
     }
 
     final String key;
-    final Function<? super RequestLog, String> converter;
+    final Function<? super RequestLog, @Nullable String> converter;
 
-    BuiltInProperty(String key, Function<? super RequestLog, String> converter) {
+    BuiltInProperty(String key, Function<? super RequestLog, @Nullable String> converter) {
         this.key = key;
         this.converter = converter;
     }

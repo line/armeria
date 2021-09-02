@@ -145,6 +145,7 @@ final class HttpRedirectBindingUtil {
         final QueryParamsBuilder params = QueryParams.builder();
         params.add(messageParamName, parameters.getFirstValue(messageParamName));
 
+        @Nullable
         final String relayState = parameters.getFirstValueOrNull(RELAY_STATE);
         if (relayState != null) {
             params.add(RELAY_STATE, relayState);
@@ -277,6 +278,7 @@ final class HttpRedirectBindingUtil {
         // be validated.
         validateSignature(config.signingCredential(), parameters, name);
 
+        @Nullable
         final String relayState = parameters.getFirstValueOrNull(RELAY_STATE);
         if (relayState != null) {
             final SAMLBindingContext context = messageContext.getSubcontext(SAMLBindingContext.class, true);

@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -95,6 +96,7 @@ enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler {
     }
 
     private static JsonNode toJsonNode(AggregatedHttpRequest req) {
+        @Nullable
         final MediaType contentType = req.contentType();
         if (contentType != null && !contentType.is(MediaType.JSON)) {
             throw HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE);

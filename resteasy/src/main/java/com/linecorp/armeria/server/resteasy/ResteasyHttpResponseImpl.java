@@ -91,7 +91,6 @@ final class ResteasyHttpResponseImpl implements org.jboss.resteasy.spi.HttpRespo
     }
 
     @Override
-    @Nullable
     public OutputStream getOutputStream() throws IOException {
         return contentStreamProxy;
     }

@@ -173,6 +173,7 @@ public final class ClientAuthorization {
         requireNonNull(credentialsSupplier, "credentialsSupplier");
         final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
         formBuilder.add(CLIENT_ID, requireNonNull(clientCredentials.getKey(), CLIENT_ID));
+        @Nullable
         final String clientSecret = clientCredentials.getValue();
         if (clientSecret != null && !clientSecret.isEmpty()) {
             formBuilder.add(CLIENT_SECRET, clientSecret);

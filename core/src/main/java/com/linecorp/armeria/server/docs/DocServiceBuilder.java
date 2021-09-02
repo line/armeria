@@ -31,6 +31,7 @@ import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -467,6 +468,7 @@ public final class DocServiceBuilder {
                 continue;
             }
 
+            @Nullable
             final String result = plugin.serializeExampleRequest(serviceName, methodName, exampleRequest);
             if (result != null) {
                 return result;
@@ -491,7 +493,9 @@ public final class DocServiceBuilder {
                 continue;
             }
 
+            @Nullable
             final String serviceName = plugin.guessServiceName(exampleRequest);
+            @Nullable
             final String methodName = plugin.guessServiceMethodName(exampleRequest);
 
             // Skip if the plugin cannot guess the service and method name.
@@ -500,6 +504,7 @@ public final class DocServiceBuilder {
             }
 
             guessed = true;
+            @Nullable
             final String serialized = plugin.serializeExampleRequest(serviceName, methodName, exampleRequest);
             if (serialized != null) {
                 return new String[] { serviceName, methodName, serialized };

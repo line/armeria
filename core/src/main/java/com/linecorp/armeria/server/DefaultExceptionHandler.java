@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
@@ -60,7 +59,6 @@ enum DefaultExceptionHandler implements ExceptionHandler {
      * HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST, new IllegalStateException(...)));
      * }</pre>
      */
-    @Nullable
     @Override
     public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
         // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException

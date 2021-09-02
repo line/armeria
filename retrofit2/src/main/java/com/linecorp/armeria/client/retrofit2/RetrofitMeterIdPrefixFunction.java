@@ -31,6 +31,7 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -116,6 +117,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
         final String serviceName;
         final String path;
 
+        @Nullable
         final Invocation invocation = InvocationUtil.getInvocation(log);
         if (invocation != null) {
             final Method method = invocation.method();

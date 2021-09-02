@@ -34,6 +34,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
@@ -84,7 +85,7 @@ final class HealthClient {
                     if (cause != null) {
                         logger.warn("Unexpected exception while fetching the registry from Consul: {}" +
                                     " (serviceName: {})", client.uri(), serviceName, cause);
-                        return null;
+                        return ImmutableList.of();
                     }
 
                     final HttpStatus status = response.status();
@@ -92,7 +93,7 @@ final class HealthClient {
                     if (!status.isSuccess()) {
                         logger.warn("Unexpected response from Consul: {} (status: {}, content: {}," +
                                     " serviceName: {})", client.uri(), status, content, serviceName);
-                        return null;
+                        return ImmutableList.of();
                     }
 
                     try {
@@ -103,7 +104,7 @@ final class HealthClient {
                     } catch (IOException e) {
                         logger.warn("Unexpected exception while parsing a response from Consul: {}" +
                                     " (content: {}, serviceName: {})", client.uri(), content, serviceName, e);
-                        return null;
+                        return ImmutableList.of();
                     }
                 });
     }

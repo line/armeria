@@ -367,7 +367,7 @@ public final class DnsResolverGroupBuilder {
             }
             assert meterRegistry != null;
 
-            DnsQueryLifecycleObserverFactory observerFactory = dnsQueryLifecycleObserverFactory;
+            @Nullable DnsQueryLifecycleObserverFactory observerFactory = dnsQueryLifecycleObserverFactory;
             if (!dnsQueryMetricsDisabled) {
                 final DefaultDnsQueryLifecycleObserverFactory defaultObserverFactory =
                         new DefaultDnsQueryLifecycleObserverFactory(

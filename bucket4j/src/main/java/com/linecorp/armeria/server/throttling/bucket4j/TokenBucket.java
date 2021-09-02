@@ -120,7 +120,7 @@ public final class TokenBucket {
      */
     @Nullable
     BandwidthLimit lowestLimit() {
-        BandwidthLimit lowestLimit = null;
+        @Nullable BandwidthLimit lowestLimit = null;
         for (BandwidthLimit limit : limits) {
             if (lowestLimit == null) {
                 lowestLimit = limit;
@@ -147,6 +147,7 @@ public final class TokenBucket {
      */
     @Nullable
     String toSpecString() {
+        @Nullable
         final BandwidthLimit lowestLimit = lowestLimit();
         if (limits.length == 0 || lowestLimit == null) {
             return null;

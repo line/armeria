@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -118,6 +119,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
+        @Nullable
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
@@ -132,7 +134,9 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             }
         }
 
+        @Nullable
         final String methodName = GrpcRequestUtil.determineMethod(ctx);
+        @Nullable
         final MethodDescriptor<?, ?> method;
         if (methodName != null) {
             final ServerMethodDefinition<?, ?> methodDef = methodsByName.get(methodName);
@@ -248,6 +252,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
+        assert grpcStatusCode != null;
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
@@ -260,6 +265,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                    .append(grpcStatusCode)
                    .append(", ")
                    .append(grpcStatus.getCode().name());
+            @Nullable
             final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
@@ -273,6 +279,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             return;
         }
 
+        @Nullable
         final MediaType grpcMediaType = grpcResponse.contentType();
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
@@ -304,6 +311,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             @Override
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
+                assert message.buf() != null;
                 final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
                 unframedHeaders.contentLength(unframedContent.length());
                 res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));

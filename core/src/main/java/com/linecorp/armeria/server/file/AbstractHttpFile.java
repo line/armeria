@@ -160,7 +160,7 @@ public abstract class AbstractHttpFile implements HttpFile {
         }
 
         // TODO(trustin): Cache the headers (sans the 'date' header') if attrs did not change.
-        final String etag = generateEntityTag(attrs);
+        @Nullable final String etag = generateEntityTag(attrs);
         final ResponseHeadersBuilder headers =
                 ResponseHeaders.builder(HttpStatus.OK)
                                .addLong(HttpHeaderNames.CONTENT_LENGTH, attrs.length());
@@ -187,7 +187,8 @@ public abstract class AbstractHttpFile implements HttpFile {
     }
 
     @Override
-    public final CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+    public final CompletableFuture<@Nullable HttpResponse> read(
+            Executor fileReadExecutor, ByteBufAllocator alloc) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
         requireNonNull(alloc, "alloc");
 
@@ -199,6 +200,7 @@ public abstract class AbstractHttpFile implements HttpFile {
     @Nullable
     private HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc,
                               @Nullable HttpFileAttributes attrs) {
+        @Nullable
         final ResponseHeaders headers = readHeaders(attrs);
         if (headers == null) {
             return null;
@@ -255,8 +257,8 @@ public abstract class AbstractHttpFile implements HttpFile {
 
                 // Handle 'if-none-match' header.
                 final RequestHeaders reqHeaders = req.headers();
-                final String etag = generateEntityTag(attrs);
-                final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
+                @Nullable final String etag = generateEntityTag(attrs);
+                @Nullable final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
                 if (etag != null && ifNoneMatch != null) {
                     if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
                         return newNotModified(attrs, etag);
@@ -266,7 +268,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                 // Handle 'if-modified-since' header, only if 'if-none-match' does not exist.
                 if (ifNoneMatch == null) {
                     try {
-                        final Long ifModifiedSince =
+                        @Nullable final Long ifModifiedSince =
                                 reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
                         if (ifModifiedSince != null) {
                             // HTTP-date does not have subsecond-precision; add 999ms to it.
@@ -283,13 +285,13 @@ public abstract class AbstractHttpFile implements HttpFile {
                 // Precondition did not match. Handle as usual.
                 switch (ctx.method()) {
                     case HEAD:
-                        final ResponseHeaders resHeaders = readHeaders(attrs);
+                        @Nullable final ResponseHeaders resHeaders = readHeaders(attrs);
                         if (resHeaders != null) {
                             return HttpResponse.of(resHeaders);
                         }
                         break;
                     case GET:
-                        final HttpResponse res = read(ctx.blockingTaskExecutor(), ctx.alloc(), attrs);
+                        @Nullable final HttpResponse res = read(ctx.blockingTaskExecutor(), ctx.alloc(), attrs);
                         if (res != null) {
                             return res;
                         }

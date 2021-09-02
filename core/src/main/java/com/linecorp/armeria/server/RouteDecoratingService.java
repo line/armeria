@@ -130,8 +130,8 @@ final class RouteDecoratingService implements HttpService {
             }
             serviceChain.add((HttpService) unwrap());
             final HttpService service = serviceChain.poll();
-            ctx.setAttr(DECORATOR_KEY, serviceChain);
             assert service != null;
+            ctx.setAttr(DECORATOR_KEY, serviceChain);
             return service.serve(ctx, req);
         }
 

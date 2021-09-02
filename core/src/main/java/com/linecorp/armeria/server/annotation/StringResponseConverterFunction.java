@@ -47,6 +47,7 @@ public final class StringResponseConverterFunction implements ResponseConverterF
                                         ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailers) throws Exception {
+        @Nullable
         final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("text/plain") or @ProducesText is specified.

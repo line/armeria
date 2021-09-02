@@ -55,6 +55,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     NonBlockingCircuitBreaker(Ticker ticker, CircuitBreakerConfig config) {
         this.ticker = requireNonNull(ticker, "ticker");
         this.config = requireNonNull(config, "config");
+        @Nullable
         final String name = config.name();
         this.name = name != null ? name : "circuit-breaker-" + seqNo.getAndIncrement();
         state = new AtomicReference<>(newClosedState());
@@ -72,6 +73,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         final State currentState = state.get();
         if (currentState.isClosed()) {
             // fires success event
+            @Nullable
             final EventCount updatedCount = currentState.counter().onSuccess();
             // notifies the count if it has been updated
             if (updatedCount != null) {
@@ -91,6 +93,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         final State currentState = state.get();
         if (currentState.isClosed()) {
             // fires failure event
+            @Nullable
             final EventCount updatedCount = currentState.counter().onFailure();
             // checks the count if it has been updated
             if (updatedCount != null) {

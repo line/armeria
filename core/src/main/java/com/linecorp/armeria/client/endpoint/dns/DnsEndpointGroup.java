@@ -182,6 +182,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
      */
     @Override
     protected final void doCloseAsync(CompletableFuture<?> future) {
+        @Nullable
         final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);

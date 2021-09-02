@@ -107,6 +107,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         final HttpClient client;
 
+        @Nullable
         final CallCredentials credentials = callOptions.getCredentials();
         if (credentials != null) {
             client = new CallCredentialsDecoratingClient(httpClient, credentials, method, authority());
@@ -169,6 +170,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
     @Override
     public <T> T as(Class<T> type) {
+        @Nullable
         final T unwrapped = Unwrappable.super.as(type);
         if (unwrapped != null) {
             return unwrapped;

@@ -123,6 +123,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static boolean warnedNullRequestId;
 
     private static void logException(Channel ch, Throwable cause) {
+        @Nullable
         final HttpServer server = HttpServer.get(ch);
         if (server != null) {
             Exceptions.logIfUnexpected(logger, ch, server.protocol(), cause);
@@ -147,6 +148,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         //   6. Repeat from step 1.
         //
 
+        @Nullable
         final AbstractHttp2ConnectionHandler h2handler =
                 ch.pipeline().get(AbstractHttp2ConnectionHandler.class);
 
@@ -625,6 +627,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
+            @Nullable
             final SslHandler sslHandler = ctx.channel().pipeline().get(SslHandler.class);
             sslSession = sslHandler != null ? sslHandler.engine().getSession() : null;
             return;

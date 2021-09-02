@@ -161,7 +161,9 @@ final class ArmeriaConfigurationUtil {
         requireNonNull(server, "server");
         requireNonNull(ports, "ports");
         ports.forEach(p -> {
+            @Nullable
             final String ip = p.getIp();
+            @Nullable
             final String iface = p.getIface();
             final int port = p.getPort();
             final List<SessionProtocol> protocols = firstNonNull(p.getProtocols(),
@@ -232,19 +234,23 @@ final class ArmeriaConfigurationUtil {
             sb.tlsCustomizer(sslContextBuilder -> {
                 sslContextBuilder.trustManager(trustManagerFactory);
 
+                @Nullable
                 final SslProvider sslProvider = ssl.getProvider();
                 if (sslProvider != null) {
                     sslContextBuilder.sslProvider(sslProvider);
                 }
+                @Nullable
                 final List<String> enabledProtocols = ssl.getEnabledProtocols();
                 if (enabledProtocols != null) {
                     sslContextBuilder.protocols(enabledProtocols.toArray(EMPTY_PROTOCOL_NAMES));
                 }
+                @Nullable
                 final List<String> ciphers = ssl.getCiphers();
                 if (ciphers != null) {
                     sslContextBuilder.ciphers(ImmutableList.copyOf(ciphers),
                                               SupportedCipherSuiteFilter.INSTANCE);
                 }
+                @Nullable
                 final ClientAuth clientAuth = ssl.getClientAuth();
                 if (clientAuth != null) {
                     sslContextBuilder.clientAuth(clientAuth);
@@ -270,7 +276,7 @@ final class ArmeriaConfigurationUtil {
             keyManagerFactory = new CustomAliasKeyManagerFactory(keyManagerFactory, ssl.getKeyAlias());
         }
 
-        String keyPassword = ssl.getKeyPassword();
+        @Nullable String keyPassword = ssl.getKeyPassword();
         if (keyPassword == null) {
             keyPassword = ssl.getKeyStorePassword();
         }
@@ -435,6 +441,7 @@ final class ArmeriaConfigurationUtil {
     private static void configureCompression(ServerBuilder serverBuilder, Compression compression) {
         if (compression.isEnabled()) {
             final int minBytesToForceChunkedAndEncoding;
+            @Nullable
             final String minResponseSize = compression.getMinResponseSize();
             if (minResponseSize == null) {
                 minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;

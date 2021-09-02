@@ -168,10 +168,11 @@ public final class RedirectConfigBuilder {
      * Returns a newly-created {@link RedirectConfig} based on the properties set so far.
      */
     public RedirectConfig build() {
-        BiPredicate<ClientRequestContext, String> predicate;
+        @Nullable BiPredicate<ClientRequestContext, String> predicate;
         if (isAllowingAllDomains) {
             predicate = allowAllDomains;
         } else {
+            @Nullable
             final BiPredicate<ClientRequestContext, String> allowedDomains = allowedDomains();
             if (allowedDomains != null) {
                 predicate = allowedDomains;

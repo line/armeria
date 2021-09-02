@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.encoding;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -53,7 +54,7 @@ class AbstractStreamDecoder implements StreamDecoder {
 
     // Mostly copied from netty's HttpContentDecoder.
     protected HttpData fetchDecoderOutput() {
-        ByteBuf decoded = null;
+        @Nullable ByteBuf decoded = null;
         for (;;) {
             final ByteBuf buf = decoder.readInbound();
             if (buf == null) {

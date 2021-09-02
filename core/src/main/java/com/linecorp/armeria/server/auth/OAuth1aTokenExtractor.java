@@ -55,6 +55,7 @@ final class OAuth1aTokenExtractor implements Function<RequestHeaders, OAuth1aTok
     @Nullable
     @Override
     public OAuth1aToken apply(RequestHeaders headers) {
+        @Nullable
         final String authorization = requireNonNull(headers, "headers").get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;

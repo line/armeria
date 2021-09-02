@@ -25,6 +25,8 @@ import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * {@link BeanPostProcessor} implementation that autowires annotated fields, setter methods, and arbitrary
  * config methods. Such members to be injected are detected through annotations:
@@ -37,6 +39,7 @@ public final class ArmeriaSpringBoot1BeanPostProcessor extends AbstractArmeriaBe
         super(beanFactory);
     }
 
+    @Nullable
     @Override
     public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
         return null;

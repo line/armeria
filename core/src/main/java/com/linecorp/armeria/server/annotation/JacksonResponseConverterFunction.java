@@ -73,6 +73,7 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
                                         ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailers) throws Exception {
+        @Nullable
         final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("application/json") or @ProducesJson is specified.

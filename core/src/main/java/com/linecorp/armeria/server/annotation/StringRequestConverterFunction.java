@@ -43,6 +43,7 @@ public final class StringRequestConverterFunction implements RequestConverterFun
         if (expectedResultType == String.class ||
             expectedResultType == CharSequence.class) {
             final Charset charset;
+            @Nullable
             final MediaType contentType = request.contentType();
             if (contentType != null) {
                 charset = contentType.charset(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);

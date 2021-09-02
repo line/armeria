@@ -21,6 +21,7 @@ import java.util.Optional;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 import com.linecorp.armeria.internal.common.auth.oauth2.MockOAuth2Service;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -41,6 +42,7 @@ public class MockOAuth2IntrospectionService extends MockOAuth2Service {
             @Param("token_type_hint") @Default("access_token") String tokenTypeHint) {
 
         // first, check "Authorization"
+        @Nullable
         final HttpResponse response = verifyClientCredentials(auth, "token introspection");
         if (response != null) {
             return response; // UNAUTHORIZED or BAD_REQUEST
@@ -50,6 +52,7 @@ public class MockOAuth2IntrospectionService extends MockOAuth2Service {
         if (!token.isPresent()) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, INVALID_REQUEST);
         }
+        @Nullable
         final MockOAuth2AccessToken accessToken = findToken(token.get());
         if (accessToken == null || !accessToken.tokenDescriptor().isActive()) {
             return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, NOT_ACTIVE_RESPONSE);

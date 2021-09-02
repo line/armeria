@@ -137,7 +137,9 @@ final class ArmeriaCallFactory implements Factory {
                             requestHeaders.value(i));
             }
 
+            @Nullable
             final RequestBody body = request.body();
+            @Nullable
             final Invocation invocation = request.tag(Invocation.class);
             if (body == null) {
                 // Without a body.
@@ -148,6 +150,7 @@ final class ArmeriaCallFactory implements Factory {
             }
 
             // With a body.
+            @Nullable
             final MediaType contentType = body.contentType();
             if (contentType != null) {
                 headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());

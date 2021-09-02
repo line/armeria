@@ -246,7 +246,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             }
 
             final Subscriber<Object> subscriber = subscription.subscriber();
-            Throwable cause = this.cause;
+            @Nullable Throwable cause = this.cause;
             if (cause == null && subscription.cancelRequested()) {
                 cause = CancelledSubscriptionException.get();
             }

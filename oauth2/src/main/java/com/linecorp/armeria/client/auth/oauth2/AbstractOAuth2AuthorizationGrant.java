@@ -112,7 +112,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
         CompletableFuture<GrantedOAuth2AccessToken> future;
-        GrantedOAuth2AccessToken token = null;
+        @Nullable GrantedOAuth2AccessToken token = null;
         for (;;) {
             final CompletableFuture<GrantedOAuth2AccessToken> tokenFuture = this.tokenFuture;
             if (!tokenFuture.isDone()) {
@@ -134,7 +134,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
 
         final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = future;
         if (token == null && fallbackTokenProvider != null) {
-            CompletableFuture<? extends GrantedOAuth2AccessToken> fallbackTokenFuture = null;
+            @Nullable CompletableFuture<? extends GrantedOAuth2AccessToken> fallbackTokenFuture = null;
             try {
                 fallbackTokenFuture = requireNonNull(
                         fallbackTokenProvider.get(), "fallbackTokenProvider.get() returned null");

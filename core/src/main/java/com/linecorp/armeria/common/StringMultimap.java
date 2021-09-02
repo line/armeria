@@ -180,11 +180,12 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         requireNonNull(name, "name");
         final int h = hashName(name);
         final int i = index(h);
-        Entry e = entries[i];
-        String value = null;
+        @Nullable Entry e = entries[i];
+        @Nullable String value = null;
         // loop until the first entry was found
         while (e != null) {
             if (e.hash == h) {
+                @Nullable
                 final NAME currentName = e.key;
                 if (currentName != null && nameEquals(currentName, name)) {
                     value = e.value;
@@ -198,6 +199,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public final String get(IN_NAME name, String defaultValue) {
         requireNonNull(defaultValue, "defaultValue");
+        @Nullable
         final String value = get(name);
         return value != null ? value : defaultValue;
     }
@@ -208,9 +210,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         requireNonNull(name, "name");
         final int h = hashName(name);
         final int i = index(h);
-        Entry e = entries[i];
+        @Nullable Entry e = entries[i];
         while (e != null) {
             if (e.hash == h) {
+                @Nullable
                 final NAME currentName = e.key;
                 if (currentName != null && nameEquals(currentName, name)) {
                     return e.value;
@@ -224,6 +227,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public final String getLast(IN_NAME name, String defaultValue) {
         requireNonNull(defaultValue, "defaultValue");
+        @Nullable
         final String value = getLast(name);
         return value != null ? value : defaultValue;
     }
@@ -237,7 +241,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     private ImmutableList<String> getAllReversed(IN_NAME name) {
         final int h = hashName(name);
         final int i = index(h);
-        Entry e = entries[i];
+        @Nullable Entry e = entries[i];
 
         if (e == null) {
             return ImmutableList.of();
@@ -246,6 +250,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final ImmutableList.Builder<String> builder = ImmutableList.builder();
         do {
             if (e.hash == h) {
+                @Nullable
                 final NAME currentName = e.key;
                 if (currentName != null && nameEquals(currentName, name)) {
                     builder.add(e.getValue());
@@ -259,6 +264,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Nullable
     @Override
     public Boolean getBoolean(IN_NAME name) {
+        @Nullable
         final String v = get(name);
         if (v == null) {
             return null;
@@ -268,6 +274,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public boolean getBoolean(IN_NAME name, boolean defaultValue) {
+        @Nullable
         final Boolean v = getBoolean(name);
         return v != null ? v : defaultValue;
     }
@@ -275,6 +282,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Nullable
     @Override
     public Boolean getLastBoolean(IN_NAME name) {
+        @Nullable
         final String v = getLast(name);
         if (v == null) {
             return null;
@@ -284,6 +292,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public boolean getLastBoolean(IN_NAME name, boolean defaultValue) {
+        @Nullable
         final Boolean v = getLastBoolean(name);
         return v != null ? v : defaultValue;
     }
@@ -291,12 +300,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Integer getInt(IN_NAME name) {
+        @Nullable
         final String v = get(name);
         return toInteger(v);
     }
 
     @Override
     public final int getInt(IN_NAME name, int defaultValue) {
+        @Nullable
         final Integer v = getInt(name);
         return v != null ? v : defaultValue;
     }
@@ -304,12 +315,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Integer getLastInt(IN_NAME name) {
+        @Nullable
         final String v = getLast(name);
         return toInteger(v);
     }
 
     @Override
     public final int getLastInt(IN_NAME name, int defaultValue) {
+        @Nullable
         final Integer v = getLastInt(name);
         return v != null ? v : defaultValue;
     }
@@ -317,12 +330,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Long getLong(IN_NAME name) {
+        @Nullable
         final String v = get(name);
         return toLong(v);
     }
 
     @Override
     public final long getLong(IN_NAME name, long defaultValue) {
+        @Nullable
         final Long v = getLong(name);
         return v != null ? v : defaultValue;
     }
@@ -330,12 +345,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Long getLastLong(IN_NAME name) {
+        @Nullable
         final String v = getLast(name);
         return toLong(v);
     }
 
     @Override
     public final long getLastLong(IN_NAME name, long defaultValue) {
+        @Nullable
         final Long v = getLastLong(name);
         return v != null ? v : defaultValue;
     }
@@ -343,12 +360,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Float getFloat(IN_NAME name) {
+        @Nullable
         final String v = get(name);
         return toFloat(v);
     }
 
     @Override
     public final float getFloat(IN_NAME name, float defaultValue) {
+        @Nullable
         final Float v = getFloat(name);
         return v != null ? v : defaultValue;
     }
@@ -356,12 +375,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Float getLastFloat(IN_NAME name) {
+        @Nullable
         final String v = getLast(name);
         return toFloat(v);
     }
 
     @Override
     public final float getLastFloat(IN_NAME name, float defaultValue) {
+        @Nullable
         final Float v = getLastFloat(name);
         return v != null ? v : defaultValue;
     }
@@ -369,12 +390,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Double getDouble(IN_NAME name) {
+        @Nullable
         final String v = get(name);
         return toDouble(v);
     }
 
     @Override
     public final double getDouble(IN_NAME name, double defaultValue) {
+        @Nullable
         final Double v = getDouble(name);
         return v != null ? v : defaultValue;
     }
@@ -382,12 +405,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Double getLastDouble(IN_NAME name) {
+        @Nullable
         final String v = getLast(name);
         return toDouble(v);
     }
 
     @Override
     public final double getLastDouble(IN_NAME name, double defaultValue) {
+        @Nullable
         final Double v = getLastDouble(name);
         return v != null ? v : defaultValue;
     }
@@ -395,12 +420,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Long getTimeMillis(IN_NAME name) {
+        @Nullable
         final String v = get(name);
         return toTimeMillis(v);
     }
 
     @Override
     public final long getTimeMillis(IN_NAME name, long defaultValue) {
+        @Nullable
         final Long v = getTimeMillis(name);
         return v != null ? v : defaultValue;
     }
@@ -408,12 +435,14 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     @Nullable
     public final Long getLastTimeMillis(IN_NAME name) {
+        @Nullable
         final String v = getLast(name);
         return toTimeMillis(v);
     }
 
     @Override
     public final long getLastTimeMillis(IN_NAME name, long defaultValue) {
+        @Nullable
         final Long v = getLastTimeMillis(name);
         return v != null ? v : defaultValue;
     }
@@ -423,10 +452,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         requireNonNull(name, "name");
         final int h = hashName(name);
         final int i = index(h);
-        Entry e = entries[i];
+        @Nullable Entry e = entries[i];
         // Return true as soon as an entry with a matching name is found.
         while (e != null) {
             if (e.hash == h) {
+                @Nullable
                 final NAME currentName = e.key;
                 if (currentName != null && nameEquals(currentName, name)) {
                     return true;
@@ -443,9 +473,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         requireNonNull(value, "value");
         final int h = hashName(name);
         final int i = index(h);
-        Entry e = entries[i];
+        @Nullable Entry e = entries[i];
         while (e != null) {
             if (e.hash == h) {
+                @Nullable
                 final NAME currentName = e.key;
                 if (currentName != null && nameEquals(currentName, name) &&
                     AsciiString.contentEquals(e.value, value)) {
@@ -465,6 +496,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean containsBoolean(IN_NAME name, boolean value) {
+        @Nullable
         final Boolean v = getBoolean(name);
         return v != null && v == value;
     }
@@ -510,7 +542,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             return ImmutableSet.of();
         }
         final ImmutableSet.Builder<NAME> builder = ImmutableSet.builder();
-        Entry e = firstGroupHead.after;
+        @Nullable Entry e = firstGroupHead.after;
         while (e != firstGroupHead) {
             builder.add(e.getKey());
             e = e.after;
@@ -556,6 +588,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     final String getAndRemove(IN_NAME name, String defaultValue) {
         requireNonNull(defaultValue, "defaultValue");
+        @Nullable
         final String value = getAndRemove(name);
         return value != null ? value : defaultValue;
     }
@@ -570,55 +603,65 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Nullable
     final Integer getIntAndRemove(IN_NAME name) {
+        @Nullable
         final String v = getAndRemove(name);
         return toInteger(v);
     }
 
     final int getIntAndRemove(IN_NAME name, int defaultValue) {
+        @Nullable
         final Integer v = getIntAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Nullable
     final Long getLongAndRemove(IN_NAME name) {
+        @Nullable
         final String v = getAndRemove(name);
         return toLong(v);
     }
 
     final long getLongAndRemove(IN_NAME name, long defaultValue) {
+        @Nullable
         final Long v = getLongAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Nullable
     final Float getFloatAndRemove(IN_NAME name) {
+        @Nullable
         final String v = getAndRemove(name);
         return toFloat(v);
     }
 
     final float getFloatAndRemove(IN_NAME name, float defaultValue) {
+        @Nullable
         final Float v = getFloatAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Nullable
     final Double getDoubleAndRemove(IN_NAME name) {
+        @Nullable
         final String v = getAndRemove(name);
         return toDouble(v);
     }
 
     final double getDoubleAndRemove(IN_NAME name, double defaultValue) {
+        @Nullable
         final Double v = getDoubleAndRemove(name);
         return v != null ? v : defaultValue;
     }
 
     @Nullable
     final Long getTimeMillisAndRemove(IN_NAME name) {
+        @Nullable
         final String v = getAndRemove(name);
         return toTimeMillis(v);
     }
 
     final long getTimeMillisAndRemove(IN_NAME name, long defaultValue) {
+        @Nullable
         final Long v = getTimeMillisAndRemove(name);
         return v != null ? v : defaultValue;
     }
@@ -1019,10 +1062,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             return null;
         }
 
-        String value = null;
-        Entry next = e.next;
+        @Nullable String value = null;
+        @Nullable Entry next = e.next;
         while (next != null) {
             if (next.hash == h) {
+                @Nullable
                 final NAME currentName = next.key;
                 if (currentName != null && nameEquals(currentName, name)) {
                     value = next.value;
@@ -1044,6 +1088,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
         e = entries[i];
         if (e.hash == h) {
+            @Nullable
             final NAME currentName = e.key;
             if (currentName != null && nameEquals(currentName, name)) {
                 if (value == null) {
@@ -1328,7 +1373,9 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
             @SuppressWarnings("unchecked")
             final Map.Entry<IN_NAME, String> that = (Map.Entry<IN_NAME, String>) o;
+            @Nullable
             final NAME thisKey = key;
+            @Nullable
             final IN_NAME thatKey = that.getKey();
             if (thisKey == null) {
                 return thatKey == null &&

@@ -126,7 +126,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, String> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
-            final AnnotatedService service = sc.service().as(AnnotatedService.class);
+            @Nullable final AnnotatedService service = sc.service().as(AnnotatedService.class);
             if (service != null) {
                 final String className = service.object().getClass().getName();
                 final String methodName = service.method().getName();
@@ -230,7 +230,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     private static List<FieldInfo> fieldInfos(List<AnnotatedValueResolver> resolvers) {
         final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
         for (AnnotatedValueResolver resolver : resolvers) {
-            final FieldInfo fieldInfo = fieldInfo(resolver);
+            @Nullable final FieldInfo fieldInfo = fieldInfo(resolver);
             if (fieldInfo != null) {
                 fieldInfosBuilder.add(fieldInfo);
             }
@@ -240,10 +240,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     @Nullable
     private static FieldInfo fieldInfo(AnnotatedValueResolver resolver) {
-        final Class<? extends Annotation> annotationType = resolver.annotationType();
+        @Nullable final Class<? extends Annotation> annotationType = resolver.annotationType();
         if (annotationType == RequestObject.class) {
-            final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
-            final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+            @Nullable final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
+            @Nullable final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
             if (factory != null) {
                 final Builder<AnnotatedValueResolver> builder = ImmutableList.builder();
                 factory.constructor().getValue().forEach(builder::add);

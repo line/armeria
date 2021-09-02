@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -168,7 +169,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
             }
 
             if (numActiveRequests.compareAndSet(currentActiveRequests, currentActiveRequests + 1)) {
-                final PendingTask task = pendingRequests.poll();
+                @Nullable final PendingTask task = pendingRequests.poll();
                 if (task == null) {
                     numActiveRequests.decrementAndGet();
                     if (!pendingRequests.isEmpty()) {

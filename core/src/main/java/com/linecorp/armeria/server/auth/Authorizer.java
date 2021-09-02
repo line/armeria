@@ -41,7 +41,7 @@ public interface Authorizer<T> {
      *     authorized, or {@code false} otherwise. If the future resolves exceptionally, the request
      *     will not be authorized.
      */
-    CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data);
+    CompletionStage<@Nullable Boolean> authorize(ServiceRequestContext ctx, T data);
 
     /**
      * Authorizes the given {@code data}.

@@ -151,6 +151,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         }
 
         final String firstTryHost;
+        @Nullable
         final String secondTryHost;
         if (endpoint.hasIpAddr()) {
             final String ipAddr = endpoint.ipAddr();

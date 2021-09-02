@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
@@ -31,7 +32,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
      */
     default void close(AggregatedHttpResponse res) {
         boolean transferredContent = false;
-        HttpData content = null;
+        @Nullable HttpData content = null;
         try {
             requireNonNull(res, "res");
 

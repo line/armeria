@@ -268,13 +268,13 @@ interface AccessLogComponent {
         public Object getMessage0(RequestLog log) {
             switch (type) {
                 case LOCAL_IP_ADDRESS:
-                    final InetSocketAddress local = log.context().localAddress();
+                    @Nullable final InetSocketAddress local = log.context().localAddress();
                     return local == null || local.isUnresolved() ? null : local.getAddress().getHostAddress();
 
                 case REMOTE_IP_ADDRESS:
                     if ("c".equals(variable)) {
                         // %{c}a means the remote address of the underlying channel.
-                        final InetSocketAddress remote = log.context().remoteAddress();
+                        @Nullable final InetSocketAddress remote = log.context().remoteAddress();
                         return remote == null || remote.isUnresolved() ? null
                                                                        : remote.getAddress().getHostAddress();
                     } else {
@@ -283,7 +283,7 @@ interface AccessLogComponent {
                         return ctx.clientAddress().getHostAddress();
                     }
                 case REMOTE_HOST:
-                    final SocketAddress ra = log.context().remoteAddress();
+                    @Nullable final SocketAddress ra = log.context().remoteAddress();
                     return ra instanceof InetSocketAddress ? ((InetSocketAddress) ra).getHostString() : null;
 
                 case RFC931:
@@ -295,13 +295,13 @@ interface AccessLogComponent {
                     final String httpMethodName = log.requestHeaders().method().name();
                     final String path = log.requestHeaders().path();
                     final String name = log.name();
-                    final RpcRequest rpcRequest = log.context().rpcRequest();
+                    @Nullable final RpcRequest rpcRequest = log.context().rpcRequest();
                     final boolean isGrpc = rpcRequest != null &&
                                            GRPC_SERVICE_NAME.equals(rpcRequest.serviceType().getName());
 
-                    final String logName;
-                    if (name != null && !isGrpc) {
-                        String serviceName = log.serviceName();
+                    @Nullable final String logName;
+                    if (!isGrpc) {
+                        @Nullable String serviceName = log.serviceName();
                         if (serviceName != null) {
                             final int idx = serviceName.lastIndexOf('.') + 1;
                             if (idx > 0) {
@@ -410,7 +410,7 @@ interface AccessLogComponent {
         @Nullable
         @Override
         Object getMessage0(RequestLog log) {
-            final Object value = log.context().attr(key);
+            @Nullable final Object value = log.context().attr(key);
             return value != null ? stringifer.apply(value) : null;
         }
     }
@@ -424,7 +424,7 @@ interface AccessLogComponent {
             return type == AccessLogType.REQUEST_LOG;
         }
 
-        private final Function<RequestLog, Object> resolver;
+        private final Function<RequestLog, @Nullable Object> resolver;
 
         RequestLogComponent(String variable, boolean addQuote,
                             @Nullable Function<ResponseHeaders, Boolean> condition) {
@@ -449,7 +449,7 @@ interface AccessLogComponent {
                                    : cause.getClass().getSimpleName();
         }
 
-        private static Function<RequestLog, Object> findResolver(String variable) {
+        private static Function<RequestLog, @Nullable Object> findResolver(String variable) {
             // The same order as methods in the RequestLog interface.
             switch (variable) {
                 case "method":
@@ -504,7 +504,7 @@ interface AccessLogComponent {
                     return RequestLog::scheme;
                 case "host":
                     return log -> {
-                        final String authority = log.requestHeaders().authority();
+                        @Nullable final String authority = log.requestHeaders().authority();
                         if ("?".equals(authority)) {
                             final InetSocketAddress remoteAddr = log.context().remoteAddress();
                             assert remoteAddr != null;

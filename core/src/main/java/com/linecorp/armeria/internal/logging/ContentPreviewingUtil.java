@@ -72,7 +72,7 @@ public final class ContentPreviewingUtil {
             }
         };
         filteredHttpRequest.whenComplete().handle((unused, cause) -> {
-            String produced = null;
+            @Nullable String produced = null;
             try {
                 produced = requestContentPreviewer.produce();
             } catch (Exception e) {
@@ -111,7 +111,7 @@ public final class ContentPreviewingUtil {
             this.ctx = ctx;
             whenComplete().handle((unused, cause) -> {
                 if (responseContentPreviewer != null) {
-                    String produced = null;
+                    @Nullable String produced = null;
                     try {
                         produced = responseContentPreviewer.produce();
                     } catch (Exception e) {

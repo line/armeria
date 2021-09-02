@@ -156,7 +156,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
 
         // More than one protocol were specified. Detect the protocol.
-
+        @Nullable
         final ScheduledFuture<?> protocolDetectionTimeoutFuture;
         // FIXME(trustin): Add a dedicated timeout option to ServerConfig.
         final long requestTimeoutMillis = config.defaultVirtualHost().requestTimeoutMillis();
@@ -277,7 +277,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             final int readableBytes = in.readableBytes();
-            SessionProtocol detected = null;
+            @Nullable SessionProtocol detected = null;
             for (final Iterator<SessionProtocol> i = candidates.iterator(); i.hasNext();/* noop */) {
                 final SessionProtocol protocol = i.next();
                 switch (protocol) {
@@ -395,6 +395,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                              proxiedCandidates);
             }
 
+            @Nullable
             final ProxiedAddresses proxiedAddresses;
             if (msg.proxiedProtocol().addressFamily() == AddressFamily.AF_UNSPEC) {
                 proxiedAddresses = null;

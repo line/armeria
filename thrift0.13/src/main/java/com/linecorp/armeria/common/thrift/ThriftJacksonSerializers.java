@@ -194,8 +194,8 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             gen.writeFieldName("header");
             serializeTMessage(value.header(), gen);
 
-            final TBase<?, ?> result;
-            final TApplicationException exception;
+            @Nullable final TBase<?, ?> result;
+            @Nullable final TApplicationException exception;
             if (value.isException()) {
                 result = null;
                 exception = value.exception();

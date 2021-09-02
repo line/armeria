@@ -146,7 +146,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         final KeepAliveHandler keepAliveHandler = writer.keepAliveHandler();
         keepAliveHandler.onReadOrWrite();
         // this.req can be set to null by fail(), so we keep it in a local variable.
-        DecodedHttpRequest req = this.req;
+        @Nullable DecodedHttpRequest req = this.req;
         final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {

@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class DefaultResponseHeadersBuilder
         extends AbstractHttpHeadersBuilder<ResponseHeadersBuilder>
         implements ResponseHeadersBuilder {
@@ -34,12 +36,14 @@ final class DefaultResponseHeadersBuilder
 
     @Override
     public ResponseHeaders build() {
+        @Nullable
         final HttpHeadersBase delegate = delegate();
         if (delegate != null) {
             checkState(delegate.contains(HttpHeaderNames.STATUS), STATUS_HEADER_MISSING);
             return new DefaultResponseHeaders(promoteDelegate());
         }
 
+        @Nullable
         final HttpHeadersBase parent = parent();
         if (parent != null) {
             if (parent instanceof ResponseHeaders) {
@@ -62,6 +66,7 @@ final class DefaultResponseHeadersBuilder
 
     @Override
     public Cookies cookies() {
+        @Nullable
         final HttpHeadersBase getters = getters();
         if (getters == null) {
             return Cookies.of();

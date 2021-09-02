@@ -27,6 +27,8 @@ import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * Provides a fake Processor to provide {@link ActionHook} to request/response.
  */
@@ -95,6 +97,7 @@ final class ArmeriaProcessor extends AbstractProcessor {
         throw new UnsupportedOperationException();
     }
 
+    @Nullable
     @Override
     protected AbstractEndpoint.Handler.SocketState service(SocketWrapperBase<?> socketWrapper)
             throws IOException {

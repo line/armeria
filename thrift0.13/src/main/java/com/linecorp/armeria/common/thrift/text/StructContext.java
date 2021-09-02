@@ -70,7 +70,7 @@ final class StructContext extends PairContext {
     private static final Map<String, Class<?>> fieldMetaDataClassCache = new MapMaker().weakValues().makeMap();
 
     static {
-        Supplier<Class<?>> supplier = null;
+        @Nullable Supplier<Class<?>> supplier = null;
         if (SystemInfo.javaVersion() >= 9) {
             try {
                 supplier = new StackWalkingThriftMessageClassFinder();

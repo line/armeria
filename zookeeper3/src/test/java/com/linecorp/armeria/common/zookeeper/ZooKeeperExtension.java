@@ -74,7 +74,7 @@ public class ZooKeeperExtension extends AbstractAllOrEachExtension implements Zo
     @Override
     public CloseableZooKeeper connection() {
         // Try up to three times to reduce flakiness.
-        Throwable lastCause = null;
+        @Nullable Throwable lastCause = null;
         for (int i = 0; i < 3; i++) {
             try {
                 return ZooKeeperAssert.super.connection();

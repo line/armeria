@@ -57,7 +57,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
     public final CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                                     ScheduledExecutorService executor,
                                                     long timeoutMillis) {
-        Endpoint endpoint = selectNow(ctx);
+        @Nullable Endpoint endpoint = selectNow(ctx);
         if (endpoint != null) {
             return UnmodifiableFuture.completedFuture(endpoint);
         }
@@ -74,6 +74,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         }
 
         // Schedule the timeout task.
+        //noinspection ConstantConditions
         final ScheduledFuture<?> timeoutFuture =
                 executor.schedule(() -> listeningFuture.complete(null),
                                   timeoutMillis, TimeUnit.MILLISECONDS);
@@ -111,7 +112,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
             }
 
             try {
-                final Endpoint endpoint = selectNow(ctx);
+                @Nullable final Endpoint endpoint = selectNow(ctx);
                 if (endpoint != null) {
                     cleanup();
 
@@ -144,7 +145,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
 
         private void cleanup() {
             group().removeListener(this);
-            final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+            @Nullable final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
             if (timeoutFuture != null) {
                 this.timeoutFuture = null;
                 timeoutFuture.cancel(false);

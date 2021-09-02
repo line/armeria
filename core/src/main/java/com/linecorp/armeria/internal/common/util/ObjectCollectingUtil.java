@@ -48,7 +48,7 @@ public final class ObjectCollectingUtil {
     private static final Class<?> MONO_CLASS;
 
     static {
-        Class<?> mono = null;
+        @Nullable Class<?> mono = null;
         try {
             mono = Class.forName("reactor.core.publisher.Mono",
                                  true, ObjectCollectingUtil.class.getClassLoader());

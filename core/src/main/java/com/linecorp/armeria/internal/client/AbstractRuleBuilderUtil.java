@@ -37,7 +37,7 @@ public final class AbstractRuleBuilderUtil {
      * a given {@link ClientRequestContext} and {@link Throwable}.
      */
     // TODO(ikhoon): Use BiPredicate.
-    public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
+    public static BiFunction<? super ClientRequestContext, ? super @Nullable Throwable, Boolean>
     buildFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
                 @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,

@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.DistributionSummary.Builder;
 import io.micrometer.core.instrument.Measurement;
@@ -114,14 +116,19 @@ public final class MoreMeters {
                    .minimumExpectedValue(distStatCfg.getMinimumExpectedValueAsDouble())
                    .serviceLevelObjectives(distStatCfg.getServiceLevelObjectiveBoundaries());
         } else {
+            @Nullable
             final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValueAsDouble();
+            @Nullable
             final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValueAsDouble();
+            @Nullable
             final Long maxExpectedValue =
                     maxExpectedValueNanos != null ? maxExpectedValueNanos.longValue() : null;
+            @Nullable
             final Long minExpectedValue =
                     minExpectedValueNanos != null ? minExpectedValueNanos.longValue() : null;
             builder.maximumExpectedValue(maxExpectedValue);
             builder.minimumExpectedValue(minExpectedValue);
+            @Nullable
             final double[] slas = distStatCfg.getServiceLevelObjectiveBoundaries();
             if (slas != null) {
                 builder.sla(Arrays.stream(slas).mapToLong(sla -> (long) sla).toArray());
@@ -138,10 +145,14 @@ public final class MoreMeters {
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
 
+        @Nullable
         final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValueAsDouble();
+        @Nullable
         final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValueAsDouble();
+        @Nullable
         final Duration maxExpectedValue =
                 maxExpectedValueNanos != null ? Duration.ofNanos(maxExpectedValueNanos.longValue()) : null;
+        @Nullable
         final Duration minExpectedValue =
                 minExpectedValueNanos != null ? Duration.ofNanos(minExpectedValueNanos.longValue()) : null;
 

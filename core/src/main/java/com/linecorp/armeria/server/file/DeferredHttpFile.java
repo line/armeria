@@ -52,9 +52,10 @@ final class DeferredHttpFile implements HttpFile {
     }
 
     @Override
-    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+    public CompletableFuture<@Nullable HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
 
+        @Nullable
         final HttpFile delegate = this.delegate;
         if (delegate != null) {
             return delegate.readAttributes(fileReadExecutor);
@@ -70,6 +71,7 @@ final class DeferredHttpFile implements HttpFile {
     public CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
 
+        @Nullable
         final HttpFile delegate = this.delegate;
         if (delegate != null) {
             return delegate.readHeaders(fileReadExecutor);
@@ -82,10 +84,11 @@ final class DeferredHttpFile implements HttpFile {
     }
 
     @Override
-    public CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+    public CompletableFuture<@Nullable HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
         requireNonNull(alloc, "alloc");
 
+        @Nullable
         final HttpFile delegate = this.delegate;
         if (delegate != null) {
             return delegate.read(fileReadExecutor, alloc);
@@ -101,6 +104,7 @@ final class DeferredHttpFile implements HttpFile {
     public CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
 
+        @Nullable
         final HttpFile delegate = this.delegate;
         if (delegate != null) {
             return delegate.aggregate(fileReadExecutor);
@@ -118,6 +122,7 @@ final class DeferredHttpFile implements HttpFile {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
         requireNonNull(alloc, "alloc");
 
+        @Nullable
         final HttpFile delegate = this.delegate;
         if (delegate != null) {
             return delegate.aggregateWithPooledObjects(fileReadExecutor, alloc);
@@ -131,6 +136,7 @@ final class DeferredHttpFile implements HttpFile {
 
     @Override
     public HttpService asService() {
+        @Nullable
         final HttpFile delegate = this.delegate;
         if (delegate != null) {
             return delegate.asService();

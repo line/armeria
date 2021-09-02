@@ -97,6 +97,7 @@ public final class ThriftServiceMetadata {
 
         for (Class<?> iface : candidateInterfaces) {
 
+            @Nullable
             final Map<String, AsyncProcessFunction<?, ?, ?>> asyncProcessMap;
             asyncProcessMap = getThriftAsyncProcessMap(implementation, iface);
             if (asyncProcessMap != null) {
@@ -108,6 +109,7 @@ public final class ThriftServiceMetadata {
                 interfaces.add(iface);
             }
 
+            @Nullable
             final Map<String, ProcessFunction<?, ?>> processMap;
             processMap = getThriftProcessMap(implementation, iface);
             if (processMap != null) {

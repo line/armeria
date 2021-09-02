@@ -40,6 +40,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Date;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
@@ -87,11 +89,13 @@ final class ServerCookieEncoder {
             buf.append(HttpConstants.SP_CHAR);
         }
 
+        @Nullable
         final String path = cookie.path();
         if (path != null) {
             add(buf, CookieHeaderNames.PATH, path);
         }
 
+        @Nullable
         final String domain = cookie.domain();
         if (domain != null) {
             add(buf, CookieHeaderNames.DOMAIN, domain);
@@ -102,6 +106,7 @@ final class ServerCookieEncoder {
         if (cookie.isHttpOnly()) {
             add(buf, CookieHeaderNames.HTTPONLY);
         }
+        @Nullable
         final String sameSite = cookie.sameSite();
         if (sameSite != null) {
             add(buf, "SameSite", sameSite);

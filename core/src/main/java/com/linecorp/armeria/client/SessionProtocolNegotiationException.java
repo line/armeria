@@ -46,8 +46,7 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
      * Creates a new instance with the specified expected and actual {@link SessionProtocol}s.
      */
     public SessionProtocolNegotiationException(SessionProtocol expected,
-                                               @Nullable SessionProtocol actual, @Nullable String reason) {
-
+                                               SessionProtocol actual, @Nullable String reason) {
         super("expected: " + requireNonNull(expected, "expected") +
               ", actual: " + requireNonNull(actual, "actual") + ", reason: " + reason);
         this.expected = expected;

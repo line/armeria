@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 
 /**
@@ -176,6 +177,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         res.handle((unused1, cause) -> {
             try {
                 retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
+                    @Nullable
                     final Backoff backoff = decision != null ? decision.backoff() : null;
                     if (backoff != null) {
                         final long nextDelay = getNextDelay(derivedCtx, backoff);
@@ -201,6 +203,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     private static void onRetryComplete(ClientRequestContext ctx, ClientRequestContext derivedCtx,
                                         RpcResponse res, CompletableFuture<RpcResponse> future) {
         onRetryingComplete(ctx);
+        @Nullable
         final HttpRequest actualHttpReq = derivedCtx.request();
         if (actualHttpReq != null) {
             ctx.updateRequest(actualHttpReq);

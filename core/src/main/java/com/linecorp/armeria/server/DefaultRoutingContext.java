@@ -112,7 +112,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public QueryParams params() {
-        QueryParams queryParams = this.queryParams;
+        @Nullable QueryParams queryParams = this.queryParams;
         if (queryParams == null) {
             if (query == null) {
                 queryParams = QueryParams.of();

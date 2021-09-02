@@ -148,7 +148,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 completionFuture.completeExceptionally(cause);
                 return Exceptions.throwUnsafely(cause);
             } else {
-                Throwable abortCause = null;
+                @Nullable Throwable abortCause = null;
                 final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(result.size());
                 final boolean withPooledObjects = containsWithPooledObjects(options);
                 for (T t : result) {
@@ -313,6 +313,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
             completed = true;
+            @Nullable
             final Throwable filteredCause = beforeError(delegate, t);
             if (filteredCause != null) {
                 delegate.onError(filteredCause);

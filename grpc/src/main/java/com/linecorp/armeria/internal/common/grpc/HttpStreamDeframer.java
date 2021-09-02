@@ -94,6 +94,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             return;
         }
 
+        @Nullable
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
@@ -102,6 +103,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
         // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
         // messages.
+        @Nullable
         final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
         if (grpcEncoding != null) {
             final io.grpc.Decompressor decompressor = decompressorRegistry.lookupDecompressor(grpcEncoding);
@@ -123,6 +125,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processTrailers(HttpHeaders headers, HttpDecoderOutput<DeframedMessage> out) {
+        @Nullable
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;

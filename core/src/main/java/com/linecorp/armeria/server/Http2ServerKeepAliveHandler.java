@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
@@ -33,6 +34,7 @@ final class Http2ServerKeepAliveHandler extends Http2KeepAliveHandler {
 
     @Override
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+        @Nullable
         final HttpServer server = HttpServer.get(ctx);
         return server != null && server.unfinishedRequests() != 0;
     }

@@ -85,6 +85,7 @@ final class RoutingTrie<V> {
      * Each node matched with the given {@code path} would be passed into the given {@link NodeProcessor}.
      */
     List<V> find(String path, NodeProcessor<V> processor) {
+        @Nullable
         final Node<V> node = findNode(path, false, processor);
         return node == null ? ImmutableList.of() : node.values;
     }
@@ -127,6 +128,7 @@ final class RoutingTrie<V> {
     @Nullable
     private Node<V> findFirstNode(Node<V> node, String path, int begin, boolean exact, IntHolder nextHolder,
                                   NodeProcessor<V> processor) {
+        @Nullable
         final Node<V> checked = checkNode(node, path, begin, exact, nextHolder);
         if (checked != continueWalking()) {
             if (checked != null) {
@@ -142,8 +144,9 @@ final class RoutingTrie<V> {
         //  - The child which has a path variable.
         //  - The child which is able to consume every remaining path. (catch-all)
         final int next = nextHolder.value;
-        Node<V> child = node.children.get(path.charAt(next));
+        @Nullable Node<V> child = node.children.get(path.charAt(next));
         if (child != null) {
+            @Nullable
             final Node<V> found = findFirstNode(child, path, next, exact, nextHolder, processor);
             if (found != null) {
                 return found;
@@ -151,6 +154,7 @@ final class RoutingTrie<V> {
         }
         child = node.parameterChild;
         if (child != null) {
+            @Nullable
             final Node<V> found = findFirstNode(child, path, next, exact, nextHolder, processor);
             if (found != null) {
                 return found;
@@ -170,6 +174,7 @@ final class RoutingTrie<V> {
 
     private void findAllNodes(Node<V> node, String path, int begin, boolean exact,
                               ImmutableList.Builder<Node<V>> accumulator, IntHolder nextHolder) {
+        @Nullable
         final Node<V> checked = checkNode(node, path, begin, exact, nextHolder);
         if (checked != continueWalking()) {
             if (checked != null) {
@@ -180,7 +185,7 @@ final class RoutingTrie<V> {
 
         final int next = nextHolder.value;
         // find the nearest child node from root to preserve the access order
-        Node<V> child = node.catchAllChild;
+        @Nullable Node<V> child = node.catchAllChild;
         if (child != null) {
             accumulator.add(child);
         }

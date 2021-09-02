@@ -53,6 +53,7 @@ public final class ReactorGrpcClientStubFactory implements GrpcClientStubFactory
     public Object newClientStub(Class<?> clientType, Channel channel) {
         final Method stubFactoryMethod = GrpcClientFactoryUtil.findStubFactoryMethod(clientType);
         try {
+            assert stubFactoryMethod != null;
             return stubFactoryMethod.invoke(null, channel);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw newClientStubCreationException(e);

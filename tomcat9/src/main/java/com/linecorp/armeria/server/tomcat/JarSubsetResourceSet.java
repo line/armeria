@@ -59,8 +59,8 @@ final class JarSubsetResourceSet extends JarResourceSet {
     private static final MethodHandle archiveEntriesSetter;
 
     static {
-        MethodHandle getter = null;
-        MethodHandle setter = null;
+        @Nullable MethodHandle getter = null;
+        @Nullable MethodHandle setter = null;
         try {
             // No need to call setAccessible() because this class is a subclass and it's a protected field.
             final Field field = AbstractArchiveResourceSet.class.getDeclaredField("archiveEntries");
@@ -94,9 +94,9 @@ final class JarSubsetResourceSet extends JarResourceSet {
     @Override
     protected HashMap<String,JarEntry> getArchiveEntries(boolean single) {
         synchronized (archiveLock) {
-            Map<String, JarEntry> archiveEntries = mhGetArchiveEntries();
+            @Nullable Map<String, JarEntry> archiveEntries = mhGetArchiveEntries();
             if (archiveEntries == null && !single) {
-                JarFile jarFile = null;
+                @Nullable JarFile jarFile = null;
                 mhSetArchiveEntries(archiveEntries = new HashMap<>());
                 try {
                     jarFile = openJarFile();
@@ -151,7 +151,7 @@ final class JarSubsetResourceSet extends JarResourceSet {
 
     @Override
     protected JarEntry getArchiveEntry(String pathInArchive) {
-        JarFile jarFile = null;
+        @Nullable JarFile jarFile = null;
         try {
             jarFile = openJarFile();
             return jarFile.getJarEntry(prefix + pathInArchive);

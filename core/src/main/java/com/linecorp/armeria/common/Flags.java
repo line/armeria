@@ -445,13 +445,14 @@ public final class Flags {
             getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
 
     static {
-        TransportType type = null;
+        @Nullable TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
             case "io_uring":
                 if (TransportType.IO_URING.isAvailable()) {
                     logger.info("Using io_uring");
                     type = TransportType.IO_URING;
                 } else {
+                    @Nullable
                     final Throwable cause = TransportType.IO_URING.unavailabilityCause();
                     if (cause != null) {
                         logger.info("io_uring not available: {}", cause.toString());
@@ -465,6 +466,7 @@ public final class Flags {
                     logger.info("Using /dev/epoll");
                     type = TransportType.EPOLL;
                 } else {
+                    @Nullable
                     final Throwable cause = TransportType.EPOLL.unavailabilityCause();
                     if (cause != null) {
                         logger.info("/dev/epoll not available: {}", cause.toString());
@@ -1441,6 +1443,7 @@ public final class Flags {
 
     private static String getNormalized(String name, String defaultValue, Predicate<String> validator) {
         final String fullName = PREFIX + name;
+        @Nullable
         final String value = getLowerCased(fullName);
         if (value == null) {
             logger.info("{}: {} (default)", fullName, defaultValue);

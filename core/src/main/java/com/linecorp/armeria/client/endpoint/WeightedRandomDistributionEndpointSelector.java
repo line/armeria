@@ -71,7 +71,7 @@ final class WeightedRandomDistributionEndpointSelector {
             return null;
         }
         final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        Endpoint selected = null;
+        @Nullable Endpoint selected = null;
         for (;;) {
             final long currentWeight = currentTotalWeight;
             if (currentWeight == 0) {

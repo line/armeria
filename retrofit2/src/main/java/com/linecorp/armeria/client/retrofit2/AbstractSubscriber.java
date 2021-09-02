@@ -97,7 +97,7 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
                 final HttpHeaders headers = (HttpHeaders) httpObject;
                 onHttpHeaders();
 
-                final String statusText = headers.get(HttpHeaderNames.STATUS);
+                @Nullable final String statusText = headers.get(HttpHeaderNames.STATUS);
                 if (statusText == null) {
                     break;
                 }

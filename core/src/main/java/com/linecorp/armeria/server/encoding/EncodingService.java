@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -72,6 +73,7 @@ public final class EncodingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        @Nullable
         final HttpEncodingType encodingType = HttpEncoders.getWrapperForRequest(req);
         final HttpResponse delegateResponse = unwrap().serve(ctx, req);
         if (encodingType == null || !encodableRequestHeadersPredicate.test(req.headers())) {

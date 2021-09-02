@@ -64,7 +64,7 @@ public final class ServerCacheControl extends CacheControl {
                                                                 .immutable()
                                                                 .build();
 
-    private static final Map<String, BiConsumer<ServerCacheControlBuilder, String>> DIRECTIVES =
+    private static final Map<String, BiConsumer<ServerCacheControlBuilder, @Nullable String>> DIRECTIVES =
             ImmutableMap.<String, BiConsumer<ServerCacheControlBuilder, String>>builder()
                     .put("no-cache", (b, v) -> b.noCache())
                     .put("no-store", (b, v) -> b.noStore())

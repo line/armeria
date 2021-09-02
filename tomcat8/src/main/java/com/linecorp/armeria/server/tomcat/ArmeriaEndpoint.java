@@ -26,6 +26,8 @@ import org.apache.tomcat.util.net.SocketEvent;
 import org.apache.tomcat.util.net.SocketProcessorBase;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * A fake {@link AbstractEndpoint}.
  */
@@ -40,6 +42,7 @@ final class ArmeriaEndpoint extends AbstractEndpoint {
     @Override
     protected void createSSLContext(SSLHostConfig sslHostConfig) throws Exception {}
 
+    @Nullable
     @Override
     protected InetSocketAddress getLocalAddress() throws IOException {
         // Doesn't seem to be used.
@@ -56,6 +59,7 @@ final class ArmeriaEndpoint extends AbstractEndpoint {
         return false;
     }
 
+    @Nullable
     @Override
     protected SocketProcessorBase createSocketProcessor(SocketWrapperBase socketWrapper, SocketEvent event) {
         return null;
@@ -73,6 +77,7 @@ final class ArmeriaEndpoint extends AbstractEndpoint {
     @Override
     public void stopInternal() throws Exception {}
 
+    @Nullable
     @Override
     protected Acceptor createAcceptor() {
         // Doesn't seem to be used.

@@ -42,6 +42,7 @@ public final class InstanceInfo {
 
     private static final Logger logger = LoggerFactory.getLogger(InstanceInfo.class);
 
+    @Nullable
     private final String instanceId;
 
     @Nullable

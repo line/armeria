@@ -98,7 +98,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             return new com.linecorp.armeria.spring.Ssl();
         }
 
-        ClientAuth clientAuth = null;
+        @Nullable ClientAuth clientAuth = null;
         if (ssl.getClientAuth() != null) {
             switch (ssl.getClientAuth()) {
                 case NEED:
@@ -109,12 +109,8 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                     break;
             }
         }
-        return new com.linecorp.armeria.spring.Ssl()
+        final com.linecorp.armeria.spring.Ssl armeriaSsl = new com.linecorp.armeria.spring.Ssl()
                 .setEnabled(ssl.isEnabled())
-                .setClientAuth(clientAuth)
-                .setCiphers(ssl.getCiphers() != null ? ImmutableList.copyOf(ssl.getCiphers()) : null)
-                .setEnabledProtocols(ssl.getEnabledProtocols() != null ? ImmutableList.copyOf(
-                        ssl.getEnabledProtocols()) : null)
                 .setKeyAlias(ssl.getKeyAlias())
                 .setKeyPassword(ssl.getKeyPassword())
                 .setKeyStore(ssl.getKeyStore())
@@ -125,10 +121,21 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 .setTrustStorePassword(ssl.getTrustStorePassword())
                 .setTrustStoreType(ssl.getTrustStoreType())
                 .setTrustStoreProvider(ssl.getTrustStoreProvider());
+        if (clientAuth != null) {
+            armeriaSsl.setClientAuth(clientAuth);
+        }
+        if (ssl.getCiphers() != null) {
+            armeriaSsl.setCiphers(ImmutableList.copyOf(ssl.getCiphers()));
+        }
+        if (ssl.getEnabledProtocols() != null) {
+            armeriaSsl.setEnabledProtocols(ImmutableList.copyOf(ssl.getEnabledProtocols()));
+        }
+        return armeriaSsl;
     }
 
     @Override
     public WebServer getWebServer(HttpHandler httpHandler) {
+        @Nullable
         final ArmeriaWebServer armeriaWebServerBean = findBean(ArmeriaWebServer.class);
         if (armeriaWebServerBean != null) {
             return armeriaWebServerBean;
@@ -143,6 +150,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         sb.disableServerHeader();
         sb.disableDateHeader();
 
+        @Nullable
         final ArmeriaSettings armeriaSettings = findBean(ArmeriaSettings.class);
         if (!isArmeriaCompressionEnabled(armeriaSettings)) {
             final Compression compression = getCompression();
@@ -213,6 +221,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         final int springPort = ensureValidPort(getPort());
         final List<ServerPort> armeriaPorts = armeriaPorts(sb);
+        @Nullable
         final InetAddress primaryAddress;
         final int primaryLocalPort;
         final SessionProtocol primarySessionProtocol;
@@ -274,7 +283,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     private static boolean isArmeriaSslEnabled(@Nullable ArmeriaSettings armeriaSettings) {
         if (armeriaSettings != null) {
-            final com.linecorp.armeria.spring.Ssl ssl = armeriaSettings.getSsl();
+            final com.linecorp.armeria.spring.@Nullable Ssl ssl = armeriaSettings.getSsl();
             if (ssl != null) {
                 return ssl.isEnabled();
             }
@@ -284,7 +293,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     private static boolean isArmeriaCompressionEnabled(@Nullable ArmeriaSettings armeriaSettings) {
         if (armeriaSettings != null) {
-            final ArmeriaSettings.Compression compression = armeriaSettings.getCompression();
+            final ArmeriaSettings.@Nullable Compression compression = armeriaSettings.getCompression();
             if (compression != null) {
                 return compression.isEnabled();
             }
@@ -294,7 +303,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     private void configureTls(ServerBuilder sb, com.linecorp.armeria.spring.Ssl ssl) {
         final SslStoreProvider provider = getSslStoreProvider();
+        @Nullable
         final Supplier<KeyStore> keyStoreSupplier;
+        @Nullable
         final Supplier<KeyStore> trustStoreSupplier;
         if (provider != null) {
             keyStoreSupplier = () -> {
@@ -319,18 +330,21 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     }
 
     private MeterIdPrefixFunction meterIdPrefixFunctionOrDefault() {
+        @Nullable
         final MeterIdPrefixFunction f = findBean(MeterIdPrefixFunction.class);
         return f != null ? f : MeterIdPrefixFunction.ofDefault("armeria.server");
     }
 
     @VisibleForTesting
     boolean isManagementPortEqualsToServerPort() {
+        @Nullable
         final Integer managementPort = environment.getProperty("management.server.port", Integer.class);
         if (managementPort == null) {
             // The management port is disable
             return true;
         }
         final Integer ensuredManagementPort = ensureValidPort(managementPort);
+        @Nullable
         final Integer serverPort = environment.getProperty("server.port", Integer.class);
         return (serverPort == null && ensuredManagementPort.equals(8080)) ||
                (ensuredManagementPort != 0 && ensuredManagementPort.equals(serverPort));

@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Queue;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 
 import io.netty.buffer.ByteBuf;
@@ -271,6 +272,7 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
         closed = true;
         readableBytes = 0;
         for (;;) {
+            @Nullable
             final ByteBuf buf = queue.poll();
             if (buf != null) {
                 buf.release();

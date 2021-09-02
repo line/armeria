@@ -37,6 +37,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 
 /**
@@ -148,6 +150,7 @@ final class ServerCookieDecoder {
                 continue;
             }
 
+            @Nullable
             final CookieBuilder builder = initCookie(logger, strict,
                                                      header, nameBegin, nameEnd, valueBegin, valueEnd);
             if (builder != null) {

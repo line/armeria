@@ -197,7 +197,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         requireNonNull(responseListener, "responseListener");
         requireNonNull(metadata, "metadata");
 
-        final Compressor compressor;
+        @Nullable final Compressor compressor;
         if (callOptions.getCompressor() != null) {
             compressor = compressorRegistry.lookupCompressor(callOptions.getCompressor());
             if (compressor == null) {
@@ -388,6 +388,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 return;
             }
             try {
+                @Nullable
                 final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                 if (trailers == null) {
                     // Malformed trailers.
@@ -412,6 +413,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 firstResponse = msg;
             }
 
+            @Nullable
             final ByteBuf buf = message.buf();
             if (unsafeWrapResponseBuffers && buf != null && !grpcWebText) {
                 GrpcUnsafeBufferUtil.storeBuffer(buf, msg, ctx);
@@ -469,6 +471,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void close(Status status, Metadata metadata) {
+        @Nullable
         final Deadline deadline = callOptions.getDeadline();
         if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
             status = Status.DEADLINE_EXCEEDED;
@@ -526,6 +529,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private void runPendingTask() {
         for (;;) {
+            @Nullable
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {
                 if (pendingTask != null) {
@@ -565,10 +569,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private String simpleMethodName() {
-        String simpleMethodName = simpleMethodNames.get(method);
-        if (simpleMethodName == null) {
-            simpleMethodName = method.getBareMethodName();
+        @Nullable final String simpleMethodName = simpleMethodNames.get(method);
+        if (simpleMethodName != null) {
+            return simpleMethodName;
         }
-        return simpleMethodName;
+        return method.getBareMethodName();
     }
 }

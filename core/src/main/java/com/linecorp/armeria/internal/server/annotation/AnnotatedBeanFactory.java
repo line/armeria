@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 
@@ -68,6 +69,7 @@ final class AnnotatedBeanFactory<T> {
             }
 
             for (final Entry<Field, AnnotatedValueResolver> field : fields.entrySet()) {
+                @Nullable
                 final Object fieldArg = field.getValue().resolve(resolverContext);
                 field.getKey().set(instance, fieldArg);
             }

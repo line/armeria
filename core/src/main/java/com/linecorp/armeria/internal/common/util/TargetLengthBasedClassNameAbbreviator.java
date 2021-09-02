@@ -103,13 +103,12 @@ public final class TargetLengthBasedClassNameAbbreviator {
             }
             final int available = dotIndexesAndLength[i] - previousDotPosition - 1;
 
-            len = (available < 1) ? available : 1;
             if (toTrim > 0) {
-                len = (available < 1) ? available : 1;
+                len = Math.min(available, 1);
             } else {
                 len = available;
             }
-            toTrim -= (available - len);
+            toTrim -= available - len;
             dotIndexesAndLength[MAX_DOTS + i] = len + 1;
         }
 

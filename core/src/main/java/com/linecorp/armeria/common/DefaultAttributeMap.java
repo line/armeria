@@ -88,6 +88,7 @@ final class DefaultAttributeMap {
     @Nullable
     private <T> T attr(AttributeKey<T> key, boolean ownAttr) {
         requireNonNull(key, "key");
+        @Nullable
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             if (!ownAttr && rootAttributeMap != null) {
@@ -108,6 +109,7 @@ final class DefaultAttributeMap {
         synchronized (head) {
             DefaultAttribute<?> curr = head;
             for (;;) {
+                @Nullable
                 final DefaultAttribute<?> next = curr.next;
                 if (next == null) {
                     if (!ownAttr && rootAttributeMap != null) {
@@ -117,6 +119,7 @@ final class DefaultAttributeMap {
                 }
 
                 if (next.key == key) {
+                    @Nullable
                     @SuppressWarnings("unchecked")
                     final T result = (T) next.getValue();
                     return result;
@@ -162,10 +165,12 @@ final class DefaultAttributeMap {
         synchronized (head) {
             DefaultAttribute<?> curr = head;
             for (;;) {
+                @Nullable
                 final DefaultAttribute<?> next = curr.next;
                 if (next != null && next.key == key) {
                     @SuppressWarnings("unchecked")
                     final DefaultAttribute<T> attr = (DefaultAttribute<T>) next;
+                    @Nullable
                     final T oldValue = attr.setValue(value);
                     return getSetAttrResultForExistingAttr(mode, attr, oldValue);
                 }
@@ -209,7 +214,7 @@ final class DefaultAttributeMap {
     }
 
     private AtomicReferenceArray<DefaultAttribute<?>> attributes() {
-        AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
+        @Nullable AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             attributes = new AtomicReferenceArray<>(BUCKET_SIZE);
 
@@ -222,6 +227,7 @@ final class DefaultAttributeMap {
     }
 
     Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        @Nullable
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             if (rootAttributeMap == null) {
@@ -250,6 +256,7 @@ final class DefaultAttributeMap {
     }
 
     Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+        @Nullable
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             return Collections.emptyIterator();
@@ -310,6 +317,7 @@ final class DefaultAttributeMap {
         @Nullable
         @Override
         public T setValue(@Nullable T value) {
+            @Nullable
             final T old = this.value;
             this.value = value;
             return old;
@@ -470,6 +478,7 @@ final class DefaultAttributeMap {
 
         @Override
         public T getValue() {
+            @Nullable
             final Entry<AttributeKey<T>, T> childAttr = this.childAttr;
             if (childAttr != null) {
                 return childAttr.getValue();
@@ -479,8 +488,10 @@ final class DefaultAttributeMap {
 
         @Override
         public T setValue(T value) {
+            @Nullable
             final Entry<AttributeKey<T>, T> childAttr = this.childAttr;
             if (childAttr == null) {
+                @Nullable
                 @SuppressWarnings("unchecked")
                 final Entry<AttributeKey<T>, T> newChildAttr = (Entry<AttributeKey<T>, T>)
                         setAttr(rootAttr.getKey(), value, SetAttrMode.CUR_ATTR);

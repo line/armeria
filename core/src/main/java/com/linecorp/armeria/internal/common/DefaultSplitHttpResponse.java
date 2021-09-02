@@ -97,7 +97,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     @Override
     public final CompletableFuture<HttpHeaders> trailers() {
-        HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
+        @Nullable HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         if (trailersFuture != null) {
             return trailersFuture;
         }
@@ -200,6 +200,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
             try {
                 downstream.onSubscribe(this);
+                @Nullable
                 final Throwable cause = this.cause;
                 if (cause != null) {
                     onError0(cause, downstream);
@@ -243,6 +244,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         }
 
         private void request0(long n) {
+            @Nullable
             final Subscription upstream = this.upstream;
             if (upstream == null) {
                 pendingRequests = LongMath.saturatedAdd(n, pendingRequests);
@@ -261,6 +263,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 downstream = NoopSubscriber.get();
             }
             maybeCompleteHeaders(null);
+            @Nullable
             final Subscription upstream = this.upstream;
             if (upstream != null) {
                 upstream.cancel();
@@ -292,6 +295,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
             assert httpObject instanceof HttpData;
 
             final EventExecutor executor = this.executor;
+            assert executor != null;
             if (executor.inEventLoop()) {
                 onNext0((HttpData) httpObject);
             } else {
@@ -311,7 +315,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
          * Completes the specified trailers.
          */
         private void completeTrailers(HttpHeaders trailers) {
-            HeadersFuture<HttpHeaders> trailersFuture = DefaultSplitHttpResponse.this.trailersFuture;
+            @Nullable HeadersFuture<HttpHeaders> trailersFuture = DefaultSplitHttpResponse.this.trailersFuture;
             if (trailersFuture != null) {
                 trailersFuture.doComplete(trailers);
                 return;
@@ -328,7 +332,9 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         @Override
         public void onError(Throwable cause) {
             maybeCompleteHeaders(cause);
+            @Nullable
             final EventExecutor executor = this.executor;
+            @Nullable
             final Subscriber<? super HttpData> downstream = this.downstream;
             if (executor == null || downstream == null) {
                 this.cause = cause;
@@ -350,7 +356,9 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         @Override
         public void onComplete() {
             maybeCompleteHeaders(null);
+            @Nullable
             final EventExecutor executor = this.executor;
+            @Nullable
             final Subscriber<? super HttpData> downstream = this.downstream;
 
             if (executor == null || downstream == null) {

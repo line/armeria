@@ -205,7 +205,7 @@ abstract class AbstractTHttp2Client extends TTransport {
         b.channel(NioSocketChannel.class);
         b.handler(initHandler);
 
-        Channel ch = null;
+        @Nullable Channel ch = null;
         try {
             ch = b.connect(host, port).syncUninterruptibly().channel();
             final THttp2ClientHandler handler = initHandler.clientHandler;

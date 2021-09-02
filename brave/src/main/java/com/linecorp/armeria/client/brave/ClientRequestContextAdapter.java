@@ -65,6 +65,7 @@ final class ClientRequestContextAdapter {
         @Override
         @Nullable
         public String url() {
+            @Nullable
             final HttpRequest req = ctx.request();
             return req != null ? req.uri().toString() : null;
         }
@@ -72,6 +73,7 @@ final class ClientRequestContextAdapter {
         @Override
         @Nullable
         public String header(String name) {
+            @Nullable
             final HttpRequest req = ctx.request();
             return req != null ? req.headers().get(name) : null;
         }

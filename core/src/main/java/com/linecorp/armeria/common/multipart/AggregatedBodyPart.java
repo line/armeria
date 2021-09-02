@@ -45,7 +45,7 @@ public interface AggregatedBodyPart extends AggregatedHttpObject {
      */
     @Nullable
     default String name() {
-        final ContentDisposition contentDisposition = headers().contentDisposition();
+        @Nullable final ContentDisposition contentDisposition = headers().contentDisposition();
         if (contentDisposition != null) {
             return contentDisposition.name();
         } else {
@@ -61,7 +61,7 @@ public interface AggregatedBodyPart extends AggregatedHttpObject {
      */
     @Nullable
     default String filename() {
-        final ContentDisposition contentDisposition = headers().contentDisposition();
+        @Nullable final ContentDisposition contentDisposition = headers().contentDisposition();
         if (contentDisposition != null) {
             return contentDisposition.filename();
         } else {

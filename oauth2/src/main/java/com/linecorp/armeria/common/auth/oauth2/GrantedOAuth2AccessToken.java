@@ -247,6 +247,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
      * {@link #expiresAt()} function.
      */
     public boolean isValid(Instant instant) {
+        @Nullable
         final Instant expires = expiresAt();
         return (expires == null) || requireNonNull(instant, "instant").isBefore(expires);
     }

@@ -158,6 +158,7 @@ public abstract class MockOAuth2Service {
             return HttpResponse.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE,
                                                       String.format(WWW_AUTHENTICATE_RESPONSE, realm)));
         }
+        @Nullable
         final String credential = extractBasicAuthorization(auth.get());
         if (credential == null) {
             return HttpResponse.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE,

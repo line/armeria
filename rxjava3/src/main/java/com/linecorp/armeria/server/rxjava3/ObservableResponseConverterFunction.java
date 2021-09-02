@@ -125,7 +125,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         }
     }
 
-    private BiFunction<Object, Throwable, HttpResponse> handleResult(
+    private BiFunction<Object, @Nullable Throwable, HttpResponse> handleResult(
             ServiceRequestContext ctx, ResponseHeaders headers, HttpHeaders trailers) {
         return (result, cause) -> {
             if (cause != null) {

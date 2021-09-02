@@ -96,6 +96,7 @@ public final class GrpcStatus {
         t = unwrap(requireNonNull(t, "t"));
 
         if (statusFunction != null) {
+            @Nullable
             final Status status = statusFunction.apply(ctx, t, metadata);
             if (status != null) {
                 return status;
@@ -149,9 +150,11 @@ public final class GrpcStatus {
         requireNonNull(status, "status");
 
         if (statusFunction != null) {
+            @Nullable
             final Throwable cause = status.getCause();
             if (cause != null) {
                 final Throwable unwrapped = unwrap(cause);
+                @Nullable
                 final Status newStatus = statusFunction.apply(ctx, unwrapped, metadata);
                 if (newStatus != null) {
                     return newStatus;
@@ -303,11 +306,14 @@ public final class GrpcStatus {
      */
     public static void reportStatus(HttpHeaders headers, TransportStatusListener transportStatusListener) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
+        assert grpcStatus != null;
         Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
+        @Nullable
         final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (grpcMessage != null) {
             status = status.withDescription(StatusMessageEscaper.unescape(grpcMessage));
         }
+        @Nullable
         final String grpcThrowable = headers.get(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
         if (grpcThrowable != null) {
             status = addCause(status, grpcThrowable);

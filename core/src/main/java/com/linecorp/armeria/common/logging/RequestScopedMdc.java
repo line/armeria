@@ -114,7 +114,7 @@ public final class RequestScopedMdc {
         MDC.get("");
 
         // Replace the default MDC adapter with ours.
-        MDCAdapter oldAdapter;
+        @Nullable MDCAdapter oldAdapter;
         try {
             final Field mdcAdapterField = MDC.class.getDeclaredField("mdcAdapter");
             mdcAdapterField.setAccessible(true);
@@ -126,7 +126,7 @@ public final class RequestScopedMdc {
         }
         delegate = oldAdapter;
 
-        MethodHandle oldAdapterGetPropertyMap = null;
+        @Nullable MethodHandle oldAdapterGetPropertyMap = null;
         if (delegate != null) {
             try {
                 oldAdapterGetPropertyMap =
@@ -187,6 +187,7 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
 
         final Object2ObjectMap<String, String> map = getMap(ctx);
+        @Nullable
         final RequestContext rootCtx = ctx.root();
         if (rootCtx == null || rootCtx == ctx) {
             return map;
@@ -283,6 +284,7 @@ public final class RequestScopedMdc {
     public static void copyAll(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         checkState(delegate != null, ERROR_MESSAGE);
+        @Nullable
         final Map<String, String> map = getDelegateContextMap();
         if (map != null) {
             putAll(ctx, map);
@@ -352,6 +354,7 @@ public final class RequestScopedMdc {
     }
 
     private static Object2ObjectMap<String, String> getMap(RequestContext ctx) {
+        @Nullable
         final Object2ObjectMap<String, String> map = ctx.ownAttr(MAP);
         return firstNonNull(map, Object2ObjectMaps.emptyMap());
     }
@@ -369,8 +372,10 @@ public final class RequestScopedMdc {
         @Override
         @Nullable
         public String get(String key) {
+            @Nullable
             final RequestContext ctx = RequestContext.currentOrNull();
             if (ctx != null) {
+                @Nullable
                 final String value = RequestScopedMdc.get(ctx, key);
                 if (value != null) {
                     return value;
@@ -382,7 +387,9 @@ public final class RequestScopedMdc {
 
         @Override
         public Map<String, String> getCopyOfContextMap() {
+            @Nullable
             final Map<String, String> threadLocalMap = getDelegateContextMap();
+            @Nullable
             final RequestContext ctx = RequestContext.currentOrNull();
             if (ctx == null) {
                 // No context available

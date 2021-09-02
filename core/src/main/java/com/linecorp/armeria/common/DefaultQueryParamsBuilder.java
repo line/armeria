@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class DefaultQueryParamsBuilder extends StringMultimapBuilder<
         /* IN_NAME */ String, /* NAME */ String,
         /* CONTAINER */ QueryParamsBase, /* SELF */ QueryParamsBuilder>
@@ -39,6 +41,7 @@ final class DefaultQueryParamsBuilder extends StringMultimapBuilder<
 
     @Override
     public QueryParams build() {
+        @Nullable
         final QueryParamsBase delegate = delegate();
         if (delegate != null) {
             if (delegate.isEmpty()) {
@@ -48,6 +51,7 @@ final class DefaultQueryParamsBuilder extends StringMultimapBuilder<
             }
         }
 
+        @Nullable
         final QueryParamsBase parent = parent();
         if (parent != null) {
             if (parent instanceof QueryParams) {

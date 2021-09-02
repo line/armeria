@@ -114,6 +114,7 @@ final class THttpClientInvocationHandler
 
     @Nullable
     private Object invokeClientMethod(Method method, @Nullable Object[] args) throws Throwable {
+        @Nullable
         final AsyncMethodCallback<Object> callback;
         if (args == null) {
             args = NO_ARGS;
@@ -167,6 +168,7 @@ final class THttpClientInvocationHandler
                 }
             } catch (Throwable cause) {
                 if (callback != null) {
+                    @Nullable
                     final ClientRequestContext ctx = captor.getOrNull();
                     if (ctx != null) {
                         try (SafeCloseable ignored = ctx.push()) {

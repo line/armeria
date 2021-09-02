@@ -387,6 +387,7 @@ public final class ServerConfig {
         for (VirtualHost h : virtualHosts) {
             for (ServiceConfig c : h.serviceConfigs()) {
                 // Consider the case where the specified service is decorated before being added.
+                @Nullable
                 final HttpService unwrapped = c.service().as(serviceType);
                 if (unwrapped == null) {
                     continue;
@@ -664,7 +665,7 @@ public final class ServerConfig {
 
     @Override
     public String toString() {
-        String strVal = this.strVal;
+        @Nullable String strVal = this.strVal;
         if (strVal == null) {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),

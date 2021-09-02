@@ -48,6 +48,7 @@ final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
     @Override
     public Endpoint decode(byte[] data) {
         final ServiceInstance<?> decodedInstance = CuratorXNodeValueCodec.INSTANCE.decode(data);
+        @Nullable
         final Endpoint endpoint = converter.apply(decodedInstance);
         if (endpoint == null) {
             logger.warn("The endpoint converter returned null from {}.", decodedInstance);

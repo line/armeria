@@ -296,6 +296,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
         if (config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {
+                @Nullable
                 final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
                                response0, aggregated);
@@ -319,6 +320,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 RequestLogProperty.RESPONSE_TRAILERS : RequestLogProperty.RESPONSE_HEADERS;
 
         derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
+            @Nullable
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             if (retryConfig.needsContentInRule() && responseCause == null) {
@@ -403,6 +405,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                      ClientRequestContext derivedCtx, HttpRequestDuplicator rootReqDuplicator,
                                      HttpRequest originalReq, HttpResponse returnedRes,
                                      CompletableFuture<HttpResponse> future, HttpResponse originalRes) {
+        @Nullable
         final Backoff backoff = decision != null ? decision.backoff() : null;
         if (backoff != null) {
             final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
@@ -431,6 +434,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
         final RequestLogAccess log = ctx.log();
+        @Nullable
         final String value;
         if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
             value = log.partial().responseHeaders().get(HttpHeaderNames.RETRY_AFTER);

@@ -127,6 +127,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                 Exceptions.throwUnsafely(t);
             }
 
+            @Nullable
             final Endpoint endpoint = ctx.endpoint();
             final HttpRequest httpReq = HttpRequest.of(
                     RequestHeaders.builder(HttpMethod.POST, ctx.path())
@@ -179,6 +180,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
     }
 
     private static String fullMethod(ClientRequestContext ctx, String method) {
+        @Nullable
         final String service = ctx.fragment();
         if (Strings.isNullOrEmpty(service)) {
             return method;
@@ -212,6 +214,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         final TProtocol inputProtocol = protocolFactory.getProtocol(inputTransport);
 
         final TMessage header = inputProtocol.readMessageBegin();
+        @Nullable
         final TApplicationException appEx = readApplicationException(seqId, func, inputProtocol, header);
         if (appEx != null) {
             handleException(ctx, reply, new ThriftReply(header, appEx), appEx);

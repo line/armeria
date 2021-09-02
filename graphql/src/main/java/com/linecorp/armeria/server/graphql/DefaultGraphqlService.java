@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 import com.linecorp.armeria.server.graphql.protocol.GraphqlRequest;
@@ -61,6 +62,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     @Override
     protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
+        @Nullable
         final MediaType produceType = req.produceType();
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
@@ -79,6 +81,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
             builder.extensions(extensions);
         }
 
+        @Nullable
         final String operationName = req.operationName();
         if (operationName != null) {
             builder.operationName(operationName);

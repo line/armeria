@@ -242,6 +242,7 @@ public class OAuth2TokenDescriptor implements Serializable {
      * {@link #expiresAt()} function.
      */
     public boolean isValid(Instant instant) {
+        @Nullable
         final Instant expires = expiresAt();
         return (expires == null) || requireNonNull(instant, "instant").isBefore(expires);
     }
@@ -257,6 +258,7 @@ public class OAuth2TokenDescriptor implements Serializable {
      * Indicates whether or not the Token used prematurely based on {@link #notBefore()} function.
      */
     public boolean isNotBefore() {
+        @Nullable
         final Instant notBefore = notBefore();
         return (notBefore == null) || Instant.now().isAfter(notBefore);
     }

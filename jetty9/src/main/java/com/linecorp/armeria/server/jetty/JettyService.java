@@ -89,7 +89,7 @@ public final class JettyService implements HttpService {
     private static final MethodHandle jResGetTrailerSupplier;
 
     static {
-        MethodHandle setAsyncSupported = null;
+        @Nullable MethodHandle setAsyncSupported = null;
         try {
             // Jetty 9.4+
             setAsyncSupported = MethodHandles.lookup().unreflect(
@@ -109,7 +109,7 @@ public final class JettyService implements HttpService {
         assert setAsyncSupported != null;
         jReqSetAsyncSupported = setAsyncSupported;
 
-        MethodHandle getTrailerSupplier = null;
+        @Nullable MethodHandle getTrailerSupplier = null;
         try {
             // Jetty 9.4+
             getTrailerSupplier = MethodHandles.lookup().unreflect(
@@ -217,6 +217,7 @@ public final class JettyService implements HttpService {
     }
 
     void stop() {
+        @Nullable
         final Server server = this.server;
         this.server = null;
         connector = null;
@@ -391,6 +392,7 @@ public final class JettyService implements HttpService {
                     }
 
                     if (lastContent) {
+                        @Nullable
                         final HttpHeaders trailers = toResponseTrailers(info);
                         if (trailers != null) {
                             write(data);
@@ -403,6 +405,7 @@ public final class JettyService implements HttpService {
                         write(data);
                     }
                 } else if (lastContent) {
+                    @Nullable
                     final HttpHeaders trailers = toResponseTrailers(info);
                     if (trailers != null) {
                         write(trailers);
@@ -453,6 +456,7 @@ public final class JettyService implements HttpService {
                 return null;
             }
 
+            @Nullable
             final HttpFields fields = trailerSupplier.get();
             if (fields == null || fields.size() == 0) {
                 return null;

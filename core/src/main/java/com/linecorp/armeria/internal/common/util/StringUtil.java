@@ -21,6 +21,8 @@ import java.util.Map;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 public final class StringUtil {
     private static final int MAX_NUM = 1000;
     private static final int MIN_NUM = -MAX_NUM;
@@ -55,6 +57,7 @@ public final class StringUtil {
         return Long.toString(num);
     }
 
+    @Nullable
     public static Boolean toBoolean(String s, boolean errorOnFailure) {
         final Boolean result = stringToBoolean.get(Ascii.toLowerCase(s));
         if (result != null) {

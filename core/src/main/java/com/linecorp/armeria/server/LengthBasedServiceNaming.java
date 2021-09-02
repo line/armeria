@@ -39,6 +39,7 @@ final class LengthBasedServiceNaming implements ServiceNaming {
     @Override
     public String serviceName(ServiceRequestContext ctx) {
         final String fullTypeName = ServiceNaming.fullTypeName().serviceName(ctx);
+        assert fullTypeName != null;
         return abbreviate(fullTypeName);
     }
 

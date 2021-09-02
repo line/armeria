@@ -182,7 +182,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void abort0(Throwable cause) {
-        SubscriptionImpl subscription = this.subscription;
+        @Nullable SubscriptionImpl subscription = this.subscription;
         if (subscription == null) {
             final SubscriptionImpl newSubscription = new SubscriptionImpl(
                     this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
@@ -213,6 +213,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void abort0(Throwable cause, SubscriptionImpl subscription) {
+        @Nullable
         final Object o = queue.peek();
         // If there's no data pushed (i.e empty stream), notify subscriber with the event pushed by
         // close() or close(cause).
@@ -287,6 +288,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
+            @Nullable
             final Throwable cause = event.cause;
             if (state == State.CLEANUP) {
                 cleanupCause = cause;
@@ -302,6 +304,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     final void notifySubscriber() {
+        @Nullable
         final SubscriptionImpl subscription = this.subscription;
         if (subscription == null) {
             return;
@@ -350,6 +353,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 return;
             }
 
+            @Nullable
             final Object o = queue.peek();
             if (o == null) {
                 break;
@@ -455,6 +459,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private void cleanupObjects(@Nullable Throwable cause) {
         for (;;) {
+            @Nullable
             final Object e = queue.poll();
             if (e == null) {
                 break;

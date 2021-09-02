@@ -117,6 +117,7 @@ final class RoutingTrieBuilder<V> {
         NodeBuilder<V> node = insertChild(null, entry.path, entry.value, entry.hasHighPrecedence);
         // Only the root node has no parent.
         for (;;) {
+            @Nullable
             final NodeBuilder<V> parent = node.parent;
             if (parent == null) {
                 return node;
@@ -157,6 +158,7 @@ final class RoutingTrieBuilder<V> {
             // We need to find a child to be able to consume the next character of the path, or need to
             // make a new sub trie to manage remaining part of the path.
             final char nextChar = convertKey(path.charAt(same));
+            @Nullable
             final NodeBuilder<V> next = current.child(nextChar);
             if (next == null) {
                 // Insert node.
@@ -229,6 +231,7 @@ final class RoutingTrieBuilder<V> {
      * Makes the given node as a child.
      */
     private NodeBuilder<V> asChild(NodeBuilder<V> child) {
+        @Nullable
         final NodeBuilder<V> parent = child.parent;
         return parent == null ? child : parent.addChild(child);
     }
@@ -369,8 +372,8 @@ final class RoutingTrieBuilder<V> {
         Node<V> build() {
             // Build the `children` while looking for `parameterChild` and `catchAllChild`.
             final Char2ObjectMap<Node<V>> children;
-            Node<V> parameterChild = null;
-            Node<V> catchAllChild = null;
+            @Nullable Node<V> parameterChild = null;
+            @Nullable Node<V> catchAllChild = null;
             if (this.children == null || this.children.isEmpty()) {
                 children = Char2ObjectMaps.emptyMap();
             } else {

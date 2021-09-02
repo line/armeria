@@ -184,12 +184,13 @@ public final class ExportGroupBuilder {
             return this;
         }
 
-        String exportKey = null;
+        @Nullable String exportKey = null;
         if (exportKeyPos > 0) {
             exportKey = keyPattern.substring(0, exportKeyPos);
             keyPattern = keyPattern.substring(exportKeyPos + 1);
         }
 
+        @Nullable
         final BuiltInProperty property = BuiltInProperty.findByKey(keyPattern);
         if (property != null) {
             builtIns.add(new ExportEntry<>(property, exportKey != null ? exportKey : property.key));
@@ -292,12 +293,11 @@ public final class ExportGroupBuilder {
         }
 
         @Nullable
-        String stringify(@Nullable Object value) {
+        String stringify(Object value) {
             if (stringifier == null) {
-                return value != null ? value.toString() : null;
-            } else {
-                return stringifier.apply(value);
+                return value.toString();
             }
+            return stringifier.apply(value);
         }
 
         @Override

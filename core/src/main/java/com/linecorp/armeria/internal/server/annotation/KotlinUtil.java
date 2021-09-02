@@ -52,7 +52,7 @@ final class KotlinUtil {
     private static final Method IS_RETURN_TYPE_UNIT;
 
     static {
-        MethodHandle callKotlinSuspendingMethod = null;
+        @Nullable MethodHandle callKotlinSuspendingMethod = null;
         final String internalCommonPackageName = RequestContextUtil.class.getPackage().getName();
         try {
             final Class<?> coroutineUtilClass =
@@ -72,8 +72,8 @@ final class KotlinUtil {
             CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
         }
 
-        Method isSuspendingFunction = null;
-        Method isReturnTypeUnit = null;
+        @Nullable Method isSuspendingFunction = null;
+        @Nullable Method isReturnTypeUnit = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
@@ -97,7 +97,7 @@ final class KotlinUtil {
             IS_KOTLIN_REFLECTION_PRESENT = isKotlinReflectionPresent;
         }
 
-        Class<? extends Annotation> metadataClass = null;
+        @Nullable Class<? extends Annotation> metadataClass = null;
         try {
             metadataClass = (Class<? extends Annotation>) getClass("kotlin.Metadata");
         } catch (ClassNotFoundException e) {
@@ -106,7 +106,7 @@ final class KotlinUtil {
             METADATA_CLASS = metadataClass;
         }
 
-        Class<?> continuationClass = null;
+        @Nullable Class<?> continuationClass = null;
         try {
             continuationClass = getClass("kotlin.coroutines.Continuation");
         } catch (ClassNotFoundException e) {

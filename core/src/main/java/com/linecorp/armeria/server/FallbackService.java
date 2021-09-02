@@ -20,6 +20,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Handles the {@link HttpRequest}s that are not matched by any user-specified {@link Route}s.
@@ -47,6 +48,7 @@ final class FallbackService implements HttpService {
             return HttpStatusException.of(HttpStatus.FORBIDDEN);
         }
 
+        @Nullable
         final HttpStatusException cause = routingCtx.deferredStatusException();
         if (cause == null) {
             return HttpStatusException.of(HttpStatus.NOT_FOUND);

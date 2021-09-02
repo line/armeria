@@ -84,11 +84,13 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
 
     @Override
     public void log(RequestLog log) {
+        @Nullable
         final V value = valueExtractor.apply(log);
         if (value == null) {
             return;
         }
 
+        @Nullable
         final K key = keyExtractor.apply(log);
         final ProducerRecord<K, V> producerRecord = new ProducerRecord<>(topic, key, value);
         producer.send(producerRecord, (metadata, exception) -> {

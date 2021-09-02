@@ -111,6 +111,7 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
 
     @Override
     protected void applyStatusCode() {
+        @Nullable
         final HttpStatus httpStatus = getStatusCode();
         if (httpStatus != null) {
             armeriaHeaders.status(httpStatus.value());

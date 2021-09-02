@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
 
@@ -36,7 +37,7 @@ final class NonExistentHttpFile implements HttpFile {
     private NonExistentHttpFile() {}
 
     @Override
-    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+    public CompletableFuture<@Nullable HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
         return UnmodifiableFuture.completedFuture(null);
     }
 
@@ -46,7 +47,7 @@ final class NonExistentHttpFile implements HttpFile {
     }
 
     @Override
-    public CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+    public CompletableFuture<@Nullable HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
         return UnmodifiableFuture.completedFuture(null);
     }
 

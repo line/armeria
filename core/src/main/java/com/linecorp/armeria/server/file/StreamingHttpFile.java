@@ -82,6 +82,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
     @Override
     protected final HttpResponse doRead(ResponseHeaders headers, long length,
                                         Executor fileReadExecutor, ByteBufAllocator alloc) throws IOException {
+        @Nullable
         final T in = newStream();
         if (in == null) {
             return null;
@@ -175,6 +176,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                         new IOException("too large to aggregate: " + attrs.length() + " bytes"));
             }
 
+            @Nullable
             final T in;
             try {
                 in = newStream();
@@ -191,6 +193,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                 final CompletableFuture<AggregatedHttpFile> future = new EventLoopCheckingFuture<>();
                 fileReadExecutor.execute(() -> {
                     final int length = (int) attrs.length();
+                    @Nullable
                     final byte[] array;
                     final ByteBuf buf;
                     if (alloc != null) {
@@ -228,6 +231,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                             builder.contentType(contentType());
                         }
 
+                        @Nullable
                         final String etag = generateEntityTag(attrs);
                         if (etag != null) {
                             builder.entityTag((unused1, unused2) -> etag);

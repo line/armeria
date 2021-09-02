@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -130,7 +131,7 @@ public final class SslContextUtil {
                 builder.applicationProtocolConfig(ALPN_CONFIG);
             }
 
-            SslContext sslContext = null;
+            @Nullable SslContext sslContext = null;
             boolean success = false;
             try {
                 sslContext = builder.build();
@@ -163,8 +164,8 @@ public final class SslContextUtil {
 
     @VisibleForTesting
     static Set<String> supportedProtocols(SslContextBuilder builder) {
-        SslContext ctx = null;
-        SSLEngine engine = null;
+        @Nullable SslContext ctx = null;
+        @Nullable SSLEngine engine = null;
         try {
             ctx = builder.build();
             engine = ctx.newEngine(PooledByteBufAllocator.DEFAULT);

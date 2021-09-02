@@ -124,6 +124,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
      */
     private HttpResponse handleCorsPreflight(ServiceRequestContext ctx, HttpRequest req) {
         final ResponseHeadersBuilder headers = ResponseHeaders.builder(HttpStatus.OK);
+        @Nullable
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowMethods(headers);
@@ -144,6 +145,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
      */
     private void setCorsResponseHeaders(ServiceRequestContext ctx, HttpRequest req,
                                         ResponseHeadersBuilder headers) {
+        @Nullable
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowCredentials(headers);
@@ -170,9 +172,10 @@ public final class CorsService extends SimpleDecoratingHttpService {
     @Nullable
     private CorsPolicy setCorsOrigin(ServiceRequestContext ctx, HttpRequest request,
                                      ResponseHeadersBuilder headers) {
-
+        @Nullable
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null) {
+            @Nullable
             final CorsPolicy policy = config.getPolicy(origin, ctx.routingContext());
             if (policy == null) {
                 logger.debug(
@@ -205,6 +208,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     }
 
     private static void echoCorsRequestOrigin(HttpRequest request, ResponseHeadersBuilder headers) {
+        @Nullable
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null) {
             setCorsOrigin(headers, origin);

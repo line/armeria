@@ -32,7 +32,7 @@ final class ScalaUtil {
     private static final Class<?> SCALA_EXECUTION_CONTEXT;
 
     static {
-        Class<?> futureClass;
+        @Nullable Class<?> futureClass;
         try {
             futureClass = Class.forName("scala.concurrent.Future");
         } catch (ClassNotFoundException e) {
@@ -40,7 +40,7 @@ final class ScalaUtil {
         }
         SCALA_FUTURE = futureClass;
 
-        Class<?> executionContextClass;
+        @Nullable Class<?> executionContextClass;
         try {
             executionContextClass = Class.forName("scala.concurrent.ExecutionContext");
         } catch (ClassNotFoundException e) {

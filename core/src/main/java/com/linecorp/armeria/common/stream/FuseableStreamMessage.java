@@ -147,7 +147,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(objs.size());
-            Throwable cause0 = null;
+            @Nullable Throwable cause0 = null;
             for (Object obj : objs) {
                 if (cause0 != null) {
                     // An error was raised. The remaing objects should be released.
@@ -156,6 +156,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 }
 
                 try {
+                    @Nullable
                     final U result = function.apply(obj);
                     if (result != null) {
                         builder.add(result);
@@ -251,7 +252,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            U result = null;
+            @Nullable U result = null;
             try {
                 if (function != null) {
                     result = function.apply(item);
@@ -357,6 +358,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
         default <V> MapperFunction<T, V> and(MapperFunction<? super R, ? extends V> after) {
             return in -> {
+                @Nullable
                 final R out = apply(in);
                 if (out != null) {
                     return after.apply(out);

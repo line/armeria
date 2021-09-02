@@ -192,6 +192,7 @@ public final class CaffeineMetricSupport {
         }
 
         private boolean updateCacheStats(boolean force) {
+            @Nullable
             final Cache<?, ?> cache = get();
             if (cache == null) {
                 return true; // GC'd

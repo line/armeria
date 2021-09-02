@@ -96,15 +96,18 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
             final String endpointUri = cfg.endpoint().toUriString(portConfig.scheme().uriText(),
                                                                   defaultHostname, portConfig.port());
             final Response response = messageContext.getMessage();
+            assert response != null;
             final Assertion assertion = getValidatedAssertion(response, endpointUri);
 
             // Find a session index which is sent by an identity provider.
+            @Nullable
             final String sessionIndex = assertion.getAuthnStatements().stream()
                                                  .map(AuthnStatement::getSessionIndex)
                                                  .filter(Objects::nonNull)
                                                  .findFirst().orElse(null);
-
+            @Nullable
             final SAMLBindingContext bindingContext = messageContext.getSubcontext(SAMLBindingContext.class);
+            @Nullable
             final String relayState = bindingContext != null ? bindingContext.getRelayState() : null;
 
             return ssoHandler.loginSucceeded(ctx, req, messageContext, sessionIndex, relayState);

@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public abstract class AbstractAuthorizerWithHandlers<T> implements Authorizer<T> {
 
     @Override
-    public final CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data) {
+    public final CompletionStage<@Nullable Boolean> authorize(ServiceRequestContext ctx, T data) {
         return AuthorizerUtil.authorizeAndSupplyHandlers(this, ctx, data)
                              .thenApply(status -> status != null ? status.isAuthorized() : null);
     }

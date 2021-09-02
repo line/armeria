@@ -163,8 +163,9 @@ public abstract class UserClient<I extends Request, O extends Response>
     protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
                               String path, @Nullable String query, @Nullable String fragment, I req,
                               RequestOptions requestOptions) {
-
+        @Nullable
         final HttpRequest httpReq;
+        @Nullable
         final RpcRequest rpcReq;
         final RequestId id = nextRequestId();
 

@@ -49,6 +49,7 @@ public interface ServiceNaming {
      */
     static ServiceNaming fullTypeName() {
         return ctx -> {
+            @Nullable
             final RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq != null) {
                 return rpcReq.serviceName();

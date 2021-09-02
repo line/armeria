@@ -67,6 +67,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public boolean isOpen() {
+        @Nullable
         final StreamMessage<T> fallbackStream = this.fallbackStream;
         if (fallbackStream != null) {
             return fallbackStream.isOpen();
@@ -77,6 +78,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     @Override
     public boolean isEmpty() {
         if (upstream.isEmpty()) {
+            @Nullable
             final StreamMessage<T> fallbackStream = this.fallbackStream;
             if (fallbackStream == null) {
                 return true;
@@ -88,6 +90,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public long demand() {
+        @Nullable
         final StreamMessage<T> fallbackStream = this.fallbackStream;
         if (fallbackStream != null) {
             return fallbackStream.demand();
@@ -133,6 +136,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
+        @Nullable
         final EventExecutor executor = this.executor;
         if (executor == null || executor.inEventLoop()) {
             abort0(cause);
@@ -142,6 +146,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     }
 
     private void abort0(Throwable cause) {
+        @Nullable
         final StreamMessage<T> fallbackStream = this.fallbackStream;
         if (fallbackStream != null) {
             fallbackStream.abort(cause);

@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -70,10 +71,10 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     private CircuitBreakerRuleWithContent<T> build(CircuitBreakerDecision decision) {
-        final BiFunction<? super ClientRequestContext, ? super T,
+        @Nullable final BiFunction<? super ClientRequestContext, ? super T,
                 ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         final boolean hasResponseFilter = responseFilter != null;
-        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
+        final BiFunction<? super ClientRequestContext, ? super @Nullable Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), exceptionFilter(),
                                                     hasResponseFilter);

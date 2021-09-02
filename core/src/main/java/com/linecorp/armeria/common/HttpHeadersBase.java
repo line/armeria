@@ -129,6 +129,7 @@ class HttpHeadersBase
 
     @Override
     void onClear() {
+        // This method could be called before the 'cache' field is initialized.
         if (cache == null || cache.isEmpty()) {
             return;
         }
@@ -362,6 +363,7 @@ class HttpHeadersBase
         if (localeCollection.isEmpty()) {
             return null;
         }
+        @Nullable
         final List<LanguageRange> languageRanges = acceptLanguages();
         if (languageRanges == null) {
             return null;
@@ -405,6 +407,7 @@ class HttpHeadersBase
 
     @Nullable
     String authority() {
+        @Nullable
         final String authority = get(HttpHeaderNames.AUTHORITY);
         return authority != null ? authority : get(HttpHeaderNames.HOST);
     }
@@ -462,6 +465,7 @@ class HttpHeadersBase
             return contentLength;
         }
 
+        @Nullable
         final String contentLengthString = get(HttpHeaderNames.CONTENT_LENGTH);
         if (contentLengthString != null) {
             final long parsed = Long.parseLong(contentLengthString);
@@ -574,6 +578,7 @@ class HttpHeadersBase
             return contentType;
         }
 
+        @Nullable
         final String contentTypeString = get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeString == null) {
             return null;
@@ -598,6 +603,7 @@ class HttpHeadersBase
     @Override
     @Nullable
     public ContentDisposition contentDisposition() {
+        @Nullable
         final String contentDispositionString = get(HttpHeaderNames.CONTENT_DISPOSITION);
         if (contentDispositionString == null) {
             return null;

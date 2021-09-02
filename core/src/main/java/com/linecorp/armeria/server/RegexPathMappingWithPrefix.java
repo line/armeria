@@ -60,6 +60,7 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
             return null;
         }
 
+        @Nullable
         final RoutingResultBuilder builder =
                 mapping.apply(routingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
         if (builder != null) {

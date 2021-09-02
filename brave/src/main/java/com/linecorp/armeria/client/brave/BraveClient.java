@@ -139,6 +139,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             final DefaultClientRequestContext defaultCtx = (DefaultClientRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
             defaultCtx.hook(() -> {
+                assert currentTraceContext != null;
                 final Scope scope = currentTraceContext.decorateScope(span.context(),
                                                                       CLIENT_REQUEST_DECORATING_SCOPE);
                 return scope::close;
@@ -160,6 +161,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         ctx.log().whenComplete().thenAccept(log -> {
             span.start(log.requestStartTimeMicros());
 
+            @Nullable
             final Long wireSendTimeNanos = log.requestFirstBytesTransferredTimeNanos();
             if (wireSendTimeNanos != null) {
                 SpanTags.logWireSend(span, wireSendTimeNanos, log);
@@ -168,6 +170,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 // e.g. validation failure, connection error.
             }
 
+            @Nullable
             final Long wireReceiveTimeNanos = log.responseFirstBytesTransferredTimeNanos();
             if (wireReceiveTimeNanos != null) {
                 SpanTags.logWireReceive(span, wireReceiveTimeNanos, log);
@@ -177,6 +180,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
 
             SpanTags.updateRemoteEndpoint(span, ctx);
 
+            @Nullable
             final ClientConnectionTimings timings = log.connectionTimings();
             if (timings != null) {
                 logTiming(span, "connection-acquire.start", "connection-acquire.end",

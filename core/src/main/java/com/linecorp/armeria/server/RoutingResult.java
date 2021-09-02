@@ -137,6 +137,7 @@ public final class RoutingResult {
      */
     public String decodedPath() {
         ensurePresence();
+        @Nullable
         final String decodedPath = this.decodedPath;
         if (decodedPath != null) {
             return decodedPath;

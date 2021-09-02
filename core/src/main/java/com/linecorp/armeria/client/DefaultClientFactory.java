@@ -163,7 +163,7 @@ final class DefaultClientFactory implements ClientFactory {
         final Scheme scheme = params.scheme();
         final Class<?> clientType = params.clientType();
         // `factory` must be non-null because we validated params.scheme() with validateParams().
-        ClientFactory factory = null;
+        @Nullable ClientFactory factory = null;
         for (ClientFactory f : clientFactories.get(scheme)) {
             if (f.isClientTypeSupported(clientType)) {
                 factory = f;
@@ -176,12 +176,14 @@ final class DefaultClientFactory implements ClientFactory {
 
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
+        @Nullable
         final T params = ClientFactory.super.unwrap(client, type);
         if (params != null) {
             return params;
         }
 
         for (ClientFactory factory : clientFactories.values()) {
+            @Nullable
             final T p = factory.unwrap(client, type);
             if (p != null) {
                 return p;
@@ -201,7 +203,7 @@ final class DefaultClientFactory implements ClientFactory {
     public <T> T as(Class<T> type) {
         requireNonNull(type, "type");
 
-        T result = ClientFactory.super.as(type);
+        @Nullable T result = ClientFactory.super.as(type);
         if (result != null) {
             return result;
         }

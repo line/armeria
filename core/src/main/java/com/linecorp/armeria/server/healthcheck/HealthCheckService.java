@@ -365,6 +365,7 @@ public final class HealthCheckService implements TransientHttpService {
                     res.write(ping);
 
                     // Send pings (102 Processing) periodically afterwards.
+                    @Nullable
                     final ScheduledFuture<?> pingFuture;
                     if (pingIntervalMillis != 0 && pingIntervalMillis < longPollingTimeoutMillis) {
                         pingFuture = ctx.eventLoop().withoutContext().scheduleWithFixedDelay(
@@ -451,6 +452,7 @@ public final class HealthCheckService implements TransientHttpService {
             return 0;
         }
 
+        @Nullable
         final String prefer = req.headers().get(HttpHeaderNames.PREFER);
         if (prefer == null) {
             return 0;
@@ -460,7 +462,7 @@ public final class HealthCheckService implements TransientHttpService {
         final LongHolder timeoutMillisHolder = new LongHolder();
         try {
             ArmeriaHttpUtil.parseDirectives(prefer, (name, value) -> {
-                if ("wait".equals(name)) {
+                if ("wait".equals(name) && value != null) {
                     timeoutMillisHolder.value = TimeUnit.SECONDS.toMillis(Long.parseLong(value));
                 }
             });

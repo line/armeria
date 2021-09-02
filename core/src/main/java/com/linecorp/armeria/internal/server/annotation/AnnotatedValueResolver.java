@@ -110,6 +110,7 @@ final class AnnotatedValueResolver {
     static {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
         builder.add((resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
+            @Nullable
             final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
             if (factory == null) {
                 return RequestConverterFunction.fallthrough();
@@ -146,6 +147,7 @@ final class AnnotatedValueResolver {
         if (resolvers.isEmpty()) {
             return emptyArguments;
         }
+        //noinspection ConstantConditions
         return resolvers.stream().map(resolver -> resolver.resolve(resolverContext)).toArray();
     }
 
@@ -165,6 +167,7 @@ final class AnnotatedValueResolver {
             final CompositeRequestConverterFunction composed = new CompositeRequestConverterFunction(merged);
             for (Type type : method.getGenericParameterTypes()) {
                 for (RequestConverterFunctionProvider provider : requestConverterFunctionProviders) {
+                    @Nullable
                     final RequestConverterFunction func =
                             provider.createRequestConverterFunction(type, composed);
                     if (func != null) {
@@ -241,6 +244,7 @@ final class AnnotatedValueResolver {
         // In this case, we need to retrieve the value of @Param annotation from 'name' parameter,
         // not the constructor or method. Also 'String' type is used for the parameter.
         //
+        @Nullable
         final AnnotatedValueResolver resolver;
         if (isAnnotationPresent(constructorOrMethod)) {
             //
@@ -410,7 +414,9 @@ final class AnnotatedValueResolver {
         requireNonNull(pathParams, "pathParams");
         requireNonNull(objectResolvers, "objectResolvers");
 
+        @Nullable
         final String description = findDescription(annotatedElement);
+        @Nullable
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(param, typeElement);
@@ -569,6 +575,7 @@ final class AnnotatedValueResolver {
 
         final Type actual =
                 ((ParameterizedType) parameterizedTypeOf(annotatedElement)).getActualTypeArguments()[0];
+        @Nullable
         final AnnotatedValueResolver resolver =
                 ofInjectableTypes0(annotatedElement, type, actual, useBlockingExecutor);
         if (resolver != null) {
@@ -616,6 +623,7 @@ final class AnnotatedValueResolver {
         if (actual == Cookies.class) {
             return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> {
+                        @Nullable
                         final String value = ctx.request().headers().get(HttpHeaderNames.COOKIE);
                         if (value == null) {
                             return Cookies.of();
@@ -646,7 +654,7 @@ final class AnnotatedValueResolver {
      * and converts it.
      */
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    resolver(Function<ResolverContext, String> getter) {
+    resolver(Function<ResolverContext, @Nullable String> getter) {
         return (resolver, ctx) -> resolver.convert(getter.apply(ctx));
     }
 
@@ -654,12 +662,12 @@ final class AnnotatedValueResolver {
      * Returns a collection value resolver which retrieves a list of string from the specified {@code getter}
      * and adds them to the specified collection data type.
      */
-    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, @Nullable Object>
     resolver(Function<ResolverContext, List<String>> getter, Supplier<String> failureMessageSupplier) {
         return (resolver, ctx) -> {
             final List<String> values = getter.apply(ctx);
             if (!resolver.hasContainer()) {
-                if (values != null && !values.isEmpty()) {
+                if (!values.isEmpty()) {
                     return resolver.convert(values.get(0));
                 }
                 return resolver.defaultOrException();
@@ -672,9 +680,10 @@ final class AnnotatedValueResolver {
                         (Collection<Object>) resolver.containerType().getDeclaredConstructor().newInstance();
 
                 // Do not convert value here because the element type is String.
-                if (values != null && !values.isEmpty()) {
+                if (!values.isEmpty()) {
                     values.stream().map(resolver::convert).forEach(resolvedValues::add);
                 } else {
+                    @Nullable
                     final Object defaultValue = resolver.defaultOrException();
                     if (defaultValue != null) {
                         resolvedValues.add(defaultValue);
@@ -692,11 +701,11 @@ final class AnnotatedValueResolver {
      * is an annotated bean, a bean factory of the specified {@link BeanFactoryId} will be used for creating an
      * instance.
      */
-    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, @Nullable Object>
     resolver(List<RequestObjectResolver> objectResolvers, BeanFactoryId beanFactoryId) {
         return (resolver, ctx) -> {
             boolean found = false;
-            Object value = null;
+            @Nullable Object value = null;
             for (final RequestObjectResolver objectResolver : objectResolvers) {
                 try {
                     value = objectResolver.convert(ctx, resolver.elementType(),
@@ -760,7 +769,7 @@ final class AnnotatedValueResolver {
     @Nullable
     private final String description;
 
-    private final BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
+    private final BiFunction<AnnotatedValueResolver, ResolverContext, @Nullable Object> resolver;
 
     @Nullable
     private final EnumConverter<?> enumConverter;
@@ -770,17 +779,18 @@ final class AnnotatedValueResolver {
 
     private final AggregationStrategy aggregationStrategy;
 
-    private AnnotatedValueResolver(@Nullable Class<? extends Annotation> annotationType,
-                                   @Nullable String httpElementName,
-                                   boolean isPathVariable, boolean shouldExist,
-                                   boolean shouldWrapValueAsOptional,
-                                   @Nullable Class<?> containerType, Class<?> elementType,
-                                   @Nullable ParameterizedType parameterizedElementType,
-                                   @Nullable String defaultValue,
-                                   @Nullable String description,
-                                   BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
-                                   @Nullable BeanFactoryId beanFactoryId,
-                                   AggregationStrategy aggregationStrategy) {
+    private AnnotatedValueResolver(
+            @Nullable Class<? extends Annotation> annotationType,
+            @Nullable String httpElementName,
+            boolean isPathVariable, boolean shouldExist,
+            boolean shouldWrapValueAsOptional,
+            @Nullable Class<?> containerType, Class<?> elementType,
+            @Nullable ParameterizedType parameterizedElementType,
+            @Nullable String defaultValue,
+            @Nullable String description,
+            BiFunction<AnnotatedValueResolver, ResolverContext, @Nullable Object> resolver,
+            @Nullable BeanFactoryId beanFactoryId,
+            AggregationStrategy aggregationStrategy) {
         this.annotationType = annotationType;
         this.httpElementName = httpElementName;
         this.isPathVariable = isPathVariable;
@@ -871,8 +881,9 @@ final class AnnotatedValueResolver {
                (List.class.isAssignableFrom(containerType) || Set.class.isAssignableFrom(containerType));
     }
 
+    @Nullable
     Object resolve(ResolverContext ctx) {
-        final Object resolved = resolver.apply(this, ctx);
+        @Nullable final Object resolved = resolver.apply(this, ctx);
         return shouldWrapValueAsOptional ? Optional.ofNullable(resolved)
                                          : resolved;
     }
@@ -935,7 +946,7 @@ final class AnnotatedValueResolver {
         @Nullable
         private String description;
         @Nullable
-        private BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
+        private BiFunction<AnnotatedValueResolver, ResolverContext, @Nullable Object> resolver;
         @Nullable
         private BeanFactoryId beanFactoryId;
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
@@ -1009,7 +1020,8 @@ final class AnnotatedValueResolver {
         /**
          * Sets a value resolver.
          */
-        private Builder resolver(BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver) {
+        private Builder resolver(
+                BiFunction<AnnotatedValueResolver, ResolverContext, @Nullable Object> resolver) {
             this.resolver = resolver;
             return this;
         }
@@ -1042,6 +1054,7 @@ final class AnnotatedValueResolver {
             final boolean shouldExist;
             final String defaultValue;
 
+            @Nullable
             final Default aDefault = annotatedElement.getAnnotation(Default.class);
             if (aDefault != null) {
                 if (supportDefault) {
@@ -1082,8 +1095,10 @@ final class AnnotatedValueResolver {
                 }
             }
 
+            @Nullable
             final Class<?> containerType = getContainerType(unwrappedParameterizedType);
             final Class<?> elementType;
+            @Nullable
             final ParameterizedType parameterizedElementType;
 
             if (containerType != null) {
@@ -1329,7 +1344,7 @@ final class AnnotatedValueResolver {
         }
 
         QueryParams queryParams() {
-            QueryParams result = queryParams;
+            @Nullable QueryParams result = queryParams;
             if (result == null) {
                 synchronized (this) {
                     result = queryParams;
@@ -1368,7 +1383,9 @@ final class AnnotatedValueResolver {
                                                  @Nullable MediaType contentType,
                                                  @Nullable AggregatedHttpRequest message) {
             try {
+                @Nullable
                 final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
+                @Nullable
                 QueryParams params2 = null;
                 if (message != null && isFormData(contentType)) {
                     // Respect 'charset' attribute of the 'content-type' header if it exists.

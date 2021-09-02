@@ -233,12 +233,14 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         private boolean shouldRampUpWithPreviousRampedUpEntry() {
+            @Nullable
             final EndpointsRampingUpEntry lastEndpointsRampingUpEntry = endpointsRampingUp.peekLast();
             return lastEndpointsRampingUpEntry != null &&
                    ticker.read() - lastEndpointsRampingUpEntry.lastUpdatedTime <= rampingUpTaskWindowNanos;
         }
 
         private boolean shouldRampUpWithNextScheduledEntry() {
+            @Nullable
             final EndpointsRampingUpEntry nextEndpointsRampingUpEntry = endpointsRampingUp.peek();
             return nextEndpointsRampingUpEntry != null &&
                    nextEndpointsRampingUpEntry.nextUpdatingTime - ticker.read() <= rampingUpTaskWindowNanos;
@@ -381,7 +383,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         private void close() {
-            EndpointsRampingUpEntry entry;
+            @Nullable EndpointsRampingUpEntry entry;
             while ((entry = endpointsRampingUp.poll()) != null) {
                 entry.scheduledFuture.cancel(true);
             }

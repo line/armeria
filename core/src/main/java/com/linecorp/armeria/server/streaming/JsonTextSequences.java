@@ -355,6 +355,7 @@ public final class JsonTextSequences {
     }
 
     static ResponseHeaders ensureContentType(ResponseHeaders headers) {
+        @Nullable
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             return headers.toBuilder()

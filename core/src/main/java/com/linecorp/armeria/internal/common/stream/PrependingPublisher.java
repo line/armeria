@@ -101,6 +101,7 @@ public final class PrependingPublisher<T> implements Publisher<T> {
             if (demand == 0) {
                 return;
             }
+            @Nullable
             final Subscription upstream = this.upstream;
             if (upstream != null) {
                 final long demand = this.demand;
@@ -119,6 +120,7 @@ public final class PrependingPublisher<T> implements Publisher<T> {
             }
             cancelled = true;
             downstream = NoopSubscriber.get();
+            @Nullable
             final Subscription upstream = this.upstream;
             if (upstream != null) {
                 upstream.cancel();

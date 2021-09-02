@@ -60,6 +60,8 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
@@ -284,7 +286,7 @@ public final class SelfSignedCertificate {
         certificate = new File(paths[0]);
         privateKey = new File(paths[1]);
         key = keypair.getPrivate();
-        FileInputStream certificateInput = null;
+        @Nullable FileInputStream certificateInput = null;
         try {
             certificateInput = new FileInputStream(certificate);
             cert = (X509Certificate) CertificateFactory.getInstance("X509")
@@ -380,7 +382,7 @@ public final class SelfSignedCertificate {
         final File keyFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".key", null);
         keyFile.deleteOnExit();
 
-        OutputStream keyOut = new FileOutputStream(keyFile);
+        @Nullable OutputStream keyOut = new FileOutputStream(keyFile);
         try {
             keyOut.write(keyText.getBytes(CharsetUtil.US_ASCII));
             keyOut.close();
@@ -411,7 +413,7 @@ public final class SelfSignedCertificate {
         final File certFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".crt", null);
         certFile.deleteOnExit();
 
-        OutputStream certOut = new FileOutputStream(certFile);
+        @Nullable OutputStream certOut = new FileOutputStream(certFile);
         try {
             certOut.write(certText.getBytes(CharsetUtil.US_ASCII));
             certOut.close();

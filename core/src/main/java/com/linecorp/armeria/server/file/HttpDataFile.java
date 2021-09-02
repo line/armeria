@@ -82,7 +82,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     }
 
     @Override
-    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+    public CompletableFuture<@Nullable HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
         return UnmodifiableFuture.completedFuture(attrs);
     }
 

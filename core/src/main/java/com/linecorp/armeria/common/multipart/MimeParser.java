@@ -210,6 +210,7 @@ final class MimeParser {
 
                     case HEADERS:
                         logger.trace("state={}", State.HEADERS);
+                        @Nullable
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
                             // Need more data

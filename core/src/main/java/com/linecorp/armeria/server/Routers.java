@@ -371,7 +371,7 @@ public final class Routers {
     private static <V> List<Routed<V>> getRouteCandidates(RoutingContext routingCtx, List<V> values,
                                                           Function<V, Route> routeResolver,
                                                           boolean isRouteDecorator) {
-        ImmutableList.Builder<Routed<V>> builder = null;
+        ImmutableList.@Nullable Builder<Routed<V>> builder = null;
         int remaining = values.size();
 
         for (V value : values) {

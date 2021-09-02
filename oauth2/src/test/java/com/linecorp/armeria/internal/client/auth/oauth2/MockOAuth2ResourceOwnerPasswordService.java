@@ -26,6 +26,7 @@ import java.util.Set;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 import com.linecorp.armeria.internal.common.auth.oauth2.MockOAuth2Service;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -61,6 +62,7 @@ public class MockOAuth2ResourceOwnerPasswordService extends MockOAuth2Service {
             @Param("scope") Optional<String> scope) {
 
         // first, check "Authorization"
+        @Nullable
         final HttpResponse response = verifyClientCredentials(auth, "token grant");
         if (response != null) {
             return response; // UNAUTHORIZED or BAD_REQUEST

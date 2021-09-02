@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.ByteBuf;
@@ -201,6 +202,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             return newFailedFuture(ClosedStreamException.get());
         }
 
+        @Nullable
         final PendingWrites currentPendingWrites = pendingWritesMap.get(id);
         if (id == currentId) {
             if (currentPendingWrites != null) {
@@ -217,6 +219,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
                 // The next PendingWrites might be complete already.
                 for (;;) {
+                    @Nullable
                     final PendingWrites nextPendingWrites = pendingWritesMap.get(currentId);
                     if (nextPendingWrites == null) {
                         break;
@@ -257,6 +260,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     private void flushPendingWrites(PendingWrites pendingWrites) {
         for (;;) {
+            @Nullable
             final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
             if (e == null) {
                 break;
@@ -302,6 +306,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
                 final PendingWrites pendingWrites = pendingWritesMap.remove(i);
                 for (;;) {
+                    @Nullable
                     final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
                     if (e == null) {
                         break;
@@ -346,6 +351,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         final ClosedSessionException cause = ClosedSessionException.get();
         for (Queue<Entry<HttpObject, ChannelPromise>> queue : pendingWritesMap.values()) {
             for (;;) {
+                @Nullable
                 final Entry<HttpObject, ChannelPromise> e = queue.poll();
                 if (e == null) {
                     break;

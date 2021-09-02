@@ -41,7 +41,7 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
     private static final Class<?> MONO_TO_FUTURE_CLASS;
 
     static {
-        Class<?> monoToFuture = null;
+        @Nullable Class<?> monoToFuture = null;
         try {
             monoToFuture = Class.forName("reactor.core.publisher.MonoToCompletableFuture",
                                          true, DeferredHttpResponse.class.getClassLoader());

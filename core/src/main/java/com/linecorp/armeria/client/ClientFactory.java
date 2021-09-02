@@ -319,6 +319,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
             parsedSchemeStr = parsedScheme.uriText();
         }
 
+        @Nullable
         final String path = Strings.emptyToNull(uri.getRawPath());
         if (scheme.equals(parsedSchemeStr) && path != null) {
             return uri;

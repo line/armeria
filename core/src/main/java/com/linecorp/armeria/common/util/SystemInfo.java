@@ -226,7 +226,7 @@ public final class SystemInfo {
 
         static {
             // Try /proc/sys/kernel/hostname on Linux.
-            String hostname = null;
+            @Nullable String hostname = null;
             if (isLinux()) {
                 try {
                     final List<String> lines = Files.readAllLines(Paths.get("/proc/sys/kernel/hostname"));
@@ -246,7 +246,7 @@ public final class SystemInfo {
 
             // Try /usr/bin/hostname.
             if (hostname == null) {
-                Process process = null;
+                @Nullable Process process = null;
                 try {
                     process = Runtime.getRuntime().exec("hostname");
                     final BufferedReader in = new BufferedReader(
@@ -421,8 +421,8 @@ public final class SystemInfo {
         static final Inet4Address defaultNonLoopbackIpV4Address;
 
         static {
-            Inet4Address result = null;
-            String nicDisplayName = null;
+            @Nullable Inet4Address result = null;
+            @Nullable String nicDisplayName = null;
             try {
                 int lowest = Integer.MAX_VALUE;
                 for (final Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
@@ -474,7 +474,7 @@ public final class SystemInfo {
                 logger.info("defaultNonLoopbackIpV4Address: {} (from: {})",
                             defaultNonLoopbackIpV4Address, nicDisplayName);
             } else {
-                Inet4Address temp = null;
+                @Nullable Inet4Address temp = null;
                 try {
                     final InetAddress localHost = InetAddress.getLocalHost();
                     if (localHost instanceof Inet4Address) {
@@ -494,6 +494,7 @@ public final class SystemInfo {
         }
 
         private static boolean isPreferredAddress(InetAddress address) {
+            @Nullable
             final Predicate<InetAddress> predicates = Flags.preferredIpV4Addresses();
             if (predicates == null) {
                 return true;

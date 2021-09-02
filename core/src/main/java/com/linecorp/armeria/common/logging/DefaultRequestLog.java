@@ -358,6 +358,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (hasInterestedFlags(flags, interestedFlags)) {
             future = completedFuture(flags);
         } else {
+            @Nullable
             final RequestLogFuture[] satisfiedFutures;
             final RequestLogFuture newFuture = new RequestLogFuture(interestedFlags);
             synchronized (pendingFutures) {
@@ -403,6 +404,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
 
             if (flagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
+                @Nullable
                 final RequestLogFuture[] satisfiedFutures;
                 synchronized (pendingFutures) {
                     satisfiedFutures = removeSatisfiedFutures();
@@ -434,7 +436,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final int flags = this.flags;
         final int maxNumListeners = pendingFutures.size();
         final Iterator<RequestLogFuture> i = pendingFutures.iterator();
-        RequestLogFuture[] satisfied = null;
+        @Nullable RequestLogFuture[] satisfied = null;
         int numSatisfied = 0;
 
         do {
@@ -548,6 +550,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> serializationFormat(log.scheme().serializationFormat()));
         child.whenAvailable(RequestLogProperty.NAME)
              .thenAccept(log -> {
+                 @Nullable
                  final String serviceName = log.serviceName();
                  final String name = log.name();
                  if (serviceName != null) {
@@ -558,6 +561,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
              .thenAccept(log -> {
+                 @Nullable
                  final Long timeNanos = log.requestFirstBytesTransferredTimeNanos();
                  if (timeNanos != null) {
                      requestFirstBytesTransferred(timeNanos);
@@ -597,6 +601,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (lastChild.isAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)) {
+            @Nullable
             final Long timeNanos = lastChild.responseFirstBytesTransferredTimeNanos();
             if (timeNanos != null) {
                 responseFirstBytesTransferred(timeNanos);
@@ -604,6 +609,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             lastChild.whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
                      .thenAccept(log -> {
+                         @Nullable
                          final Long timeNanos = log.responseFirstBytesTransferredTimeNanos();
                          if (timeNanos != null) {
                              responseFirstBytesTransferred(timeNanos);
@@ -1029,6 +1035,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (requestHeaders == null) {
+            @Nullable
             final HttpRequest req = context().request();
             if (req != null) {
                 requestHeaders = req.headers();
@@ -1057,10 +1064,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void setNamesIfAbsent() {
         if (name == null) {
-            String newServiceName = null;
-            String newName = null;
-            ServiceConfig config = null;
-            ServiceRequestContext sctx = null;
+            @Nullable String newServiceName = null;
+            @Nullable String newName = null;
+            @Nullable ServiceConfig config = null;
+            @Nullable ServiceRequestContext sctx = null;
 
             // Set the default names from ServiceConfig
             if (ctx instanceof ServiceRequestContext) {
@@ -1070,7 +1077,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 newName = config.defaultLogName();
             }
 
-            RpcRequest rpcReq = ctx.rpcRequest();
+            @Nullable RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq == null && requestContent instanceof RpcRequest) {
                 rpcReq = (RpcRequest) requestContent;
             }
@@ -1439,7 +1446,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return requestStr;
         }
 
-        final String requestCauseString;
+        @Nullable final String requestCauseString;
         if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CAUSE) && requestCause != null) {
             requestCauseString = String.valueOf(requestCause);
         } else {
@@ -1555,6 +1562,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return responseStr;
         }
 
+        @Nullable
         final String responseCauseString;
         if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_CAUSE) && responseCause != null) {
             responseCauseString = String.valueOf(responseCause);
@@ -1641,6 +1649,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private <T> String sanitize(
             BiFunction<? super RequestContext, ? super T, ? extends @Nullable Object> headersSanitizer,
             T requestHeaders) {
+        @Nullable
         final Object sanitized = headersSanitizer.apply(ctx, requestHeaders);
         return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
@@ -1885,6 +1894,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public String name() {
+            assert name != null;
             return name;
         }
 

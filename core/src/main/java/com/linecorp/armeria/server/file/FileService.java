@@ -137,6 +137,7 @@ public final class FileService extends AbstractHttpService {
 
     FileService(FileServiceConfig config) {
         this.config = requireNonNull(config, "config");
+        @Nullable
         final String cacheSpec = config.entryCacheSpec();
         if (cacheSpec != null) {
             cache = newCache(cacheSpec);
@@ -150,6 +151,7 @@ public final class FileService extends AbstractHttpService {
         b.recordStats()
          .removalListener((RemovalListener<PathAndEncoding, AggregatedHttpFile>) (key, value, cause) -> {
              if (value != null) {
+                 @Nullable
                  final HttpData data = value.content();
                  if (data != null) {
                      data.close();
@@ -201,6 +203,7 @@ public final class FileService extends AbstractHttpService {
         if (config.serveCompressedFiles()) {
             // We do a simple parse of the accept-encoding header, without worrying about star values
             // or priorities.
+            @Nullable
             final String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
             if (acceptEncoding != null) {
                 for (String encoding : COMMA_SPLITTER.split(acceptEncoding)) {
@@ -276,8 +279,8 @@ public final class FileService extends AbstractHttpService {
         }));
     }
 
-    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
-                                                 Set<FileServiceContentEncoding> supportedEncodings) {
+    private CompletableFuture<@Nullable HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                           Set<FileServiceContentEncoding> supportedEncodings) {
         return findFile(ctx, path, supportedEncodings.iterator()).thenCompose(file -> {
             if (file != null) {
                 return UnmodifiableFuture.completedFuture(file);
@@ -287,8 +290,8 @@ public final class FileService extends AbstractHttpService {
         });
     }
 
-    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
-                                                 Iterator<FileServiceContentEncoding> i) {
+    private CompletableFuture<@Nullable HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                           Iterator<FileServiceContentEncoding> i) {
         if (!i.hasNext()) {
             return UnmodifiableFuture.completedFuture(null);
         }
@@ -304,8 +307,8 @@ public final class FileService extends AbstractHttpService {
         });
     }
 
-    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
-                                                 @Nullable String contentEncoding) {
+    private CompletableFuture<@Nullable HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                           @Nullable String contentEncoding) {
 
         final ScheduledExecutorService fileReadExecutor = ctx.blockingTaskExecutor();
         final HttpFile uncachedFile = config.vfs().get(fileReadExecutor, path, config.clock(),
@@ -329,6 +332,7 @@ public final class FileService extends AbstractHttpService {
                 return uncachedFile;
             }
 
+            @Nullable
             final AggregatedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
             if (cachedFile == null) {
                 // Cache miss. Add a new entry to the cache.

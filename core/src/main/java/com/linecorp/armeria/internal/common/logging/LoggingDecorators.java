@@ -122,6 +122,7 @@ public final class LoggingDecorators {
                     ? extends @Nullable Object> responseCauseSanitizer) {
 
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
+        @Nullable
         final Throwable responseCause = log.responseCause();
 
         if (responseLogLevel.isEnabled(logger)) {
@@ -149,6 +150,7 @@ public final class LoggingDecorators {
                                                                  requestTrailersSanitizer));
                 }
 
+                @Nullable
                 final Object sanitizedResponseCause = responseCauseSanitizer.apply(ctx, responseCause);
                 if (sanitizedResponseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);

@@ -367,6 +367,7 @@ final class TTextProtocol extends TProtocol {
             return;
         }
 
+        @Nullable
         final Class<?> fieldClass = getCurrentFieldClassIfIs(TEnum.class);
         if (fieldClass == null) {
             writeNameOrValue(TypedParser.INTEGER, i32);
@@ -503,6 +504,7 @@ final class TTextProtocol extends TProtocol {
             throw new TException("Expected Json Object!");
         }
 
+        @Nullable
         final Class<?> fieldClass = getCurrentFieldClassIfIs(TBase.class);
         if (fieldClass != null) {
             pushContext(new StructContext(structElem, fieldClass));
@@ -643,6 +645,7 @@ final class TTextProtocol extends TProtocol {
     public int readI32() throws TException {
         readCurrentContext();
 
+        @Nullable
         final Class<?> fieldClass = getCurrentFieldClassIfIs(TEnum.class);
         if (fieldClass != null) {
             // Enum fields may be set by string, even though they represent integers.
@@ -807,6 +810,7 @@ final class TTextProtocol extends TProtocol {
         final BaseContext context = currentFieldContext.peek();
         final String fieldName = currentFieldName.peek();
 
+        @Nullable
         final Class<?> classToCheck = context.getClassByFieldName(fieldName);
         if (classToCheck != null && classToMatch.isAssignableFrom(classToCheck)) {
             return classToCheck;

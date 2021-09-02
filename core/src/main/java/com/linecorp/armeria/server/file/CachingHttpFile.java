@@ -48,7 +48,7 @@ final class CachingHttpFile implements HttpFile {
     }
 
     @Override
-    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+    public CompletableFuture<@Nullable HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
         return file.readAttributes(fileReadExecutor);
     }
 
@@ -58,7 +58,7 @@ final class CachingHttpFile implements HttpFile {
     }
 
     @Override
-    public CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
+    public CompletableFuture<@Nullable HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc) {
         return getFile(fileReadExecutor).read(fileReadExecutor, alloc);
     }
 
@@ -99,6 +99,7 @@ final class CachingHttpFile implements HttpFile {
                 return file;
             }
 
+            @Nullable
             final AggregatedHttpFile cachedFile = this.cachedFile;
             if (cachedFile == null) {
                 // Cache miss. Add a new entry to the cache.

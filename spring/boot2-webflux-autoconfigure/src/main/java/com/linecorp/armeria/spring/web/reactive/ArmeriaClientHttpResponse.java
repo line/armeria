@@ -73,6 +73,7 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
 
     @Override
     public MultiValueMap<String, ResponseCookie> getCookies() {
+        @Nullable
         final MultiValueMap<String, ResponseCookie> cookies = this.cookies;
         if (cookies != null) {
             return cookies;
@@ -88,6 +89,7 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
 
     @Override
     public HttpHeaders getHeaders() {
+        @Nullable
         final HttpHeaders httpHeaders = this.httpHeaders;
         if (httpHeaders != null) {
             return httpHeaders;

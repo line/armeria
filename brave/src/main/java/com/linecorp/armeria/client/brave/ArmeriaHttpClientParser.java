@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
@@ -87,24 +88,21 @@ final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponsePa
         final RequestLog log = ctx.log().ensureComplete();
         span.tag(SpanTags.TAG_HTTP_PROTOCOL, ClientRequestContextAdapter.protocol(log));
 
+        @Nullable
         final String serFmt = ClientRequestContextAdapter.serializationFormat(log);
         if (serFmt != null) {
             span.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
-
+        @Nullable
         final SocketAddress raddr = ctx.remoteAddress();
         if (raddr != null) {
             span.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
         }
-
+        @Nullable
         final SocketAddress laddr = ctx.localAddress();
         if (laddr != null) {
             span.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }
-
-        final String name = log.name();
-        if (name != null) {
-            span.name(name);
-        }
+        span.name(log.name());
     }
 }

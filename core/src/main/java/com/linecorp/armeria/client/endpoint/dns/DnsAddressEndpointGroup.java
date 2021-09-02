@@ -146,6 +146,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
                 continue;
             }
 
+            @Nullable
             final byte[] addrBytes = extractAddressBytes(r, logger(), logPrefix());
             if (addrBytes == null) {
                 continue;

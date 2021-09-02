@@ -133,6 +133,7 @@ public final class ConsulUpdatingListener extends ServerListenerAdapter {
         final ServerPort serverPort = server.activePort();
         assert serverPort != null;
 
+        @Nullable
         final Inet4Address inet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         final String host = inet4Address != null ? inet4Address.getHostAddress() : server.defaultHostname();
         return Endpoint.of(host, serverPort.localAddress().getPort());
@@ -150,20 +151,23 @@ public final class ConsulUpdatingListener extends ServerListenerAdapter {
 
     @Override
     public void serverStopping(Server server) {
+        @Nullable
+        final String serviceId = this.serviceId;
         if (serviceId != null) {
             consulClient.deregister(serviceId)
                         .aggregate()
                         .handle((res, cause) -> {
-                      if (cause != null) {
-                          logger.warn("Failed to deregister {} from Consul: {}",
-                                      serviceId, consulClient.uri(), cause);
-                      } else if (res.status() != HttpStatus.OK) {
-                          logger.warn("Failed to deregister {} from Consul: {}. (status: {}, content: {})",
-                                      serviceId, consulClient.uri(), res.status(),
-                                      res.contentUtf8());
-                      }
-                      return null;
-                  });
+                            if (cause != null) {
+                                logger.warn("Failed to deregister {} from Consul: {}",
+                                            serviceId, consulClient.uri(), cause);
+                            } else if (res.status() != HttpStatus.OK) {
+                                logger.warn(
+                                        "Failed to deregister {} from Consul: {}. (status: {}, content: {})",
+                                        serviceId, consulClient.uri(), res.status(),
+                                        res.contentUtf8());
+                            }
+                            return null;
+                        });
         }
     }
 }

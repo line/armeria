@@ -139,9 +139,9 @@ public final class ContentDisposition {
         requireNonNull(contentDisposition, "contentDisposition");
         final List<String> parts = tokenize(contentDisposition);
         final String type = parts.get(0);
-        String name = null;
-        String filename = null;
-        Charset charset = null;
+        @Nullable String name = null;
+        @Nullable String filename = null;
+        @Nullable Charset charset = null;
         for (int i = 1; i < parts.size(); i++) {
             final String part = parts.get(i);
             final int eqIndex = part.indexOf('=');

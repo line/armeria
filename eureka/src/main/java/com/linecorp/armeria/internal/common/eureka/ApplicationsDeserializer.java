@@ -27,6 +27,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class ApplicationsDeserializer extends StdDeserializer<Applications> {
 
     private static final long serialVersionUID = -2925089225769559114L;
@@ -44,7 +46,7 @@ final class ApplicationsDeserializer extends StdDeserializer<Applications> {
     @Override
     public Applications deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonToken jsonToken;
-        String appsHashCode = null;
+        @Nullable String appsHashCode = null;
         final Set<Application> applications = new HashSet<>();
         while ((jsonToken = p.nextToken()) != JsonToken.END_OBJECT) {
             if (JsonToken.FIELD_NAME == jsonToken) {

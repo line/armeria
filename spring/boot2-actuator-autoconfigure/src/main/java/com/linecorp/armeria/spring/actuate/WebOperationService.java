@@ -90,8 +90,8 @@ final class WebOperationService implements HttpService {
     static {
         final String healthComponentClassName = "org.springframework.boot.actuate.health.HealthComponent";
         final String getStatusMethodName = "getStatus";
-        Class<?> healthComponentC = null;
-        MethodHandle getStatusMH = null;
+        @Nullable Class<?> healthComponentC = null;
+        @Nullable MethodHandle getStatusMH = null;
         try {
             healthComponentC = Class.forName(
                     healthComponentClassName, false, Health.class.getClassLoader());
@@ -223,13 +223,14 @@ final class WebOperationService implements HttpService {
 
         if (body instanceof Resource) {
             final Resource resource = (Resource) body;
-            final String filename = resource.getFilename();
             final HttpResponseWriter res = HttpResponse.streaming();
             final long length = resource.contentLength();
             final ResponseHeadersBuilder headers = ResponseHeaders.builder(status);
             headers.contentType(contentType);
             headers.contentLength(length);
             headers.setTimeMillis(HttpHeaderNames.LAST_MODIFIED, resource.lastModified());
+            @Nullable
+            final String filename = resource.getFilename();
             if (filename != null) {
                 headers.set(HttpHeaderNames.CONTENT_DISPOSITION,
                             "attachment;filename=" + FILENAME_BAD_CHARS.matcher(filename).replaceAll("_"));
@@ -238,7 +239,7 @@ final class WebOperationService implements HttpService {
             res.write(headers.build());
 
             boolean success = false;
-            ReadableByteChannel in = null;
+            @Nullable ReadableByteChannel in = null;
             try {
                 in = resource.readableChannel();
                 final ReadableByteChannel finalIn = in;

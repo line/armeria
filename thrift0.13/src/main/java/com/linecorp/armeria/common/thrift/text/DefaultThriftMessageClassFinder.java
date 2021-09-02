@@ -42,8 +42,8 @@ final class DefaultThriftMessageClassFinder extends AbstractThriftMessageClassFi
 
         for (StackTraceElement f : frames) {
             final String className = f.getClassName();
+            @Nullable
             final Class<?> matchedClazz = getMatchedClass(getClassByName(className));
-
             if (matchedClazz != null) {
                 return matchedClazz;
             }

@@ -45,6 +45,7 @@ public class AbortableSubscriberBlackboxTckTest extends SubscriberBlackboxVerifi
         return publisher = new PublisherBasedStreamMessage<>(upstream);
     }
 
+    @Nullable
     @Override
     public Long createElement(int element) {
         return null;

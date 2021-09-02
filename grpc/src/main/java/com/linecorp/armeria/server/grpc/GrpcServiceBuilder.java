@@ -616,6 +616,7 @@ public final class GrpcServiceBuilder {
         return (ctx, throwable, metadata) -> {
             for (Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> mapping : mappings) {
                 if (mapping.getKey().isInstance(throwable)) {
+                    @Nullable
                     final Status status = mapping.getValue().apply(ctx, throwable, metadata);
                     return status == null ? null : status.withCause(throwable);
                 }
@@ -649,6 +650,7 @@ public final class GrpcServiceBuilder {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
             for (Entry entry : registryBuilder.entries()) {
+                @Nullable
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
                         ServerInterceptors.intercept(entry.service(), interceptors.build());
@@ -659,6 +661,7 @@ public final class GrpcServiceBuilder {
             handlerRegistry = registryBuilder.build();
         }
 
+        @Nullable
         final GrpcStatusFunction statusFunction;
         if (exceptionMappings != null) {
             statusFunction = toGrpcStatusFunction(exceptionMappings);

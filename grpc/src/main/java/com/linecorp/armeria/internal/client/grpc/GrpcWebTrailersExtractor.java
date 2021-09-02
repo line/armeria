@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -85,6 +86,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
             protected HttpObject filter(HttpObject obj) {
                 if (obj instanceof ResponseHeaders) {
                     final ResponseHeaders headers = (ResponseHeaders) obj;
+                    @Nullable
                     final String statusText = headers.get(HttpHeaderNames.STATUS);
                     if (statusText == null) {
                         // Missing status header.
@@ -104,10 +106,12 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                         return obj;
                     }
 
+                    @Nullable
                     final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
                     if (grpcEncoding != null) {
                         // We use DecompressorRegistry in ArmeriaClientCall. If ArmeriaClientCall
                         // supports to add another decompressor, we will change this to support that too.
+                        @Nullable
                         final Decompressor decompressor =
                                 DecompressorRegistry.getDefaultInstance().lookupDecompressor(grpcEncoding);
                         if (decompressor == null) {
@@ -161,6 +165,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                     return;
                 }
                 try {
+                    @Nullable
                     final HttpHeaders trailers = InternalGrpcWebUtil.parseGrpcWebTrailers(buf);
                     if (trailers == null) {
                         return;

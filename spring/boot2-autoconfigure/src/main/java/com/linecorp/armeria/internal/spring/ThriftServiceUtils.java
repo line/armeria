@@ -49,6 +49,7 @@ final class ThriftServiceUtils {
         thriftServiceClass = findClass(serverPackageName + ".thrift.THttpService");
         entriesMethod = thriftServiceClass != null ? findMethod(thriftServiceClass, "entries") : null;
 
+        @Nullable
         final Class<?> thriftServiceEntryClass = findClass(serverPackageName + ".thrift.ThriftServiceEntry");
         interfacesMethod = thriftServiceEntryClass != null ? findMethod(thriftServiceEntryClass,
                                                                         "interfaces") : null;
@@ -72,6 +73,7 @@ final class ThriftServiceUtils {
         if (thriftServiceClass == null || entriesMethod == null || interfacesMethod == null) {
             return ImmutableSet.of();
         }
+        @Nullable
         final Object thriftService = service.as(thriftServiceClass);
         if (thriftService == null) {
             return ImmutableSet.of();

@@ -166,6 +166,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             disconnectWhenFinished();
                         }
 
+                        @Nullable
                         final HttpResponseWrapper res = getResponse(resId);
                         if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
                             close(ctx);
@@ -278,6 +279,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
 
+        @Nullable
         final HttpResponseWrapper res = this.res;
         this.res = null;
 

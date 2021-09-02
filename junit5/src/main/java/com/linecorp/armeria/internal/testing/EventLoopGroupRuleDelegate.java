@@ -52,6 +52,7 @@ public final class EventLoopGroupRuleDelegate {
     }
 
     public void after() {
+        @Nullable
         final EventLoopGroup group = this.group;
         if (group != null) {
             this.group = null;

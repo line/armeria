@@ -142,8 +142,9 @@ final class AnnotatedServiceTypeUtil {
     @SuppressWarnings("unchecked")
     @Nullable
     static <T> Function<String, T> getCreatorMethod(Class<T> clazz) {
+        @Nullable
         final MethodHandle methodHandle = Stream.of("of", "valueOf", "fromString")
-                     .map((methodName) -> getPublicStaticMethodHandle(clazz, methodName))
+                     .map(methodName -> getPublicStaticMethodHandle(clazz, methodName))
                      .filter(Objects::nonNull)
                      .findFirst()
                      .orElseGet(() -> getStringConstructorMethodHandle(clazz));

@@ -407,7 +407,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
         } else {
             // Fail all pending responses.
+            @Nullable
             final HttpResponseDecoder responseDecoder = this.responseDecoder;
+            @Nullable
             final Throwable pendingException;
             if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
                 pendingException = getPendingException(ctx);
@@ -452,6 +454,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {
+        @Nullable
         final Throwable previousCause = ctx.channel().attr(PENDING_EXCEPTION).setIfAbsent(cause);
         if (previousCause != null && logger.isWarnEnabled()) {
             logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);

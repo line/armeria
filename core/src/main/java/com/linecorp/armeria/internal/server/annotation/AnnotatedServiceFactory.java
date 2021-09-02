@@ -190,6 +190,7 @@ public final class AnnotatedServiceFactory {
     }
 
     private static HttpStatus defaultResponseStatus(Method method) {
+        @Nullable
         final StatusCode statusCodeAnnotation = AnnotationUtil.findFirst(method, StatusCode.class);
         if (statusCodeAnnotation == null) {
             // Set a default HTTP status code for a response depending on the return type of the method.
@@ -396,6 +397,7 @@ public final class AnnotatedServiceFactory {
      * annotation. 0 would be returned if there is no specified {@link Order} annotation.
      */
     private static int order(Method method) {
+        @Nullable
         final Order order = AnnotationUtil.findFirst(method, Order.class);
         return order != null ? order.value() : 0;
     }
@@ -609,7 +611,7 @@ public final class AnnotatedServiceFactory {
                 continue;
             }
 
-            DecoratorAndOrder udd = userDefinedDecorator(annotation);
+            @Nullable DecoratorAndOrder udd = userDefinedDecorator(annotation);
             if (udd != null) {
                 list.add(udd);
                 continue;
@@ -617,6 +619,7 @@ public final class AnnotatedServiceFactory {
 
             // If user-defined decorators are repeatable and they are specified more than once.
             try {
+                @Nullable
                 final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
                                                                     withName("value")), null);
                 assert method != null : "No 'value' method is found from " + annotation;
@@ -642,6 +645,7 @@ public final class AnnotatedServiceFactory {
     @Nullable
     private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
         // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
+        @Nullable
         final DecoratorFactory d = AnnotationUtil.findFirstDeclared(annotation.annotationType(),
                                                                     DecoratorFactory.class);
         if (d == null) {
@@ -655,6 +659,7 @@ public final class AnnotatedServiceFactory {
         // If the annotation has "order" attribute, we can use it when sorting decorators.
         int order = 0;
         try {
+            @Nullable
             final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
                                                                 withName("order")), null);
             if (method != null) {
@@ -746,6 +751,7 @@ public final class AnnotatedServiceFactory {
     @Nullable
     static String findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
+        @Nullable
         final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
         if (description != null) {
             final String value = description.value();
@@ -760,12 +766,13 @@ public final class AnnotatedServiceFactory {
             final Class<?> clazz = executable.getDeclaringClass();
             final String fileName = getFileName(clazz.getCanonicalName());
             final String propertyName = executable.getName() + '.' + parameter.getName();
+            @Nullable
             final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
             if (cachedProperties != null) {
                 return cachedProperties.getProperty(propertyName);
             }
-            try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
-                                                                   .getResourceAsStream(fileName)) {
+            try (@Nullable InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
+                                                                             .getResourceAsStream(fileName)) {
                 if (stream == null) {
                     return null;
                 }
@@ -787,6 +794,7 @@ public final class AnnotatedServiceFactory {
      */
     private static String computePathPrefix(Class<?> clazz, String pathPrefix) {
         ensureAbsolutePath(pathPrefix, "pathPrefix");
+        @Nullable
         final PathPrefix pathPrefixAnnotation = AnnotationUtil.findFirst(clazz, PathPrefix.class);
         if (pathPrefixAnnotation == null) {
             return pathPrefix;

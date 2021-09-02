@@ -133,6 +133,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamClosed(Http2Stream stream) {
         goAwayHandler.onStreamClosed(channel(), stream);
 
+        @Nullable
         final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
         if (res == null) {
             return;
@@ -182,6 +183,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead();
+        @Nullable
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
@@ -231,6 +233,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         keepAliveChannelRead();
 
         final int dataLength = data.readableBytes();
+        @Nullable
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
@@ -292,6 +295,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         keepAliveChannelRead();
+        @Nullable
         final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
@@ -353,9 +357,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     private void keepAliveChannelRead() {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onReadOrWrite();
-        }
+        keepAliveHandler.onReadOrWrite();
     }
 
     private static int streamIdToId(int streamId) {

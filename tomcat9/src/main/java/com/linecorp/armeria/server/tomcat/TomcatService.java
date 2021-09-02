@@ -349,6 +349,7 @@ public abstract class TomcatService implements HttpService {
 
     @Override
     public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        @Nullable
         final Connector connector = connector();
         if (connector == null || !isConnectorAvailable(connector.getState())) {
             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
@@ -376,6 +377,7 @@ public abstract class TomcatService implements HttpService {
                 }
 
                 final ArmeriaProcessor processor = createProcessor(coyoteAdapter);
+                @Nullable
                 final Request coyoteReq = convertRequest(ctx, aReq, processor.getRequest());
                 if (coyoteReq == null) {
                     if (res.tryWrite(INVALID_AUTHORITY_HEADERS)) {
@@ -409,6 +411,7 @@ public abstract class TomcatService implements HttpService {
                         final HttpHeaders headers = convertResponse(coyoteRes);
                         if (res.tryWrite(headers)) {
                             for (;;) {
+                                @Nullable
                                 final HttpData d = data.poll();
                                 if (d == null || !res.tryWrite(d)) {
                                     break;
@@ -471,6 +474,7 @@ public abstract class TomcatService implements HttpService {
         coyoteReq.setLocalPort(localAddr.getPort());
 
         final String hostHeader = req.authority();
+        assert hostHeader != null;
         final int colonPos = hostHeader.indexOf(':');
         if (colonPos < 0) {
             coyoteReq.serverName().setString(hostHeader);
@@ -557,11 +561,12 @@ public abstract class TomcatService implements HttpService {
         final MimeHeaders cHeaders = coyoteRes.getMimeHeaders();
         final int numHeaders = cHeaders.size();
         for (int i = 0; i < numHeaders; i++) {
+            @Nullable
             final AsciiString name = toHeaderName(cHeaders.getName(i));
             if (name == null) {
                 continue;
             }
-
+            @Nullable
             final String value = toHeaderValue(cHeaders.getValue(i));
             if (value == null) {
                 continue;

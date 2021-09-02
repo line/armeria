@@ -133,7 +133,7 @@ public abstract class AbstractOAuth2Request<T> {
     private HttpRequest createHttpRequest(String endpointPath, QueryParams requestFormData) {
         final RequestHeadersBuilder headersBuilder =
                 RequestHeaders.builder(HttpMethod.POST, endpointPath);
-        final String authorizationHeaderValue = authorizationHeaderValue();
+        @Nullable final String authorizationHeaderValue = authorizationHeaderValue();
         if (authorizationHeaderValue != null) {
             headersBuilder.add(HttpHeaderNames.AUTHORIZATION, authorizationHeaderValue);
         } else {
@@ -159,7 +159,6 @@ public abstract class AbstractOAuth2Request<T> {
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    @Nullable
     protected T extractResults(AggregatedHttpResponse response, QueryParams requestFormData) {
         final HttpStatus status = response.status();
         switch (status.code()) {
@@ -195,7 +194,7 @@ public abstract class AbstractOAuth2Request<T> {
      */
     protected TokenRequestException onUnauthorizedError(AggregatedHttpResponse errorResponse) {
         final StringBuilder messageBuilder = new StringBuilder().append(errorResponse.status());
-        final String wwwAuthenticate = errorResponse.headers().get(HttpHeaderNames.WWW_AUTHENTICATE);
+        @Nullable final String wwwAuthenticate = errorResponse.headers().get(HttpHeaderNames.WWW_AUTHENTICATE);
         if (wwwAuthenticate != null) {
             messageBuilder.append(": ").append(wwwAuthenticate);
         }
@@ -210,7 +209,7 @@ public abstract class AbstractOAuth2Request<T> {
      * Validates the content type of the response.
      */
     private static void validateContentType(AggregatedHttpResponse response, MediaType expectedType) {
-        final MediaType contentType = response.contentType();
+        @Nullable final MediaType contentType = response.contentType();
         if (contentType == null) {
             // if omitted, assume that the type matches the expected
             return;

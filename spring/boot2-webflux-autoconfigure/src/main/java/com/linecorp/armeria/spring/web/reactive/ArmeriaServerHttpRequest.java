@@ -101,6 +101,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
     @Nullable
     @Override
     protected SslInfo initSslInfo() {
+        @Nullable
         final SSLSession session = ctx.sslSession();
         return session != null ? new DefaultSslInfo(session)
                                : null;

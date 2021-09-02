@@ -140,6 +140,7 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
             return failureStatusFuture;
         }
         final String accessToken = data.accessToken();
+        @Nullable
         final OAuth2TokenDescriptor tokenDescriptor = tokenCache.getIfPresent(accessToken);
         if (tokenDescriptor != null) {
             // just re-validate existing token

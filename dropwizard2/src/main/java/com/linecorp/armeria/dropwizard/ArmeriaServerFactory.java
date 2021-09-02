@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.dropwizard;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -59,6 +60,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerFactory.class);
 
     @JsonUnwrapped
+    @Nullable
     private @Valid ArmeriaSettings armeriaSettings;
 
     @JsonIgnore
@@ -76,6 +78,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
 
     @JsonIgnore
     public ServerBuilder getServerBuilder() {
+        checkState(serverBuilder != null, "serverBuilder is null.");
         return serverBuilder;
     }
 

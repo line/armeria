@@ -30,6 +30,7 @@ import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -49,6 +50,7 @@ final class ArmeriaConnector extends ServerConnector {
 
         this.armeriaServer = armeriaServer;
 
+        @Nullable
         final HttpConfiguration httpConfig = server.getBean(HttpConfiguration.class);
         this.httpConfig = httpConfig != null ? httpConfig : new HttpConfiguration();
         addBean(this.httpConfig);

@@ -174,7 +174,7 @@ public final class AnnotatedService implements HttpService {
         }
         callKotlinSuspendingMethod = KotlinUtil.getCallKotlinSuspendingMethod();
 
-        ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
+        @Nullable ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
         if (serviceName == null) {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
@@ -220,7 +220,7 @@ public final class AnnotatedService implements HttpService {
                         .build());
 
         for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
-            final ResponseConverterFunction func =
+            @Nullable final ResponseConverterFunction func =
                     provider.createResponseConverterFunction(actualType, responseConverter);
             if (func != null) {
                 return func;
@@ -316,9 +316,11 @@ public final class AnnotatedService implements HttpService {
         switch (responseType) {
             case HTTP_RESPONSE:
                 if (useBlockingTaskExecutor) {
+                    //noinspection ConstantConditions
                     return f.thenApplyAsync(aReq -> (HttpResponse) invoke(ctx, req, aReq),
                                             ctx.blockingTaskExecutor());
                 } else {
+                    //noinspection ConstantConditions
                     return f.thenApply(aReq -> (HttpResponse) invoke(ctx, req, aReq));
                 }
 
@@ -415,7 +417,7 @@ public final class AnnotatedService implements HttpService {
     private static ResponseHeadersBuilder addNegotiatedResponseMediaType(ServiceRequestContext ctx,
                                                                          HttpHeaders headers) {
 
-        final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
+        @Nullable final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
         if (negotiatedResponseMediaType == null || headers.contentType() != null) {
             // Do not overwrite 'content-type'.
             return ResponseHeaders.builder()
@@ -492,7 +494,7 @@ public final class AnnotatedService implements HttpService {
 
             for (final ExceptionHandlerFunction func : functions) {
                 try {
-                    final HttpResponse response = func.handleException(ctx, req, peeledCause);
+                    @Nullable final HttpResponse response = func.handleException(ctx, req, peeledCause);
                     // Check the return value just in case, then pass this exception to the default handler
                     // if it is null.
                     if (response == null) {

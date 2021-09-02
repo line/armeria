@@ -41,6 +41,7 @@ final class LazyList<E> extends ForwardingList<E> {
 
     @Override
     protected List<E> delegate() {
+        @Nullable
         final List<E> delegate = this.delegate;
         if (delegate != null) {
             return delegate;

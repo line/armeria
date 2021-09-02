@@ -80,6 +80,7 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     @Override
     public CompletableFuture<Void> whenComplete() {
+        @Nullable
         final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
         if (emitter != null) {
             return emitter.whenComplete();
@@ -123,6 +124,7 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
         closeCause = cause;
         closed = true;
 
+        @Nullable
         final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
         if (emitter != null) {
             emitter.abort(cause);
@@ -131,18 +133,21 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     @Override
     public boolean isOpen() {
+        @Nullable
         final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
         return emitter == null || emitter.isOpen();
     }
 
     @Override
     public boolean isEmpty() {
+        @Nullable
         final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
         return emitter == null || emitter.isEmpty();
     }
 
     @Override
     public long demand() {
+        @Nullable
         final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
         if (emitter == null) {
             return 0;
@@ -231,11 +236,13 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
             emitter = newEmitter;
 
             if (closed) {
+                assert closeCause != null;
                 downstream.onError(closeCause);
                 newEmitter.abort(CancelledSubscriptionException.get());
                 return;
             }
 
+            @Nullable
             final CompletableFuture<Void> completionFuture = MultipartEncoder.this.completionFuture;
             if (completionFuture != null) {
                 completeAsync(newEmitter.whenComplete(), completionFuture);

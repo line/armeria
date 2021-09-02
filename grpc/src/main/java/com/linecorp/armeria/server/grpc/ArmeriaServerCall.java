@@ -364,6 +364,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         if (status.getCode() == Code.CANCELLED) {
+            @Nullable
             final Throwable cause = status.getCause();
             if (cause instanceof ClosedStreamException) {
                 closeListener(status);
@@ -439,6 +440,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     public void onNext(DeframedMessage message) {
         try {
             final I request;
+            @Nullable
             final ByteBuf buf = message.buf();
 
             boolean success = false;
@@ -649,11 +651,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Nullable
     private static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {
+        @Nullable
         final String encoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
         if (encoding == null) {
             return ForwardingDecompressor.forGrpc(Identity.NONE);
         }
-        final io.grpc.Decompressor decompressor = registry.lookupDecompressor(encoding);
+        final io.grpc.@Nullable Decompressor decompressor = registry.lookupDecompressor(encoding);
         if (decompressor != null) {
             return ForwardingDecompressor.forGrpc(decompressor);
         }

@@ -325,6 +325,7 @@ public interface Cookie extends Comparable<Cookie> {
                 ImmutableSet.builderWithExpectedSize(setCookieHeaders.length);
         for (String v : setCookieHeaders) {
             requireNonNull(v, "setCookieHeaders contains null.");
+            @Nullable
             final Cookie cookie = fromSetCookieHeader(strict, v);
             if (cookie != null) {
                 builder.add(cookie);
@@ -623,7 +624,9 @@ public interface Cookie extends Comparable<Cookie> {
             return v;
         }
 
+        @Nullable
         final String path = path();
+        @Nullable
         final String otherPath = c.path();
         if (path == null) {
             if (otherPath != null) {
@@ -638,7 +641,9 @@ public interface Cookie extends Comparable<Cookie> {
             }
         }
 
+        @Nullable
         final String domain = domain();
+        @Nullable
         final String otherDomain = c.domain();
         if (domain == null) {
             if (otherDomain != null) {

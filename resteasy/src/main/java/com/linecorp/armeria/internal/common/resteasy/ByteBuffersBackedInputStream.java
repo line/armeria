@@ -70,13 +70,14 @@ public final class ByteBuffersBackedInputStream extends InputStream {
 
     @Nullable
     private ByteBuf peekBuffer() {
+        @Nullable
         final ByteBuf buffer = nextBuffer;
         return (buffer == null) ? buffers.peek() : buffer;
     }
 
     @Nullable
     private ByteBuf buffer() throws InterruptedException, IOException {
-        ByteBuf buffer = nextBuffer;
+        @Nullable ByteBuf buffer = nextBuffer;
         if (buffer == null) {
             buffer = takeNext();
         }
@@ -85,6 +86,7 @@ public final class ByteBuffersBackedInputStream extends InputStream {
 
     @Nullable
     private ByteBuf next() throws InterruptedException, IOException {
+        @Nullable
         final ByteBuf buffer = takeNext();
         return nextBuffer = buffer;
     }
@@ -94,7 +96,7 @@ public final class ByteBuffersBackedInputStream extends InputStream {
      */
     @Nullable
     private ByteBuf takeNext() throws InterruptedException, IOException {
-        ByteBuf buffer = null;
+        @Nullable ByteBuf buffer = null;
         while (buffer == null) {
             if (interruption != null) {
                 final InterruptedIOException ioe = new InterruptedIOException();
@@ -119,7 +121,7 @@ public final class ByteBuffersBackedInputStream extends InputStream {
      * Drains the Queue.
      */
     private void drain() {
-        ByteBuf buffer;
+        @Nullable ByteBuf buffer;
         do {
             buffer = buffers.poll();
         } while (buffer != null);
@@ -173,6 +175,7 @@ public final class ByteBuffersBackedInputStream extends InputStream {
 
     @Override
     public int available() {
+        @Nullable
         final ByteBuf buffer = peekBuffer();
         if (buffer == null) {
             return 0;
@@ -193,7 +196,7 @@ public final class ByteBuffersBackedInputStream extends InputStream {
 
     private int read(Function<ByteBuf, Integer> reader) throws IOException {
         try {
-            ByteBuf buffer = buffer();
+            @Nullable ByteBuf buffer = buffer();
             if (buffer == null) {
                 return -1;
             }

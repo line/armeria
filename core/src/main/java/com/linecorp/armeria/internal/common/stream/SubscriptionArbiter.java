@@ -142,6 +142,7 @@ public class SubscriptionArbiter implements Subscription {
         requireNonNull(subscription, "subscription");
         assert executor.inEventLoop();
 
+        @Nullable
         final Subscription previous = newSubscription;
         if (previous == NoopSubscription.get()) {
             // Cancelled already
@@ -170,7 +171,7 @@ public class SubscriptionArbiter implements Subscription {
         }
 
         long toRequest = 0L;
-        Subscription requestFrom = null;
+        @Nullable Subscription requestFrom = null;
 
         do {
             // Get snapshots from values and initialize them
@@ -179,6 +180,7 @@ public class SubscriptionArbiter implements Subscription {
             final long newProd = newProduced;
             newProduced = 0;
 
+            @Nullable
             final Subscription next = newSubscription;
             final boolean isCancelled = next == NoopSubscription.get();
             if (next != null) {
@@ -186,6 +188,7 @@ public class SubscriptionArbiter implements Subscription {
             }
 
             if (isCancelled) {
+                @Nullable
                 final Subscription s = subscription;
                 subscription = null;
                 if (s != null) {

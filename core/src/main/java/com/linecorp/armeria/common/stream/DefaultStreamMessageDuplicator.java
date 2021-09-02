@@ -576,7 +576,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         private void abort0(Throwable cause) {
-            DownstreamSubscription<T> currentSubscription = subscription;
+            @Nullable DownstreamSubscription<T> currentSubscription = subscription;
             if (currentSubscription != null) {
                 currentSubscription.abort(cause);
                 return;

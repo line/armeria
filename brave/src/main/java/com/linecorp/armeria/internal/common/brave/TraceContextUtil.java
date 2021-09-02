@@ -39,7 +39,7 @@ public final class TraceContextUtil {
         return ctx.attr(TRACE_CONTEXT_KEY);
     }
 
-    public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
+    public static void setTraceContext(RequestContext ctx, @Nullable TraceContext traceContext) {
         ctx.setAttr(TRACE_CONTEXT_KEY, traceContext);
     }
 

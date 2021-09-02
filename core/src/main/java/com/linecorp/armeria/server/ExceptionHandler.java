@@ -75,6 +75,7 @@ public interface ExceptionHandler {
     default ExceptionHandler orElse(ExceptionHandler other) {
         requireNonNull(other, "other");
         return (ctx, cause) -> {
+            @Nullable
             final HttpResponse response = convert(ctx, cause);
             if (response != null) {
                 return response;

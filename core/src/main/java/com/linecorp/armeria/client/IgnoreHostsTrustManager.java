@@ -48,6 +48,8 @@ import javax.net.ssl.X509ExtendedTrustManager;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * An implementation of {@link X509ExtendedTrustManager} that skips verification on the list of allowed hosts.
  */
@@ -60,7 +62,7 @@ final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
      * Returns new {@link IgnoreHostsTrustManager} instance.
      */
     static IgnoreHostsTrustManager of(Set<String> insecureHosts) {
-        X509ExtendedTrustManager delegate = null;
+        @Nullable X509ExtendedTrustManager delegate = null;
         try {
             final TrustManagerFactory trustManagerFactory = TrustManagerFactory
                     .getInstance(TrustManagerFactory.getDefaultAlgorithm());

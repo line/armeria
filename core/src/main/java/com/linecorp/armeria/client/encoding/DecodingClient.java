@@ -117,6 +117,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
         }
 
         // Respect user-defined accept-encoding.
+        @Nullable
         final String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
         if (Strings.isNullOrEmpty(acceptEncoding)) {
             // No accept-encoding is specified.

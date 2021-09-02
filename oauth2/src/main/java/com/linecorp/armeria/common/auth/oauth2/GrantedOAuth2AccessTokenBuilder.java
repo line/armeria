@@ -78,7 +78,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
         if (refreshToken != null) {
             builder.refreshToken(refreshToken);
         }
-        String scope = map.remove(SCOPE);
+        @Nullable String scope = map.remove(SCOPE);
         if (scope == null) {
             scope = requestScope;
         }

@@ -55,6 +55,7 @@ final class ArmeriaHttpResponseBodyStream extends DefaultSplitHttpResponse {
             super.subscribe(s);
         } else {
             // The other subscribers - notify whether completed successfully only.
+            @Nullable
             final Publisher<HttpData> publisherForLateSubscribers = this.publisherForLateSubscribers;
             if (publisherForLateSubscribers != null) {
                 publisherForLateSubscribers.subscribe(s);

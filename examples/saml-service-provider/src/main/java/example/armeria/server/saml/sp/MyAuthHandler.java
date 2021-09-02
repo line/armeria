@@ -43,7 +43,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
      * the request is treated as authenticated.
      */
     @Override
-    public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest data) {
+    public CompletionStage<@Nullable Boolean> authorize(ServiceRequestContext ctx, HttpRequest data) {
         final String cookie = data.headers().get(HttpHeaderNames.COOKIE);
         if (cookie == null) {
             return CompletableFuture.completedFuture(false);
@@ -64,7 +64,11 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
     public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                        MessageContext<Response> message, @Nullable String sessionIndex,
                                        @Nullable String relayState) {
-        final NameID nameId = getNameId(message.getMessage(), SamlNameIdFormat.EMAIL);
+        final Response message0 = message.getMessage();
+        assert message0 != null;
+        @Nullable
+        final NameID nameId = getNameId(message0, SamlNameIdFormat.EMAIL);
+        @Nullable
         final String username = nameId != null ? nameId.getValue() : null;
         if (username == null) {
             return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,

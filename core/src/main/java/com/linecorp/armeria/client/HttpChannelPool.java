@@ -162,7 +162,9 @@ final class HttpChannelPool implements AsyncCloseable {
                 break;
             case CONNECT:
                 final ConnectProxyConfig connectProxyConfig = (ConnectProxyConfig) proxyConfig;
+                @Nullable
                 final String username = connectProxyConfig.username();
+                @Nullable
                 final String password = connectProxyConfig.password();
                 if (username == null || password == null) {
                     proxyHandler = new HttpProxyHandler(proxyAddress);
@@ -236,7 +238,7 @@ final class HttpChannelPool implements AsyncCloseable {
      */
     @Nullable
     PooledChannel acquireNow(SessionProtocol desiredProtocol, PoolKey key) {
-        PooledChannel ch;
+        @Nullable PooledChannel ch;
         switch (desiredProtocol) {
             case HTTP:
                 ch = acquireNowExact(key, SessionProtocol.H2C);
@@ -258,6 +260,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     @Nullable
     private PooledChannel acquireNowExact(PoolKey key, SessionProtocol protocol) {
+        @Nullable
         final Deque<PooledChannel> queue = getPool(protocol, key);
         if (queue == null) {
             return null;
@@ -334,6 +337,7 @@ final class HttpChannelPool implements AsyncCloseable {
             return false;
         }
 
+        @Nullable
         final ChannelAcquisitionFuture pendingAcquisition = getPendingAcquisition(desiredProtocol, key);
         if (pendingAcquisition == null) {
             return false;
@@ -476,6 +480,7 @@ final class HttpChannelPool implements AsyncCloseable {
         try {
             if (future.isSuccess()) {
                 final Channel channel = future.getNow();
+                @Nullable
                 final SessionProtocol protocol = getProtocolIfHealthy(channel);
                 if (protocol == null || closeable.isClosing()) {
                     channel.close();
@@ -519,9 +524,11 @@ final class HttpChannelPool implements AsyncCloseable {
                     allChannels.remove(channel);
 
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
+                    @Nullable
                     final Deque<PooledChannel> queue = getPool(protocol, key);
                     if (queue != null) {
                         for (;;) {
+                            @Nullable
                             final PooledChannel pooledChannel = queue.peekFirst();
                             if (pooledChannel == null || isHealthy(pooledChannel)) {
                                 break;
@@ -797,6 +804,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
                     // we do not waste our time looking for pending acquisitions for the host
                     // that does not support HTTP/2.
+                    @Nullable
                     final PooledChannel ch = acquireNow(actualProtocol, key);
                     if (ch != null) {
                         pch = ch;
@@ -846,6 +854,7 @@ final class HttpChannelPool implements AsyncCloseable {
         }
 
         private void handlePendingPiggybacks(@Nullable PooledChannel value) {
+            @Nullable
             final Object pendingPiggybackHandlers = this.pendingPiggybackHandlers;
             if (pendingPiggybackHandlers == null) {
                 return;

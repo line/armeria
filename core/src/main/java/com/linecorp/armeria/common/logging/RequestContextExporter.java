@@ -197,7 +197,7 @@ public final class RequestContextExporter {
      * Note that this method returns an empty {@link Map} if current {@link RequestContext} is {@code null}.
      */
     public Map<String, String> export() {
-        final RequestContext ctx = RequestContext.currentOrNull();
+        @Nullable final RequestContext ctx = RequestContext.currentOrNull();
         return ctx != null ? export(ctx) : ImmutableMap.of();
     }
 
@@ -225,9 +225,9 @@ public final class RequestContextExporter {
         if (attrs != null) {
             assert state.attrValues != null;
             for (int i = 0; i < attrs.length; i++) {
-                final Object newValue = ctx.attr(attrs[i].key);
+                @Nullable final Object newValue = ctx.attr(attrs[i].key);
                 if (!needsUpdate) {
-                    final Object oldValue = state.attrValues[i];
+                    @Nullable final Object oldValue = state.attrValues[i];
                     needsUpdate = !Objects.equals(oldValue, newValue);
                 }
                 state.attrValues[i] = newValue;
@@ -299,7 +299,7 @@ public final class RequestContextExporter {
 
     private static void putStringifiedProperty(State state, ExportEntry<?> entry, @Nullable Object value) {
         if (value != null) {
-            final String valueStr = entry.stringify(value);
+            @Nullable final String valueStr = entry.stringify(value);
             if (valueStr != null) {
                 state.put(entry.exportKey, valueStr);
                 return;
@@ -311,7 +311,7 @@ public final class RequestContextExporter {
     }
 
     private State state(RequestContext ctx) {
-        final State state = ctx.ownAttr(STATE);
+        @Nullable final State state = ctx.ownAttr(STATE);
         if (state != null) {
             return state;
         }

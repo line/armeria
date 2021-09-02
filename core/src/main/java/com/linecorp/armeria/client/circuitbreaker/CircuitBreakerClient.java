@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
@@ -305,6 +306,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     private void reportResult(ClientRequestContext ctx, CircuitBreaker circuitBreaker,
                               RequestLogProperty logProperty) {
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
+            @Nullable
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             reportSuccessOrFailure(circuitBreaker, rule().shouldReportAsSuccess(ctx, resCause));

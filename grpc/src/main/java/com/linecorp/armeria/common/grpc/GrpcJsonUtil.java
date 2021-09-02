@@ -45,7 +45,9 @@ final class GrpcJsonUtil {
                                                                    .omittingInsignificantWhitespace(true)
                                                                    .ignoringUnknownFields(true);
         for (MethodDescriptor<?, ?> method : methods) {
+            @Nullable
             final Message reqPrototype = marshallerPrototype(method.getRequestMarshaller());
+            @Nullable
             final Message resPrototype = marshallerPrototype(method.getResponseMarshaller());
             if (reqPrototype != null) {
                 builder.register(reqPrototype);
@@ -65,6 +67,7 @@ final class GrpcJsonUtil {
     @Nullable
     private static Message marshallerPrototype(Marshaller<?> marshaller) {
         if (marshaller instanceof PrototypeMarshaller) {
+            @Nullable
             final Object prototype = ((PrototypeMarshaller<?>) marshaller).getMessagePrototype();
             if (prototype instanceof Message) {
                 return (Message) prototype;

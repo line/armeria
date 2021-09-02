@@ -193,16 +193,21 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
         final String instanceId = oldInfo.getInstanceId() != null ? oldInfo.getInstanceId() : hostName;
 
+        @Nullable
         final Inet4Address defaultInet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
+        @Nullable
         final String defaultIpAddr = defaultInet4Address != null ? defaultInet4Address.getHostAddress()
                                                                  : null;
+        @Nullable
         final String ipAddr = oldInfo.getIpAddr() != null ? oldInfo.getIpAddr() : defaultIpAddr;
         final PortWrapper oldPortWrapper = oldInfo.getPort();
         final PortWrapper portWrapper = portWrapper(server, oldPortWrapper, SessionProtocol.HTTP);
         final PortWrapper oldSecurePortWrapper = oldInfo.getSecurePort();
         final PortWrapper securePortWrapper = portWrapper(server, oldSecurePortWrapper, SessionProtocol.HTTPS);
 
+        @Nullable
         final String vipAddress = vipAddress(oldInfo.getVipAddress(), hostName, portWrapper);
+        @Nullable
         final String secureVipAddress = vipAddress(oldInfo.getSecureVipAddress(), hostName, securePortWrapper);
 
         final Optional<ServiceConfig> healthCheckService =
@@ -219,8 +224,10 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         } else {
             hostnameOrIpAddr = hostName;
         }
+        @Nullable
         final String healthCheckUrl = healthCheckUrl(hostnameOrIpAddr, oldInfo.getHealthCheckUrl(), portWrapper,
                                                      healthCheckService, SessionProtocol.HTTP);
+        @Nullable
         final String secureHealthCheckUrl =
                 healthCheckUrl(hostnameOrIpAddr, oldInfo.getSecureHealthCheckUrl(), securePortWrapper,
                                healthCheckService, SessionProtocol.HTTPS);
@@ -246,6 +253,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
             return oldPortWrapper;
         }
 
+        @Nullable
         final ServerPort serverPort = server.activePort(protocol);
         if (serverPort == null) {
             return disabledPort;
@@ -292,10 +300,12 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     @Override
     public void serverStopping(Server server) throws Exception {
         closed = true;
+        @Nullable
         final ScheduledFuture<?> heartBeatFuture = this.heartBeatFuture;
         if (heartBeatFuture != null) {
             heartBeatFuture.cancel(false);
         }
+        @Nullable
         final String appName = this.appName;
         if (appName != null) {
             final String instanceId = instanceInfo.getInstanceId();

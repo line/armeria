@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to a combination of host, method and/or
@@ -38,7 +39,10 @@ import com.linecorp.armeria.common.RpcRequest;
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
-            true, false, false, (host, method, path) -> CircuitBreaker.of(host));
+            true, false, false, (host, method, path) -> {
+        assert host != null;
+        return CircuitBreaker.of(host);
+    });
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
@@ -61,8 +65,11 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     @Override
     public CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception {
+        @Nullable
         final String host = isPerHost ? host(ctx) : null;
+        @Nullable
         final String method = isPerMethod ? method(ctx) : null;
+        @Nullable
         final String path = isPerPath ? path(ctx) : null;
         final String key = Stream.of(host, method, path)
                                  .filter(Objects::nonNull)
@@ -75,10 +82,12 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
     }
 
     private static String host(ClientRequestContext ctx) {
+        @Nullable
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
             return "UNKNOWN";
         } else {
+            @Nullable
             final String ipAddr = endpoint.ipAddr();
             if (ipAddr == null || endpoint.isIpAddrOnly()) {
                 return endpoint.authority();
@@ -89,11 +98,13 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
     }
 
     private static String method(ClientRequestContext ctx) {
+        @Nullable
         final RpcRequest rpcReq = ctx.rpcRequest();
         return rpcReq != null ? rpcReq.method() : ctx.method().name();
     }
 
     private static String path(ClientRequestContext ctx) {
+        @Nullable
         final HttpRequest request = ctx.request();
         return request == null ? "" : request.path();
     }

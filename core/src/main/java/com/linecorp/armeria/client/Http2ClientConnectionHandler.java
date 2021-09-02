@@ -118,7 +118,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     protected boolean needsImmediateDisconnection() {
         return clientFactory.isClosing() ||
                responseDecoder.goAwayHandler().receivedErrorGoAway() ||
-               (keepAliveHandler != null && keepAliveHandler.isClosing());
+               keepAliveHandler.isClosing();
     }
 
     @Override
@@ -128,14 +128,12 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
-        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             keepAliveHandler.initialize(ctx);
         }
     }
 
     private void destroyKeepAliveHandler() {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.destroy();
-        }
+        keepAliveHandler.destroy();
     }
 }

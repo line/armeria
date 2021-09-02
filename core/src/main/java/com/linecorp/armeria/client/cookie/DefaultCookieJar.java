@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.NetUtil;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -129,6 +130,7 @@ final class DefaultCookieJar implements CookieJar {
     @VisibleForTesting
     Cookie ensureDomainAndPath(Cookie cookie, URI uri) {
         final boolean validDomain = !Strings.isNullOrEmpty(cookie.domain());
+        @Nullable
         final String cookiePath = cookie.path();
         final boolean validPath = !Strings.isNullOrEmpty(cookiePath) && cookiePath.charAt(0) == '/';
         if (validDomain && validPath) {
@@ -180,8 +182,10 @@ final class DefaultCookieJar implements CookieJar {
     }
 
     private static boolean isSecure(String scheme) {
+        @Nullable
         final SessionProtocol parsedProtocol;
         if (scheme.indexOf('+') >= 0) {
+            @Nullable
             final Scheme parsedScheme = Scheme.tryParse(scheme);
             parsedProtocol = parsedScheme != null ? parsedScheme.sessionProtocol() : null;
         } else {

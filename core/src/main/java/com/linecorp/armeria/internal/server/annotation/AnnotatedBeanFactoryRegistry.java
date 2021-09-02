@@ -85,7 +85,7 @@ final class AnnotatedBeanFactoryRegistry {
         final BeanFactoryId beanFactoryId = new BeanFactoryId(clazz, pathParams);
         final AnnotatedBeanFactories annotatedBeanFactories = factories.get(clazz);
         if (!annotatedBeanFactories.containsKey(beanFactoryId.pathParams)) {
-            final AnnotatedBeanFactory<?> factory = createFactory(beanFactoryId, objectResolvers);
+            @Nullable final AnnotatedBeanFactory<?> factory = createFactory(beanFactoryId, objectResolvers);
             if (factory != null) {
                 annotatedBeanFactories.put(beanFactoryId.pathParams, factory);
                 logger.debug("Registered a bean factory: {}", beanFactoryId);
@@ -105,14 +105,14 @@ final class AnnotatedBeanFactoryRegistry {
             return null;
         }
         final AnnotatedBeanFactories annotatedBeanFactories = factories.get(beanFactoryId.type);
-        final AnnotatedBeanFactory<?> factory = annotatedBeanFactories.get(beanFactoryId.pathParams);
+        @Nullable final AnnotatedBeanFactory<?> factory = annotatedBeanFactories.get(beanFactoryId.pathParams);
         return factory != null && factory != unsupportedBeanFactory ? factory : null;
     }
 
     static Set<AnnotatedValueResolver> uniqueResolverSet() {
         return new TreeSet<>((o1, o2) -> {
-            final String o1Name = o1.httpElementName();
-            final String o2Name = o2.httpElementName();
+            @Nullable final String o1Name = o1.httpElementName();
+            @Nullable final String o2Name = o2.httpElementName();
             if (o1Name != null && o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
                 return 0;
             }
@@ -153,7 +153,7 @@ final class AnnotatedBeanFactoryRegistry {
         final List<RequestObjectResolver> resolvers = addToFirstIfExists(
                 objectResolvers, AnnotationUtil.findDeclared(beanFactoryId.type, RequestConverter.class));
 
-        final Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor =
+        @Nullable final Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor =
                 findConstructor(beanFactoryId, resolvers);
         if (constructor == null) {
             // There is no constructor, so we cannot create a new instance.
@@ -189,7 +189,7 @@ final class AnnotatedBeanFactoryRegistry {
     private static <T> Entry<Constructor<T>, List<AnnotatedValueResolver>> findConstructor(
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
 
-        Entry<Constructor<T>, List<AnnotatedValueResolver>> candidate = null;
+        @Nullable Entry<Constructor<T>, List<AnnotatedValueResolver>> candidate = null;
 
         final Set<Constructor> constructors = getConstructors(beanFactoryId.type);
         for (final Constructor<T> constructor : constructors) {
@@ -274,7 +274,7 @@ final class AnnotatedBeanFactoryRegistry {
         for (final Field field : fields) {
             final List<RequestConverter> converters =
                     AnnotationUtil.findDeclared(field, RequestConverter.class);
-            final AnnotatedValueResolver resolver =
+            @Nullable final AnnotatedValueResolver resolver =
                     AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
                                                        addToFirstIfExists(objectResolvers, converters));
             if (resolver != null) {

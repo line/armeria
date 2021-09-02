@@ -236,6 +236,7 @@ final class HttpHealthChecker implements AsyncCloseable {
         }
 
         private void updateLongPollingSettings(ResponseHeaders headers) {
+            @Nullable
             final String longPollingSettings = headers.get(ARMERIA_LPHC);
             if (longPollingSettings == null) {
                 maxLongPollingSeconds = 0;

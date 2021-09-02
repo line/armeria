@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.ThreeElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
@@ -499,6 +500,7 @@ public interface HttpResponse extends Response, HttpMessage {
             throw new IllegalArgumentException(e.toString(), e);
         }
 
+        @Nullable
         final MediaType contentType = headers.contentType();
         if (contentType != null && contentType.isJson()) {
             return of(headers, httpData);

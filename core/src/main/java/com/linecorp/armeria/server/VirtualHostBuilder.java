@@ -917,6 +917,7 @@ public final class VirtualHostBuilder {
         final ServiceNaming defaultServiceNaming =
                 this.defaultServiceNaming != null ?
                 this.defaultServiceNaming : template.defaultServiceNaming;
+        assert defaultServiceNaming != null;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
@@ -929,6 +930,7 @@ public final class VirtualHostBuilder {
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
                 this.rejectedRouteHandler : template.rejectedRouteHandler;
+        assert rejectedRouteHandler != null;
 
         final AccessLogWriter accessLogWriter;
         final boolean shutdownAccessLogWriterOnStop;
@@ -939,18 +941,16 @@ public final class VirtualHostBuilder {
             accessLogWriter = template.accessLogWriter;
             shutdownAccessLogWriterOnStop = template.shutdownAccessLogWriterOnStop;
         }
+        assert accessLogWriter != null;
 
         final Function<? super VirtualHost, ? extends Logger> accessLoggerMapper =
                 this.accessLoggerMapper != null ?
                 this.accessLoggerMapper : template.accessLoggerMapper;
+        assert accessLoggerMapper != null;
 
         final AnnotatedServiceExtensions extensions =
                 annotatedServiceExtensions != null ?
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
-
-        assert rejectedRouteHandler != null;
-        assert accessLogWriter != null;
-        assert accessLoggerMapper != null;
         assert extensions != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
@@ -979,7 +979,7 @@ public final class VirtualHostBuilder {
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop);
 
-        SslContext sslContext = null;
+        @Nullable SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
             final boolean tlsAllowUnsafeCiphers =
@@ -1046,7 +1046,7 @@ public final class VirtualHostBuilder {
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
                                     shutdownAccessLogWriterOnStop);
-
+            @Nullable
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
             final VirtualHost decoratedVirtualHost = decorator != null ? virtualHost.decorate(decorator)
@@ -1062,6 +1062,7 @@ public final class VirtualHostBuilder {
 
     private SelfSignedCertificate selfSignedCertificate() throws CertificateException {
         if (selfSignedCertificate == null) {
+            assert defaultHostname != null;
             return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
         }
         return selfSignedCertificate;
@@ -1086,8 +1087,8 @@ public final class VirtualHostBuilder {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
 
-        SSLEngine serverEngine = null;
-        SSLEngine clientEngine = null;
+        @Nullable SSLEngine serverEngine = null;
+        @Nullable SSLEngine clientEngine = null;
 
         try {
             serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);

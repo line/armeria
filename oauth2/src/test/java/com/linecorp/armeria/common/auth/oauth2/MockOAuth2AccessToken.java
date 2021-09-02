@@ -69,10 +69,12 @@ public class MockOAuth2AccessToken {
                 new GrantedOAuth2AccessTokenBuilder(requireNonNull(accessToken, "accessToken"))
                         .scope(requireNonNull(descriptor, "descriptor").scope())
                         .issuedAt(requireNonNull(descriptor.issuedAt(), "issuedAt"));
+        @Nullable
         final String tokenType = descriptor.tokenType();
         if (tokenType != null) {
             grantedTokenBuilder.tokenType(tokenType);
         }
+        @Nullable
         final Duration expiresIn = descriptor.expiresIn();
         if (expiresIn != null) {
             grantedTokenBuilder.expiresIn(expiresIn);

@@ -68,6 +68,7 @@ public interface ServiceRequestContext extends RequestContext {
      */
     static ServiceRequestContext current() {
         final RequestContext ctx = RequestContext.current();
+        @Nullable
         final ServiceRequestContext root = ctx.root();
         if (root != null) {
             return root;
@@ -87,6 +88,7 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @Nullable
     static ServiceRequestContext currentOrNull() {
+        @Nullable
         final RequestContext ctx = RequestContext.currentOrNull();
         if (ctx == null) {
             return null;
@@ -108,7 +110,7 @@ public interface ServiceRequestContext extends RequestContext {
     static <T> T mapCurrent(
             Function<? super ServiceRequestContext, T> mapper,
             @Nullable Supplier<@Nullable T> defaultValueSupplier) {
-
+        @Nullable
         final ServiceRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
@@ -215,6 +217,7 @@ public interface ServiceRequestContext extends RequestContext {
     @Override
     @MustBeClosed
     default SafeCloseable push() {
+        @Nullable
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance

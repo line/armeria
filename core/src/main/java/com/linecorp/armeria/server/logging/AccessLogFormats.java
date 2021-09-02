@@ -88,8 +88,8 @@ final class AccessLogFormats {
         final ImmutableList.Builder<AccessLogComponent> builder = ImmutableList.builder();
 
         final StringBuilder textBuilder = new StringBuilder();
-        Condition.Builder condBuilder = null;
-        String variable = null;
+        Condition.@Nullable Builder condBuilder = null;
+        @Nullable String variable = null;
 
         State state = State.TEXT;
         for (int i = 0; i < formatStr.length();/* Increase 'i' at the end of the loop. */) {
@@ -205,7 +205,8 @@ final class AccessLogFormats {
         // Do not add quotes when parsing a user-provided custom format.
         final boolean addQuote = false;
 
-        final Function<ResponseHeaders, Boolean> condition = condBuilder != null ? condBuilder.build() : null;
+        @Nullable final Function<ResponseHeaders, Boolean> condition = condBuilder != null ? condBuilder.build()
+                                                                                           : null;
         if (TimestampComponent.isSupported(type)) {
             return new TimestampComponent(addQuote, variable);
         }

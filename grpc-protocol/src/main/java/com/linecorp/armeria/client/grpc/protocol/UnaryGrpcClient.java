@@ -140,6 +140,7 @@ public final class UnaryGrpcClient {
                                 }
 
                                 // Status can either be in the headers or trailers depending on error
+                                @Nullable
                                 String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
                                 if (grpcStatus != null) {
                                     checkGrpcStatus(grpcStatus, msg.headers());
@@ -154,7 +155,7 @@ public final class UnaryGrpcClient {
 
     private static void checkGrpcStatus(@Nullable String grpcStatus, HttpHeaders headers) {
         if (grpcStatus != null && !"0".equals(grpcStatus)) {
-            String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+            @Nullable String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
             }

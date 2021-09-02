@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import brave.Span;
@@ -54,7 +55,9 @@ public final class SpanTags {
     }
 
     public static boolean updateRemoteEndpoint(Span span, RequestContext ctx) {
+        @Nullable
         final SocketAddress remoteAddress = ctx.remoteAddress();
+        @Nullable
         final InetAddress address;
         final int port;
         if (remoteAddress instanceof InetSocketAddress) {

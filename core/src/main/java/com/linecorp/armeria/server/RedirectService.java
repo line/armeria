@@ -266,6 +266,7 @@ public final class RedirectService implements HttpService {
     }
 
     private static String appendQueryString(ServiceRequestContext ctx, String location) {
+        @Nullable
         final String query = ctx.query();
         if (query == null || location.lastIndexOf('?') >= 0) {
             // The request URI does not have a query string or

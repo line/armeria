@@ -60,7 +60,7 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
     }
 
     @Override
-    public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+    public CompletableFuture<@Nullable HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
         return CompletableFuture.supplyAsync(() -> {
             if (!Files.exists(path)) {
                 return null;

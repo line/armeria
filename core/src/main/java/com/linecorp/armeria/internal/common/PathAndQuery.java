@@ -119,6 +119,7 @@ public final class PathAndQuery {
     @Nullable
     public static PathAndQuery parse(@Nullable String rawPath) {
         if (CACHE != null && rawPath != null) {
+            @Nullable
             final PathAndQuery parsed = CACHE.getIfPresent(rawPath);
             if (parsed != null) {
                 return parsed;
@@ -188,7 +189,9 @@ public final class PathAndQuery {
 
     @Nullable
     private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery) {
+        @Nullable
         final Bytes path;
+        @Nullable
         final Bytes query;
 
         if (pathAndQuery == null) {
@@ -414,6 +417,7 @@ public final class PathAndQuery {
 
             if (b == PERCENT_ENCODING_MARKER && (i + 1) < length) {
                 final int marker = value.data[i + 1] & 0xFF;
+                @Nullable
                 final String percentEncodedChar = MARKER_TO_PERCENT_ENCODED_CHAR[marker];
                 if (percentEncodedChar != null) {
                     buf.append(percentEncodedChar);

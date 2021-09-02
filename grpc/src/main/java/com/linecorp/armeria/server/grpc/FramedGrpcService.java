@@ -154,7 +154,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        @Nullable
         final MediaType contentType = req.contentType();
+        @Nullable
         final SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -164,6 +166,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
+        @Nullable
         final String methodName = GrpcRequestUtil.determineMethod(ctx);
         if (methodName == null) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST,
@@ -171,6 +174,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                    "Invalid path.");
         }
 
+        @Nullable
         final ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
         if (method == null) {
             return HttpResponse.of(
@@ -182,6 +186,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
 
         if (useClientTimeoutHeader) {
+            @Nullable
             final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
             if (timeoutHeader != null) {
                 try {
@@ -205,6 +210,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final HttpResponseWriter res = HttpResponse.streaming();
+        @Nullable
         final ArmeriaServerCall<?, ?> call = startCall(
                 registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
                 serializationFormat);

@@ -93,6 +93,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                               .collect(toImmutableList());
         sendQueries(questions, hostname, result);
         result.handle((entry, unused) -> {
+            @Nullable
             final Throwable cause = entry.cause();
             if (cause != null) {
                 if (entry.hasCacheableCause() && negativeTtl > 0) {
@@ -127,6 +128,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 cache.get(unresolvedAddress.getHostString(), s -> loadingCache(unresolvedAddress, promise));
         assert entryFuture != null; // loader does not return null.
         entryFuture.handle((entry, unused) -> {
+            @Nullable
             final Throwable cause = entry.cause();
             if (cause != null) {
                 promise.tryFailure(cause);
@@ -163,10 +165,11 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
             @SuppressWarnings("unchecked")
             final List<DnsRecord> records = (List<DnsRecord>) f.getNow();
-            InetAddress inetAddress = null;
+            @Nullable InetAddress inetAddress = null;
             long ttlMillis = -1;
             try {
                 for (DnsRecord r : records) {
+                    @Nullable
                     final byte[] addrBytes = extractAddressBytes(r, logger, hostname);
                     if (addrBytes == null) {
                         continue;
@@ -302,6 +305,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                     return null;
                 }
 
+                @Nullable
                 final Throwable cause = entry.cause();
                 if (cause != null) {
                     final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);

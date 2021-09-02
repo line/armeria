@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 
 /**
@@ -313,6 +314,7 @@ public final class ServerSentEvents {
     }
 
     static ResponseHeaders ensureContentType(ResponseHeaders headers) {
+        @Nullable
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             return headers.toBuilder()
@@ -342,26 +344,31 @@ public final class ServerSentEvents {
         final StringBuilder sb = new StringBuilder();
 
         // Write a comment first because a user might want to explain his or her event at first line.
+        @Nullable
         final String comment = sse.comment();
         if (comment != null) {
             appendField(sb, "", comment, false);
         }
 
+        @Nullable
         final String id = sse.id();
         if (id != null) {
             appendField(sb, "id", id, true);
         }
 
+        @Nullable
         final String event = sse.event();
         if (event != null) {
             appendField(sb, "event", event, true);
         }
 
+        @Nullable
         final String data = sse.data();
         if (data != null) {
             appendField(sb, "data", data, true);
         }
 
+        @Nullable
         final Duration retry = sse.retry();
         if (retry != null) {
             // Reconnection time, in milliseconds.
@@ -374,6 +381,7 @@ public final class ServerSentEvents {
 
     private static <T> HttpData toHttpData(
             Function<? super T, ? extends ServerSentEvent> converter, T content) {
+        @Nullable
         final ServerSentEvent sse = converter.apply(content);
         return sse == null ? HttpData.empty() : toHttpData(sse);
     }

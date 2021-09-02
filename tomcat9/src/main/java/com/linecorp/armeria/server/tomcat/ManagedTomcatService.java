@@ -112,7 +112,8 @@ final class ManagedTomcatService extends TomcatService {
     }
 
     void stop() throws Exception {
-        final org.apache.catalina.Server server = this.server;
+        final org.apache.catalina.@Nullable Server server = this.server;
+        @Nullable
         final Connector connector = this.connector;
         this.server = null;
         this.connector = null;
@@ -132,7 +133,7 @@ final class ManagedTomcatService extends TomcatService {
         } catch (Exception e) {
             logger.warn("Failed to stop an embedded Tomcat: {}", toString(server), e);
         }
-
+        assert connector != null;
         postStopTask.accept(connector);
     }
 

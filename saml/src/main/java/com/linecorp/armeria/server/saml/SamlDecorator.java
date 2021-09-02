@@ -138,8 +138,10 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
                 return ssoHandler.beforeInitiatingSso(ctx, req, arg.messageContext, arg.idpConfig)
                                  .thenApply(unused -> arg);
             }).thenApply(arg -> {
+                @Nullable
                 final SAMLBindingContext bindingContext =
                         arg.messageContext.getSubcontext(SAMLBindingContext.class);
+                @Nullable
                 final String relayState = bindingContext != null ? bindingContext.getRelayState() : null;
 
                 // Support HTTP Redirect and HTTP POST binding protocols when sending
@@ -197,6 +199,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
         // The ProtocolBinding attribute is mutually exclusive with the AssertionConsumerServiceIndex attribute
         // and is typically accompanied by the AssertionConsumerServiceURL attribute.
         final SamlPortConfig portConfig = portConfigHolder.config();
+        assert portConfig != null;
         final SamlEndpoint acsEndpoint = idp.acsEndpoint() != null ? idp.acsEndpoint()
                                                                    : sp.defaultAcsConfig().endpoint();
         authnRequest.setAssertionConsumerServiceURL(acsEndpoint.toUriString(portConfig.scheme().uriText(),

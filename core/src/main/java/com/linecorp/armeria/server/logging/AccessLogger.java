@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
@@ -119,7 +120,7 @@ final class AccessLogger {
         for (final AccessLogComponent component : format) {
             final boolean addQuote = component.addQuote();
             try {
-                final Object text = component.getMessage(log);
+                @Nullable final Object text = component.getMessage(log);
                 if (text != null) {
                     if (addQuote) {
                         escapeAndQuote(message, text.toString());

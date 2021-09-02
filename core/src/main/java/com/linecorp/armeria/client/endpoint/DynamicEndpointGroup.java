@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -99,6 +100,7 @@ public class DynamicEndpointGroup
      * the subclasses' constructor finishes its job.
      */
     private EndpointSelector maybeCreateSelector() {
+        @Nullable
         final EndpointSelector selector = this.selector.get();
         if (selector != null) {
             return selector;

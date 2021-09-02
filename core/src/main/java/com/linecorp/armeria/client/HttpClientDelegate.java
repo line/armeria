@@ -155,6 +155,7 @@ final class HttpClientDelegate implements HttpClient {
         }
 
         final PoolKey key = new PoolKey(host, ipAddr, port, proxyConfig);
+        @Nullable
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
@@ -185,6 +186,7 @@ final class HttpClientDelegate implements HttpClient {
             assert proxyAddress != null;
 
             // use proxy information in context if available
+            @Nullable
             final ServiceRequestContext serviceCtx = ServiceRequestContext.currentOrNull();
             if (serviceCtx != null) {
                 final ProxiedAddresses proxiedAddresses = serviceCtx.proxiedAddresses();
@@ -208,7 +210,7 @@ final class HttpClientDelegate implements HttpClient {
 
     @VisibleForTesting
     static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
-        String host = extractHost(ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY));
+        @Nullable String host = extractHost(ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY));
         if (host != null) {
             return host;
         }

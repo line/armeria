@@ -54,6 +54,7 @@ public final class RequestMetricSupport {
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        @Nullable
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -79,9 +80,13 @@ public final class RequestMetricSupport {
 
         final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
                 registry, activeRequestsId, ActiveRequestMetrics.class,
-                (reg, prefix) ->
-                        reg.gauge(prefix.name(), prefix.tags(),
-                                  new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
+                (reg, prefix) -> {
+                    final ActiveRequestMetrics gauge = reg.gauge(prefix.name(), prefix.tags(),
+                                                                 new ActiveRequestMetrics(),
+                                                                 ActiveRequestMetrics::doubleValue);
+                    assert gauge != null;
+                    return gauge;
+                });
         activeRequestMetrics.increment();
         ctx.log().whenComplete().thenAccept(requestLog -> {
             onResponse(requestLog, meterIdPrefixFunction, server, successFunction);
@@ -111,6 +116,7 @@ public final class RequestMetricSupport {
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
         updateMetrics(ctx, log, metrics, successFunction);
+        @Nullable
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
             metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
@@ -183,6 +189,7 @@ public final class RequestMetricSupport {
             return false;
         }
 
+        @Nullable
         final Object responseContent = log.responseContent();
         if (responseContent instanceof RpcResponse) {
             return !((RpcResponse) responseContent).isCompletedExceptionally();
@@ -332,6 +339,7 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
+            @Nullable
             final Counter actualRequests = this.actualRequests;
             if (actualRequests != null) {
                 return actualRequests;

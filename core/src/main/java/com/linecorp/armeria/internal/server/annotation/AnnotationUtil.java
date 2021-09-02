@@ -204,6 +204,7 @@ final class AnnotationUtil {
 
         // Repeatable is not a repeatable. So the length of the returning array is 0 or 1.
         final Repeatable[] repeatableAnnotations = annotationType.getAnnotationsByType(Repeatable.class);
+        @Nullable
         final Class<? extends Annotation> containerType =
                 repeatableAnnotations.length > 0 ? repeatableAnnotations[0].value() : null;
 
@@ -441,6 +442,7 @@ final class AnnotationUtil {
 
         // If this annotation is a containing annotation of the target annotation,
         // try to call "value" method of it in order to get annotations we are finding.
+        @Nullable
         final Method method = Iterables.getFirst(
                 getMethods(containerType, withName("value"), withParametersCount(0)), null);
         if (method == null) {

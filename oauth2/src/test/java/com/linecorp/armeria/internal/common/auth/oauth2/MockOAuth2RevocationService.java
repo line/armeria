@@ -21,6 +21,7 @@ import java.util.Optional;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Header;
@@ -39,6 +40,7 @@ public class MockOAuth2RevocationService extends MockOAuth2Service {
             @Param("token_type_hint") @Default("access_token") String tokenTypeHint) {
 
         // first, check "Authorization"
+        @Nullable
         final HttpResponse response = verifyClientCredentials(auth, "token revocation");
         if (response != null) {
             return response; // UNAUTHORIZED or BAD_REQUEST

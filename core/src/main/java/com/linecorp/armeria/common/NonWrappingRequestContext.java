@@ -145,6 +145,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @Override
     @SuppressWarnings("unchecked")
     public <A extends SocketAddress> A remoteAddress() {
+        @Nullable
         final Channel ch = channel();
         return ch != null ? (A) ch.remoteAddress() : null;
     }
@@ -153,6 +154,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @Override
     @SuppressWarnings("unchecked")
     public <A extends SocketAddress> A localAddress() {
+        @Nullable
         final Channel ch = channel();
         return ch != null ? (A) ch.localAddress() : null;
     }
@@ -174,6 +176,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
 
     @Override
     public final String decodedPath() {
+        @Nullable
         final String decodedPath = this.decodedPath;
         if (decodedPath != null) {
             return decodedPath;
@@ -235,6 +238,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     public void hook(Supplier<? extends SafeCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         for (;;) {
+            @Nullable
             final Supplier<? extends SafeCloseable> oldContextHook = this.contextHook;
             final Supplier<? extends SafeCloseable> newContextHook;
             if (oldContextHook == null) {

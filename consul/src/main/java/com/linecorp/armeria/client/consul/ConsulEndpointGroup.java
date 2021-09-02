@@ -120,7 +120,7 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
             if (cause != null) {
                 logger.warn("Unexpected exception while fetching the registry from: {}" +
                             " (serviceName: {})", consulClient.uri(), serviceName, cause);
-            } else if (endpoints != null) {
+            } else if (endpoints != null && !endpoints.isEmpty()) {
                 setEndpoints(endpoints);
             }
 
@@ -132,6 +132,7 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
+        @Nullable
         final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);

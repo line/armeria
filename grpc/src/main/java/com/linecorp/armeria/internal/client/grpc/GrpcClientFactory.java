@@ -45,6 +45,7 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
@@ -99,7 +100,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
 
         GrpcClientStubFactory clientStubFactory = options.get(GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY);
-        ServiceDescriptor serviceDescriptor = null;
+        @Nullable ServiceDescriptor serviceDescriptor = null;
 
         if (clientStubFactory == NullGrpcClientStubFactory.INSTANCE) {
             for (GrpcClientStubFactory stubFactory : clientStubFactories) {
@@ -125,6 +126,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 addTrailersExtractor(params, options, serializationFormat);
         final HttpClient httpClient = newHttpClient(newParams);
 
+        @Nullable
         final GrpcJsonMarshaller jsonMarshaller;
         if (GrpcSerializationFormats.isJson(serializationFormat)) {
             jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY)
@@ -200,6 +202,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
+        @Nullable
         final T unwrapped = super.unwrap(client, type);
         if (unwrapped != null) {
             return unwrapped;

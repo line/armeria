@@ -54,6 +54,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+        @Nullable
         final HttpData lastData = closeResponseDecoder();
         if (lastData == null) {
             return;
@@ -67,6 +68,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        @Nullable
         final HttpData lastData = closeResponseDecoder();
         if (lastData != null) {
             lastData.close();
@@ -76,6 +78,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+        @Nullable
         final HttpData lastData = closeResponseDecoder();
         if (lastData != null) {
             lastData.close();

@@ -50,6 +50,7 @@ public final class OAuth2TokenScopeValidator {
      *     elements of the {@code permittedScope}.
      */
     public static boolean validateScope(ServiceRequestContext ctx, Set<String> permittedScope) {
+        @Nullable
         final OAuth2TokenDescriptor tokenDescriptor = ctx.attr(OAUTH2_TOKEN);
         if (tokenDescriptor == null) {
             return false;

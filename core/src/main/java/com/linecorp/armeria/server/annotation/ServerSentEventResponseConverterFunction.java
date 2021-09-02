@@ -44,6 +44,7 @@ public final class ServerSentEventResponseConverterFunction implements ResponseC
                                         ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailers) throws Exception {
+        @Nullable
         final MediaType contentType = headers.contentType();
         if (contentType != null && contentType.is(MediaType.EVENT_STREAM)) {
             if (result instanceof Publisher) {

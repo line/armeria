@@ -145,7 +145,7 @@ public final class TomcatServiceBuilder {
      */
     public TomcatService build() {
         // Create a temporary directory and use it if baseDir is not set.
-        Path baseDir = this.baseDir;
+        @Nullable Path baseDir = this.baseDir;
         if (baseDir == null) {
             try {
                 baseDir = Files.createTempDirectory("tomcat-armeria.");
@@ -165,7 +165,7 @@ public final class TomcatServiceBuilder {
         }
 
         // Use a NullRealm if no Realm was specified.
-        Realm realm = this.realm;
+        @Nullable Realm realm = this.realm;
         if (realm == null) {
             realm = new NullRealm();
         }

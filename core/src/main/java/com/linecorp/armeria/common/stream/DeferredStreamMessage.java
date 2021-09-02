@@ -117,6 +117,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             throw new IllegalStateException("upstream set already");
         }
 
+        @Nullable
         final Throwable abortCause = this.abortCause;
         if (abortCause != null) {
             upstream.abort(abortCause);
@@ -170,6 +171,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public final boolean isOpen() {
+        @Nullable
         final StreamMessage<T> upstream = this.upstream;
         if (upstream != null) {
             return upstream.isOpen();
@@ -180,6 +182,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public final boolean isEmpty() {
+        @Nullable
         final StreamMessage<T> upstream = this.upstream;
         if (upstream != null) {
             return upstream.isEmpty();
@@ -206,6 +209,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     private void doRequest(long n) {
+        @Nullable
         final Subscription upstreamSubscription = this.upstreamSubscription;
         if (upstreamSubscription != null) {
             upstreamSubscription.request(n);
@@ -227,6 +231,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     private void doCancel() {
+        @Nullable
         final Subscription upstreamSubscription = this.upstreamSubscription;
         if (upstreamSubscription != null) {
             try {
@@ -283,7 +288,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     private void safeOnSubscribeToUpstream() {
+        @Nullable
         final StreamMessage<T> upstream = this.upstream;
+        @Nullable
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
         if (upstream == null || downstreamSubscription == null || downstreamSubscription == NOOP_SUBSCRIPTION) {
             return;
@@ -313,6 +320,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
                 this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
         downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription);
 
+        @Nullable
         final StreamMessage<T> upstream = this.upstream;
         if (upstream != null) {
             upstream.abort(cause);
@@ -343,6 +351,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         }
 
         // An atomic operation on multiple subscribers will be handled by upstream.collect()
+        @Nullable
         final StreamMessage<T> upstream = this.upstream;
         if (upstream != null) {
             return upstream.collect(executor, options);

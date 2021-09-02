@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.PreviewSpec.PreviewMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
@@ -203,6 +204,7 @@ public final class ContentPreviewerFactoryBuilder {
             MediaTypeSet mediaTypeSet) {
         requireNonNull(mediaTypeSet, "mediaTypesSet");
         return (ctx, headers) -> {
+            @Nullable
             final MediaType contentType = headers.contentType();
             if (contentType == null) {
                 return false;

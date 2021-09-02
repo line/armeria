@@ -144,6 +144,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     private static ZooKeeperRegistrationSpec legacySpec(ZooKeeperRegistrationSpec spec, Server server) {
+        @Nullable
         final Endpoint endpoint = ((LegacyZooKeeperRegistrationSpec) spec).endpoint();
         if (endpoint != null) {
             if (endpoint.hasPort()) {
@@ -165,6 +166,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     }
 
     private static String defaultAddress(Server server) {
+        @Nullable
         final Inet4Address inet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         return inet4Address != null ? inet4Address.getHostAddress() : server.defaultHostname();
     }
@@ -211,6 +213,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
                .metadata(serverSetsInstance.metadata())
                .sequential(spec.isSequential())
                .nodeName(spec.path().substring(1)); // Simply remove prepended '/'.
+        @Nullable
         final Integer shardId = serverSetsInstance.shardId();
         if (shardId != null) {
             builder.shardId(shardId);
@@ -223,6 +226,7 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
             warnIfInactivePort(server, port, protocol);
             return port;
         }
+        @Nullable
         final ServerPort serverPort = server.activePort(protocol);
         return serverPort != null ? serverPort.localAddress().getPort() : -1;
     }

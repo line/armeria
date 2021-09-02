@@ -30,6 +30,7 @@ import com.google.rpc.Code;
 
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -92,7 +93,7 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
     }
 
     private static void addGrpcStatus(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
-        String status = log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS);
+        @Nullable String status = log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS);
         if (status != null) {
             tagListBuilder.add(statusTag(status));
             return;
@@ -104,6 +105,7 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
             return;
         }
 
+        @Nullable
         final HttpHeaders trailers = GrpcWebTrailers.get(log.context());
         if (trailers != null) {
             status = trailers.get(GrpcHeaderNames.GRPC_STATUS);

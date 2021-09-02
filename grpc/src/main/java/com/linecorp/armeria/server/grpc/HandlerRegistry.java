@@ -147,6 +147,7 @@ final class HandlerRegistry {
                 final ServerServiceDefinition service = entry.service();
                 final String path = entry.path();
                 services.put(path, service);
+                @Nullable
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 if (methodDescriptor == null) {
                     for (ServerMethodDefinition<?, ?> method : service.getMethods()) {

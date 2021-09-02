@@ -230,6 +230,7 @@ public final class DefaultClientRequestContext
 
     @Nullable
     private static ServiceRequestContext serviceRequestContext() {
+        @Nullable
         final RequestContext current = RequestContext.currentOrNull();
         return current != null ? current.root() : null;
     }
@@ -274,6 +275,7 @@ public final class DefaultClientRequestContext
         //       so that the customizer can inject the attributes which may be required
         //       by the EndpointSelector.
         runThreadLocalContextCustomizers();
+        @Nullable
         final Endpoint endpoint = endpointGroup.selectNow(this);
         if (endpoint != null) {
             updateEndpoint(endpoint);
@@ -322,7 +324,7 @@ public final class DefaultClientRequestContext
      * @see #init(EndpointGroup)
      */
     public CompletableFuture<Boolean> whenInitialized() {
-        CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
+        @Nullable CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {
             return whenInitialized;
         } else {
@@ -339,6 +341,7 @@ public final class DefaultClientRequestContext
      * Completes the {@link #whenInitialized()} with the specified value.
      */
     public void finishInitialization(boolean success) {
+        @Nullable
         final CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {
             whenInitialized.complete(success);
@@ -365,6 +368,7 @@ public final class DefaultClientRequestContext
     }
 
     private void runThreadLocalContextCustomizers() {
+        @Nullable
         final List<Consumer<? super ClientRequestContext>> customizers = this.customizers;
         if (customizers != null) {
             this.customizers = null;
@@ -384,6 +388,7 @@ public final class DefaultClientRequestContext
 
     private void failEarly(Throwable cause) {
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
+        @Nullable
         final HttpRequest req = request();
         if (req != null) {
             autoFillSchemeAndAuthority();
@@ -396,6 +401,7 @@ public final class DefaultClientRequestContext
     }
 
     private void autoFillSchemeAndAuthority() {
+        @Nullable
         final HttpRequest req = request();
         if (req == null) {
             return;
@@ -461,6 +467,7 @@ public final class DefaultClientRequestContext
 
     @Nullable
     private List<Consumer<? super ClientRequestContext>> copyThreadLocalCustomizers() {
+        @Nullable
         final ClientThreadLocalState state = ClientThreadLocalState.get();
         if (state == null) {
             return null;
@@ -555,6 +562,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public ByteBufAllocator alloc() {
+        @Nullable
         final Channel channel = channel();
         return channel != null ? channel.alloc() : PooledByteBufAllocator.DEFAULT;
     }
@@ -724,7 +732,9 @@ public final class DefaultClientRequestContext
 
     @Override
     public String toString() {
+        @Nullable
         final Channel ch = channel();
+        @Nullable
         final RequestLogAccess parent = log().parent();
         final short newAvailability =
                 (short) ((ch != null ? STR_CHANNEL_AVAILABILITY : 0) |
@@ -742,8 +752,11 @@ public final class DefaultClientRequestContext
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
         final String creqId = id().shortText();
+        @Nullable
         final String preqId = parent != null ? parent.context().id().shortText() : null;
+        @Nullable
         final String sreqId = root() != null ? root().id().shortText() : null;
+        @Nullable
         final String chanId = ch != null ? ch.id().asShortText() : null;
         final String proto = sessionProtocol().uriText();
         final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";

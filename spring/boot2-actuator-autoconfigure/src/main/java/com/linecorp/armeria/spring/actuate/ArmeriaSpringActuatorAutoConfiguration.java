@@ -136,6 +136,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
+            @Nullable
             final CorsServiceBuilder cors;
             if (!corsProperties.getAllowedOrigins().isEmpty()) {
                 cors = CorsService.builder(corsProperties.getAllowedOrigins());
@@ -213,6 +214,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                                ConfigurableEnvironment environment,
                                                                ArmeriaSettings armeriaSettings) {
         return sb -> {
+            @Nullable
             final Port port = obtainManagementServerPort(serverProperties.getPort());
             if (port != null) {
                 configurePorts(sb, ImmutableList.of(port));

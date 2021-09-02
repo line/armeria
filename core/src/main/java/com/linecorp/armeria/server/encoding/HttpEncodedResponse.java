@@ -188,10 +188,11 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
             // Content-Encoding.
             return false;
         }
-        if (headers.contentType() != null) {
+        @Nullable
+        final MediaType contentType = headers.contentType();
+        if (contentType != null) {
             // Make sure the content type is worth encoding.
             try {
-                final MediaType contentType = headers.contentType();
                 if (!encodableContentTypePredicate.test(contentType)) {
                     return false;
                 }

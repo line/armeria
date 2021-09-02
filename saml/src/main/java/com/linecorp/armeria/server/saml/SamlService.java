@@ -160,6 +160,7 @@ final class SamlService implements HttpServiceWithRoutes {
             }
 
             final SamlPortConfig portConfig = portConfigHolder.config();
+            assert portConfig != null;
             final boolean isTls = ctx.sessionProtocol().isTls();
             if (portConfig.scheme().isTls() != isTls) {
                 if (isTls) {
@@ -192,6 +193,7 @@ final class SamlService implements HttpServiceWithRoutes {
          */
         SamlParameters(AggregatedHttpRequest req) {
             requireNonNull(req, "req");
+            @Nullable
             final MediaType contentType = req.contentType();
 
             if (contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
@@ -228,6 +230,7 @@ final class SamlService implements HttpServiceWithRoutes {
         @Nullable
         String getFirstValueOrNull(String name) {
             requireNonNull(name, "name");
+            @Nullable
             final String value = params.get(name);
             return Strings.emptyToNull(value);
         }

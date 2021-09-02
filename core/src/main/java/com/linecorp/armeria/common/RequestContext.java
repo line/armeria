@@ -117,7 +117,7 @@ public interface RequestContext {
     static <T> T mapCurrent(
             Function<? super RequestContext, T> mapper,
             @Nullable Supplier<@Nullable T> defaultValueSupplier) {
-
+        @Nullable
         final RequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
@@ -489,6 +489,7 @@ public interface RequestContext {
      */
     @MustBeClosed
     default SafeCloseable replace() {
+        @Nullable
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         return () -> RequestContextUtil.pop(this, oldCtx);
     }

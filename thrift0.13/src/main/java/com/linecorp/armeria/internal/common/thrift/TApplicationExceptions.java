@@ -23,6 +23,8 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolUtil;
 import org.apache.thrift.protocol.TType;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 public final class TApplicationExceptions {
 
     /**
@@ -35,7 +37,7 @@ public final class TApplicationExceptions {
         TField field;
         iprot.readStructBegin();
 
-        String message = null;
+        @Nullable String message = null;
         int type = TApplicationException.UNKNOWN;
 
         while (true) {

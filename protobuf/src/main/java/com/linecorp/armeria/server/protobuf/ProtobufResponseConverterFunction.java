@@ -94,6 +94,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             // Should never reach here.
             fromPublisher = null;
         }
+        assert fromPublisher != null;
         fromPublisherMH = fromPublisher;
 
         MethodHandle fromStream;
@@ -107,6 +108,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             // Should never reach here.
             fromStream = null;
         }
+        assert fromStream != null;
         fromStreamMH = fromStream;
 
         MethodHandle fromObject;
@@ -119,6 +121,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             // Should never reach here.
             fromObject = null;
         }
+        assert fromObject != null;
         fromObjectMH = fromObject;
     }
 
@@ -145,6 +148,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
                                         @Nullable Object result, HttpHeaders trailers) throws Exception {
+        @Nullable
         final MediaType contentType = headers.contentType();
         final boolean isJson = isJson(contentType);
 

@@ -84,7 +84,7 @@ public final class VirtualHost {
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
                 Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
-                @Nullable ServiceNaming defaultServiceNaming,
+                ServiceNaming defaultServiceNaming,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {

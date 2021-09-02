@@ -760,9 +760,9 @@ public final class MediaType {
     @Nullable
     public Charset charset() {
         // racy single-check idiom, this is safe because Optional is immutable.
-        Charset local = parsedCharset;
+        @Nullable Charset local = parsedCharset;
         if (local == null) {
-            String value = null;
+            @Nullable String value = null;
             local = NO_CHARSET;
             for (String currentValue : parameters.get(CHARSET_ATTRIBUTE)) {
                 if (value == null) {
@@ -1096,6 +1096,7 @@ public final class MediaType {
      */
     public static MediaType parse(String input) {
         checkNotNull(input);
+        @Nullable
         final MediaType wellKnown = KnownTypesByString.get(input);
         if (wellKnown != null) {
             return wellKnown;
@@ -1219,6 +1220,7 @@ public final class MediaType {
     @Override
     public String toString() {
         // racy single-check idiom, safe because String is immutable
+        @Nullable
         String result = toString;
         if (result == null) {
             result = computeToString();

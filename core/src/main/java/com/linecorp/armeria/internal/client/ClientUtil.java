@@ -166,6 +166,7 @@ public final class ClientUtil {
     }
 
     private static void fail(ClientRequestContext ctx, Throwable cause) {
+        @Nullable
         final HttpRequest req = ctx.request();
         if (req != null) {
             req.abort(cause);
@@ -185,6 +186,7 @@ public final class ClientUtil {
                                                          @Nullable RpcRequest rpcReq,
                                                          boolean initialAttempt) {
         final RequestId id = ctx.options().requestIdGenerator().get();
+        @Nullable
         final EndpointGroup endpointGroup = ctx.endpointGroup();
         final ClientRequestContext derived;
         if (endpointGroup != null && !initialAttempt) {
@@ -199,6 +201,7 @@ public final class ClientUtil {
         // serializationFormat is always not null, so this is fine.
         logBuilder.serializationFormat(partial.serializationFormat());
         if (parentLog.isAvailable(RequestLogProperty.NAME)) {
+            @Nullable
             final String serviceName = partial.serviceName();
             final String name = partial.name();
             if (serviceName != null) {

@@ -112,11 +112,13 @@ public enum TransportType {
                 return false;
             }
         }
+        @Nullable
         final TransportType found = findOrNull(eventLoopGroup);
         return found != null && found.isAvailable();
     }
 
     private static TransportType find(EventLoopGroup eventLoopGroup) {
+        @Nullable
         final TransportType found = findOrNull(eventLoopGroup);
         if (found == null) {
             throw unsupportedEventLoopType(eventLoopGroup);

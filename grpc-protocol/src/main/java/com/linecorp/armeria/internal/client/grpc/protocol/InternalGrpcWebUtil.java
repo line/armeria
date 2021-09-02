@@ -38,6 +38,7 @@ public final class InternalGrpcWebUtil {
     private static final ByteProcessor FIND_COLON = new IndexOfProcessor((byte) ':');
 
     public static ByteBuf messageBuf(DeframedMessage message, ByteBufAllocator alloc) throws IOException {
+        @Nullable
         final ByteBuf messageBuf = message.buf();
         final ByteBuf buf;
         if (messageBuf != null) {
@@ -45,16 +46,12 @@ public final class InternalGrpcWebUtil {
         } else {
             // TODO(minwoox) Optimize this by creating buffer with the sensible initial capacity.
             buf = alloc.compositeBuffer();
-            boolean success = false;
             try (ByteBufOutputStream os = new ByteBufOutputStream(buf);
                  InputStream stream = message.stream()) {
                 assert stream != null;
                 ByteStreams.copy(stream, os);
-                success = true;
             } catch (Throwable t) {
-                if (!success) {
-                    buf.release();
-                }
+                buf.release();
                 throw t;
             }
         }

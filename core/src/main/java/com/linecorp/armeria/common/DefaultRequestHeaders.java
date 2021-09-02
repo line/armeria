@@ -38,6 +38,7 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
 
     @Override
     public URI uri() {
+        @Nullable
         final URI uri = this.uri;
         if (uri != null) {
             return uri;

@@ -33,7 +33,7 @@ final class SamlInitializer {
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
-        Throwable cause = null;
+        @Nullable Throwable cause = null;
         try {
             // To help confirm that your JCE implementations have everything needed by OpenSAML,
             // the following method is provided:

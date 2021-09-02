@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import reactor.core.CoreSubscriber;
@@ -85,6 +86,7 @@ public final class RequestContextHooks {
             }
 
             if (source instanceof Scannable) {
+                @Nullable
                 final Object parent = ((Scannable) source).scanUnsafe(Attr.PARENT);
                 if (parent instanceof ContextHolder) {
                     return makeContextAware(source, ((ContextHolder) parent).context());
@@ -100,6 +102,7 @@ public final class RequestContextHooks {
             }
 
             if (source instanceof Scannable) {
+                @Nullable
                 final Object parent = ((Scannable) source).scanUnsafe(Attr.PARENT);
                 if (parent instanceof ContextHolder) {
                     return makeContextAware(source, ((ContextHolder) parent).context());

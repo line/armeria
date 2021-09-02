@@ -101,7 +101,7 @@ public interface AggregatedHttpFile {
      */
     @Nullable
     default AggregatedHttpResponse response() {
-        final ResponseHeaders headers = headers();
+        @Nullable final ResponseHeaders headers = headers();
         if (headers == null) {
             return null;
         } else {

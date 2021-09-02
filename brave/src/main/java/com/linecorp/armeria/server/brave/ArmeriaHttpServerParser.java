@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.brave;
 
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -80,14 +81,12 @@ final class ArmeriaHttpServerParser implements HttpRequestParser, HttpResponsePa
 
         final ServiceRequestContext ctx = (ServiceRequestContext) res;
         final RequestLog requestLog = ctx.log().ensureComplete();
+        @Nullable
         final String serFmt = ServiceRequestContextAdapter.serializationFormat(requestLog);
         if (serFmt != null) {
             span.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
 
-        final String name = requestLog.name();
-        if (name != null) {
-            span.name(name);
-        }
+        span.name(requestLog.name());
     }
 }

@@ -26,6 +26,7 @@ import java.util.function.BiFunction;
 
 import com.google.common.collect.MapMaker;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Meter;
@@ -88,7 +89,7 @@ public final class MicrometerUtil {
                                        RegistrationState registrationState,
                                        MeterRegistry registry, MeterIdPrefix idPrefix, Class<T> type,
                                        BiFunction<MeterRegistry, MeterIdPrefix, T> factory) {
-
+        @Nullable
         final Object object = map.computeIfAbsent(idPrefix, i -> {
             registrationState.isRegistering = true;
             try {
@@ -111,6 +112,7 @@ public final class MicrometerUtil {
                                                    RegistrationState registrationState) {
         for (;;) {
             @SuppressWarnings("unchecked")
+            @Nullable
             final PendingRegistration<Object> pendingRegistration =
                     (PendingRegistration<Object>) registrationState.pendingRegistrations.poll();
 

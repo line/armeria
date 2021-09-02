@@ -90,7 +90,7 @@ public final class ThriftFunction {
         // Determine the success and exception fields of the function.
         final ImmutableMap.Builder<Class<Throwable>, TFieldIdEnum> exceptionFieldsBuilder =
                 ImmutableMap.builder();
-        TFieldIdEnum successField = null;
+        @Nullable TFieldIdEnum successField = null;
 
         if (result != null) { // if not oneway
             @SuppressWarnings("unchecked")
@@ -259,7 +259,7 @@ public final class ThriftFunction {
             }
         }
 
-        final TFieldIdEnum successField = successField();
+        @Nullable final TFieldIdEnum successField = successField();
         if (successField == null) { //void method
             return null;
         } else if (ThriftFieldAccess.isSet(result, successField)) {

@@ -118,6 +118,7 @@ final class HttpPostBindingUtil {
         final MessageContext<T> messageContext = new MessageContext<>();
         messageContext.setMessage(message);
 
+        @Nullable
         final String relayState = parameters.getFirstValueOrNull(RELAY_STATE);
         if (relayState != null) {
             final SAMLBindingContext context = messageContext.getSubcontext(SAMLBindingContext.class, true);

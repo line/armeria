@@ -176,6 +176,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                @Nullable
                 final Throwable cause = log.responseCause();
                 if (cause != null) {
                     abortResponse(response, derivedCtx, cause);
@@ -189,6 +190,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 endRedirect(ctx, reqDuplicator, responseFuture, response);
                 return;
             }
+            @Nullable
             final String location = responseHeaders.get(HttpHeaderNames.LOCATION);
             if (isNullOrEmpty(location)) {
                 endRedirect(ctx, reqDuplicator, responseFuture, response);
@@ -354,6 +356,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 sb.append(SessionProtocol.HTTPS.uriText());
             }
             sb.append("://");
+            @Nullable
             String authority = headers.authority();
             final Endpoint endpoint = ctx.endpoint();
             assert endpoint != null;

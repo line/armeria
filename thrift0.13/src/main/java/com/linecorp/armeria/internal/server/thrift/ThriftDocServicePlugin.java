@@ -99,7 +99,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     private static final MethodHandle legacyTSerializerToString;
 
     static {
-        MethodHandle methodHandle = null;
+        @Nullable MethodHandle methodHandle = null;
         try {
             methodHandle =
                     MethodHandles.publicLookup()
@@ -226,7 +226,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
             throw new IllegalStateException("failed to find a class: " + argsClassName, e);
         }
 
-        Class<?> resultClass;
+        @Nullable Class<?> resultClass;
         try {
             resultClass = Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
         } catch (ClassNotFoundException ignored) {
@@ -259,7 +259,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                              .collect(toImmutableList());
 
         // Find the 'success' field.
-        FieldInfo fieldInfo = null;
+        @Nullable FieldInfo fieldInfo = null;
         if (resultClass != null) { // Function isn't "oneway" function
             final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
                     FieldMetaData.getStructMetaDataMap(resultClass);
@@ -419,6 +419,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                 return STRING;
         }
 
+        @Nullable
         final String unresolvedName;
         if (fieldValueMetaData.isTypedef()) {
             unresolvedName = fieldValueMetaData.getTypedefName();
@@ -507,6 +508,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     @Override
     public String guessServiceName(Object exampleRequest) {
+        @Nullable
         final TBase<?, ?> exampleTBase = asTBase(exampleRequest);
         if (exampleTBase == null) {
             return null;
@@ -517,6 +519,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     @Override
     public String guessServiceMethodName(Object exampleRequest) {
+        @Nullable
         final TBase<?, ?> exampleTBase = asTBase(exampleRequest);
         if (exampleTBase == null) {
             return null;
