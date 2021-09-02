@@ -48,12 +48,14 @@ import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
+import GraphqlRequestBody from './GrahpqlRequestBody';
 
 SyntaxHighlighter.registerLanguage('json', json);
 
 interface OwnProps {
   method: Method;
   isAnnotatedService: boolean;
+  isGraphqlService: boolean;
   exampleHeaders: SelectOption[];
   examplePaths: SelectOption[];
   exampleQueries: SelectOption[];
@@ -103,7 +105,13 @@ const toggle = (prev: boolean, override: unknown) => {
   }
   return !prev;
 };
+
 const escapeSingleQuote = (text: string) => text.replace(/'/g, `'\\''`);
+
+const extractUrlPath = (method: Method) => {
+  const endpoints = method.endpoints;
+  return endpoints[0].pathMapping.substring('exact:'.length);
+};
 
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
@@ -111,6 +119,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   examplePaths,
   exampleQueries,
   isAnnotatedService,
+  isGraphqlService,
   history,
   location,
   match,
@@ -151,15 +160,19 @@ const DebugPage: React.FunctionComponent<Props> = ({
     let urlRequestBody;
     if (useRequestBody) {
       if (urlParams.has('request_body')) {
-        urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+        if (!isGraphqlService) {
+          urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+        } else {
+          urlRequestBody = urlParams.get('request_body');
+        }
         scrollToDebugForm();
       }
     }
 
     let urlPath;
-    if (isAnnotatedService) {
+    if (isAnnotatedService || isGraphqlService) {
       if (exactPathMapping) {
-        urlPath = method.endpoints[0].pathMapping.substring('exact:'.length);
+        urlPath = extractUrlPath(method);
       } else {
         urlPath = urlParams.get('endpoint_path') || '';
       }
@@ -185,6 +198,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     exactPathMapping,
     exampleQueries.length,
     isAnnotatedService,
+    isGraphqlService,
     location.search,
     match.params,
     method,
@@ -260,8 +274,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
     [],
   );
 
-  const onDebugFormChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setRequestBody(e.target.value);
+  const onDebugFormChange = useCallback((value: string) => {
+    setRequestBody(value);
   }, []);
 
   const onExport = useCallback(() => {
@@ -287,7 +301,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       let uri;
       let endpoint;
 
-      if (isAnnotatedService) {
+      if (isAnnotatedService || isGraphqlService) {
         const queries = additionalQueries;
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
@@ -320,6 +334,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
       if (process.env.WEBPACK_DEV === 'true') {
         headers[docServiceDebug] = 'true';
       }
+      if (isGraphqlService) {
+        headers.Accept = 'application/json';
+      }
 
       const headerOptions = Object.keys(headers)
         .map((name) => {
@@ -343,6 +360,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     transport,
     requestBody,
     isAnnotatedService,
+    isGraphqlService,
     showSnackbar,
     additionalQueries,
     exactPathMapping,
@@ -484,7 +502,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   ]);
 
   const supportedExamplePaths = useMemo(() => {
-    if (isAnnotatedService) {
+    if (isAnnotatedService || isGraphqlService) {
       return examplePaths;
     }
     return transport.listDebugMimeTypeEndpoint(method).map((endpoint) => {
@@ -493,7 +511,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         value: endpoint.pathMapping,
       };
     });
-  }, [examplePaths, method, isAnnotatedService, transport]);
+  }, [isAnnotatedService, isGraphqlService, transport, method, examplePaths]);
 
   return (
     <Section>
@@ -519,6 +537,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
               examplePaths={supportedExamplePaths}
               editable={!exactPathMapping}
               isAnnotatedService={isAnnotatedService}
+              isGraphqlService={isGraphqlService}
               endpointPathOpen={endpointPathOpen}
               additionalPath={additionalPath}
               onEditEndpointPathClick={toggleEndpointPathOpen}
@@ -549,12 +568,22 @@ const DebugPage: React.FunctionComponent<Props> = ({
             />
             {useRequestBody && (
               <>
-                <RequestBody
-                  requestBodyOpen={requestBodyOpen}
-                  requestBody={requestBody}
-                  onEditRequestBodyClick={toggleRequestBodyOpen}
-                  onDebugFormChange={onDebugFormChange}
-                />
+                {isGraphqlService ? (
+                  <GraphqlRequestBody
+                    requestBodyOpen={requestBodyOpen}
+                    requestBody={requestBody}
+                    onEditRequestBodyClick={toggleRequestBodyOpen}
+                    onDebugFormChange={onDebugFormChange}
+                    schemaUrlPath={extractUrlPath(method)}
+                  />
+                ) : (
+                  <RequestBody
+                    requestBodyOpen={requestBodyOpen}
+                    requestBody={requestBody}
+                    onEditRequestBodyClick={toggleRequestBodyOpen}
+                    onDebugFormChange={onDebugFormChange}
+                  />
+                )}
               </>
             )}
             <Typography variant="body2" paragraph />
