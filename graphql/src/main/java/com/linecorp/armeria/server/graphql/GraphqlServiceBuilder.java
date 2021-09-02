@@ -122,7 +122,6 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link GraphQLSchema}.
-     * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
     public GraphqlServiceBuilder schema(GraphQLSchema schema) {
         this.schema = requireNonNull(schema, "schema");
