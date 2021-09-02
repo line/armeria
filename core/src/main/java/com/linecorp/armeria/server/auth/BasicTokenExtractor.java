@@ -33,6 +33,7 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 
 import io.netty.util.AsciiString;
@@ -88,6 +89,6 @@ final class BasicTokenExtractor implements Function<RequestHeaders, BasicToken> 
         final String username = credential.substring(0, sep);
         final String password = credential.substring(sep + 1);
 
-        return BasicToken.of(username, password);
+        return AuthToken.ofBasic(username, password);
     }
 }

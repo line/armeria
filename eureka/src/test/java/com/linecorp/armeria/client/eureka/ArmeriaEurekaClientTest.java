@@ -54,7 +54,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 
@@ -68,7 +68,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
     @Override
     protected EurekaHttpClient getEurekaClientWithBasicAuthentication(String userName, String password) {
         final WebClient webClient = WebClient.builder(toH1C(getHttpServer().getServiceURI()))
-                                             .auth(BasicToken.of(userName, password))
+                                             .auth(AuthToken.ofBasic(userName, password))
                                              .build();
         return new EurekaHttpClientWrapper(webClient);
     }

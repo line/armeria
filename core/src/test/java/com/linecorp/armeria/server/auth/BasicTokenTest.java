@@ -19,15 +19,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.AuthToken;
 
 class BasicTokenTest {
     @Test
     void testEquals() {
-        assertThat(BasicToken.of("a", "b")).isEqualTo(BasicToken.of("a", "b"));
-        assertThat(BasicToken.of("a", "b")).isNotEqualTo(BasicToken.of("x", "b"));
-        assertThat(BasicToken.of("a", "b")).isNotEqualTo(BasicToken.of("a", "x"));
-        assertThat(BasicToken.of("a", "b")).isNotEqualTo(BasicToken.of("x", "x"));
-        assertThat(BasicToken.of("a", "b")).isNotEqualTo(BasicToken.of("aa", "bb"));
+        assertThat(AuthToken.ofBasic("a", "b")).isEqualTo(AuthToken.ofBasic("a", "b"));
+        assertThat(AuthToken.ofBasic("a", "b")).isNotEqualTo(AuthToken.ofBasic("x", "b"));
+        assertThat(AuthToken.ofBasic("a", "b")).isNotEqualTo(AuthToken.ofBasic("a", "x"));
+        assertThat(AuthToken.ofBasic("a", "b")).isNotEqualTo(AuthToken.ofBasic("x", "x"));
+        assertThat(AuthToken.ofBasic("a", "b")).isNotEqualTo(AuthToken.ofBasic("aa", "bb"));
     }
 }
