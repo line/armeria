@@ -173,12 +173,15 @@ class ServerCallListenerCompatibilityTest {
                 for (int j = 1; j < allEvents.size(); j++) {
                     final List<String> armeriaEvents = allEvents.get(i);
                     assertThat(armeriaEvents).matches(events -> {
+                        // A server returned 2 messages. ArmeriaServerCall will invoke onReady() whenever a
+                        // message is correctly consumed with OK status.
+                        // However, the exact number of `onReady()` varies depending on when messages are emitted.
                         return events.equals(expectedEvents) ||
-                               // ArmeriaServerCall will invoke onReady() whenever a message is consumed with
-                               // normal requests if a call is not closed.
                                events.equals(ImmutableList.of("onReady", "onMessage", "onHalfClose",
-                                                              "onReady", "onComplete"));
-                    });
+                                                              "onReady", "onComplete")) ||
+                                events.equals(ImmutableList.of("onReady", "onMessage", "onHalfClose",
+                                                               "onReady", "onReady", "onComplete"));
+                    }, "");
                 }
             }
         }
