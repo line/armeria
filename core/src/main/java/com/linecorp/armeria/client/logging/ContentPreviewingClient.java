@@ -121,9 +121,9 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
     private final ContentPreviewerFactory contentPreviewerFactory;
 
     private final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> requestContentSanitizer;
+            ? extends @Nullable Object> requestPreviewSanitizer;
     private final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> responseContentSanitizer;
+            ? extends @Nullable Object> responsePreviewSanitizer;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
@@ -131,13 +131,13 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
     ContentPreviewingClient(HttpClient delegate,
                             ContentPreviewerFactory contentPreviewerFactory,
                             BiFunction<? super RequestContext, String,
-                                    ? extends @Nullable Object> requestContentSanitizer,
+                                    ? extends @Nullable Object> requestPreviewSanitizer,
                             BiFunction<? super RequestContext, String,
-                                    ? extends @Nullable Object> responseContentSanitizer) {
+                                    ? extends @Nullable Object> responsePreviewSanitizer) {
         super(delegate);
         this.contentPreviewerFactory = contentPreviewerFactory;
-        this.requestContentSanitizer = requestContentSanitizer;
-        this.responseContentSanitizer = responseContentSanitizer;
+        this.requestPreviewSanitizer = requestPreviewSanitizer;
+        this.responsePreviewSanitizer = responsePreviewSanitizer;
     }
 
     @Override
@@ -149,10 +149,10 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
         ctx.setAttr(SETTING_CONTENT_PREVIEW, true);
         final ContentPreviewer requestContentPreviewer =
                 contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
-        req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestContentSanitizer);
+        req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
 
         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().execute(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responseContentSanitizer);
+        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
     }
 }

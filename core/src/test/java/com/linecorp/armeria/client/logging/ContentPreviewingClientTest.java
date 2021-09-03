@@ -137,7 +137,7 @@ class ContentPreviewingClientTest {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
-                                                           .requestContentSanitizer(CONTENT_SANITIZER)
+                                                           .requestPreviewSanitizer(CONTENT_SANITIZER)
                                                            .newDecorator())
                          .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
@@ -160,7 +160,7 @@ class ContentPreviewingClientTest {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
-                                                           .responseContentSanitizer(CONTENT_SANITIZER)
+                                                           .responsePreviewSanitizer(CONTENT_SANITIZER)
                                                            .newDecorator())
                          .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
@@ -183,7 +183,7 @@ class ContentPreviewingClientTest {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
-                                                           .contentSanitizer(CONTENT_SANITIZER)
+                                                           .previewSanitizer(CONTENT_SANITIZER)
                                                            .newDecorator())
                          .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",

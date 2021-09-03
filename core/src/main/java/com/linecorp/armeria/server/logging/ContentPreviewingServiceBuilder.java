@@ -33,16 +33,16 @@ import com.linecorp.armeria.server.HttpService;
 public final class ContentPreviewingServiceBuilder {
 
     private static final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> DEFAULT_REQUEST_CONTENT_SANITIZER = Functions.second();
+            ? extends @Nullable Object> DEFAULT_REQUEST_PREVIEW_SANITIZER = Functions.second();
     private static final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> DEFAULT_RESPONSE_CONTENT_SANITIZER = Functions.second();
+            ? extends @Nullable Object> DEFAULT_RESPONSE_PREVIEW_SANITIZER = Functions.second();
 
     private final ContentPreviewerFactory contentPreviewerFactory;
 
     private BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> requestContentSanitizer = DEFAULT_REQUEST_CONTENT_SANITIZER;
+            ? extends @Nullable Object> requestPreviewSanitizer = DEFAULT_REQUEST_PREVIEW_SANITIZER;
     private BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> responseContentSanitizer = DEFAULT_RESPONSE_CONTENT_SANITIZER;
+            ? extends @Nullable Object> responsePreviewSanitizer = DEFAULT_RESPONSE_PREVIEW_SANITIZER;
 
     ContentPreviewingServiceBuilder(ContentPreviewerFactory contentPreviewerFactory) {
         this.contentPreviewerFactory = contentPreviewerFactory;
@@ -53,10 +53,10 @@ public final class ContentPreviewingServiceBuilder {
      * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset, will
      * not sanitize request content preview.
      */
-    public ContentPreviewingServiceBuilder requestContentSanitizer(
+    public ContentPreviewingServiceBuilder requestPreviewSanitizer(
             BiFunction<? super RequestContext, String,
-                    ? extends @Nullable Object> requestContentSanitizer) {
-        this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
+                    ? extends @Nullable Object> requestPreviewSanitizer) {
+        this.requestPreviewSanitizer = requireNonNull(requestPreviewSanitizer, "requestPreviewSanitizer");
         return this;
     }
 
@@ -65,10 +65,10 @@ public final class ContentPreviewingServiceBuilder {
      * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset, will
      * not sanitize response content preview.
      */
-    public ContentPreviewingServiceBuilder responseContentSanitizer(
+    public ContentPreviewingServiceBuilder responsePreviewSanitizer(
             BiFunction<? super RequestContext, String,
-                    ? extends @Nullable Object> responseContentSanitizer) {
-        this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
+                    ? extends @Nullable Object> responsePreviewSanitizer) {
+        this.responsePreviewSanitizer = requireNonNull(responsePreviewSanitizer, "responsePreviewSanitizer");
         return this;
     }
 
@@ -78,19 +78,19 @@ public final class ContentPreviewingServiceBuilder {
      * If unset, will not sanitize response content preview.
      * This method is a shortcut for:
      * <pre>{@code
-     * builder.requestContentSanitizer(contentSanitizer);
-     * builder.responseContentSanitizer(contentSanitizer);
+     * builder.requestContentSanitizer(previewSanitizer);
+     * builder.responseContentSanitizer(previewSanitizer);
      * }</pre>
      *
-     * @see #requestContentSanitizer(BiFunction)
-     * @see #responseContentSanitizer(BiFunction)
+     * @see #requestPreviewSanitizer(BiFunction)
+     * @see #responsePreviewSanitizer(BiFunction)
      */
-    public ContentPreviewingServiceBuilder contentSanitizer(
+    public ContentPreviewingServiceBuilder previewSanitizer(
             BiFunction<? super RequestContext, String,
-                    ? extends @Nullable Object> contentSanitizer) {
-        requireNonNull(contentSanitizer, "contentSanitizer");
-        this.requestContentSanitizer = contentSanitizer;
-        this.responseContentSanitizer = contentSanitizer;
+                    ? extends @Nullable Object> previewSanitizer) {
+        requireNonNull(previewSanitizer, "previewSanitizer");
+        this.requestPreviewSanitizer = previewSanitizer;
+        this.responsePreviewSanitizer = previewSanitizer;
         return this;
     }
 
@@ -100,7 +100,7 @@ public final class ContentPreviewingServiceBuilder {
      */
     public ContentPreviewingService build(HttpService delegate) {
         return new ContentPreviewingService(delegate, contentPreviewerFactory,
-                                            requestContentSanitizer, responseContentSanitizer);
+                                            requestPreviewSanitizer, responsePreviewSanitizer);
     }
 
     /**

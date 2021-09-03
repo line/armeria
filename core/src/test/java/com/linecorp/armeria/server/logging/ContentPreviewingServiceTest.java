@@ -105,22 +105,22 @@ class ContentPreviewingServiceTest {
                                                     .newDecorator());
             sb.decorator("/encoded", decodingContentPreviewDecorator());
 
-            sb.service("/requestContentSanitizer", httpService);
-            sb.decorator("/requestContentSanitizer",
+            sb.service("/requestPreviewSanitizer", httpService);
+            sb.decorator("/requestPreviewSanitizer",
                          ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
-                                                 .requestContentSanitizer(CONTENT_SANITIZER)
+                                                 .requestPreviewSanitizer(CONTENT_SANITIZER)
                                                  .newDecorator());
 
-            sb.service("/responseContentSanitizer", httpService);
-            sb.decorator("/responseContentSanitizer",
+            sb.service("/responsePreviewSanitizer", httpService);
+            sb.decorator("/responsePreviewSanitizer",
                          ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
-                                                 .responseContentSanitizer(CONTENT_SANITIZER)
+                                                 .responsePreviewSanitizer(CONTENT_SANITIZER)
                                                  .newDecorator());
 
-            sb.service("/contentSanitizer", httpService);
-            sb.decorator("/contentSanitizer",
+            sb.service("/previewSanitizer", httpService);
+            sb.decorator("/previewSanitizer",
                          ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
-                                                 .contentSanitizer(CONTENT_SANITIZER)
+                                                 .previewSanitizer(CONTENT_SANITIZER)
                                                  .newDecorator());
 
             sb.decoratorUnder("/", (delegate, ctx, req) -> {
@@ -234,7 +234,7 @@ class ContentPreviewingServiceTest {
     @Test
     void sanitizeRequestContentPreview() {
         final WebClient client = WebClient.of(server.httpUri());
-        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/requestContentSanitizer",
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/requestPreviewSanitizer",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
         assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
                 .isEqualTo("Hello Armeria!");
@@ -246,7 +246,7 @@ class ContentPreviewingServiceTest {
     @Test
     void sanitizeResponseContentPreview() {
         final WebClient client = WebClient.of(server.httpUri());
-        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/responseContentSanitizer",
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/responsePreviewSanitizer",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
         assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
                 .isEqualTo("Hello Armeria!");
@@ -258,7 +258,7 @@ class ContentPreviewingServiceTest {
     @Test
     void sanitizeContentPreview() {
         final WebClient client = WebClient.of(server.httpUri());
-        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/contentSanitizer",
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/previewSanitizer",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
         assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
                 .isEqualTo("Hello Armeria!");
