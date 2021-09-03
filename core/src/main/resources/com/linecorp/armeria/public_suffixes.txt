@@ -1900,7 +1900,6 @@ diamonds
 dielddanuorri.no
 diet
 digital
-diher.solutions
 dinosaur.museum
 direct
 direct.quickconnect.to
@@ -5465,7 +5464,6 @@ nba
 nc
 nc.tr
 nc.us
-nctu.me
 nd.us
 ne
 ne.jp
@@ -6801,7 +6799,6 @@ rs.ba
 rs.gov.br
 rs.leg.br
 rsc.cdn77.org
-rss.my.id
 rsvp
 ru
 ru.com
@@ -7143,6 +7140,7 @@ servemp3.com
 servep2p.com
 servepics.com
 servequake.com
+servers.run
 servesarcasm.com
 service.gov.scot
 service.gov.uk
