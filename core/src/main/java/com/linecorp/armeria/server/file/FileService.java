@@ -333,7 +333,7 @@ public final class FileService extends AbstractHttpService {
             if (cache == null) {
                 if (uncachedAttrs != null) {
                     if (decompress && encoding != null) {
-                        // The compressed data will be depressed while being served.
+                        // The compressed data will be decompressed while being served.
                         return new DecompressingHttpFile(uncachedFile, encoding,
                                                          guessFromPath(path, encoding.headerValue));
                     } else {

@@ -16,24 +16,16 @@
 
 package com.linecorp.armeria.server.file;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.server.file.FileServiceConfig.validateEntryCacheSpec;
-import static com.linecorp.armeria.server.file.FileServiceConfig.validateMaxCacheEntrySizeBytes;
-import static com.linecorp.armeria.server.file.FileServiceConfig.validateNonNegativeParameter;
-import static java.util.Objects.requireNonNull;
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
+import com.linecorp.armeria.common.*;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import java.time.Clock;
 import java.util.Map.Entry;
 
-import com.github.benmanes.caffeine.cache.CaffeineSpec;
-
-import com.linecorp.armeria.common.CacheControl;
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
+import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.server.file.FileServiceConfig.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builds a new {@link FileService} and its {@link FileServiceConfig}. Use the factory methods in
@@ -117,9 +109,11 @@ public final class FileServiceBuilder {
     }
 
     /**
-     * Sets whether pre-compressed files could be served after being decompressed, a client does not
+     * Sets whether pre-compressed files could be served after being decompressed, when a client does not
      * {@link HttpHeaderNames#ACCEPT_ENCODING accept} a compressed file. The compressed file will be
      * automatically decompressed depending on the extension of the compressed file.
+     * For example, files compressed with gzip should have the extension {@code ".gz"} and
+     * compressed with brotli should have the extension {@code ".br"}.
      *
      * <p>Note that this option is valid only when {@link #serveCompressedFiles(boolean)} is enabled.
      *
