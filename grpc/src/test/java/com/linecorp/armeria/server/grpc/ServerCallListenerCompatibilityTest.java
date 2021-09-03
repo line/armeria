@@ -34,8 +34,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -171,13 +169,13 @@ class ServerCallListenerCompatibilityTest {
                     final List<String> armeriaEvents = allEvents.get(i);
                     assertThat(armeriaEvents).matches(events -> {
                         // A server returned 2 messages. ArmeriaServerCall will invoke onReady() whenever a
-                        // message is correctly consumed with OK status.
-                        // However, the exact number of `onReady()` varies depending on when messages are emitted.
+                        // message is correctly consumed with OK status. However, the exact number of
+                        // `onReady()` varies depending on when messages are emitted.
                         return events.equals(expectedEvents) ||
                                events.equals(ImmutableList.of("onReady", "onMessage", "onHalfClose",
                                                               "onReady", "onComplete")) ||
-                                events.equals(ImmutableList.of("onReady", "onMessage", "onHalfClose",
-                                                               "onReady", "onReady", "onComplete"));
+                               events.equals(ImmutableList.of("onReady", "onMessage", "onHalfClose",
+                                                              "onReady", "onReady", "onComplete"));
                     }, "");
                 }
             }
