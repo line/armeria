@@ -62,8 +62,6 @@ import io.grpc.stub.StreamObserver;
 
 class ServerCallListenerCompatibilityTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(ServerCallListenerCompatibilityTest.class);
-
     private static final ListenerEventCollector eventCollector = new ListenerEventCollector();
 
     @BeforeEach
@@ -155,7 +153,6 @@ class ServerCallListenerCompatibilityTest {
                 // Waits 1 second for events to be fully collected.
                 Thread.sleep(1000);
                 allEvents.add(eventCollector.capture());
-                logger.info("{}.event: {}", i, allEvents.get(i));
                 if (i > 0) {
                     if (!hasResponse) {
                         assertThat(allEvents.get(i)).isEqualTo(allEvents.get(i - 1));
@@ -247,7 +244,6 @@ class ServerCallListenerCompatibilityTest {
         public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
             responseObserver.onError(
                     Status.INVALID_ARGUMENT.withDescription("invalid").asRuntimeException());
-            responseObserver.onCompleted();
         }
 
         @Override
@@ -255,7 +251,6 @@ class ServerCallListenerCompatibilityTest {
                                         StreamObserver<StreamingOutputCallResponse> responseObserver) {
             responseObserver.onError(
                     Status.INVALID_ARGUMENT.withDescription("invalid").asRuntimeException());
-            responseObserver.onCompleted();
         }
     }
 
