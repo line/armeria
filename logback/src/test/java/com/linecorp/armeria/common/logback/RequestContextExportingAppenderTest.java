@@ -36,6 +36,7 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.LoggerFactory;
@@ -162,17 +163,28 @@ class RequestContextExportingAppenderTest {
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
 
-    @Test
-    void testXmlConfig() throws Exception {
-        try {
-            final Logger logger = (Logger) LoggerFactory.getLogger("RCEA");
+    @Nested
+    class TestXmlConfigTest {
+        @BeforeEach
+        void beforeEach() throws Exception {
+            final JoranConfigurator configurator = new JoranConfigurator();
+            configurator.setContext(context);
+            context.reset();
+            configurator.doConfigure(getClass().getResource("testXmlConfig.xml"));
+        }
 
+        @AfterEach
+        void afterEach() throws Exception {
             final JoranConfigurator configurator = new JoranConfigurator();
             configurator.setContext(context);
             context.reset();
 
-            configurator.doConfigure(getClass().getResource("testXmlConfig.xml"));
+            configurator.doConfigure(getClass().getResource("/logback-test.xml"));
+        }
 
+        @Test
+        void testXmlConfig() throws Exception {
+            final Logger logger = (Logger) LoggerFactory.getLogger("RCEA");
             final RequestContextExportingAppender rcea =
                     (RequestContextExportingAppender) logger.getAppender("RCEA");
 
@@ -197,27 +209,11 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.bar", "some-name")
                            .containsEntry("baz", "some-value")
                            .hasSize(11);
-        } finally {
-            // Revert to the original configuration.
-            final JoranConfigurator configurator = new JoranConfigurator();
-            configurator.setContext(context);
-            context.reset();
-
-            configurator.doConfigure(getClass().getResource("/logback-test.xml"));
         }
-    }
 
-    @Test
-    void testXmlConfigExportPrefix() throws Exception {
-        try {
+        @Test
+        void testXmlConfigExportPrefix() throws Exception {
             final Logger logger = (Logger) LoggerFactory.getLogger("RCEA_WITH_PREFIX");
-
-            final JoranConfigurator configurator = new JoranConfigurator();
-            configurator.setContext(context);
-            context.reset();
-
-            configurator.doConfigure(getClass().getResource("testXmlConfig.xml"));
-
             final RequestContextExportingAppender rcea =
                     (RequestContextExportingAppender) logger.getAppender("RCEA_WITH_PREFIX");
 
@@ -243,26 +239,11 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
                            .hasSize(12);
-        } finally {
-            // Revert to the original configuration.
-            final JoranConfigurator configurator = new JoranConfigurator();
-            configurator.setContext(context);
-            context.reset();
-
-            configurator.doConfigure(getClass().getResource("/logback-test.xml"));
         }
-    }
 
-    @Test
-    void testMultipleExporters() throws Exception {
-        try {
+        @Test
+        void testMultipleExporters() throws Exception {
             final Logger logger = (Logger) LoggerFactory.getLogger("multiple-exporters");
-
-            final JoranConfigurator configurator = new JoranConfigurator();
-            configurator.setContext(context);
-            context.reset();
-
-            configurator.doConfigure(getClass().getResource("testXmlConfig.xml"));
 
             final RequestContextExportingAppender rcea1 =
                     (RequestContextExportingAppender) logger.getAppender("RCEA1");
@@ -280,13 +261,6 @@ class RequestContextExportingAppenderTest {
 
             assertThat(rcea1.exporter().export(ctx)).containsOnlyKeys("remote.ip");
             assertThat(rcea2.exporter().export(ctx)).containsOnlyKeys("remote.port");
-        } finally {
-            // Revert to the original configuration.
-            final JoranConfigurator configurator = new JoranConfigurator();
-            configurator.setContext(context);
-            context.reset();
-
-            configurator.doConfigure(getClass().getResource("/logback-test.xml"));
         }
     }
 

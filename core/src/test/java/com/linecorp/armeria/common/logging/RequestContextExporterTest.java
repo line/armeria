@@ -178,9 +178,9 @@ class RequestContextExporterTest {
                                       .build();
 
         ctx.setAttr(ATTR1, "foo");
-        assertThat(exporter1.export(ctx)).containsOnlyKeys("attrs.attr1");
-
         ctx.setAttr(ATTR2, "bar");
+
+        assertThat(exporter1.export(ctx)).containsOnlyKeys("attrs.attr1");
         assertThat(exporter2.export(ctx)).containsOnlyKeys("attrs.attr2");
     }
 
