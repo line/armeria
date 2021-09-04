@@ -74,11 +74,12 @@ jmh {
     }
 
     if (rootProject.hasProperty('jmh.params')) {
-        benchmarkParameters = [:]
+        def parameters = [:]
         rootProject.findProperty('jmh.params').split(';').each {
             def parts = it.split('=')
-            benchmarkParameters[parts[0]] = parts[1].tokenize(',')
+            parameters[parts[0]] = rootProject.objects.listProperty(String).value(parts[1].tokenize(','))
         }
+        benchmarkParameters = parameters
     }
 }
 
