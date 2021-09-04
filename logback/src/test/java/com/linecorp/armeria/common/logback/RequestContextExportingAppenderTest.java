@@ -164,7 +164,7 @@ class RequestContextExportingAppenderTest {
     }
 
     @Nested
-    class TestXmlConfigTest {
+    class XmlConfigTest {
         @BeforeEach
         void beforeEach() throws Exception {
             final JoranConfigurator configurator = new JoranConfigurator();
