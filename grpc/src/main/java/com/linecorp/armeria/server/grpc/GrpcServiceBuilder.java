@@ -123,7 +123,6 @@ public final class GrpcServiceBuilder {
     private ImmutableList.Builder<ServerInterceptor> interceptors;
 
     @Nullable
-    @UnstableApi
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
@@ -293,18 +292,6 @@ public final class GrpcServiceBuilder {
         return this;
     }
 
-    /**
-     * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
-     * service.
-     * @param unframedGrpcErrorHandler The function which maps the error response to a {@link HttpResponse}.
-     */
-    @UnstableApi
-    public GrpcServiceBuilder unframedGrpcErrorHandler(UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
-        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
-        this.unframedGrpcErrorHandler = unframedGrpcErrorHandler;
-        return this;
-    }
-
     private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
         checkState(protoReflectionServiceInterceptor == null,
                    "Attempting to add a ProtoReflectionService but one is already present. " +
@@ -435,6 +422,18 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder enableUnframedRequests(boolean enableUnframedRequests) {
         this.enableUnframedRequests = enableUnframedRequests;
+        return this;
+    }
+
+    /**
+     * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
+     * service.
+     * @param unframedGrpcErrorHandler The function which maps the error response to an {@link HttpResponse}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder unframedGrpcErrorHandler(UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
+        this.unframedGrpcErrorHandler = unframedGrpcErrorHandler;
         return this;
     }
 

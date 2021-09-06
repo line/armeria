@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,6 +30,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;
+import io.grpc.Status.Code;
 
 /**
  * Error handler which maps grpc response to {@link HttpStatus}.
@@ -59,11 +60,10 @@ public interface UnframedGrpcErrorHandler {
         return (ctx, status, response) -> {
             final HttpHeaders headers = !response.trailers().isEmpty() ?
                                         response.trailers() : response.headers();
-            final String grpcStatusCode = headers.get(GrpcHeaderNames.GRPC_STATUS);
-            final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
-            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
-            final ImmutableMap.Builder<String, Object> builder =
-                    ImmutableMap.<String, Object>builder().put("code", grpcStatus.getCode().name());
+            final Code grpcCode = status.getCode();
+            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcCode);
+            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+            builder.put("code", grpcCode.name());
             final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 builder.put("message", grpcMessage);
@@ -71,7 +71,7 @@ public interface UnframedGrpcErrorHandler {
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.JSON_UTF_8)
                                                                    .add(GrpcHeaderNames.GRPC_STATUS,
-                                                                        grpcStatusCode)
+                                                                        String.valueOf(grpcCode.value()))
                                                                    .build();
             return HttpResponse.ofJson(responseHeaders, builder.build());
         };
@@ -84,16 +84,15 @@ public interface UnframedGrpcErrorHandler {
         return (ctx, status, response) -> {
             final HttpHeaders headers = !response.trailers().isEmpty() ?
                                         response.trailers() : response.headers();
-            final String grpcStatusCode = headers.get(GrpcHeaderNames.GRPC_STATUS);
-            final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
-            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
+            final Code grpcCode = status.getCode();
+            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcCode);
             final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
             message.append(", ").append(httpStatus.reasonPhrase()).append('\n');
             message.append("Caused by: ").append('\n');
             message.append("grpc-status: ")
-                   .append(grpcStatusCode)
+                   .append(grpcCode.value())
                    .append(", ")
-                   .append(grpcStatus.getCode().name());
+                   .append(grpcCode.name());
             final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
@@ -101,7 +100,7 @@ public interface UnframedGrpcErrorHandler {
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.PLAIN_TEXT_UTF_8)
                                                                    .add(GrpcHeaderNames.GRPC_STATUS,
-                                                                        grpcStatusCode)
+                                                                        String.valueOf(grpcCode.value()))
                                                                    .build();
             return HttpResponse.of(responseHeaders, HttpData.ofUtf8(message.toString()));
         };
