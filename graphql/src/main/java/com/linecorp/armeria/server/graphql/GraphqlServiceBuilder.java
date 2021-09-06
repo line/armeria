@@ -43,7 +43,6 @@ import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLSchema;
-import graphql.schema.GraphQLSchema.Builder;
 import graphql.schema.GraphQLTypeVisitor;
 import graphql.schema.SchemaTransformer;
 import graphql.schema.idl.RuntimeWiring;
@@ -220,7 +219,7 @@ public final class GraphqlServiceBuilder {
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
-        final GraphQLSchema schema = schema();
+        final GraphQLSchema schema = makeSchema();
         GraphQL.Builder builder = GraphQL.newGraphQL(schema);
         final List<Instrumentation> instrumentations = this.instrumentations.build();
         if (!instrumentations.isEmpty()) {
@@ -241,7 +240,7 @@ public final class GraphqlServiceBuilder {
         return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
     }
 
-    private GraphQLSchema schema() {
+    private GraphQLSchema makeSchema() {
         if (schema != null) {
             return schema;
         }
