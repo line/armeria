@@ -65,7 +65,7 @@ open class AnnotatedServiceFlowBenchmark {
         val httpPort = server.activePorts().values
             .first { obj: ServerPort -> obj.hasHttp() }.localAddress().port
 
-        client = WebClient.of("h2c://localhost:$httpPort")
+        client = WebClient.of("h2c://127.0.0.1:$httpPort")
     }
 
     @TearDown

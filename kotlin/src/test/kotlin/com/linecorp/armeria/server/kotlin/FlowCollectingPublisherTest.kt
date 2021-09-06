@@ -14,11 +14,12 @@
  * under the License
  */
 
-package com.linecorp.armeria.server
+package com.linecorp.armeria.server.kotlin
 
 import com.linecorp.armeria.internal.common.kotlin.FlowCollectingPublisher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.flow
@@ -28,6 +29,7 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
+import reactor.test.StepVerifier
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedTransferQueue
@@ -37,31 +39,10 @@ import java.util.concurrent.atomic.AtomicReference
 class FlowCollectingPublisherTest {
     @Test
     fun test_shouldCompleteAfterConsumingAllElements() {
-        val queue: BlockingQueue<Any> = LinkedTransferQueue()
-
-        FlowCollectingPublisher(flowOf(1, 2))
-            .subscribe(object : Subscriber<Int> {
-                override fun onSubscribe(s: Subscription) {
-                    queue.add("onSubscribe")
-                    s.request(Long.MAX_VALUE)
-                }
-
-                override fun onNext(t: Int) {
-                    queue.add(t)
-                }
-
-                override fun onError(t: Throwable) {
-                    queue.add("onError") // never reaches here
-                }
-
-                override fun onComplete() {
-                    queue.add("onComplete")
-                }
-            })
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("onSubscribe")
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo(1)
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo(2)
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("onComplete")
+        val pub = FlowCollectingPublisher(flowOf(1, 2))
+        StepVerifier.create(pub)
+            .expectNext(1, 2)
+            .verifyComplete()
     }
 
     @Test
@@ -139,45 +120,38 @@ class FlowCollectingPublisherTest {
     }
 
     @Test
-    fun test_errorAfterCancellationIsNotReported() {
-        val queue: BlockingQueue<Any> = LinkedTransferQueue()
+    fun test_emitsOnErrorSignalUponUpstreamCancellation() {
+        val pub = FlowCollectingPublisher(
+            flow {
+                emit("onNext")
+                currentCoroutineContext().cancel()
+            }
+        )
+        StepVerifier.create(pub)
+            .expectNext("onNext")
+            .expectError(CancellationException::class.java)
+            .verify()
+    }
 
-        FlowCollectingPublisher(
+    @Test
+    fun test_errorAfterCancellationIsNotSignaled() {
+        val pub = FlowCollectingPublisher(
             flow {
                 try {
                     emit("onNext")
+                    emit("onNext")
                 } catch (t: CancellationException) {
-                    queue.add("cancellationException")
+                    // do nothing
                 } finally {
                     throw RuntimeException()
                 }
             }
-        ).subscribe(object : Subscriber<String> {
-            private lateinit var subscription: Subscription
-
-            override fun onComplete() {
-                queue.add("onComplete") // never reaches here
-            }
-
-            override fun onSubscribe(s: Subscription) {
-                queue.add("onSubscribe")
-                subscription = s
-                subscription.request(2)
-            }
-
-            override fun onNext(t: String) {
-                queue.add(t)
-                subscription.cancel()
-            }
-
-            override fun onError(t: Throwable) {
-                queue.add("onError") // never reaches here
-            }
-        })
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("onSubscribe")
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("onNext")
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isEqualTo("cancellationException")
-        assertThat(queue.poll(3, TimeUnit.SECONDS)).isNull()
+        )
+        StepVerifier.create(pub)
+            .expectSubscription()
+            .expectNext("onNext")
+            .thenCancel()
+            .verify()
     }
 
     @Test

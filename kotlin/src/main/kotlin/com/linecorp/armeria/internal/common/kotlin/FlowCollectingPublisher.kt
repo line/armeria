@@ -46,10 +46,13 @@ internal class FlowCollectingPublisher<T : Any>(
                 delegate.write(it)
                 delegate.whenConsumed().await()
             }
-            delegate.close()
         }
         delegate.whenComplete().handle { _, _ -> cancel() }
         delegate.subscribe(s)
+    }
+
+    override fun onCompleted(value: Unit) {
+        delegate.close()
     }
 
     override fun onCancelled(cause: Throwable, handled: Boolean) {

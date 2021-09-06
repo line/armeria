@@ -33,7 +33,7 @@ class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider 
     ): ResponseConverterFunction? =
         returnType
             .toClass()
-            .let {
+            ?.let {
                 if (Flow::class.java.isAssignableFrom(it)) {
                     FlowResponseConverterFunction(responseConverter)
                 } else {

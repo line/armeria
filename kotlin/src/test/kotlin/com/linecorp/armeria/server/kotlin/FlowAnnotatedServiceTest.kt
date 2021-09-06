@@ -14,20 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server
+package com.linecorp.armeria.server.kotlin
 
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.HttpData
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
+import com.linecorp.armeria.common.ResponseHeaders
 import com.linecorp.armeria.common.sse.ServerSentEvent
+import com.linecorp.armeria.server.Route
+import com.linecorp.armeria.server.ServerBuilder
+import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.ProducesEventStream
+import com.linecorp.armeria.server.annotation.ProducesJson
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences
 import com.linecorp.armeria.server.annotation.ProducesOctetStream
 import com.linecorp.armeria.server.annotation.ProducesText
-import com.linecorp.armeria.server.kotlin.CoroutineContextService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
@@ -40,12 +44,9 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import org.reactivestreams.Subscriber
-import org.reactivestreams.Subscription
-import java.util.concurrent.CountDownLatch
+import reactor.test.StepVerifier
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -80,6 +81,14 @@ internal class FlowAnnotatedServiceTest {
             "id:1\n" + "event:MESSAGE_DELIVERED\n" + "data:{\"message_id\":1}\n" + "\n",
             "id:2\n" + "event:FOLLOW_REQUEST\n" + "data:{\"user_id\":123}\n" + "\n",
             ""
+        )
+    }
+
+    @Test
+    fun test_aggregatedJson(): Unit = runBlocking {
+        val aggregated = client.get("/flow/aggregated-json-obj").aggregate().await()
+        assertThat(aggregated.contentUtf8()).isEqualTo(
+            "[{\"name\":\"foo\",\"age\":10},{\"name\":\"bar\",\"age\":20},{\"name\":\"baz\",\"age\":30}]"
         )
     }
 
@@ -167,11 +176,19 @@ internal class FlowAnnotatedServiceTest {
                             )
                         }
 
+                        @Get("/aggregated-json-obj")
+                        @ProducesJson
+                        fun aggregatedJson() = flow {
+                            emit(Member(name = "foo", age = 10))
+                            emit(Member(name = "bar", age = 20))
+                            emit(Member(name = "baz", age = 30))
+                        }
+
                         @Blocking
                         @Get("/blocking-annotation")
                         @ProducesText
                         suspend fun blockingAnnotation(): Flow<String> = flow {
-                            checkNotNull(ServiceRequestContext.currentOrNull())
+                            ServiceRequestContext.current()
                             assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
                             emit("OK")
                         }
@@ -247,32 +264,15 @@ private data class User(
 }
 
 internal infix fun HttpResponse.shouldProduce(expected: List<String>) {
-    val stream = expected.toMutableList()
-    val latch = CountDownLatch(1)
-    val cause = AtomicReference<Throwable?>()
-
-    this.split().body().subscribe(object : Subscriber<HttpData> {
-        lateinit var subscription: Subscription
-
-        override fun onSubscribe(s: Subscription) {
-            subscription = s
-            s.request(Long.MAX_VALUE)
+    val pub = this.map {
+        when (it) {
+            is ResponseHeaders -> it.status()
+            is HttpData -> it.toStringUtf8()
+            else -> throw IllegalStateException()
         }
-
-        override fun onNext(t: HttpData) {
-            assertThat(t.toStringUtf8()).isEqualTo(stream.removeAt(0))
-        }
-
-        override fun onError(t: Throwable) {
-            cause.set(t)
-            subscription.cancel()
-            latch.countDown()
-        }
-
-        override fun onComplete() {
-            latch.countDown()
-        }
-    })
-    latch.await()
-    cause.get()?.also { throw it }
+    }
+    StepVerifier.create(pub)
+        .expectNext(HttpStatus.OK)
+        .expectNextSequence(expected)
+        .verifyComplete()
 }

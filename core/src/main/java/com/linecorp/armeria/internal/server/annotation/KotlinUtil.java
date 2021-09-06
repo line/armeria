@@ -186,7 +186,6 @@ final class KotlinUtil {
 
     static Type kFunctionReturnType(Method method) {
         assert K_FUNCTION_RETURN_TYPE != null;
-        requireNonNull(K_FUNCTION_RETURN_TYPE, "K_FUNCTION_RETURN_TYPE");
         try {
             return (Type) K_FUNCTION_RETURN_TYPE.invoke(null, method);
         } catch (Exception e) {

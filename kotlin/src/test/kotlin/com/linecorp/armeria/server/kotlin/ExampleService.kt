@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server
+package com.linecorp.armeria.server.kotlin
 
 class ExampleService {
     fun normal(): Int = 1
