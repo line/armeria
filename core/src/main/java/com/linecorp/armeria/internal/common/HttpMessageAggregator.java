@@ -235,7 +235,9 @@ public final class HttpMessageAggregator {
             for (int i = start; i < end; i++) {
                 try (HttpData data = (HttpData) objects.get(i)) {
                     final ByteBuf buf = data.byteBuf();
-                    if (!data.isEmpty()) {
+                    if (data.isEmpty()) {
+                        data.close();
+                    } else {
                         merged.writeBytes(buf, buf.readerIndex(), data.length());
                     }
                 }
@@ -257,9 +259,11 @@ public final class HttpMessageAggregator {
 
     public static HttpData aggregateData(HttpData data1, HttpData data2, @Nullable ByteBufAllocator alloc) {
         if (data2.isEmpty()) {
+            data2.close();
             return data1;
         }
         if (data1.isEmpty()) {
+            data1.close();
             return data2;
         }
 
