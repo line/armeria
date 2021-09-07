@@ -34,10 +34,12 @@ if [ "${START_SERVER}" = "true" ]; then
   BASEDIR=$(dirname $0)
   "${BASEDIR}"/../../../gradlew :it:grpc:ghz:run -PnoWeb &
   GRPC_SERVER_PID=$!
+
+  # TODO(ikhoon): Use 'curl' to check the healthiness of the server
+  # Waits for the server to be fully started
+  sleep "${SERVER_STARTUP_TIME}"
 fi
 
-# Waits for the server to be fully started
-sleep "${SERVER_STARTUP_TIME}"
 
 echo "==> Running gRPC benchmark using ghz..."
 ghz --cpus "${GRPC_CLIENT_CPUS}" \
