@@ -15,9 +15,9 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.StringMultimap.HASH_CODE_SEED;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -609,7 +609,49 @@ abstract class StringMultimapBuilder<
     }
 
     @Override
-    public final String toString() {
-        return getClass().getSimpleName() + firstNonNull(getters(), "[]");
+    public int hashCode() {
+        final CONTAINER getters = getters();
+        if (getters != null) {
+            return getters.hashCode();
+        } else {
+            return HASH_CODE_SEED;
+        }
     }
+
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof StringMultimapBuilder)) {
+            return false;
+        }
+
+        @SuppressWarnings("NullableProblems")
+        final StringMultimapBuilder<?, ?, ?, ?> that = (StringMultimapBuilder<?, ?, ?, ?>) o;
+        if (size() != that.size()) {
+            return false;
+        }
+        if (isEmpty() && that.isEmpty()) {
+            return true;
+        }
+
+        final CONTAINER getters = getters();
+        if (getters != null) {
+            return getters.equals(that.getters());
+        }
+        return false;
+    }
+
+    @Override
+    public final String toString() {
+        final CONTAINER getters = getters();
+        if (getters != null) {
+            return getters.toString();
+        } else {
+            return "[]";
+        }
+    }
+
 }

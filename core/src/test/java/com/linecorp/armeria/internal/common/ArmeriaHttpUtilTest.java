@@ -58,7 +58,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
@@ -204,7 +203,7 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void endOfStreamSet() {
-        final Http2Headers in = new DefaultHttp2Headers();
+        final Http2Headers in = new ArmeriaHttp2Headers();
         in.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
         final HttpHeaders out = toArmeria(in, true, true);
         assertThat(out.isEndOfStream()).isTrue();
@@ -215,7 +214,7 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void endOfStreamSetEmpty() {
-        final Http2Headers in = new DefaultHttp2Headers();
+        final Http2Headers in = new ArmeriaHttp2Headers();
         final HttpHeaders out = toArmeria(in, true, true);
         assertThat(out.isEndOfStream()).isTrue();
 
@@ -225,18 +224,22 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void inboundCookiesMustBeMergedForHttp2() {
-        final Http2Headers in = new DefaultHttp2Headers();
+        final Http2Headers in = new ArmeriaHttp2Headers();
 
+        in.add(HttpHeaderNames.METHOD, "GET");
+        in.add(HttpHeaderNames.SCHEME, "http");
+        in.add(HttpHeaderNames.AUTHORITY, "foo.com");
+        in.add(HttpHeaderNames.PATH, "/");
         in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
         in.add(HttpHeaderNames.COOKIE, "e=f;g=h");
         in.addObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final HttpHeaders out = toArmeria(in, true, false);
+        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(null, in, false, "http", null);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
-                .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
+                .containsExactly("a=b; c=d; e=f;g=h; i=j; k=l;");
     }
 
     @Test
@@ -460,7 +463,7 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void convertedHeaderTypes() {
-        final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
+        final Http2Headers in = new ArmeriaHttp2Headers().set("a", "b");
 
         // Request headers without pseudo headers.
         assertThat(toArmeria(in, true, false)).isInstanceOf(HttpHeaders.class)
@@ -503,7 +506,7 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void toArmeriaRequestHeaders() {
-        final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
+        final Http2Headers in = new ArmeriaHttp2Headers().set("a", "b");
 
         final InetSocketAddress socketAddress = new InetSocketAddress(36462);
         final Channel channel = mock(Channel.class);

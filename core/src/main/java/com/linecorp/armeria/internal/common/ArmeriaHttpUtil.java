@@ -50,6 +50,7 @@ import java.util.function.BiConsumer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.base.Ascii;
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -236,6 +237,7 @@ public final class ArmeriaHttpUtil {
 
     private static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
     private static final String COOKIE_SEPARATOR = "; ";
+    private static final Joiner COOKIE_JOINER = Joiner.on(COOKIE_SEPARATOR);
 
     @Nullable
     private static final LoadingCache<AsciiString, String> HEADER_VALUE_CACHE =
@@ -505,61 +507,48 @@ public final class ArmeriaHttpUtil {
     public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
                                                          boolean endOfStream, String scheme,
                                                          ServerConfig cfg) {
-        final RequestHeadersBuilder builder = RequestHeaders.builder();
-        toArmeria(builder, headers, endOfStream);
+        assert headers instanceof ArmeriaHttp2Headers;
+        final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
+        builder.endOfStream(endOfStream);
         // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-        if (builder.authority() == null) {
+
+        if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
             builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
         }
-        return builder.build();
+        final List<String> cookies = builder.getAll(HttpHeaderNames.COOKIE);
+        if (cookies.size() > 1) {
+            // Cookies must be concatenated into a single octet string.
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
+            builder.set(HttpHeaderNames.COOKIE, COOKIE_JOINER.join(cookies));
+        }
+        return RequestHeaders.of(builder.build());
     }
 
     /**
      * Converts the specified Netty HTTP/2 into Armeria HTTP/2 headers.
      */
-    public static HttpHeaders toArmeria(Http2Headers headers, boolean request, boolean endOfStream) {
-        final HttpHeadersBuilder builder;
+    public static HttpHeaders toArmeria(Http2Headers http2Headers, boolean request, boolean endOfStream) {
+        assert http2Headers instanceof ArmeriaHttp2Headers;
+        final HttpHeadersBuilder delegate = ((ArmeriaHttp2Headers) http2Headers).delegate();
+        delegate.endOfStream(endOfStream);
+        HttpHeaders headers = delegate.build();
+
         if (request) {
-            builder = headers.contains(HttpHeaderNames.METHOD) ? RequestHeaders.builder()
-                                                               : HttpHeaders.builder();
+            if (headers.contains(HttpHeaderNames.METHOD)) {
+                headers = RequestHeaders.of(headers);
+            }
+            // http2Headers should be a trailers
         } else {
-            builder = headers.contains(HttpHeaderNames.STATUS) ? ResponseHeaders.builder()
-                                                               : HttpHeaders.builder();
-        }
-
-        toArmeria(builder, headers, endOfStream);
-        return builder.build();
-    }
-
-    private static void toArmeria(HttpHeadersBuilder builder, Http2Headers headers, boolean endOfStream) {
-        builder.sizeHint(headers.size());
-        builder.endOfStream(endOfStream);
-
-        StringJoiner cookieJoiner = null;
-        for (Entry<CharSequence, CharSequence> e : headers) {
-            final AsciiString name = HttpHeaderNames.of(e.getKey());
-            final CharSequence value = e.getValue();
-
-            // Cookies must be concatenated into a single octet string.
-            // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
-            if (name.equals(HttpHeaderNames.COOKIE)) {
-                if (cookieJoiner == null) {
-                    cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
-                }
-                COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
-            } else {
-                builder.add(name, convertHeaderValue(name, value));
+            if (headers.contains(HttpHeaderNames.STATUS)) {
+                headers = ResponseHeaders.of(headers);
             }
         }
-
-        if (cookieJoiner != null && cookieJoiner.length() != 0) {
-            builder.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
-        }
+        return headers;
     }
 
     /**
@@ -729,18 +718,11 @@ public final class ArmeriaHttpUtil {
      *
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
-    public static Http2Headers toNettyHttp2ServerHeaders(HttpHeaders inputHeaders) {
-        final int headerSizeHint = inputHeaders.size() + 2; // server and data headers
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
-        for (Entry<AsciiString, String> entry : inputHeaders) {
-            final AsciiString name = entry.getKey();
-            final String value = entry.getValue();
-            if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
-                continue;
-            }
-            outputHeaders.add(name, value);
+    public static Http2Headers toNettyHttp2ServerHeaders(HttpHeadersBuilder inputHeaders) {
+        for (Entry<AsciiString, AsciiString> disallowed : HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST) {
+           inputHeaders.remove(disallowed.getKey());
         }
-        return outputHeaders;
+        return new ArmeriaHttp2Headers(inputHeaders);
     }
 
     /**
@@ -749,22 +731,21 @@ public final class ArmeriaHttpUtil {
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
     public static Http2Headers toNettyHttp2ServerTrailer(HttpHeaders inputHeaders) {
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, inputHeaders.size());
-        for (Entry<AsciiString, String> entry : inputHeaders) {
-            final AsciiString name = entry.getKey();
-            final String value = entry.getValue();
-            if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
-                continue;
-            }
-            if (ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST.contains(name)) {
-                continue;
-            }
-            if (isTrailerDisallowed(name)) {
-                continue;
-            }
-            outputHeaders.add(name, value);
+        final HttpHeadersBuilder builder = inputHeaders.toBuilder();
+
+        for (Entry<AsciiString, AsciiString> disallowed : HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST) {
+            builder.remove(disallowed.getKey());
         }
-        return outputHeaders;
+
+        for (AsciiString disallowed : ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST) {
+            builder.remove(disallowed);
+        }
+
+        for (Entry<AsciiString, AsciiString> disallowed: HTTP_TRAILER_DISALLOWED_LIST) {
+            builder.remove(disallowed.getKey());
+        }
+
+        return new ArmeriaHttp2Headers(builder);
     }
 
     /**
@@ -990,7 +971,7 @@ public final class ArmeriaHttpUtil {
         return headers;
     }
 
-    private static String convertHeaderValue(AsciiString name, CharSequence value) {
+    public static String convertHeaderValue(AsciiString name, CharSequence value) {
         if (!(value instanceof AsciiString)) {
             return value.toString();
         }

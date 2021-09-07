@@ -275,8 +275,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse of(HttpStatus status, MediaType mediaType,
                            @FormatString String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
-        return of(status, mediaType,
-                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
+        return of(status, mediaType, HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
     }
 
     /**
