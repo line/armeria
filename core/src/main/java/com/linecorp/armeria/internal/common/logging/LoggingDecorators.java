@@ -126,7 +126,9 @@ public final class LoggingDecorators {
 
         if (responseLogLevel.isEnabled(logger)) {
             final RequestContext ctx = log.context();
-            if (!log.responseHeaders().status().isServerError() && isTransientService(ctx)) {
+            if (responseCause == null &&
+                !log.responseHeaders().status().isServerError() &&
+                isTransientService(ctx)) {
                 return;
             }
 
