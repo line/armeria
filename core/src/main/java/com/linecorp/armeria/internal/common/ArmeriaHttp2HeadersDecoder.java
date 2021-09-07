@@ -27,6 +27,6 @@ public final class ArmeriaHttp2HeadersDecoder extends DefaultHttp2HeadersDecoder
 
     @Override
     protected Http2Headers newHeaders() {
-        return new ArmeriaHttp2Headers();
+        return new ArmeriaHttp2Headers().sizeHint(numberOfHeadersGuess());
     }
 }

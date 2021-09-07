@@ -55,6 +55,11 @@ class ArmeriaHttp2Headers implements Http2Headers {
         return delegate;
     }
 
+    ArmeriaHttp2Headers sizeHint(int sizeHint) {
+        delegate.sizeHint(sizeHint);
+        return this;
+    }
+
     @Nullable
     @Override
     public CharSequence get(CharSequence name) {
