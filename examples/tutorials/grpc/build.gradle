@@ -1,0 +1,20 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':core')
+    implementation project(':grpc')
+
+    compileOnly 'javax.annotation:javax.annotation-api'
+    runtimeOnly 'org.slf4j:slf4j-simple'
+
+    testImplementation project(':junit5')
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+}
+
+application {
+//    mainClass.set('example.armeria.grpc.Main')
+}
+

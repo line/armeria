@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
@@ -44,7 +43,7 @@ public final class Main {
 
     static void configureServices(ServerBuilder sb) {
         final HelloRequest exampleRequest = HelloRequest.newBuilder().setName("Armeria").build();
-        final HttpServiceWithRoutes grpcService =
+        final GrpcService grpcService =
                 GrpcService.builder()
                            .addService(new HelloServiceImpl())
                            // See https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md

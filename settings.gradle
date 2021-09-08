@@ -134,3 +134,5 @@ includeWithFlags ':examples:spring-boot-webflux',                  'java'
 includeWithFlags ':examples:static-files',                         'java'
 includeWithFlags ':examples:thrift',                               'java'
 includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java'
+includeWithFlags ':examples:tutorials:grpc-tutorial',              'java'
+project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')

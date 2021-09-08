@@ -90,7 +90,7 @@ public final class BlogService {
     public HttpResponse deleteBlogPost(@Param int id) {
         final BlogPost removed = blogPosts.remove(id);
         if (removed == null) {
-            throw new IllegalArgumentException("The blog post does not exist. id: " + id);
+            throw new IllegalArgumentException("The blog post does not exist. ID: " + id);
             // Or we can simply return a NOT_FOUND response.
             // return HttpResponse.of(HttpStatus.NOT_FOUND);
         }

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package example.armeria.server.blog.grpc;
+option java_package = "example.armeria.server.blog.grpc";
+
+import "google/protobuf/timestamp.proto";
+
+service BlogService {
+  rpc CreateBlogPost (BlogPost) returns (BlogPost) {}
+  rpc GetBlogPost (BlogId) returns (BlogPost) {}
+  rpc GetBlogPosts (Sort) returns (stream BlogPost) {}
+  rpc UpdateBlogPost (BlogPost) returns (BlogPost) {}
+  rpc DeleteBlogPost (BlogId) returns (BlogId) {}
+}
+
+message BlogPost {
+  int32 id = 1;
+  string title = 2;
+  string content = 3;
+  int64 createdAt = 4;
+  int64 modifiedAt = 5;
+}
+
+message BlogId {
+  int32 id = 1;
+}
+
+message Sort {
+  bool descending = 1;
+}
