@@ -33,7 +33,7 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 
 /**
- * Error handler which maps grpc response to {@link HttpStatus}.
+ * Error handler which maps a gRPC response to an {@link HttpResponse}.
  */
 @FunctionalInterface
 @UnstableApi

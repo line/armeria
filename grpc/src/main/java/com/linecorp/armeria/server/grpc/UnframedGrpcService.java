@@ -79,8 +79,6 @@ import io.grpc.Status;
  */
 final class UnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
 
-    private static final char LINE_SEPARATOR = '\n';
-
     private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
