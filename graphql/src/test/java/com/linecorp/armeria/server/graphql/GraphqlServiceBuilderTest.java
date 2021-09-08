@@ -52,9 +52,9 @@ class GraphqlServiceBuilderTest {
     }
 
     @Test
-    void specifySchemaURL() throws Exception {
-        final URL graphqlSchemaURL = getClass().getResource("/test.graphqls");
-        final GraphqlService service = new GraphqlServiceBuilder().schemaURL(graphqlSchemaURL).build();
+    void specifySchemaUrl() throws Exception {
+        final URL graphqlSchemaUrl = getClass().getResource("/test.graphqls");
+        final GraphqlService service = new GraphqlServiceBuilder().schemaUrl(graphqlSchemaUrl).build();
         assertThat(service).isNotNull();
     }
 

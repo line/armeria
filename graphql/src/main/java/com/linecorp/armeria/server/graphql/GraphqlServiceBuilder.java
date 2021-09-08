@@ -60,7 +60,7 @@ public final class GraphqlServiceBuilder {
 
     private static final List<String> DEFAULT_SCHEMA_FILE_NAMES = ImmutableList.of("schema.graphqls",
                                                                                    "schema.graphql");
-    private final ImmutableList.Builder<URL> schemaURLs = ImmutableList.builder();
+    private final ImmutableList.Builder<URL> schemaUrls = ImmutableList.builder();
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =
             ImmutableList.builder();
@@ -92,7 +92,7 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
         requireNonNull(schemaFiles, "schemaFiles");
-        return schemaURL(Streams.stream(schemaFiles)
+        return schemaUrl(Streams.stream(schemaFiles)
                                 .map(file -> {
                                     try {
                                         return file.toURI().toURL();
@@ -106,21 +106,21 @@ public final class GraphqlServiceBuilder {
      * Adds the schema {@link URL}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphqlServiceBuilder schemaURL(URL... schemaURLs) {
-        return schemaURL(ImmutableList.copyOf(requireNonNull(schemaURLs, "schemaURLs")));
+    public GraphqlServiceBuilder schemaUrl(URL... schemaUrls) {
+        return schemaUrl(ImmutableList.copyOf(requireNonNull(schemaUrls, "schemaUrls")));
     }
 
     /**
      * Adds the schema {@link URL}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphqlServiceBuilder schemaURL(Iterable<URL> schemaURLs) {
-        this.schemaURLs.addAll(requireNonNull(schemaURLs, "schemaURLs"));
+    public GraphqlServiceBuilder schemaUrl(Iterable<URL> schemaUrls) {
+        this.schemaUrls.addAll(requireNonNull(schemaUrls, "schemaUrls"));
         return this;
     }
 
     /**
-     * Adds the {@link GraphQLSchema}.
+     * Sets the {@link GraphQLSchema}.
      */
     public GraphqlServiceBuilder schema(GraphQLSchema schema) {
         this.schema = requireNonNull(schema, "schema");
@@ -245,7 +245,7 @@ public final class GraphqlServiceBuilder {
             return schema;
         }
 
-        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaURLs.build());
+        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaUrls.build());
         final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfigurators.build());
         GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring);
         final List<GraphQLTypeVisitor> typeVisitors = this.typeVisitors.build();
