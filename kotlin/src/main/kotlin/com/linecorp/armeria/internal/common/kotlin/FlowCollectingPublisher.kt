@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.common.stream.DefaultStreamMessage
+import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.AbstractCoroutine
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -36,6 +37,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 @OptIn(InternalCoroutinesApi::class)
 internal class FlowCollectingPublisher<T : Any>(
     private val flow: Flow<T>,
+    private val ctx: ServiceRequestContext,
     context: CoroutineContext = EmptyCoroutineContext
 ) : Publisher<T>, AbstractCoroutine<Unit>(context, initParentJob = false, active = true) {
     private val delegate = DefaultStreamMessage<T>()
@@ -48,7 +50,7 @@ internal class FlowCollectingPublisher<T : Any>(
             }
         }
         delegate.whenComplete().handle { _, _ -> cancel() }
-        delegate.subscribe(s)
+        delegate.subscribe(s, ctx.eventLoop())
     }
 
     override fun onCompleted(value: Unit) {

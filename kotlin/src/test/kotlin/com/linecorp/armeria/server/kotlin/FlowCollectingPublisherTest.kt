@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.server.kotlin
 
+import com.linecorp.armeria.common.HttpMethod
+import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.internal.common.kotlin.FlowCollectingPublisher
+import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.cancel
@@ -36,10 +39,12 @@ import java.util.concurrent.LinkedTransferQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
+private val ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"))
+
 class FlowCollectingPublisherTest {
     @Test
     fun test_shouldCompleteAfterConsumingAllElements() {
-        val pub = FlowCollectingPublisher(flowOf(1, 2))
+        val pub = FlowCollectingPublisher(flowOf(1, 2), ctx)
         StepVerifier.create(pub)
             .expectNext(1, 2)
             .verifyComplete()
@@ -56,7 +61,8 @@ class FlowCollectingPublisherTest {
                     emit(it)
                     queue.add(it)
                 }
-            }
+            },
+            ctx
         ).subscribe(object : Subscriber<Int> {
             private lateinit var subscription: Subscription
 
@@ -92,7 +98,8 @@ class FlowCollectingPublisherTest {
                     emit(it)
                     queue.add(it)
                 }
-            }.buffer(capacity = 1)
+            }.buffer(capacity = 1),
+            ctx
         ).subscribe(object : Subscriber<Int> {
             private lateinit var subscription: Subscription
 
@@ -125,7 +132,8 @@ class FlowCollectingPublisherTest {
             flow {
                 emit("onNext")
                 currentCoroutineContext().cancel()
-            }
+            },
+            ctx
         )
         StepVerifier.create(pub)
             .expectNext("onNext")
@@ -145,7 +153,8 @@ class FlowCollectingPublisherTest {
                 } finally {
                     throw RuntimeException()
                 }
-            }
+            },
+            ctx
         )
         StepVerifier.create(pub)
             .expectSubscription()
@@ -164,6 +173,7 @@ class FlowCollectingPublisherTest {
                 coroutineNameCaptor.set(currentCoroutineContext()[CoroutineName])
                 emit(1)
             },
+            ctx = ctx,
             context = context
         ).subscribe(object : Subscriber<Int> {
             override fun onSubscribe(s: Subscription) {}
