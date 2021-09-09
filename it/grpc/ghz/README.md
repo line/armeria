@@ -14,7 +14,7 @@ Otherwise, please refer to [ghz#install](https://github.com/bojand/ghz#install).
 ./bench.sh
 
 # Load the running gRPC server that is listening on 50051 port.
-START_SERVER=false ./bench.sh
+GRPC_SERVER_START=false ./bench.sh
 ```
 
 See [bench.sh](./bench.sh) for more options.

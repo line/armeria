@@ -20,7 +20,6 @@ then
     exit
 fi
 
-
 stop_server() {
   if [ -n "${GRPC_SERVER_PID}" ]; then
     echo "==> ✋ Stopping gRPC server..."
