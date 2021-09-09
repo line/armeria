@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
@@ -227,8 +226,7 @@ public final class FileService extends AbstractHttpService {
                 return UnmodifiableFuture.completedFuture(file);
             }
 
-            final boolean endsWithSlash =
-                    decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/';
+            final boolean endsWithSlash = decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/';
             if (endsWithSlash) {
                 // Try index.html if it was a directory access.
                 final String indexPath = decodedMappedPath + "index.html";
@@ -275,8 +273,7 @@ public final class FileService extends AbstractHttpService {
                     return config.vfs().canList(ctx.blockingTaskExecutor(), decodedMappedPath);
                 }).thenApply(canList -> {
                     if (canList) {
-                        throw HttpResponseException.of(
-                                HttpResponse.ofRedirect(HttpStatus.TEMPORARY_REDIRECT, ctx.path() + '/'));
+                        throw HttpResponseException.of(HttpResponse.ofRedirect(ctx.path() + '/'));
                     } else {
                         return HttpFile.nonExistent();
                     }
@@ -398,7 +395,8 @@ public final class FileService extends AbstractHttpService {
 
         return HttpFile.from(uncachedFile.aggregateWithPooledObjects(executor, alloc).thenApply(aggregated -> {
             if (decompress && encoding != null) {
-                aggregated = decompress(aggregated, encoding, alloc);
+                assert aggregated instanceof HttpDataFile;
+                aggregated = decompress((HttpDataFile) aggregated, encoding, alloc);
                 if (aggregated.attributes().length() > config.maxCacheEntrySizeBytes()) {
                     // Invalidate the cache just in case the file was small previously.
                     cache.invalidate(pathAndEncoding);
@@ -414,40 +412,37 @@ public final class FileService extends AbstractHttpService {
         }));
     }
 
-    private static AggregatedHttpFile decompress(AggregatedHttpFile compressed, ContentEncoding encoding,
-                                                 ByteBufAllocator alloc) {
+    private static HttpDataFile decompress(HttpDataFile compressed, ContentEncoding encoding,
+                                           ByteBufAllocator alloc) {
+
         @Nullable
         final HttpData content = compressed.content();
-        if (content == null || content.isEmpty() || compressed == AggregatedHttpFile.nonExistent()) {
+        if (content.isEmpty()) {
             return compressed;
         }
 
         final StreamDecoder decoder = encoding.decoderFactory.newDecoder(alloc);
         final HttpData decoded = aggregateData(decoder.decode(content), decoder.finish(), alloc);
 
-        final HttpDataFile httpDataFile = (HttpDataFile) compressed;
-        final HttpFileAttributes attributes = httpDataFile.attributes();
-        assert attributes != null;
+        final HttpFileAttributes attributes = compressed.attributes();
 
         // Rebuild an AggregatedHttpFile with a decompressed content.
         final AggregatedHttpFileBuilder builder =
                 AggregatedHttpFile.builder(decoded, attributes.lastModifiedMillis());
-        builder.clock(httpDataFile.clock());
-        builder.date(httpDataFile.isDateEnabled());
-        builder.lastModified(httpDataFile.isLastModifiedEnabled());
+        builder.clock(compressed.clock());
+        builder.date(compressed.isDateEnabled());
+        builder.lastModified(compressed.isLastModifiedEnabled());
+        builder.setHeaders(compressed.headers());
 
         @Nullable
         final BiFunction<String, HttpFileAttributes, String> entityFunction =
-                httpDataFile.entityTagFunction();
+                compressed.entityTagFunction();
         if (entityFunction == null) {
             builder.entityTag(false);
         } else {
             builder.entityTag(entityFunction);
         }
-        if (httpDataFile.headers() != null) {
-            builder.setHeaders(httpDataFile.headers());
-        }
-        return builder.build();
+        return (HttpDataFile) builder.build();
     }
 
     /**

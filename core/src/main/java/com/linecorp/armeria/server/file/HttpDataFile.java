@@ -76,6 +76,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
         return "";
     }
 
+    @Nonnull
     @Override
     public HttpFileAttributes attributes() {
         return attrs;
@@ -86,6 +87,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
         return UnmodifiableFuture.completedFuture(attrs);
     }
 
+    @Nonnull
     @Override
     public ResponseHeaders headers() {
         return readHeaders(attrs);

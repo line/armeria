@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * A {@link HttpResponse} that applies HTTP decoding using the {@link StreamDecoder} created with this.
+ * An {@link HttpResponse} that applies HTTP decoding using the {@link StreamDecoder} created with this.
  */
 public final class StaticHttpDecodedResponse extends AbstractHttpDecodedResponse {
 
@@ -53,14 +53,17 @@ public final class StaticHttpDecodedResponse extends AbstractHttpDecodedResponse
         }
 
         if (obj instanceof ResponseHeaders) {
-            final ResponseHeadersBuilder builder = ((ResponseHeaders) obj).toBuilder();
-            builder.remove(HttpHeaderNames.CONTENT_LENGTH);
-            if (contentType == null) {
-                builder.remove(HttpHeaderNames.CONTENT_TYPE);
-            } else {
-                builder.contentType(contentType);
+            final ResponseHeaders responseHeaders = (ResponseHeaders) obj;
+            if (!responseHeaders.status().isInformational()) {
+                final ResponseHeadersBuilder builder = responseHeaders.toBuilder();
+                builder.remove(HttpHeaderNames.CONTENT_LENGTH);
+                if (contentType == null) {
+                    builder.remove(HttpHeaderNames.CONTENT_TYPE);
+                } else {
+                    builder.contentType(contentType);
+                }
+                return builder.build();
             }
-            return builder.build();
         }
         return obj;
     }

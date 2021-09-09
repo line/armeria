@@ -16,16 +16,24 @@
 
 package com.linecorp.armeria.server.file;
 
-import com.github.benmanes.caffeine.cache.CaffeineSpec;
-import com.linecorp.armeria.common.*;
-import com.linecorp.armeria.common.annotation.Nullable;
+import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.server.file.FileServiceConfig.validateEntryCacheSpec;
+import static com.linecorp.armeria.server.file.FileServiceConfig.validateMaxCacheEntrySizeBytes;
+import static com.linecorp.armeria.server.file.FileServiceConfig.validateNonNegativeParameter;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
 import java.util.Map.Entry;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.server.file.FileServiceConfig.*;
-import static java.util.Objects.requireNonNull;
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
+
+import com.linecorp.armeria.common.CacheControl;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a new {@link FileService} and its {@link FileServiceConfig}. Use the factory methods in
