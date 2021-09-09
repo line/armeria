@@ -49,7 +49,11 @@ internal class FlowCollectingPublisher<T : Any>(
                 delegate.whenConsumed().await()
             }
         }
-        delegate.whenComplete().handle { _, _ -> cancel() }
+        delegate.whenComplete().handle { _, _ ->
+            if (isActive) {
+                cancel()
+            }
+        }
         delegate.subscribe(s, ctx.eventLoop())
     }
 
