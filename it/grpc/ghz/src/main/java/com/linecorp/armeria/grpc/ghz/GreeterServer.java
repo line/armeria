@@ -34,15 +34,26 @@ import io.grpc.stub.StreamObserver;
  */
 final class GreeterServer {
 
-    private static void start() throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         /* The port on which the server should run */
-        final int port = 50051;
+        int port;
+        try {
+            port = Integer.parseInt(System.getenv("GRPC_SERVER_PORT"));
+        } catch (NumberFormatException e) {
+            // use default port
+            port = 50051;
+        }
+
+        final boolean useBlockingTaskExecutor =
+                Boolean.parseBoolean(System.getenv("GRPC_SERVER_USE_BLOCKING_EXECUTOR"));
+
         final Server server =
                 Server.builder()
                       .http(port)
                       .service(GrpcService.builder()
                                           .addService(new GreeterImpl())
                                           .supportedSerializationFormats(GrpcSerializationFormats.PROTO)
+                                          .useBlockingTaskExecutor(useBlockingTaskExecutor)
                                           .build())
                       .disableDateHeader()
                       .disableServerHeader()
@@ -61,10 +72,6 @@ final class GreeterServer {
             }
             System.err.println("*** server shut down");
         }));
-    }
-
-    public static void main(String[] args) throws IOException, InterruptedException {
-        start();
     }
 
     private static final class GreeterImpl extends GreeterGrpc.GreeterImplBase {
