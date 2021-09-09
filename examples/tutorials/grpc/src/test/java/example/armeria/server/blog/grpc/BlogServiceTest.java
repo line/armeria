@@ -35,6 +35,7 @@ class BlogServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(GrpcService.builder()
                                   .addService(new BlogService())
+                                  .exceptionMapping(new GrpcExceptionHandler())
                                   .build());
         }
     };
@@ -66,6 +67,18 @@ class BlogServiceTest {
 
         assertThat(blogPost.getTitle()).isEqualTo("My first blog");
         assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    @Order(2)
+    void getInvalidBlogPost() throws JsonProcessingException {
+        final Throwable exception = catchThrowable(() -> {
+            client.getBlogPost(BlogId.newBuilder().setId(Integer.MAX_VALUE).build());
+        });
+        final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+        assertThat(statusException)
+                .hasMessageContaining("The blog post does not exist. ID: " + Integer.MAX_VALUE);
     }
 
     @Test

@@ -34,6 +34,7 @@ final class Main {
                 GrpcService.builder()
                            .addService(new BlogService())
                            .enableUnframedRequests(true)
+                           .exceptionMapping(new GrpcExceptionHandler())
                            // You can set useBlockingTaskExecutor(true) in order to execute all gRPC methods in
                            // the blockingTaskExecutor thread pool.
                            // .useBlockingTaskExecutor(true)

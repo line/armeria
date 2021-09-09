@@ -38,9 +38,7 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
     public void getBlogPost(BlogId blogId, StreamObserver<BlogPost> responseObserver) {
         final BlogPost blogPost = blogPosts.get(blogId.getId());
         if (blogPost == null) {
-            responseObserver.onError(
-                    Status.NOT_FOUND.withDescription("The blog post does not exist. ID: " + blogId.getId())
-                                    .asRuntimeException());
+            throw new BlogNotFoundException("The blog post does not exist. ID: " + blogId.getId());
         } else {
             responseObserver.onNext(blogPost);
             responseObserver.onCompleted();
