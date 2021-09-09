@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import io.grpc.stub.StreamObserver;
 
 /**
- * A gRPC server which is used for measuring performance with https://github.com/bojand/ghz
+ * A gRPC server which is used for measuring performance with https://github.com/bojand/ghz.
  * Use {@code bench.sh} to load this server.
  */
 final class GreeterServer {

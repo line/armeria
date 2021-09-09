@@ -14,10 +14,9 @@ GRPC_CLIENT_QPS=$(( GRPC_CLIENT_QPS / GRPC_CLIENT_CONCURRENCY ))
 GRPC_CLIENT_CPUS=${GRPC_CLIENT_CPUS:-"4"}
 GRPC_REQUEST_PAYLOAD=${GRPC_REQUEST_PAYLOAD:-"100B"}
 
-if ! command -v ghz > /dev/null 2>&1
-then
-    echo "ghz could not be found. Visit https://ghz.sh/docs/install for installation"
-    exit
+if ! command -v ghz > /dev/null 2>&1; then
+  echo "ghz could not be found. Visit https://ghz.sh/docs/install for installation"
+  exit 1
 fi
 
 stop_server() {
