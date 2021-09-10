@@ -785,6 +785,7 @@ beskidy.pl
 best
 bestbuy
 bet
+bet.ar
 beta.bounty-full.com
 betainabox.com
 better-than.tv
@@ -1690,6 +1691,7 @@ cooking
 cookingchannel
 cool
 coop
+coop.ar
 coop.br
 coop.ht
 coop.km
@@ -5248,6 +5250,7 @@ musica.bo
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
 mutual
+mutual.ar
 mv
 mw
 mw.gov.pl
@@ -7114,6 +7117,7 @@ sells-it.net
 sellsyourhome.org
 semboku.akita.jp
 semine.miyagi.jp
+senasa.ar
 sener
 sennan.osaka.jp
 senseering.net
