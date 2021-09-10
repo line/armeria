@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
@@ -92,29 +93,29 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
         requireNonNull(schemaFiles, "schemaFiles");
-        return schemaUrl(Streams.stream(schemaFiles)
-                                .map(file -> {
-                                    try {
-                                        return file.toURI().toURL();
-                                    } catch (MalformedURLException e) {
-                                        throw new UncheckedIOException(e);
-                                    }
-                                }).collect(toImmutableList()));
+        return schemaUrls(Streams.stream(schemaFiles)
+                                 .map(file -> {
+                                     try {
+                                         return file.toURI().toURL();
+                                     } catch (MalformedURLException e) {
+                                         throw new UncheckedIOException(e);
+                                     }
+                                 }).collect(toImmutableList()));
     }
 
     /**
      * Adds the schema {@link URL}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphqlServiceBuilder schemaUrl(URL... schemaUrls) {
-        return schemaUrl(ImmutableList.copyOf(requireNonNull(schemaUrls, "schemaUrls")));
+    public GraphqlServiceBuilder schemaUrls(URL... schemaUrls) {
+        return schemaUrls(ImmutableList.copyOf(requireNonNull(schemaUrls, "schemaUrls")));
     }
 
     /**
      * Adds the schema {@link URL}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphqlServiceBuilder schemaUrl(Iterable<URL> schemaUrls) {
+    public GraphqlServiceBuilder schemaUrls(Iterable<URL> schemaUrls) {
         this.schemaUrls.addAll(requireNonNull(schemaUrls, "schemaUrls"));
         return this;
     }
@@ -241,14 +242,22 @@ public final class GraphqlServiceBuilder {
     }
 
     private GraphQLSchema makeSchema() {
+        final List<URL> schemaUrls = this.schemaUrls.build();
+        final List<RuntimeWiringConfigurator> runtimeWiringConfigurators =
+                this.runtimeWiringConfigurators.build();
+        final List<GraphQLTypeVisitor> typeVisitors = this.typeVisitors.build();
+
         if (schema != null) {
+            checkState(schemaUrls.isEmpty() && runtimeWiringConfigurators.isEmpty() &&
+                       typeVisitors.isEmpty(),
+                       "Cannot add schemaUrl(or File), runtimeWiringConfigurator and " +
+                       "typeVisitor when GraphqlSchema is specified.");
             return schema;
         }
 
-        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaUrls.build());
-        final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfigurators.build());
+        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaUrls);
+        final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfigurators);
         GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring);
-        final List<GraphQLTypeVisitor> typeVisitors = this.typeVisitors.build();
         for (GraphQLTypeVisitor typeVisitor : typeVisitors) {
             schema = SchemaTransformer.transformSchema(schema, typeVisitor);
         }
