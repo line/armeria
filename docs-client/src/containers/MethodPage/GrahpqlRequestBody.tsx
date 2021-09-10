@@ -49,7 +49,7 @@ const toggle = (prev: boolean, override: unknown) => {
   return !prev;
 };
 
-function parseJson(requestBody: string) {
+const parseJson = (requestBody: string) => {
   let parsedJson;
   try {
     parsedJson = JSON.parse(requestBody);
@@ -57,7 +57,7 @@ function parseJson(requestBody: string) {
     // ignored
   }
   return parsedJson;
-}
+};
 
 const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   requestBodyOpen,
