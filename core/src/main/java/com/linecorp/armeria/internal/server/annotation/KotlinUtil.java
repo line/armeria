@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static java.util.Objects.requireNonNull;
-
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
