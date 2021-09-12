@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.spring;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.parseDataSize;
 
 import java.util.function.Consumer;
@@ -25,6 +26,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 
 /**
@@ -69,7 +71,7 @@ public final class ArmeriaConfigurationSettingsUtil {
                            http1MaxChunkSize -> server.http1MaxChunkSize(
                                    Ints.saturatedCast(parseDataSize(http1MaxChunkSize))));
 
-        configureIfNonNull(settings.getAccessLogFormat(), server::accessLogFormat);
+        configureIfNonNull(settings.getAccessLog(), accessLog -> configureAccessLog(server, accessLog));
         configureIfNonNull(settings.getAccessLogger(), server::accessLogger);
 
         configureIfNonNull(settings.getRequestTimeout(), server::requestTimeout);
@@ -83,6 +85,19 @@ public final class ArmeriaConfigurationSettingsUtil {
     private static <T> void configureIfNonNull(@Nullable T nullable, Consumer<T> block) {
         if (nullable != null) {
             block.accept(nullable);
+        }
+    }
+
+    private static void configureAccessLog(ServerBuilder server, ArmeriaSettings.AccessLog settings) {
+        if ("common".equalsIgnoreCase(settings.getType())) {
+            server.accessLogWriter(AccessLogWriter.common(), true);
+        } else if ("combined".equalsIgnoreCase(settings.getType())) {
+            server.accessLogWriter(AccessLogWriter.combined(), true);
+        } else if ("disabled".equalsIgnoreCase(settings.getType())) {
+            server.accessLogWriter(AccessLogWriter.disabled(), true);
+        } else if ("custom".equalsIgnoreCase(settings.getType())) {
+            checkArgument(settings.getFormat() != null, "custom type must have format");
+            server.accessLogWriter(AccessLogWriter.custom(settings.getFormat()), true);
         }
     }
 }

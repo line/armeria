@@ -257,6 +257,56 @@ public class ArmeriaSettings {
     }
 
     /**
+     * Configurations for the access log.
+     */
+    public static class AccessLog {
+
+        /**
+         * The access log type that is supposed to be one of
+         * {@code "common"}, {@code "combined"}, {@code "disabled"} or {@code "custom"}.
+         * The default is {@code "disabled"}.
+         */
+        private String type = "disabled";
+
+        /**
+         * The access log format.
+         * Please note that this format is used only when the specified {@code type} is {@code "custom"}.
+         */
+        @Nullable
+        private String format;
+
+        /**
+         * Returns the access log type.
+         */
+        public String getType() {
+            return type;
+        }
+
+        /**
+         * Sets the access log type that is supposed to be one of
+         * {@code "common"}, {@code "combined"}, {@code "disabled"} or {@code "custom"}.
+         */
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        /**
+         * Returns the access log format.
+         */
+        @Nullable
+        public String getFormat() {
+            return format;
+        }
+
+        /**
+         * Sets the access log format.
+         */
+        public void setFormat(@Nullable String format) {
+            this.format = format;
+        }
+    }
+
+    /**
      * Whether to auto configure and start the Armeria server.
      * The default is {@code true}.
      */
@@ -419,10 +469,10 @@ public class ArmeriaSettings {
     private String http1MaxChunkSize;
 
     /**
-     * The format of the {@link Server}'s access log.
+     * The {@link Server}'s access log configuration.
      */
     @Nullable
-    private String accessLogFormat;
+    private AccessLog accessLog;
 
     /**
      * The default access logger name for all {@link VirtualHost}s.
@@ -823,18 +873,18 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Returns the format of the {@link Server}'s access log.
+     * Returns the {@link Server}'s access log configuration.
      */
     @Nullable
-    public String getAccessLogFormat() {
-        return accessLogFormat;
+    public AccessLog getAccessLog() {
+        return accessLog;
     }
 
     /**
-     * Sets the format of the {@link Server}'s access log.
+     * Sets the {@link Server}'s access log configuration.
      */
-    public void setAccessLogFormat(@Nullable String accessLogFormat) {
-        this.accessLogFormat = accessLogFormat;
+    public void setAccessLog(@Nullable AccessLog accessLog) {
+        this.accessLog = accessLog;
     }
 
     /**
