@@ -22,8 +22,6 @@ import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeRequestH
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -38,6 +36,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -193,15 +192,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        if (request.isEmpty()) {
+        final boolean isEmpty = request.isEmpty();
+        if (isEmpty) {
             state = State.DONE;
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
 
         final RequestHeaders merged = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
-        logBuilder.requestHeaders(firstHeaders);
-        final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, request.isEmpty());
+        logBuilder.requestHeaders(merged);
+        final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, isEmpty);
         future.addListener(this);
         ch.flush();
     }

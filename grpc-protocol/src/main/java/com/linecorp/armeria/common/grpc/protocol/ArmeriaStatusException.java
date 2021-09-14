@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.common.grpc.protocol;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

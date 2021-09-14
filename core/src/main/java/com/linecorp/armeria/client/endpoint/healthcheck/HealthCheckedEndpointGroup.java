@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -34,8 +35,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +49,7 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -83,6 +83,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
     private static final ThreadLocal<Boolean> isRefreshingContexts = new ThreadLocal<>();
+    private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -177,6 +178,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                         new HashSet<>(healthCheckStrategy.getSelectedEndpoints());
 
                 boolean removed = false;
+                final Set<DefaultHealthCheckerContext> willRemove = new HashSet<>();
                 // Stop the health checkers whose endpoints disappeared and destroy their contexts.
                 for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i =
                      contexts.entrySet().iterator(); i.hasNext();) {
@@ -187,24 +189,36 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     }
 
                     removed = true;
+                    willRemove.add(e.getValue());
                     i.remove();
-                    e.getValue().destroy();
                 }
 
                 if (newSelectedEndpoints.isEmpty()) {
                     if (!removed) {
                         // The weight of an endpoint is changed. So we just refresh.
                         refreshEndpoints();
+                    } else {
+                        willRemove.forEach(DefaultHealthCheckerContext::destroy);
                     }
                     return;
                 }
 
                 // At this time newSelectedEndpoints only contains newly appeared endpoints.
                 // Start the health checkers with new contexts.
+                final List<CompletableFuture<?>> initialFutures = new ArrayList<>(newSelectedEndpoints.size());
                 for (Endpoint e : newSelectedEndpoints) {
                     final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
                     ctx.init(checkerFactory.apply(ctx));
+                    initialFutures.add(ctx.initialCheckFuture);
                     contexts.put(e, ctx);
+                }
+                if (!willRemove.isEmpty()) {
+                    // Remove old endpoints after finishing the initial health check of `newSelectedEndpoints`.
+                    CompletableFuture.allOf(initialFutures.toArray(EMPTY_FUTURES))
+                                     .handle((unused, ex) -> {
+                                         willRemove.forEach(DefaultHealthCheckerContext::destroy);
+                                         return null;
+                                     });
                 }
             }
         } finally {

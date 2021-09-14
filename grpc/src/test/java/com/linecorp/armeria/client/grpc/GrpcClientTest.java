@@ -41,8 +41,6 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,18 +62,16 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
@@ -140,7 +136,7 @@ class GrpcClientTest {
     public static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(MAX_MESSAGE_SIZE);
             sb.idleTimeoutMillis(0);
             sb.http(0);
@@ -179,21 +175,10 @@ class GrpcClientTest {
                                        .build()
                                        .decorate((service, ctx, req) -> {
                                            final HttpResponse res = service.serve(ctx, req);
-                                           return new FilteredHttpResponse(res) {
-                                               private boolean headersReceived;
-
-                                               @Override
-                                               protected HttpObject filter(HttpObject obj) {
-                                                   if (obj instanceof HttpHeaders) {
-                                                       if (!headersReceived) {
-                                                           headersReceived = true;
-                                                       } else {
-                                                           SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
-                                                       }
-                                                   }
-                                                   return obj;
-                                               }
-                                           };
+                                           return res.mapTrailers(trailers -> {
+                                               SERVER_TRAILERS_CAPTURE.set(trailers);
+                                               return trailers;
+                                           });
                                        }));
         }
     };

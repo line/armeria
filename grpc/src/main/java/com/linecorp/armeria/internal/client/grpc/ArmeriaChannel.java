@@ -18,13 +18,13 @@ package com.linecorp.armeria.internal.client.grpc;
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
 
 import java.net.URI;
-
-import javax.annotation.Nullable;
+import java.util.Map;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -65,19 +66,22 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     @Nullable
     private final GrpcJsonMarshaller jsonMarshaller;
     private final String advertisedEncodingsHeader;
+    private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
                    MeterRegistry meterRegistry,
                    SessionProtocol sessionProtocol,
                    SerializationFormat serializationFormat,
-                   @Nullable GrpcJsonMarshaller jsonMarshaller) {
+                   @Nullable GrpcJsonMarshaller jsonMarshaller,
+                   Map<MethodDescriptor<?, ?>, String> simpleMethodNames) {
         this.params = params;
         this.httpClient = httpClient;
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.serializationFormat = serializationFormat;
         this.jsonMarshaller = jsonMarshaller;
+        this.simpleMethodNames = simpleMethodNames;
 
         advertisedEncodingsHeader = String.join(
                 ",", DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings());
@@ -116,6 +120,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 client,
                 req,
                 method,
+                simpleMethodNames,
                 maxOutboundMessageSizeBytes,
                 maxInboundMessageSizeBytes,
                 callOptions,
@@ -184,7 +189,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 options(),
                 req,
                 null,
+                RequestOptions.of(),
                 System.nanoTime(),
-                SystemInfo.currentTimeMicros());
+                SystemInfo.currentTimeMicros(),
+                /* hasBaseUri */ true);
     }
 }

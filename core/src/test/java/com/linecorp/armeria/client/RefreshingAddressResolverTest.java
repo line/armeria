@@ -17,12 +17,13 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.client.DnsTimeoutUtil.assertDnsTimeoutException;
 import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetAddress;
@@ -57,7 +58,6 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
@@ -268,11 +268,7 @@ class RefreshingAddressResolverTest {
                 await().until(future::isDone);
 
                 final Throwable cause = future.cause();
-                assertThat(cause).isInstanceOfAny(UnknownHostException.class,
-                                                  DnsTimeoutException.class);
-                if (cause instanceof UnknownHostException) {
-                    assertThat(cause).hasCauseInstanceOf(DnsNameResolverTimeoutException.class);
-                }
+                assertDnsTimeoutException(cause);
 
                 // Because it's timed out, the result is not cached.
                 final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
@@ -307,9 +303,9 @@ class RefreshingAddressResolverTest {
                                                       .addressResolverGroupFactory(builder::build)
                                                       .build()) {
                 final WebClient client = WebClient.builder("http://foo.com").factory(factory).build();
-                assertThatThrownBy(() -> client.get("/").aggregate().join())
-                        .hasCauseInstanceOf(UnprocessedRequestException.class)
-                        .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
+                final Throwable cause = catchThrowable(() -> client.get("/").aggregate().join());
+                assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class);
+                assertDnsTimeoutException(cause);
             }
         }
     }
@@ -327,7 +323,7 @@ class RefreshingAddressResolverTest {
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future::isDone);
-                assertThat(future.cause()).isInstanceOf(DnsTimeoutException.class);
+                assertDnsTimeoutException(future.cause());
             }
         }
     }

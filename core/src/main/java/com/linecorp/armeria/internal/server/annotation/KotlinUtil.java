@@ -25,11 +25,11 @@ import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 @SuppressWarnings("unchecked")
 final class KotlinUtil {
@@ -53,9 +53,10 @@ final class KotlinUtil {
 
     static {
         MethodHandle callKotlinSuspendingMethod = null;
+        final String internalCommonPackageName = RequestContextUtil.class.getPackage().getName();
         try {
             final Class<?> coroutineUtilClass =
-                    getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaCoroutineUtil");
+                    getClass(internalCommonPackageName + ".kotlin.ArmeriaCoroutineUtil");
 
             callKotlinSuspendingMethod = MethodHandles.lookup().findStatic(
                     coroutineUtilClass, "callKotlinSuspendingMethod",
@@ -63,7 +64,7 @@ final class KotlinUtil {
                             CompletableFuture.class,
                             ImmutableList.of(Method.class, Object.class,
                                              Object[].class, ExecutorService.class,
-                                             RequestContext.class))
+                                             ServiceRequestContext.class))
             );
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
             // ignore
@@ -75,7 +76,7 @@ final class KotlinUtil {
         Method isReturnTypeUnit = null;
         try {
             final Class<?> kotlinUtilClass =
-                    getClass("com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil");
+                    getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
 
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);

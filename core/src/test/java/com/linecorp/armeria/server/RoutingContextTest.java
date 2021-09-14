@@ -16,54 +16,35 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.DefaultRoutingContext.compareMediaType;
-import static com.linecorp.armeria.server.DefaultRoutingContext.extractAcceptTypes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 class RoutingContextTest {
 
     @Test
     void testAcceptTypes() {
-        final HttpHeaders headers = HttpHeaders.of(
+        final RequestHeaders headers = RequestHeaders.of(
+                HttpMethod.GET, "/",
                 HttpHeaderNames.ACCEPT,
                 "application/xml;q=0.9, " +
                 "*/*;q=0.8, " +
                 "text/html;charset=UTF-8, " +
                 "application/xhtml+xml;charset=utf-8");
-        final List<MediaType> acceptTypes = extractAcceptTypes(headers);
-        assertThat(acceptTypes).containsExactly(MediaType.XHTML_UTF_8,
-                                                MediaType.HTML_UTF_8,
+        final List<MediaType> acceptTypes = headers.accept();
+        assertThat(acceptTypes).containsExactly(MediaType.HTML_UTF_8,
+                                                MediaType.XHTML_UTF_8,
                                                 MediaType.parse("application/xml;q=0.9"),
                                                 MediaType.parse("*/*;q=0.8"));
-    }
-
-    @Test
-    void testCompareMediaTypes() {
-        // Sort by their quality factor.
-        assertThat(compareMediaType(MediaType.parse("application/octet-stream;q=0.8"),
-                                    MediaType.parse("text/plain;q=0.9")))
-                .isGreaterThan(0);
-        // Sort by their coverage. (the number of wildcards)
-        assertThat(compareMediaType(MediaType.parse("text/*;q=0.9"),
-                                    MediaType.parse("text/plain;q=0.9")))
-                .isGreaterThan(0);
-        // Sort by lexicographic order.
-        assertThat(compareMediaType(MediaType.parse("text/plain;q=0.9"),
-                                    MediaType.parse("application/octet-stream;q=0.9")))
-                .isGreaterThan(0);
     }
 
     @Test

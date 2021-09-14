@@ -26,11 +26,11 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * The default {@link PathMapping} implementation. It holds three things:
@@ -53,7 +53,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      */
     private final String pathPattern;
 
-    private final String nomalizedPathPattern;
+    private final String normalizedPathPattern;
 
     /**
      * Regex form of given path, which will be used for matching or extracting.
@@ -134,7 +134,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
         this.pathPattern = pathPattern;
         pattern = Pattern.compile(patternJoiner.toString());
-        nomalizedPathPattern = normalizedPatternJoiner.toString();
+        normalizedPathPattern = normalizedPatternJoiner.toString();
         skeleton = skeletonJoiner.toString();
         paths = ImmutableList.of(skeleton, skeleton);
         paramNameArray = paramNames.toArray(EMPTY_NAMES);
@@ -177,7 +177,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
     @Override
     public String patternString() {
-        return nomalizedPathPattern;
+        return normalizedPathPattern;
     }
 
     @Override

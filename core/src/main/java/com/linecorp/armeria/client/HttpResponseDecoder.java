@@ -16,12 +16,11 @@
 
 package com.linecorp.armeria.client;
 
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +31,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -57,6 +57,7 @@ abstract class HttpResponseDecoder {
 
     private int unfinishedResponses;
     private boolean disconnectWhenFinished;
+    private boolean closing;
 
     HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
         this.channel = channel;
@@ -99,6 +100,11 @@ abstract class HttpResponseDecoder {
 
     @Nullable
     final HttpResponseWrapper removeResponse(int id) {
+        if (closing) {
+            // `unfinishedResponses` will be removed by `failUnfinishedResponses()`
+            return null;
+        }
+
         final HttpResponseWrapper removed = responses.remove(id);
         if (removed != null) {
             unfinishedResponses--;
@@ -121,13 +127,18 @@ abstract class HttpResponseDecoder {
     }
 
     final void failUnfinishedResponses(Throwable cause) {
-        try {
-            for (HttpResponseWrapper res : responses.values()) {
-                res.close(cause);
-            }
-        } finally {
-            unfinishedResponses -= responses.size();
-            responses.clear();
+        if (closing) {
+            return;
+        }
+        closing = true;
+
+        for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
+             iterator.hasNext();) {
+            final HttpResponseWrapper res = iterator.next();
+            // To avoid calling removeResponse by res.close(cause), remove before closing.
+            iterator.remove();
+            unfinishedResponses--;
+            res.close(cause);
         }
     }
 
@@ -163,6 +174,8 @@ abstract class HttpResponseDecoder {
         private boolean loggedResponseFirstBytesTransferred;
 
         private State state = State.WAIT_NON_INFORMATIONAL;
+        @Nullable
+        private ResponseHeaders headers;
 
         HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
@@ -182,6 +195,11 @@ abstract class HttpResponseDecoder {
 
         long writtenBytes() {
             return delegate.writtenBytes();
+        }
+
+        ResponseHeaders headers() {
+            assert headers != null;
+            return headers;
         }
 
         void logResponseFirstBytesTransferred() {
@@ -240,6 +258,7 @@ abstract class HttpResponseDecoder {
                 final ResponseHeaders headers = (ResponseHeaders) o;
                 final HttpStatus status = headers.status();
                 if (!status.isInformational()) {
+                    this.headers = headers;
                     state = State.WAIT_DATA_OR_TRAILERS;
                     if (ctx != null) {
                         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
@@ -382,9 +401,9 @@ abstract class HttpResponseDecoder {
             if (ctx instanceof DefaultClientRequestContext) {
                 final CancellationScheduler responseCancellationScheduler =
                         ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
-                responseCancellationScheduler.init(ctx.eventLoop(), newCancellationTask(),
-                                                   TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis),
-                                                   ResponseTimeoutException.get());
+                responseCancellationScheduler.init(
+                        ctx.eventLoop(), newCancellationTask(),
+                        TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis), /* server */ false);
             }
         }
 

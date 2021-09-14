@@ -26,11 +26,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A complete HTTP request whose content is readily available as a single {@link HttpData}.
@@ -157,8 +157,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
-        return of(RequestHeaders.builder(method, path)
-                                .contentType(mediaType).build(),
+        return of(RequestHeaders.builder(method, path).contentType(mediaType).build(),
                   content, trailers);
     }
 
@@ -200,7 +199,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         if (content.isEmpty()) {
             builder.remove(CONTENT_LENGTH);
         } else {
-            builder.setInt(CONTENT_LENGTH, content.length());
+            builder.contentLength(content.length());
         }
         headers = builder.build();
         return new DefaultAggregatedHttpRequest(headers, content, trailers);

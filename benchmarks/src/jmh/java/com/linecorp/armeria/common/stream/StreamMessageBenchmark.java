@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -40,7 +39,8 @@ import io.netty.channel.EventLoop;
 /**
  * Microbenchmarks of {@link StreamMessage Stream Messages}.
  */
-@Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2 })
+@Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2,
+                        "-Dcom.linecorp.armeria.reportBlockedEventLoop=false"})
 @State(Scope.Benchmark)
 public class StreamMessageBenchmark {
 
@@ -97,7 +97,8 @@ public class StreamMessageBenchmark {
             subscriber = new SummingSubscriber(completedLatch, flowControl);
         }
 
-        private long computedSum() {
+        private long computedSum(StreamMessage<Integer> stream) {
+            stream.whenComplete().join();
             final long computedSum = subscriber.sum();
             if (computedSum != sum) {
                 throw new IllegalStateException(
@@ -107,7 +108,7 @@ public class StreamMessageBenchmark {
             return computedSum;
         }
 
-        private void writeAllValues(StreamMessage<Integer> stream) {
+        void writeAllValues(StreamMessage<Integer> stream) {
             if (stream instanceof StreamWriter) {
                 @SuppressWarnings("unchecked")
                 final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
@@ -132,8 +133,7 @@ public class StreamMessageBenchmark {
         final StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber);
         streamObjects.writeAllValues(stream);
-        // No executor, so sum will be updated inline.
-        return streamObjects.computedSum();
+        return streamObjects.computedSum(stream);
     }
 
     // Isolates performance of stream operations, but requires the stream to execute events inline or it would
@@ -143,23 +143,22 @@ public class StreamMessageBenchmark {
         final StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber, EventLoopJmhExecutor.currentEventLoop());
         streamObjects.writeAllValues(stream);
-        return streamObjects.computedSum();
+        return streamObjects.computedSum(stream);
     }
 
     // Has synchronization overhead, but does not require the stream to execute events inline so can be used
     // to compare approaches.
     @Benchmark
     public long notJmhEventLoop(StreamObjects streamObjects) throws Exception {
+        final StreamMessage<Integer> stream = newStream(streamObjects);
         ANOTHER_EVENT_LOOP.execute(() -> {
-            final StreamMessage<Integer> stream = newStream(streamObjects);
             stream.subscribe(streamObjects.subscriber, ANOTHER_EVENT_LOOP);
             streamObjects.writeAllValues(stream);
         });
-        streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
-        return streamObjects.computedSum();
+        return streamObjects.computedSum(stream);
     }
 
-    private static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
+    static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
             case DEFAULT_STREAM_MESSAGE:
                 return new DefaultStreamMessage<>();

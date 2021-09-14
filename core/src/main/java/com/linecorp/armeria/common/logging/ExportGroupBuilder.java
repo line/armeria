@@ -21,11 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;

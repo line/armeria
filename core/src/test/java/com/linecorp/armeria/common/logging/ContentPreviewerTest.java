@@ -19,17 +19,16 @@ package com.linecorp.armeria.common.logging;
 import static com.linecorp.armeria.common.logging.ContentPreviewerFactoryBuilder.hexDumpProducer;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
@@ -43,6 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
@@ -53,8 +53,6 @@ class ContentPreviewerTest {
 
     static class MyHttpClient {
         private final WebClient client;
-        @Nullable
-        private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int maxLength) {
             final WebClientBuilder builder = WebClient.builder(serverExtension.httpUri().resolve(uri));
@@ -66,20 +64,14 @@ class ContentPreviewerTest {
                                                     .requestLogLevel(LogLevel.INFO)
                                                     .successfulResponseLogLevel(LogLevel.INFO)
                                                     .newDecorator())
-                            .decorator((delegate, ctx, req) -> {
-                                if (waitingFuture != null) {
-                                    ctx.log().whenComplete().thenAccept(waitingFuture::complete);
-                                }
-                                return delegate.execute(ctx, req);
-                            }).build();
+                            .build();
         }
 
         RequestLog get(String path) throws Exception {
-            waitingFuture = new CompletableFuture<>();
-            getBody(path).aggregate().join();
-            final RequestLog log = waitingFuture.get();
-            waitingFuture = null;
-            return log;
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                getBody(path).aggregate();
+                return captor.get().log().whenComplete().join();
+            }
         }
 
         HttpResponse getBody(String path) throws Exception {
@@ -95,20 +87,10 @@ class ContentPreviewerTest {
         }
 
         RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
-            waitingFuture = new CompletableFuture<>();
-            postBody(path, content, contentType).aggregate().join();
-            final RequestLog log = waitingFuture.get();
-            waitingFuture = null;
-            return log;
-        }
-
-        RequestLog post(String path, String content, Charset charset, MediaType contentType)
-                throws Exception {
-            return post(path, content.getBytes(charset), contentType);
-        }
-
-        RequestLog post(String path, String content, MediaType contentType) throws Exception {
-            return post(path, content.getBytes(), contentType);
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                postBody(path, content, contentType).aggregate();
+                return captor.get().log().whenComplete().join();
+            }
         }
 
         RequestLog post(String path, String content) throws Exception {
@@ -167,15 +149,6 @@ class ContentPreviewerTest {
                 final RequestLog log = waitingFuture.get();
                 waitingFuture = null;
                 return log;
-            }
-
-            RequestLog post(String path, String content, Charset charset, MediaType contentType)
-                    throws Exception {
-                return post(path, content.getBytes(charset), contentType);
-            }
-
-            RequestLog post(String path, String content, MediaType contentType) throws Exception {
-                return post(path, content.getBytes(), contentType);
             }
 
             RequestLog post(String path, String content) throws Exception {

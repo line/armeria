@@ -33,11 +33,10 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -46,6 +45,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.MatchesHeader;
 import com.linecorp.armeria.server.annotation.MatchesParam;
 
@@ -55,6 +55,8 @@ import com.linecorp.armeria.server.annotation.MatchesParam;
 public final class RouteBuilder {
 
     static final Route CATCH_ALL_ROUTE = new RouteBuilder().catchAll().build();
+
+    static final Route FALLBACK_ROUTE = new RouteBuilder().fallback(true).catchAll().build();
 
     @Nullable
     private PathMapping pathMapping;
@@ -68,6 +70,13 @@ public final class RouteBuilder {
     private final List<RoutingPredicate<QueryParams>> paramPredicates = new ArrayList<>();
 
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
+
+    /**
+     * See {@link Route#isFallback()}.
+     */
+    private boolean isFallback;
+
+    private final List<Route> excludedRoutes = new ArrayList<>();
 
     RouteBuilder() {}
 
@@ -414,6 +423,45 @@ public final class RouteBuilder {
     }
 
     /**
+     * Sets whether this {@link Route} is a fallback, which is matched only when no configured {@link Route}
+     * was matched.
+     */
+    RouteBuilder fallback(boolean isFallback) {
+        this.isFallback = isFallback;
+        return this;
+    }
+
+    /**
+     * Adds a {@code pathPattern} that is supposed to be excluded from the {@link Route} built by this
+     * {@link RouteBuilder}.
+     * Please refer to <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
+     * to learn more about path pattern syntax.
+     */
+    RouteBuilder exclude(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
+        excludedRoutes.add(Route.builder().path(pathPattern).build());
+        return this;
+    }
+
+    /**
+     * Adds a {@link Route} that is supposed to be excluded from the {@link Route} built by this
+     * {@link RouteBuilder}.
+     */
+    RouteBuilder exclude(Route excludedRoute) {
+        excludedRoutes.add(requireNonNull(excludedRoute, "excludedRoute"));
+        return this;
+    }
+
+    /**
+     * Adds {@link Route}s that are supposed to be excluded from the {@link Route} built by this
+     * {@link RouteBuilder}.
+     */
+    RouteBuilder exclude(Iterable<? extends Route> excludedRoutes) {
+        Iterables.addAll(this.excludedRoutes, requireNonNull(excludedRoutes, "excludedRoutes"));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route} based on the properties of this builder.
      */
     public Route build() {
@@ -424,12 +472,13 @@ public final class RouteBuilder {
         }
         final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
         return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
-                                paramPredicates, headerPredicates);
+                                paramPredicates, headerPredicates, isFallback, excludedRoutes);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(pathMapping, methods, consumes, produces);
+        return Objects.hash(pathMapping, methods, consumes, produces,
+                            paramPredicates, headerPredicates, isFallback, excludedRoutes);
     }
 
     @Override
@@ -448,7 +497,9 @@ public final class RouteBuilder {
                consumes.equals(that.consumes) &&
                produces.equals(that.produces) &&
                paramPredicates.equals(that.paramPredicates) &&
-               headerPredicates.equals(that.headerPredicates);
+               headerPredicates.equals(that.headerPredicates) &&
+               isFallback == that.isFallback &&
+               excludedRoutes.equals(that.excludedRoutes);
     }
 
     @Override
@@ -460,6 +511,8 @@ public final class RouteBuilder {
                           .add("produces", produces)
                           .add("paramPredicates", paramPredicates)
                           .add("headerPredicates", headerPredicates)
+                          .add("isFallback", isFallback)
+                          .add("excludedRoutes", excludedRoutes)
                           .toString();
     }
 

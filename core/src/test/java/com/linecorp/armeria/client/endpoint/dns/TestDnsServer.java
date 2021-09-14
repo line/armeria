@@ -22,11 +22,10 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.bootstrap.Bootstrap;

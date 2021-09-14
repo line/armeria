@@ -1,3 +1,23 @@
+def buildJdkVersion = 16
+if (rootProject.hasProperty('buildJdkVersion')) {
+    def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
+    if (buildJdkVersion != jdkVersion) {
+        buildJdkVersion = jdkVersion
+        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
+    }
+}
+rootProject.ext.set("buildJdkVersion", buildJdkVersion)
+
+def testJavaVersion = buildJdkVersion
+if (rootProject.hasProperty('testJavaVersion')) {
+    def testVersion = Integer.parseInt(rootProject.findProperty('testJavaVersion'))
+    if (buildJdkVersion != testVersion) {
+        testJavaVersion = testVersion
+        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
+    }
+}
+rootProject.ext.set("testJavaVersion", testJavaVersion)
+
 // Enable checkstyle if the rule file exists.
 def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
 def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
@@ -26,10 +46,23 @@ configure(projectsWithFlags('java')) {
         delete project.ext.genSrcDir
     }
 
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.buildJdkVersion)
+            implementation = JvmImplementation.VENDOR_SPECIFIC
+        }
+    }
+
     // Add the generated source directories to the source sets.
     project.sourceSets.all { sourceSet ->
         sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/java")
         sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
+    }
+    afterEvaluate {
+        Task generateSourcesTask = project.tasks.findByName('generateSources')
+        if (generateSourcesTask != null) {
+            tasks.sourcesJar.dependsOn(generateSourcesTask)
+        }
     }
 
     java {
@@ -54,13 +87,32 @@ configure(projectsWithFlags('java')) {
     }
 
     // Enable full exception logging for test failures.
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         testLogging.exceptionFormat = 'full'
-    }
 
-    // Use JUnit platform.
-    tasks.withType(Test) {
-        useJUnitPlatform()
+        // Use JUnit platform.
+        def flakyTests = rootProject.findProperty('flakyTests')
+        if (flakyTests == 'true') {
+            useJUnitPlatform {
+                includeTags 'FLAKY_TESTS'
+            }
+        } else if (flakyTests == 'false') {
+            useJUnitPlatform {
+                excludeTags 'FLAKY_TESTS'
+            }
+        } else {
+            if (flakyTests != null) {
+                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
+            }
+            useJUnitPlatform()
+        }
+
+        // Use a different JRE for testing if necessary.
+        if (rootProject.ext.buildJdkVersion != rootProject.ext.testJavaVersion) {
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(rootProject.ext.testJavaVersion)
+            }
+        }
     }
 
     // Enforce checkstyle rules.

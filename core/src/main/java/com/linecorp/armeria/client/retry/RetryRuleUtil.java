@@ -19,12 +19,11 @@ package com.linecorp.armeria.client.retry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class RetryRuleUtil {
 
@@ -107,12 +106,17 @@ final class RetryRuleUtil {
             public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable T response,
                                                               @Nullable Throwable cause) {
                 if (response instanceof HttpResponse) {
-                    try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
-                        final RetryRuleWithContent<T> duplicatedSecond =
-                                (RetryRuleWithContent<T>) withDuplicator(
-                                        (RetryRuleWithContent<HttpResponse>) second, duplicator);
-                        return handle(ctx, response, cause, fromRetryRule(first), duplicatedSecond);
-                    }
+                    final HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator();
+                    final RetryRuleWithContent<T> duplicatedSecond =
+                            (RetryRuleWithContent<T>) withDuplicator(
+                                    (RetryRuleWithContent<HttpResponse>) second, duplicator);
+                    final CompletionStage<RetryDecision> decision =
+                            handle(ctx, response, cause, fromRetryRule(first), duplicatedSecond);
+                    decision.handle((unused1, unused2) -> {
+                        duplicator.abort();
+                        return null;
+                    });
+                    return decision;
                 } else {
                     return handle(ctx, response, cause, fromRetryRule(first), second);
                 }
@@ -166,15 +170,20 @@ final class RetryRuleUtil {
             public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable T response,
                                                               @Nullable Throwable cause) {
                 if (response instanceof HttpResponse) {
-                    try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
-                        final RetryRuleWithContent<T> duplicatedFirst =
-                                (RetryRuleWithContent<T>) withDuplicator(
-                                        (RetryRuleWithContent<HttpResponse>) first, duplicator);
-                        final RetryRuleWithContent<T> duplicatedSecond =
-                                (RetryRuleWithContent<T>) withDuplicator(
-                                        (RetryRuleWithContent<HttpResponse>) second, duplicator);
-                        return handle(ctx, response, cause, duplicatedFirst, duplicatedSecond);
-                    }
+                    final HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator();
+                    final RetryRuleWithContent<T> duplicatedFirst =
+                            (RetryRuleWithContent<T>) withDuplicator(
+                                    (RetryRuleWithContent<HttpResponse>) first, duplicator);
+                    final RetryRuleWithContent<T> duplicatedSecond =
+                            (RetryRuleWithContent<T>) withDuplicator(
+                                    (RetryRuleWithContent<HttpResponse>) second, duplicator);
+                    final CompletionStage<RetryDecision> decision =
+                            handle(ctx, response, cause, duplicatedFirst, duplicatedSecond);
+                    decision.handle((unused1, unused2) -> {
+                        duplicator.abort();
+                        return null;
+                    });
+                    return decision;
                 } else {
                     return handle(ctx, response, cause, first, second);
                 }

@@ -40,5 +40,6 @@ configure(projectsWithFlags('java', 'publish')) {
     }
 
     // Ensure version.properties is available during the build.
+    tasks.sourcesJar.dependsOn(tasks.versionProperties)
     tasks.processResources.dependsOn(tasks.versionProperties)
 }

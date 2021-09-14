@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder class for creating {@link ContentDisposition}.
@@ -86,7 +86,7 @@ public final class ContentDispositionBuilder {
      * Only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported.
      *
      * <p><strong>Note:</strong> Do not use this for a {@code "multipart/form-data"} requests as per
-     * <a link="https://datatracker.ietf.org/doc/html/rfc7578#section-4.2">RFC 7578, Section 4.2</a>
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7578#section-4.2">RFC 7578, Section 4.2</a>
      * and also RFC 5987 itself mentions it does not apply to multipart requests.
      */
     public ContentDispositionBuilder filename(String filename, @Nullable Charset charset) {

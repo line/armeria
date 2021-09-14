@@ -26,8 +26,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -42,6 +40,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -60,27 +59,29 @@ class HttpServerRequestTimeoutTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.requestTimeoutMillis(400)
+            sb.requestTimeoutMillis(600)
               .accessLogWriter(accessLog::set, false)
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
+                              .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
-                                                                   Duration.ofMillis(300)));
+                                                                   Duration.ofMillis(500)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/extend-timeout-from-start", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
+                              .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofMillis(200)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-while-writing", (ctx, req) -> {
-                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(200));
+                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(200)).onBackpressureDrop();
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-before-writing", (ctx, req) -> {
-                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(800));
+                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(800)).onBackpressureDrop();
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-immediately", (ctx, req) -> {
@@ -127,9 +128,10 @@ class HttpServerRequestTimeoutTest {
             sb.requestTimeoutMillis(0)
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
-                          Flux.interval(Duration.ofMillis(100))
+                          Flux.interval(Duration.ofMillis(200))
+                              .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
-                                                                   Duration.ofMillis(150)));
+                                                                   Duration.ofMillis(500)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-now", (ctx, req) -> {
@@ -232,9 +234,10 @@ class HttpServerRequestTimeoutTest {
 
     @Test
     void cancel() {
-        final AggregatedHttpResponse response =
-                withoutTimeoutServerClient.get("/cancel").aggregate().join();
-        assertThat(response.status().code()).isEqualTo(503);
+        assertThatThrownBy(() -> withoutTimeoutServerClient.get("/cancel").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasRootCauseInstanceOf(ClosedStreamException.class)
+                .hasRootCauseMessage("received a RST_STREAM frame: CANCEL");
     }
 
     @Test

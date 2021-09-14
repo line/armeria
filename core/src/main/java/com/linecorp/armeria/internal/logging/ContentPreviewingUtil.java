@@ -18,9 +18,8 @@ package com.linecorp.armeria.internal.logging;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
-import org.reactivestreams.Subscriber;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -38,6 +38,8 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 public final class ContentPreviewingUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(ContentPreviewingUtil.class);
 
     /**
      * Sets up the request {@link ContentPreviewer} to set
@@ -60,7 +62,7 @@ public final class ContentPreviewingUtil {
             logBuilder.requestContentPreview(null);
             return null;
         });
-        return new FilteredHttpRequest(req) {
+        final FilteredHttpRequest filteredHttpRequest = new FilteredHttpRequest(req) {
             @Override
             protected HttpObject filter(HttpObject obj) {
                 if (obj instanceof HttpData) {
@@ -68,23 +70,19 @@ public final class ContentPreviewingUtil {
                 }
                 return obj;
             }
-
-            @Override
-            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                logBuilder.requestContentPreview(requestContentPreviewer.produce());
-            }
-
-            @Override
-            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber,
-                                            Throwable cause) {
-                // Call produce() to release the resources in the previewer. Consider adding close() method.
-                requestContentPreviewer.produce();
-
-                // Set null to make it sure the log is complete.
-                logBuilder.requestContentPreview(null);
-                return cause;
-            }
         };
+        filteredHttpRequest.whenComplete().handle((unused, cause) -> {
+            String produced = null;
+            try {
+                produced = requestContentPreviewer.produce();
+            } catch (Exception e) {
+                logger.warn("Unexpected exception while producing the request content preview. " +
+                            "previewer: {}", requestContentPreviewer, e);
+            }
+            logBuilder.requestContentPreview(produced);
+            return null;
+        });
+        return filteredHttpRequest;
     }
 
     /**
@@ -96,54 +94,60 @@ public final class ContentPreviewingUtil {
         requireNonNull(factory, "factory");
         requireNonNull(ctx, "ctx");
         requireNonNull(res, "res");
+        return new ContentPreviewerHttpResponse(res, factory, ctx);
+    }
 
-        return new FilteredHttpResponse(res) {
-            @Nullable
-            ContentPreviewer responseContentPreviewer;
+    private static class ContentPreviewerHttpResponse extends FilteredHttpResponse {
 
-            @Override
-            protected HttpObject filter(HttpObject obj) {
-                if (obj instanceof ResponseHeaders) {
-                    final ResponseHeaders resHeaders = (ResponseHeaders) obj;
+        private final ContentPreviewerFactory factory;
+        private final RequestContext ctx;
+        @Nullable
+        ContentPreviewer responseContentPreviewer;
 
-                    // Skip informational headers.
-                    final String status = resHeaders.get(HttpHeaderNames.STATUS);
-                    if (ArmeriaHttpUtil.isInformational(status)) {
-                        return obj;
-                    }
-                    final ContentPreviewer contentPreviewer = factory.responseContentPreviewer(ctx, resHeaders);
-                    if (!contentPreviewer.isDisabled()) {
-                        responseContentPreviewer = contentPreviewer;
-                    }
-                } else if (obj instanceof HttpData) {
-                    if (responseContentPreviewer != null) {
-                        responseContentPreviewer.onData((HttpData) obj);
-                    }
-                }
-                return obj;
-            }
-
-            @Override
-            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+        protected ContentPreviewerHttpResponse(HttpResponse delegate, ContentPreviewerFactory factory,
+                                               RequestContext ctx) {
+            super(delegate);
+            this.factory = factory;
+            this.ctx = ctx;
+            whenComplete().handle((unused, cause) -> {
                 if (responseContentPreviewer != null) {
-                    ctx.logBuilder().responseContentPreview(responseContentPreviewer.produce());
+                    String produced = null;
+                    try {
+                        produced = responseContentPreviewer.produce();
+                    } catch (Exception e) {
+                        logger.warn("Unexpected exception while producing the response content preview. " +
+                                    "previewer: {}", responseContentPreviewer, e);
+                    }
+                    ctx.logBuilder().responseContentPreview(produced);
                 } else {
                     // Call requestContentPreview(null) to make sure that the log is complete.
                     ctx.logBuilder().responseContentPreview(null);
                 }
-            }
+                return null;
+            });
+        }
 
-            @Override
-            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                if (responseContentPreviewer != null) {
-                    // Call produce() to release the resources in the previewer. Consider adding close() method.
-                    responseContentPreviewer.produce();
+        @Override
+        protected HttpObject filter(HttpObject obj) {
+            if (obj instanceof ResponseHeaders) {
+                final ResponseHeaders resHeaders = (ResponseHeaders) obj;
+
+                // Skip informational headers.
+                final String status = resHeaders.get(HttpHeaderNames.STATUS);
+                if (ArmeriaHttpUtil.isInformational(status)) {
+                    return obj;
                 }
-                // Set null to make it sure the log is complete.
-                ctx.logBuilder().responseContentPreview(null);
-                return cause;
+                final ContentPreviewer contentPreviewer = factory.responseContentPreviewer(ctx, resHeaders);
+                if (!contentPreviewer.isDisabled()) {
+                    responseContentPreviewer = contentPreviewer;
+                }
+            } else if (obj instanceof HttpData) {
+                if (responseContentPreviewer != null) {
+                    responseContentPreviewer.onData((HttpData) obj);
+                }
             }
-        };
+            return obj;
+        }
     }
 
     private ContentPreviewingUtil() {}

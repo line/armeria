@@ -19,11 +19,10 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.opensaml.security.credential.Credential;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.saml.SamlServiceProviderBuilder.CredentialResolverAdapter;
 
 /**

@@ -1,6 +1,10 @@
 {
-  "root": ["index", "setup"],
-  "References": {
+  "root": [
+    "index",
+    "setup"
+  ],
+  "Useful links": {
+    "Tutorials": "/tutorials",
     "Community articles": "/community/articles",
     "API documentation": "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/index.html",
     "Release notes": "/release-notes"
@@ -45,6 +49,8 @@
     "advanced-saml",
     "advanced-spring-webflux-integration",
     "advanced-dropwizard-integration",
-    "advanced-scalapb"
+    "advanced-scala",
+    "advanced-scalapb",
+    "advanced-client-interoperability"
   ]
 }

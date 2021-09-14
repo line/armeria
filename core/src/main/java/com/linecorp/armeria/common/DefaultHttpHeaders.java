@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 @SuppressWarnings("checkstyle:EqualsHashCode")
 class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
@@ -23,11 +23,6 @@ class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
     static final DefaultHttpHeaders EMPTY = new DefaultHttpHeaders(false);
 
     static final DefaultHttpHeaders EMPTY_EOS = new DefaultHttpHeaders(true);
-
-    @Nullable
-    private MediaType contentType;
-    @Nullable
-    private ContentDisposition contentDisposition;
 
     /**
      * Creates an empty headers.
@@ -57,27 +52,13 @@ class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
     @Nullable
     @Override
     public final MediaType contentType() {
-        final MediaType contentType = this.contentType;
-        if (contentType != null) {
-            return contentType;
-        }
-
-        final MediaType newContentType = super.contentType();
-        this.contentType = newContentType;
-        return newContentType;
+        return super.contentType();
     }
 
     @Nullable
     @Override
     public final ContentDisposition contentDisposition() {
-        final ContentDisposition contentDisposition = this.contentDisposition;
-        if (contentDisposition != null) {
-            return contentDisposition;
-        }
-
-        final ContentDisposition newContentDisposition = super.contentDisposition();
-        this.contentDisposition = newContentDisposition;
-        return newContentDisposition;
+        return super.contentDisposition();
     }
 
     @Override

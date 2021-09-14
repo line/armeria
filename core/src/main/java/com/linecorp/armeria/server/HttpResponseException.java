@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised to send an HTTP response with the content specified
@@ -33,31 +34,54 @@ public final class HttpResponseException extends RuntimeException {
 
     /**
      * Returns a new {@link HttpResponseException} instance with the specified HTTP status code.
+     *
+     * @deprecated Use {@link HttpStatusException#of(int)} instead.
      */
+    @Deprecated
     public static HttpResponseException of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
     }
 
     /**
      * Returns a new {@link HttpResponseException} instance with the specified {@link HttpStatus}.
+     *
+     * @deprecated Use {@link HttpStatusException#of(HttpStatus)} instead.
      */
+    @Deprecated
     public static HttpResponseException of(HttpStatus httpStatus) {
         requireNonNull(httpStatus, "httpStatus");
-        return new HttpResponseException(HttpResponse.of(httpStatus));
+        return new HttpResponseException(HttpResponse.of(httpStatus), null);
     }
 
     /**
      * Returns a new {@link HttpResponseException} instance with the specified {@link AggregatedHttpResponse}.
      */
     public static HttpResponseException of(AggregatedHttpResponse aggregatedResponse) {
-        return of(requireNonNull(aggregatedResponse, "aggregatedResponse").toHttpResponse());
+        return of(requireNonNull(aggregatedResponse, "aggregatedResponse").toHttpResponse(), null);
+    }
+
+    /**
+     * Returns a new {@link HttpResponseException} instance with the specified {@link AggregatedHttpResponse}
+     * and {@link Throwable}.
+     */
+    public static HttpResponseException of(AggregatedHttpResponse aggregatedResponse,
+                                           @Nullable Throwable cause) {
+        return of(requireNonNull(aggregatedResponse, "aggregatedResponse").toHttpResponse(), cause);
     }
 
     /**
      * Returns a new {@link HttpResponseException} instance with the specified {@link HttpResponse}.
      */
     public static HttpResponseException of(HttpResponse httpResponse) {
-        return new HttpResponseException(httpResponse);
+        return new HttpResponseException(httpResponse, null);
+    }
+
+    /**
+     * Returns a new {@link HttpResponseException} instance with the specified {@link HttpResponse} and
+     * {@link Throwable}.
+     */
+    public static HttpResponseException of(HttpResponse httpResponse, @Nullable Throwable cause) {
+        return new HttpResponseException(httpResponse, cause);
     }
 
     private static final long serialVersionUID = 3487991462085151316L;
@@ -65,10 +89,11 @@ public final class HttpResponseException extends RuntimeException {
     private final HttpResponse httpResponse;
 
     /**
-     * Creates a new instance with the specified {@link HttpResponse}.
+     * Creates a new instance with the specified {@link HttpResponse} and {@link Throwable}.
      */
-    private HttpResponseException(HttpResponse httpResponse) {
-        this.httpResponse = requireNonNull(httpResponse, "httpResponse");
+    private HttpResponseException(HttpResponse httpResponse, @Nullable Throwable cause) {
+        super(requireNonNull(httpResponse, "httpResponse").toString(), cause);
+        this.httpResponse = httpResponse;
     }
 
     /**

@@ -17,9 +17,8 @@ package com.linecorp.armeria.server.annotation;
 
 import java.lang.reflect.Type;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -39,11 +38,8 @@ public interface ResponseConverterFunctionProvider {
      * @param responseType the return {@link Type} of the annotated HTTP service method
      * @param responseConverter the {@link ResponseConverterFunction} which converts an object
      *                          into an {@link HttpResponse}
-     * @param exceptionHandler the {@link ExceptionHandlerFunction} which converts a {@link Throwable}
-     *                         into an {@link HttpResponse}
      */
     @Nullable
     ResponseConverterFunction createResponseConverterFunction(Type responseType,
-                                                              ResponseConverterFunction responseConverter,
-                                                              ExceptionHandlerFunction exceptionHandler);
+                                                              ResponseConverterFunction responseConverter);
 }

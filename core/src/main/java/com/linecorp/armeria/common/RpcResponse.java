@@ -22,8 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -60,7 +59,7 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
         final CompletableRpcResponse res = new CompletableRpcResponse();
         stage.handle((value, cause) -> {
             if (cause != null) {
-                res.completeExceptionally(cause);
+                res.completeExceptionally(Exceptions.peel(cause));
             } else if (value instanceof RpcResponse) {
                 ((RpcResponse) value).handle((rpcResponseResult, rpcResponseCause) -> {
                     if (rpcResponseCause != null) {

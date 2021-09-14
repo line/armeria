@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -72,34 +73,56 @@ public final class AuthService extends SimpleDecoratingHttpService {
     }
 
     private final Authorizer<HttpRequest> authorizer;
-    private final AuthSuccessHandler successHandler;
-    private final AuthFailureHandler failureHandler;
+    private final AuthSuccessHandler defaultSuccessHandler;
+    private final AuthFailureHandler defaultFailureHandler;
 
     AuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
-                AuthSuccessHandler successHandler, AuthFailureHandler failureHandler) {
+                AuthSuccessHandler defaultSuccessHandler, AuthFailureHandler defaultFailureHandler) {
         super(delegate);
         this.authorizer = authorizer;
-        this.successHandler = successHandler;
-        this.failureHandler = failureHandler;
+        this.defaultSuccessHandler = defaultSuccessHandler;
+        this.defaultFailureHandler = defaultFailureHandler;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(AuthorizerUtil.authorize(authorizer, ctx, req).handleAsync((result, cause) -> {
+        return HttpResponse.from(AuthorizerUtil.authorizeAndSupplyHandlers(authorizer, ctx, req)
+                                               .handleAsync((result, cause) -> {
             try {
                 final HttpService delegate = (HttpService) unwrap();
                 if (cause == null) {
                     if (result != null) {
-                        return result ? successHandler.authSucceeded(delegate, ctx, req)
-                                      : failureHandler.authFailed(delegate, ctx, req, null);
+                        if (!result.isAuthorized()) {
+                            return handleFailure(delegate, result.failureHandler(), ctx, req, null);
+                        }
+                        return handleSuccess(delegate, result.successHandler(), ctx, req);
                     }
                     cause = AuthorizerUtil.newNullResultException(authorizer);
                 }
 
-                return failureHandler.authFailed(delegate, ctx, req, cause);
+                return handleFailure(delegate, result != null ? result.failureHandler() : null,
+                                     ctx, req, cause);
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
             }
         }, ctx.eventLoop()));
+    }
+
+    private HttpResponse handleSuccess(HttpService delegate,
+                                       @Nullable AuthSuccessHandler authorizerSuccessHandler,
+                                       ServiceRequestContext ctx, HttpRequest req)
+            throws Exception {
+        final AuthSuccessHandler handler = authorizerSuccessHandler == null ? defaultSuccessHandler
+                                                                            : authorizerSuccessHandler;
+        return handler.authSucceeded(delegate, ctx, req);
+    }
+
+    private HttpResponse handleFailure(HttpService delegate,
+                                       @Nullable AuthFailureHandler authorizerFailureHandler,
+                                       ServiceRequestContext ctx, HttpRequest req,
+                                       @Nullable Throwable cause) throws Exception {
+        final AuthFailureHandler handler = authorizerFailureHandler == null ? defaultFailureHandler
+                                                                            : authorizerFailureHandler;
+        return handler.authFailed(delegate, ctx, req, cause);
     }
 }

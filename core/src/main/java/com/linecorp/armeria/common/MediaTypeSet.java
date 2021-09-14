@@ -26,12 +26,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An immutable {@link Set} of {@link MediaType}s which provides useful methods for content negotiation.

@@ -18,17 +18,17 @@ package com.linecorp.armeria.common.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -63,8 +63,8 @@ class MeterIdPrefixFunctionTest {
 
     @Test
     void testAndThen() {
-        final ServiceRequestContext ctx = newContext(HttpMethod.GET, "/",
-                                                     RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
+        final ServiceRequestContext ctx = newServiceContext(
+                HttpMethod.GET, "/", RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
         ctx.logBuilder().endResponse();
         final MeterIdPrefixFunction f = new MeterIdPrefixFunction() {
             @Override
@@ -96,7 +96,7 @@ class MeterIdPrefixFunctionTest {
         MeterIdPrefix res;
 
         // A simple HTTP request.
-        ctx = newContext(HttpMethod.GET, "/", null);
+        ctx = newServiceContext(HttpMethod.GET, "/", null);
         ctx.logBuilder().endResponse();
         res = f.completeRequestPrefix(registry, ctx.log().ensureComplete());
         assertThat(res.name()).isEqualTo("foo");
@@ -106,7 +106,8 @@ class MeterIdPrefixFunctionTest {
                                                Tag.of("service", ctx.config().service().getClass().getName()));
 
         // An RPC request.
-        ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
+        ctx = newServiceContext(HttpMethod.POST, "/post",
+                                RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
         ctx.logBuilder().endResponse();
         res = f.completeRequestPrefix(registry, ctx.log().ensureComplete());
         assertThat(res.name()).isEqualTo("foo");
@@ -115,8 +116,18 @@ class MeterIdPrefixFunctionTest {
                                                Tag.of("method", "doFoo"),
                                                Tag.of("service", MeterIdPrefixFunctionTest.class.getName()));
 
+        // An RPC request with client context.
+        final ClientRequestContext clientCtx = newClientContext(
+                HttpMethod.POST, "/post", RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
+        clientCtx.logBuilder().endResponse();
+        res = f.completeRequestPrefix(registry, clientCtx.log().ensureComplete());
+        assertThat(res.name()).isEqualTo("foo");
+        assertThat(res.tags()).containsExactly(Tag.of("http.status", "0"),
+                                               Tag.of("method", "doFoo"),
+                                               Tag.of("service", MeterIdPrefixFunctionTest.class.getName()));
+
         // HTTP response status.
-        ctx = newContext(HttpMethod.GET, "/get", null);
+        ctx = newServiceContext(HttpMethod.GET, "/get", null);
         ctx.logBuilder().startResponse();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         ctx.logBuilder().endResponse();
@@ -137,7 +148,7 @@ class MeterIdPrefixFunctionTest {
         MeterIdPrefix res;
 
         // A simple HTTP request.
-        ctx = newContext(HttpMethod.GET, "/", null);
+        ctx = newServiceContext(HttpMethod.GET, "/", null);
         res = f.activeRequestPrefix(registry, ctx.log().ensureRequestComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
@@ -145,15 +156,24 @@ class MeterIdPrefixFunctionTest {
                                                Tag.of("service", ctx.config().service().getClass().getName()));
 
         // An RPC request.
-        ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
+        ctx = newServiceContext(HttpMethod.POST, "/post",
+                                RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
         res = f.activeRequestPrefix(registry, ctx.log().ensureRequestComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "doFoo"),
                                                Tag.of("service", MeterIdPrefixFunctionTest.class.getName()));
 
+        // An RPC request with client context.
+        final ClientRequestContext clientCtx = newClientContext(
+                HttpMethod.POST, "/post", RpcRequest.of(MeterIdPrefixFunctionTest.class, "doFoo"));
+        res = f.activeRequestPrefix(registry, clientCtx.log().ensureRequestComplete());
+        assertThat(res.name()).isEqualTo("foo");
+        assertThat(res.tags()).containsExactly(Tag.of("method", "doFoo"),
+                                               Tag.of("service", MeterIdPrefixFunctionTest.class.getName()));
+
         // HTTP response status.
-        ctx = newContext(HttpMethod.GET, "/get", null);
+        ctx = newServiceContext(HttpMethod.GET, "/get", null);
         ctx.logBuilder().startResponse();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         res = f.activeRequestPrefix(registry, ctx.log().ensureRequestComplete());
@@ -197,9 +217,17 @@ class MeterIdPrefixFunctionTest {
         }
     }
 
-    private static ServiceRequestContext newContext(HttpMethod method, String path,
-                                                    @Nullable Object requestContent) {
+    private static ServiceRequestContext newServiceContext(HttpMethod method, String path,
+                                                           @Nullable Object requestContent) {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(method, path));
+        ctx.logBuilder().requestContent(requestContent, null);
+        ctx.logBuilder().endRequest();
+        return ctx;
+    }
+
+    private static ClientRequestContext newClientContext(HttpMethod method, String path,
+                                                         @Nullable Object requestContent) {
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(method, path));
         ctx.logBuilder().requestContent(requestContent, null);
         ctx.logBuilder().endRequest();
         return ctx;

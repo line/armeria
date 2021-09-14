@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 interface EventCounter {
 

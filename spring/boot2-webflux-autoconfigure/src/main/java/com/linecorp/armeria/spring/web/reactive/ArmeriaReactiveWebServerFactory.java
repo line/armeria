@@ -32,8 +32,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -57,6 +55,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
@@ -69,6 +68,7 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
+import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -163,7 +163,8 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                             Metrics.globalRegistry),
                                                findBeans(HealthChecker.class),
                                                findBeans(HealthCheckServiceConfigurator.class),
-                                               meterIdPrefixFunctionOrDefault());
+                                               meterIdPrefixFunctionOrDefault(),
+                                               findBeans(MetricCollectingServiceConfigurator.class));
         }
 
         // In the property file, both Spring and Armeria port configuration can coexist.

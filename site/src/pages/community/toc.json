@@ -2,11 +2,13 @@
   "root": ["index"],
   "Pages": [
     "articles",
+    "office-hours",
     "developer-guide",
     "code-of-conduct",
     "design-resources"
   ],
   "See also": {
+    "Tutorials": "/tutorials",
     "User manual": "/docs",
     "LINE Engineering": "https://engineering.linecorp.com/en/"
   }

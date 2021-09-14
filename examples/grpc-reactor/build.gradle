@@ -6,9 +6,11 @@ dependencies {
     implementation project(':core')
     implementation project(':grpc')
     implementation 'com.salesforce.servicelibs:reactor-grpc-stub'
+    implementation 'io.projectreactor:reactor-core'
     compileOnly 'javax.annotation:javax.annotation-api'
     runtimeOnly 'org.slf4j:slf4j-simple'
 
+    testImplementation project(':junit5')
     testImplementation 'javax.annotation:javax.annotation-api'
     testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
     testImplementation 'org.assertj:assertj-core'
@@ -17,5 +19,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.grpc.reactor.Main'
+    mainClass.set('example.armeria.grpc.reactor.Main')
 }

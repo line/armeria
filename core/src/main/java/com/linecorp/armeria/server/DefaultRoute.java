@@ -16,14 +16,13 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.RoutingResult.HIGHEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
-import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -34,6 +33,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultRoute implements Route {
 
@@ -43,6 +43,8 @@ final class DefaultRoute implements Route {
     private final Set<MediaType> produces;
     private final List<RoutingPredicate<QueryParams>> paramPredicates;
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates;
+    private final boolean isFallback;
+    private final List<Route> excludedRoutes;
 
     private final int hashCode;
     private final int complexity;
@@ -50,7 +52,9 @@ final class DefaultRoute implements Route {
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<QueryParams>> paramPredicates,
-                 List<RoutingPredicate<HttpHeaders>> headerPredicates) {
+                 List<RoutingPredicate<HttpHeaders>> headerPredicates,
+                 boolean isFallback,
+                 List<Route> excludedRoutes) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
         this.methods = Sets.immutableEnumSet(methods);
@@ -58,9 +62,16 @@ final class DefaultRoute implements Route {
         this.produces = ImmutableSet.copyOf(requireNonNull(produces, "produces"));
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
+        this.isFallback = isFallback;
+        // Mark excluded routes as 'fallback' in order to avoid deferring an exception while checking
+        // whether a request is matched by 'excludedRoutes'.
+        this.excludedRoutes = requireNonNull(excludedRoutes, "excludedRoutes")
+                .stream().map(excludedRoute -> excludedRoute.toBuilder().fallback(true).build())
+                .collect(toImmutableList());
 
         hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
-                                this.paramPredicates, this.headerPredicates);
+                                this.paramPredicates, this.headerPredicates, this.isFallback,
+                                this.excludedRoutes);
 
         int complexity = 0;
         if (!consumes.isEmpty()) {
@@ -74,6 +85,9 @@ final class DefaultRoute implements Route {
         }
         if (!headerPredicates.isEmpty()) {
             complexity += 1 << 3;
+        }
+        if (!excludedRoutes.isEmpty()) {
+            complexity += 1 << 4;
         }
         this.complexity = complexity;
     }
@@ -92,9 +106,8 @@ final class DefaultRoute implements Route {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (routingCtx.deferredStatusException() == null) {
-                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
+                deferStatusException(routingCtx, HttpStatus.METHOD_NOT_ALLOWED);
             }
-
             return emptyOrCorsPreflightResult(routingCtx, builder);
         }
 
@@ -115,7 +128,7 @@ final class DefaultRoute implements Route {
                 if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
-                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
+                deferStatusException(routingCtx, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }
         }
@@ -157,24 +170,55 @@ final class DefaultRoute implements Route {
                 if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
-                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
+                deferStatusException(routingCtx, HttpStatus.NOT_ACCEPTABLE);
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }
         }
 
         if (routingCtx.requiresMatchingParamsPredicates()) {
-            if (!paramPredicates.isEmpty() &&
-                !paramPredicates.stream().allMatch(p -> p.test(routingCtx.params()))) {
-                return RoutingResult.empty();
+            if (!paramPredicates.isEmpty()) {
+                for (RoutingPredicate<QueryParams> p : paramPredicates) {
+                    if (!p.test(routingCtx.params())) {
+                        return RoutingResult.empty();
+                    }
+                }
             }
         }
         if (routingCtx.requiresMatchingHeadersPredicates()) {
-            if (!headerPredicates.isEmpty() &&
-                !headerPredicates.stream().allMatch(p -> p.test(routingCtx.headers()))) {
-                return RoutingResult.empty();
+            if (!headerPredicates.isEmpty()) {
+                for (RoutingPredicate<HttpHeaders> p : headerPredicates) {
+                    if (!p.test(routingCtx.headers())) {
+                        return RoutingResult.empty();
+                    }
+                }
             }
         }
+
+        // We assume that a user adds excluded routes as little as possible. It would be much better to split
+        // routes if there's many routes to be excluded.
+        if (!excludedRoutes.isEmpty()) {
+            for (Route r : excludedRoutes) {
+                if (r.apply(routingCtx, isRouteDecorator).isPresent()) {
+                    return RoutingResult.excluded();
+                }
+            }
+        }
+
         return builder.build();
+    }
+
+    private void deferStatusException(RoutingContext routingCtx, HttpStatus httpStatus) {
+        if (isFallback) {
+            // Do not defer an exception if this route is a fallback route, which is matched
+            // only when no configured route was matched.
+            //
+            // For example, assume that a route '/a/b/c/' supports HTTP GET method only.
+            // Its fallback route would be added as a path of '/a/b/c' with supporting HTTP GET method as well.
+            // In this case, '404 not found' would make sense rather than '405 method not allowed'
+            // if a 'DELETE /a/b/c' request is received, because the fallback route wasn't specified by a user.
+            return;
+        }
+        routingCtx.deferStatusException(HttpStatusException.of(httpStatus));
     }
 
     private static RoutingResult emptyOrCorsPreflightResult(RoutingContext routingCtx,
@@ -232,6 +276,29 @@ final class DefaultRoute implements Route {
     }
 
     @Override
+    public boolean isFallback() {
+        return isFallback;
+    }
+
+    @Override
+    public List<Route> excludedRoutes() {
+        return excludedRoutes;
+    }
+
+    @Override
+    public RouteBuilder toBuilder() {
+        return new RouteBuilder()
+                .pathMapping(pathMapping)
+                .methods(methods)
+                .consumes(consumes)
+                .produces(produces)
+                .matchesParams(paramPredicates)
+                .matchesHeaders(headerPredicates)
+                .fallback(isFallback)
+                .exclude(excludedRoutes);
+    }
+
+    @Override
     public int hashCode() {
         return hashCode;
     }
@@ -252,7 +319,9 @@ final class DefaultRoute implements Route {
                consumes.equals(that.consumes) &&
                produces.equals(that.produces) &&
                headerPredicates.equals(that.headerPredicates) &&
-               paramPredicates.equals(that.paramPredicates);
+               paramPredicates.equals(that.paramPredicates) &&
+               isFallback == that.isFallback &&
+               excludedRoutes.equals(that.excludedRoutes);
     }
 
     @Override

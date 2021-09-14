@@ -20,13 +20,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.EventLoop;
 import io.netty.resolver.ResolvedAddressTypes;

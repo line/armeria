@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -40,6 +38,8 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -54,7 +54,7 @@ import io.netty.util.AsciiString;
  */
 public final class JacksonRequestConverterFunction implements RequestConverterFunction {
 
-    private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
+    private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();
     private static final Map<Class<?>, Boolean> skippableTypes;
 
     static {
@@ -95,8 +95,7 @@ public final class JacksonRequestConverterFunction implements RequestConverterFu
             @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
 
         final MediaType contentType = request.contentType();
-        if (contentType != null && (contentType.is(MediaType.JSON) ||
-                                    contentType.subtype().endsWith("+json"))) {
+        if (contentType != null && contentType.isJson()) {
             if (expectedResultType == TreeNode.class ||
                 expectedResultType == JsonNode.class) {
                 try {

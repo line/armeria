@@ -23,14 +23,12 @@ import java.util.BitSet;
 import java.util.Objects;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 
@@ -133,7 +131,8 @@ public final class PathAndQuery {
      * the parsed result was valid (e.g., when a server is able to successfully handle the parsed path).
      */
     public void storeInCache(@Nullable String rawPath) {
-        if (CACHE != null && rawPath != null) {
+        if (CACHE != null && !cached && rawPath != null) {
+            cached = true;
             CACHE.put(rawPath, this);
         }
     }
@@ -141,6 +140,8 @@ public final class PathAndQuery {
     private final String path;
     @Nullable
     private final String query;
+
+    private boolean cached;
 
     private PathAndQuery(String path, @Nullable String query) {
         this.path = path;
@@ -178,10 +179,10 @@ public final class PathAndQuery {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("path", path)
-                          .add("query", query)
-                          .toString();
+        if (query == null) {
+            return path;
+        }
+        return path + "?" + query;
     }
 
     @Nullable

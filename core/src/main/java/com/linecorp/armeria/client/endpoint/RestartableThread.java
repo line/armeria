@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A restartable thread utility class.

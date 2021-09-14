@@ -20,14 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -54,15 +53,17 @@ final class DefaultClientBuilderParams implements ClientBuilderParams {
         scheme = factory.validateScheme(Scheme.parse(uri.getScheme()));
         endpointGroup = Endpoint.parse(uri.getRawAuthority());
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append(nullOrEmptyToSlash(uri.getRawPath()));
-        if (uri.getRawQuery() != null) {
-            buf.append('?').append(uri.getRawQuery());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append(nullOrEmptyToSlash(uri.getRawPath()));
+            if (uri.getRawQuery() != null) {
+                buf.append('?').append(uri.getRawQuery());
+            }
+            if (uri.getRawFragment() != null) {
+                buf.append('#').append(uri.getRawFragment());
+            }
+            absolutePathRef = buf.toString();
         }
-        if (uri.getRawFragment() != null) {
-            buf.append('#').append(uri.getRawFragment());
-        }
-        absolutePathRef = buf.toString();
     }
 
     DefaultClientBuilderParams(Scheme scheme, EndpointGroup endpointGroup,

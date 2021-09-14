@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.apache.thrift.protocol.TMessage;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
@@ -116,12 +116,6 @@ class RequestContextExportingAppenderTest {
             count++;
             switch (level) {
                 case Status.WARN:
-                    if (s.getThrowable() != null) {
-                        logger.warn(s.getMessage(), s.getThrowable());
-                    } else {
-                        logger.warn(s.getMessage());
-                    }
-                    break;
                 case Status.ERROR:
                     if (s.getThrowable() != null) {
                         logger.warn(s.getMessage(), s.getThrowable());
@@ -312,7 +306,8 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("req.id")
-                           .hasSize(16);
+                           .containsKey("req.root_id")
+                           .hasSize(17);
         }
     }
 
@@ -356,7 +351,8 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
                            .containsKey("req.id")
-                           .hasSize(23);
+                           .containsKey("req.root_id")
+                           .hasSize(24);
         }
     }
 
@@ -420,8 +416,9 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.my_attr_name", "some-name")
                            .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
+                           .containsKey("req.root_id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(29);
+                           .hasSize(30);
         }
     }
 

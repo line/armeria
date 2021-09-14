@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class LazyList<E> extends ForwardingList<E> {
 

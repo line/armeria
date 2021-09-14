@@ -38,8 +38,6 @@ import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
 import java.util.Base64;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +49,9 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
@@ -91,12 +91,12 @@ public final class GrpcStatus {
      * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
      * and the protocol package, is used by default.
      */
-    public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, Throwable t,
-                                       Metadata metadata) {
+    public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, RequestContext ctx,
+                                       Throwable t, Metadata metadata) {
         t = unwrap(requireNonNull(t, "t"));
 
         if (statusFunction != null) {
-            final Status status = statusFunction.apply(t, metadata);
+            final Status status = statusFunction.apply(ctx, t, metadata);
             if (status != null) {
                 return status;
             }
@@ -145,14 +145,14 @@ public final class GrpcStatus {
      * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
      */
     public static Status fromStatusFunction(@Nullable GrpcStatusFunction statusFunction,
-                                            Status status, Metadata metadata) {
+                                            RequestContext ctx, Status status, Metadata metadata) {
         requireNonNull(status, "status");
 
         if (statusFunction != null) {
             final Throwable cause = status.getCause();
             if (cause != null) {
                 final Throwable unwrapped = unwrap(cause);
-                final Status newStatus = statusFunction.apply(unwrapped, metadata);
+                final Status newStatus = statusFunction.apply(ctx, unwrapped, metadata);
                 if (newStatus != null) {
                     return newStatus;
                 }
@@ -174,8 +174,9 @@ public final class GrpcStatus {
     }
 
     /**
-     * Maps GRPC status codes to http status, as defined in upstream grpc-gateway
-     * <a href="https://github.com/grpc-ecosystem/grpc-gateway/blob/master/third_party/googleapis/google/rpc/code.proto">code.proto</a>.
+     * Maps GRPC status codes to http status, as defined in upstream Google APIs
+     * <a href="https://github.com/googleapis/googleapis/blob/b2a7d2709887e38bcd3b5142424e563b0b386b6f/google/rpc/code.proto">
+     * code.proto</a>.
      */
     public static HttpStatus grpcCodeToHttpStatus(Status.Code grpcStatusCode) {
         switch (grpcStatusCode) {

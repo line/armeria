@@ -25,8 +25,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -43,7 +42,6 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
  * Decorates an {@link HttpService} to log {@link HttpRequest}s and {@link HttpResponse}s.
@@ -75,14 +73,21 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
 
-    private final BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer;
-    private final BiFunction<? super RequestContext, Object, ?> requestContentSanitizer;
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super RequestHeaders,
+            ? extends @Nullable Object> requestHeadersSanitizer;
+    private final BiFunction<? super RequestContext, Object,
+            ? extends @Nullable Object> requestContentSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable Object> requestTrailersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super ResponseHeaders, ?> responseHeadersSanitizer;
-    private final BiFunction<? super RequestContext, Object, ?> responseContentSanitizer;
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer;
-    private final BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer;
+    private final BiFunction<? super RequestContext, ? super ResponseHeaders,
+            ? extends @Nullable Object> responseHeadersSanitizer;
+    private final BiFunction<? super RequestContext, Object,
+            ? extends @Nullable Object> responseContentSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable Object> responseTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super Throwable,
+            ? extends @Nullable Object> responseCauseSanitizer;
 
     private final Sampler<? super ServiceRequestContext> sampler;
 
@@ -95,13 +100,20 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             @Nullable Logger logger,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer,
+            BiFunction<? super RequestContext, ? super RequestHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super ResponseHeaders,
+                    ? extends @Nullable Object> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable,
+                    ? extends @Nullable Object> responseCauseSanitizer,
             Sampler<? super ServiceRequestContext> sampler) {
 
         super(requireNonNull(delegate, "delegate"));
@@ -122,8 +134,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_SERVICE_LOGGING) &&
-            sampler.isSampled(ctx)) {
+        if (sampler.isSampled(ctx)) {
             logWhenComplete(logger, ctx, requestLogger, responseLogger);
         }
         return unwrap().serve(ctx, req);

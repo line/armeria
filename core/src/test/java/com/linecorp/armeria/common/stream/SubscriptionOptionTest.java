@@ -20,13 +20,10 @@ import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuff
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.params.provider.Arguments.of;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
-
-import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,8 +34,10 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
+import reactor.core.publisher.Mono;
 
 class SubscriptionOptionTest {
 
@@ -100,11 +99,11 @@ class SubscriptionOptionTest {
 
     @ParameterizedTest
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
-    void notifyCancellation(HttpData unused1, ByteBuf unused2, StreamMessage<HttpData> stream) {
-        notifyCancellation(stream);
+    void notifyCancellation(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
+        notifyCancellation(buf, stream);
     }
 
-    static void notifyCancellation(StreamMessage<HttpData> stream) {
+    static void notifyCancellation(ByteBuf buf, StreamMessage<HttpData> stream) {
         final AtomicBoolean completed = new AtomicBoolean();
         stream.subscribe(new Subscriber<HttpData>() {
             @Override
@@ -131,6 +130,7 @@ class SubscriptionOptionTest {
 
         await().untilAsserted(() -> assertThat(completed).isTrue());
         await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompletedExceptionally());
+        assertThat(buf.refCnt()).isZero();
     }
 
     static SubscriptionOption[] subscriptionOptions(boolean subscribedWithPooledObjects) {
@@ -145,7 +145,7 @@ class SubscriptionOptionTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(defaultStream(), fixedStream(), deferredStream());
+            return Stream.of(defaultStream(), fixedStream(), deferredStream(), publisherBasedStream());
         }
 
         private static Arguments defaultStream() {
@@ -154,14 +154,14 @@ class SubscriptionOptionTest {
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             defaultStream.write(data);
             defaultStream.close();
-            return of(data, buf, defaultStream);
+            return Arguments.of(data, buf, defaultStream);
         }
 
         private static Arguments fixedStream() {
             final ByteBuf buf = newPooledBuffer();
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             final StreamMessage<HttpData> fixedStream = StreamMessage.of(data);
-            return of(data, buf, fixedStream);
+            return Arguments.of(data, buf, fixedStream);
         }
 
         private static Arguments deferredStream() {
@@ -172,7 +172,16 @@ class SubscriptionOptionTest {
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             d.write(data);
             d.close();
-            return of(data, buf, deferredStream);
+            return Arguments.of(data, buf, deferredStream);
+        }
+
+        private static Arguments publisherBasedStream() {
+            final ByteBuf buf = newPooledBuffer();
+            final HttpData data = HttpData.wrap(buf).withEndOfStream();
+            final PublisherBasedStreamMessage<HttpData> publisherBasedStream =
+                    new PublisherBasedStreamMessage<>(Mono.just(data)
+                                                          .doOnDiscard(HttpData.class, HttpData::close));
+            return Arguments.of(data, buf, publisherBasedStream);
         }
     }
 }

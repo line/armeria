@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -31,8 +30,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -42,6 +39,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
@@ -114,11 +112,6 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, EMPTY_OPTIONS);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
@@ -144,8 +137,12 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
         } else {
-            blockingTaskExecutor =
-                    ServiceRequestContext.mapCurrent(ServiceRequestContext::blockingTaskExecutor, null);
+            final ServiceRequestContext serviceRequestContext = ServiceRequestContext.currentOrNull();
+            if (serviceRequestContext != null) {
+                blockingTaskExecutor = serviceRequestContext.blockingTaskExecutor();
+            } else {
+                blockingTaskExecutor = null;
+            }
         }
         AsynchronousFileChannel fileChannel = null;
         boolean success = false;

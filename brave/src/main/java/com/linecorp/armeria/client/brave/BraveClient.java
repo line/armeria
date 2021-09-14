@@ -21,17 +21,18 @@ import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.ensure
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
@@ -43,6 +44,8 @@ import brave.http.HttpClientHandler;
 import brave.http.HttpClientRequest;
 import brave.http.HttpClientResponse;
 import brave.http.HttpTracing;
+import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Scope;
 
 /**
  * Decorates an {@link HttpClient} to trace outbound {@link HttpRequest}s using
@@ -51,6 +54,16 @@ import brave.http.HttpTracing;
 public final class BraveClient extends SimpleDecoratingHttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(BraveClient.class);
+
+    private static final Scope CLIENT_REQUEST_DECORATING_SCOPE = new Scope() {
+        @Override
+        public void close() {}
+
+        @Override
+        public String toString() {
+            return "ClientRequestDecoratingScope";
+        }
+    };
 
     /**
      * Creates a new tracing {@link HttpClient} decorator using the specified {@link Tracing} instance.
@@ -92,14 +105,26 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
 
     private final Tracer tracer;
     private final HttpClientHandler<HttpClientRequest, HttpClientResponse> handler;
+    @Nullable
+    private final RequestContextCurrentTraceContext currentTraceContext;
+    private final boolean scopeDecoratorAdded;
 
     /**
      * Creates a new instance.
      */
     private BraveClient(HttpClient delegate, HttpTracing httpTracing) {
         super(delegate);
-        tracer = httpTracing.tracing().tracer();
+        final Tracing tracing = httpTracing.tracing();
+        tracer = tracing.tracer();
         handler = HttpClientHandler.create(httpTracing);
+        final CurrentTraceContext currentTraceContext = tracing.currentTraceContext();
+        if (currentTraceContext instanceof RequestContextCurrentTraceContext) {
+            this.currentTraceContext = (RequestContextCurrentTraceContext) currentTraceContext;
+            scopeDecoratorAdded = this.currentTraceContext.scopeDecoratorAdded();
+        } else {
+            this.currentTraceContext = null;
+            scopeDecoratorAdded = false;
+        }
     }
 
     @Override
@@ -110,11 +135,26 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
-        // For no-op spans, we only need to inject into headers and don't set any other attributes.
+        if (scopeDecoratorAdded && !span.isNoop() && ctx instanceof DefaultClientRequestContext) {
+            final DefaultClientRequestContext defaultCtx = (DefaultClientRequestContext) ctx;
+            // Run the scope decorators when the ctx is pushed to the thread local.
+            defaultCtx.hook(() -> {
+                final Scope scope = currentTraceContext.decorateScope(span.context(),
+                                                                      CLIENT_REQUEST_DECORATING_SCOPE);
+                return scope::close;
+            });
+        }
+
+        maybeAddTagsToSpan(ctx, braveReq, span);
+        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
+            return unwrap().execute(ctx, req);
+        }
+    }
+
+    private void maybeAddTagsToSpan(ClientRequestContext ctx, HttpClientRequest braveReq, Span span) {
         if (span.isNoop()) {
-            try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-                return unwrap().execute(ctx, req);
-            }
+            // For no-op spans, we only need to inject into headers and don't set any other attributes.
+            return;
         }
 
         ctx.log().whenComplete().thenAccept(log -> {
@@ -162,10 +202,6 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             final HttpClientResponse braveRes = ClientRequestContextAdapter.asHttpClientResponse(log, braveReq);
             handler.handleReceive(braveRes, span);
         });
-
-        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-            return unwrap().execute(ctx, req);
-        }
     }
 
     private static void logTiming(Span span, String startName, String endName, long startTimeMicros,

@@ -17,13 +17,13 @@ package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Ascii;
 
-public class PathAndQueryTest {
+class PathAndQueryTest {
     @Test
-    public void empty() {
+    void empty() {
         final PathAndQuery res = PathAndQuery.parse(null);
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/");
@@ -41,12 +41,12 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void relative() {
+    void relative() {
         assertThat(PathAndQuery.parse("foo")).isNull();
     }
 
     @Test
-    public void doubleDots() {
+    void doubleDots() {
         assertThat(PathAndQuery.parse("/..")).isNull();
         assertThat(PathAndQuery.parse("/../")).isNull();
         assertThat(PathAndQuery.parse("/../foo")).isNull();
@@ -70,7 +70,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void hexadecimal() {
+    void hexadecimal() {
         assertThat(PathAndQuery.parse("/%")).isNull();
         assertThat(PathAndQuery.parse("/%0")).isNull();
         assertThat(PathAndQuery.parse("/%0X")).isNull();
@@ -78,7 +78,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void controlChars() {
+    void controlChars() {
         assertThat(PathAndQuery.parse("/\0")).isNull();
         assertThat(PathAndQuery.parse("/a\nb")).isNull();
         assertThat(PathAndQuery.parse("/a\u007fb")).isNull();
@@ -112,7 +112,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void percent() {
+    void percent() {
         final PathAndQuery res = PathAndQuery.parse("/%25");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/%25");
@@ -120,7 +120,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void slash() {
+    void slash() {
         final PathAndQuery res = PathAndQuery.parse("%2F?%2F");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/");
@@ -128,7 +128,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void consecutiveSlashes() {
+    void consecutiveSlashes() {
         final PathAndQuery res = PathAndQuery.parse(
                 "/path//with///consecutive////slashes?/query//with///consecutive////slashes");
         assertThat(res).isNotNull();
@@ -144,7 +144,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void colon() {
+    void colon() {
         assertThat(PathAndQuery.parse("/:")).isNotNull();
         assertThat(PathAndQuery.parse("/:/")).isNotNull();
         assertThat(PathAndQuery.parse("/a/:")).isNotNull();
@@ -152,7 +152,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void rawUnicode() {
+    void rawUnicode() {
         // 2- and 3-byte UTF-8
         final PathAndQuery res1 = PathAndQuery.parse("/\u00A2?\u20AC"); // ¢ and €
         assertThat(res1).isNotNull();
@@ -169,7 +169,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void encodedUnicode() {
+    void encodedUnicode() {
         final String encodedPath = "/%ec%95%88";
         final String encodedQuery = "%eb%85%95";
         final PathAndQuery res = PathAndQuery.parse(encodedPath + '?' + encodedQuery);
@@ -179,7 +179,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void noEncoding() {
+    void noEncoding() {
         final PathAndQuery res = PathAndQuery.parse("/a?b=c");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/a");
@@ -187,7 +187,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void space() {
+    void space() {
         final PathAndQuery res = PathAndQuery.parse("/ ? ");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/%20");
@@ -200,7 +200,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void plus() {
+    void plus() {
         final PathAndQuery res = PathAndQuery.parse("/+?a+b=c+d");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/+");
@@ -213,7 +213,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void ampersand() {
+    void ampersand() {
         final PathAndQuery res = PathAndQuery.parse("/&?a=1&a=2&b=3");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/&");
@@ -227,7 +227,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void semicolon() {
+    void semicolon() {
         final PathAndQuery res = PathAndQuery.parse("/;?a=b;c=d");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/;");
@@ -241,7 +241,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void equal() {
+    void equal() {
         final PathAndQuery res = PathAndQuery.parse("/=?a=b=1");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/=");
@@ -255,7 +255,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void sharp() {
+    void sharp() {
         final PathAndQuery res = PathAndQuery.parse("/#?a=b#1");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/#");
@@ -269,7 +269,7 @@ public class PathAndQueryTest {
     }
 
     @Test
-    public void allReservedCharacters() {
+    void allReservedCharacters() {
         final PathAndQuery res = PathAndQuery.parse("/#/:[]@!$&'()*+,;=?a=/#/:[]@!$&'()*+,;=");
         assertThat(res).isNotNull();
         assertThat(res.path()).isEqualTo("/#/:[]@!$&'()*+,;=");
@@ -281,5 +281,13 @@ public class PathAndQueryTest {
         assertThat(res2).isNotNull();
         assertThat(res2.path()).isEqualTo("/#/:[]@!$&'()*+,;=?");
         assertThat(res2.query()).isEqualTo("a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
+    }
+
+    @Test
+    void doubleQuote() {
+        final PathAndQuery res = PathAndQuery.parse("/\"?\"");
+        assertThat(res).isNotNull();
+        assertThat(res.path()).isEqualTo("/%22");
+        assertThat(res.query()).isEqualTo("%22");
     }
 }

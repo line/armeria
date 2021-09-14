@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.common.logging;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -25,12 +26,13 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.HttpResponseException;
-import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
  * Utilities for logging decorators.
@@ -48,7 +50,17 @@ public final class LoggingDecorators {
     public static void logWhenComplete(
             Logger logger, RequestContext ctx,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
-        ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
+        final boolean isTransientService = isTransientService(ctx);
+        final CompletableFuture<RequestOnlyLog> requestCompletionFuture;
+        if (!isTransientService) {
+            requestCompletionFuture = ctx.log().whenRequestComplete().thenApply(log -> {
+                requestLogger.accept(log);
+                return log;
+            });
+        } else {
+            requestCompletionFuture = ctx.log().whenRequestComplete();
+        }
+        requestCompletionFuture.exceptionally(e -> {
             try (SafeCloseable ignored = ctx.push()) {
                 logger.warn("{} Unexpected exception while logging request: ", ctx, e);
             }
@@ -68,9 +80,12 @@ public final class LoggingDecorators {
     public static void logRequest(
             Logger logger, RequestOnlyLog log,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer) {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         if (requestLogLevel.isEnabled(logger)) {
@@ -91,19 +106,30 @@ public final class LoggingDecorators {
             Logger logger, RequestLog log,
             Function<? super RequestLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super RequestHeaders, ?> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super ResponseHeaders,
+                    ? extends @Nullable Object> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable,
+                    ? extends @Nullable Object> responseCauseSanitizer) {
 
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
         final Throwable responseCause = log.responseCause();
 
         if (responseLogLevel.isEnabled(logger)) {
             final RequestContext ctx = log.context();
+            if (!log.responseHeaders().status().isServerError() && isTransientService(ctx)) {
+                return;
+            }
+
             final String responseStr = log.toStringResponseOnly(responseHeadersSanitizer,
                                                                 responseContentSanitizer,
                                                                 responseTrailersSanitizer);
@@ -123,11 +149,6 @@ public final class LoggingDecorators {
                                                                  requestTrailersSanitizer));
                 }
 
-                if (expected(responseCause)) {
-                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
-                    return;
-                }
-
                 final Object sanitizedResponseCause = responseCauseSanitizer.apply(ctx, responseCause);
                 if (sanitizedResponseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
@@ -145,7 +166,10 @@ public final class LoggingDecorators {
         }
     }
 
-    private static boolean expected(Throwable responseCause) {
-        return responseCause instanceof HttpResponseException || responseCause instanceof HttpStatusException;
+    private static boolean isTransientService(RequestContext ctx) {
+        return ctx instanceof ServiceRequestContext &&
+               !((ServiceRequestContext) ctx).config()
+                                             .transientServiceOptions()
+                                             .contains(TransientServiceOption.WITH_SERVICE_LOGGING);
     }
 }

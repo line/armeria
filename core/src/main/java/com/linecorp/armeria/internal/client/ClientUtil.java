@@ -25,13 +25,18 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -52,12 +57,13 @@ public final class ClientUtil {
         requireNonNull(futureConverter, "futureConverter");
         requireNonNull(errorResponseFactory, "errorResponseFactory");
 
+        boolean initialized = false;
+        boolean success = false;
         try {
-            endpointGroup = mapEndpoint(ctx, endpointGroup);
             final CompletableFuture<Boolean> initFuture = ctx.init(endpointGroup);
-            if (initFuture.isDone()) {
+            initialized = initFuture.isDone();
+            if (initialized) {
                 // Initialization has been done immediately.
-                final boolean success;
                 try {
                     success = initFuture.get();
                 } catch (Exception e) {
@@ -66,22 +72,28 @@ public final class ClientUtil {
 
                 return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
             } else {
-                return futureConverter.apply(initFuture.handle((success, cause) -> {
+                return futureConverter.apply(initFuture.handle((success0, cause) -> {
                     try {
                         if (cause != null) {
                             throw UnprocessedRequestException.of(Exceptions.peel(cause));
                         }
 
-                        return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
+                        return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success0);
                     } catch (Throwable t) {
                         fail(ctx, t);
                         return errorResponseFactory.apply(ctx, t);
+                    } finally {
+                        ctx.finishInitialization(success0);
                     }
                 }));
             }
         } catch (Throwable cause) {
             fail(ctx, cause);
             return errorResponseFactory.apply(ctx, cause);
+        } finally {
+            if (initialized) {
+                ctx.finishInitialization(success);
+            }
         }
     }
 
@@ -114,15 +126,6 @@ public final class ClientUtil {
 
             // No need to call `fail()` because failed by `DefaultRequestContext.init()` already.
             return errorResponseFactory.apply(ctx, cause);
-        }
-    }
-
-    private static EndpointGroup mapEndpoint(ClientRequestContext ctx, EndpointGroup endpointGroup) {
-        if (endpointGroup instanceof Endpoint) {
-            return requireNonNull(ctx.options().endpointRemapper().apply((Endpoint) endpointGroup),
-                                  "endpointRemapper returned null.");
-        } else {
-            return endpointGroup;
         }
     }
 
@@ -160,6 +163,69 @@ public final class ClientUtil {
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);
+    }
+
+    /**
+     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
+     * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
+     */
+    public static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
+                                                         @Nullable HttpRequest req,
+                                                         @Nullable RpcRequest rpcReq,
+                                                         boolean initialAttempt) {
+        final RequestId id = ctx.options().requestIdGenerator().get();
+        final EndpointGroup endpointGroup = ctx.endpointGroup();
+        final ClientRequestContext derived;
+        if (endpointGroup != null && !initialAttempt) {
+            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.selectNow(ctx));
+        } else {
+            derived = ctx.newDerivedContext(id, req, rpcReq, ctx.endpoint());
+        }
+
+        final RequestLogAccess parentLog = ctx.log();
+        final RequestLog partial = parentLog.partial();
+        final RequestLogBuilder logBuilder = derived.logBuilder();
+        // serializationFormat is always not null, so this is fine.
+        logBuilder.serializationFormat(partial.serializationFormat());
+        if (parentLog.isAvailable(RequestLogProperty.NAME)) {
+            final String serviceName = partial.serviceName();
+            final String name = partial.name();
+            if (serviceName != null) {
+                logBuilder.name(serviceName, name);
+            } else {
+                logBuilder.name(name);
+            }
+        }
+
+        final RequestLogBuilder parentLogBuilder = ctx.logBuilder();
+        if (parentLogBuilder.isDeferred(RequestLogProperty.REQUEST_CONTENT)) {
+            logBuilder.defer(RequestLogProperty.REQUEST_CONTENT);
+        }
+        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT)
+                 .thenAccept(requestLog -> logBuilder.requestContent(
+                         requestLog.requestContent(), requestLog.rawRequestContent()));
+        if (parentLogBuilder.isDeferred(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            logBuilder.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+        }
+        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)
+                 .thenAccept(requestLog -> logBuilder.requestContentPreview(
+                         requestLog.requestContentPreview()));
+
+        // Propagates the response content only when deferResponseContent is called.
+        if (parentLogBuilder.isDeferred(RequestLogProperty.RESPONSE_CONTENT)) {
+            logBuilder.defer(RequestLogProperty.RESPONSE_CONTENT);
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT)
+                     .thenAccept(requestLog -> logBuilder.responseContent(
+                             requestLog.responseContent(), requestLog.rawResponseContent()));
+        }
+        if (parentLogBuilder.isDeferred(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            logBuilder.defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)
+                     .thenAccept(requestLog -> logBuilder.responseContentPreview(
+                             requestLog.responseContentPreview()));
+        }
+        ctx.logBuilder().addChild(derived.log());
+        return derived;
     }
 
     private ClientUtil() {}

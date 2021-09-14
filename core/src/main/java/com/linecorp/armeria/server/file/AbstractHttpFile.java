@@ -23,8 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Splitter;
 import com.google.common.math.LongMath;
 
@@ -37,6 +35,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 
@@ -171,7 +170,7 @@ public abstract class AbstractHttpFile implements HttpFile {
     private ResponseHeaders addCommonHeaders(ResponseHeadersBuilder headers, HttpFileAttributes attrs,
                                              @Nullable String etag) {
         if (contentType != null) {
-            headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+            headers.contentType(contentType);
         }
         if (dateEnabled) {
             headers.setTimeMillis(HttpHeaderNames.DATE, clock.millis());

@@ -61,9 +61,6 @@ class HttpServerAutoRedirectTest {
             // returning `202 Accepted`.
             sb.service("/f/", service);
             sb.routeDecorator().pathPrefix("/f/").build((delegate, ctx, req) -> HttpResponse.of(202));
-
-            // This should never be invoked in this test.
-            sb.serviceUnder("/", service);
         }
     };
 

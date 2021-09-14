@@ -22,15 +22,14 @@ import java.net.IDN;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 
-import javax.annotation.Nullable;
-
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.EventLoop;
@@ -53,8 +52,9 @@ abstract class DnsEndpointGroupBuilder {
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     DnsEndpointGroupBuilder(String hostname) {
-        this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
-                                                      IDN.ALLOW_UNASSIGNED));
+        this.hostname = InternetDomainName.from(IDN.toASCII(requireNonNull(hostname, "hostname"),
+                                                            IDN.ALLOW_UNASSIGNED))
+                                          .toString();
     }
 
     final String hostname() {
@@ -168,7 +168,7 @@ abstract class DnsEndpointGroupBuilder {
     }
 
     /**
-     * Sets the {@link EndpointSelectionStrategy} that deteremines the enumeration order of {@link Endpoint}s.
+     * Sets the {@link EndpointSelectionStrategy} that determines the enumeration order of {@link Endpoint}s.
      */
     public DnsEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");

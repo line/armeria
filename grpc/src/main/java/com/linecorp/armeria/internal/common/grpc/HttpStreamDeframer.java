@@ -19,13 +19,13 @@ package com.linecorp.armeria.internal.common.grpc;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
@@ -40,6 +40,7 @@ import io.grpc.Status;
 
 public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
+    private final RequestContext ctx;
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
     @Nullable
@@ -50,10 +51,12 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     public HttpStreamDeframer(
             DecompressorRegistry decompressorRegistry,
+            RequestContext ctx,
             TransportStatusListener transportStatusListener,
             @Nullable GrpcStatusFunction statusFunction,
             int maxMessageSizeBytes) {
         super(maxMessageSizeBytes);
+        this.ctx = requireNonNull(ctx, "ctx");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
         this.statusFunction = statusFunction;
@@ -112,7 +115,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             } catch (Throwable t) {
                 final Metadata metadata = new Metadata();
                 transportStatusListener.transportReportStatus(
-                        GrpcStatus.fromThrowable(statusFunction, t, metadata),
+                        GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata),
                         metadata);
             }
         }
@@ -131,7 +134,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     public void processOnError(Throwable cause) {
         final Metadata metadata = new Metadata();
         transportStatusListener.transportReportStatus(
-                GrpcStatus.fromThrowable(statusFunction, cause, metadata), metadata);
+                GrpcStatus.fromThrowable(statusFunction, ctx, cause, metadata), metadata);
     }
 
     @Override

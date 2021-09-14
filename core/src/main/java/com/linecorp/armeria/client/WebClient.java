@@ -227,7 +227,15 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends the specified HTTP request.
      */
     @CheckReturnValue
-    HttpResponse execute(HttpRequest req);
+    default HttpResponse execute(HttpRequest req) {
+        return execute(req, RequestOptions.of());
+    }
+
+    /**
+     * Sends the specified HTTP request with the specified {@link RequestOptions}.
+     */
+    @CheckReturnValue
+    HttpResponse execute(HttpRequest req, RequestOptions options);
 
     /**
      * Sends the specified HTTP request.

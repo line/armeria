@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 
@@ -33,6 +34,8 @@ import io.netty.buffer.ByteBufAllocator;
 final class HttpDecodedRequest extends FilteredHttpRequest {
 
     private final StreamDecoder responseDecoder;
+
+    private boolean decoderFinished;
 
     HttpDecodedRequest(HttpRequest delegate, StreamDecoderFactory decoderFactory,
                        ByteBufAllocator alloc) {
@@ -51,15 +54,40 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-        final HttpData lastData = responseDecoder.finish();
+        final HttpData lastData = closeResponseDecoder();
+        if (lastData == null) {
+            return;
+        }
         if (!lastData.isEmpty()) {
             subscriber.onNext(lastData);
+        } else {
+            lastData.close();
         }
     }
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        responseDecoder.finish();
+        final HttpData lastData = closeResponseDecoder();
+        if (lastData != null) {
+            lastData.close();
+        }
         return cause;
+    }
+
+    @Override
+    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+        final HttpData lastData = closeResponseDecoder();
+        if (lastData != null) {
+            lastData.close();
+        }
+    }
+
+    @Nullable
+    private HttpData closeResponseDecoder() {
+        if (decoderFinished) {
+            return null;
+        }
+        decoderFinished = true;
+        return responseDecoder.finish();
     }
 }

@@ -27,7 +27,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
 
 import org.eclipse.jetty.http.HttpFields;
@@ -48,6 +47,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
@@ -252,7 +253,7 @@ public final class JettyService implements HttpService {
 
             boolean success = false;
             try {
-                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport(res);
+                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport(ctx, res);
                 final HttpChannel httpChannel = new HttpChannel(
                         connector,
                         connector.getHttpConfiguration(),
@@ -331,8 +332,15 @@ public final class JettyService implements HttpService {
         final HttpFields jHeaders = new HttpFields(aHeaders.size());
         aHeaders.forEach(e -> {
             final AsciiString key = e.getKey();
-            if (!key.isEmpty() && key.byteAt(0) != ':') {
+            if (key.isEmpty()) {
+                return;
+            }
+
+            if (key.byteAt(0) != ':') {
                 jHeaders.add(key.toString(), e.getValue());
+            } else if (HttpHeaderNames.AUTHORITY.equals(key) && !aHeaders.contains(HttpHeaderNames.HOST)) {
+                // Convert `:authority` to `host`.
+                jHeaders.add(HttpHeaderNames.HOST.toString(), e.getValue());
             }
         });
 
@@ -344,21 +352,29 @@ public final class JettyService implements HttpService {
 
     private static final class ArmeriaHttpTransport implements HttpTransport {
 
-        final HttpResponseWriter res;
+        private final ServiceRequestContext ctx;
+        private final HttpResponseWriter res;
         @Nullable
         MetaData.Response info;
 
-        ArmeriaHttpTransport(HttpResponseWriter res) {
+        ArmeriaHttpTransport(ServiceRequestContext ctx, HttpResponseWriter res) {
+            this.ctx = ctx;
             this.res = res;
         }
 
         @Override
         public void send(@Nullable MetaData.Response info, boolean head,
                          @Nullable ByteBuffer content, boolean lastContent, Callback callback) {
+            if (ctx.isTimedOut()) {
+                // Silently discard the write request in case of timeout to match the behavior of Jetty.
+                callback.succeeded();
+                return;
+            }
+
             try {
                 if (info != null) {
                     this.info = info;
-                    res.write(toResponseHeaders(info));
+                    write(toResponseHeaders(info));
                 }
 
                 final int length = content != null ? content.remaining() : 0;
@@ -377,19 +393,19 @@ public final class JettyService implements HttpService {
                     if (lastContent) {
                         final HttpHeaders trailers = toResponseTrailers(info);
                         if (trailers != null) {
-                            res.write(data);
-                            res.write(trailers);
+                            write(data);
+                            write(trailers);
                         } else {
-                            res.write(data.withEndOfStream());
+                            write(data.withEndOfStream());
                         }
                         res.close();
                     } else {
-                        res.write(data);
+                        write(data);
                     }
                 } else if (lastContent) {
                     final HttpHeaders trailers = toResponseTrailers(info);
                     if (trailers != null) {
-                        res.write(trailers);
+                        write(trailers);
                     }
                     res.close();
                 }
@@ -398,6 +414,11 @@ public final class JettyService implements HttpService {
             } catch (Throwable cause) {
                 callback.failed(cause);
             }
+        }
+
+        @SuppressWarnings("ResultOfMethodCallIgnored")
+        private void write(HttpObject o) {
+            res.tryWrite(o);
         }
 
         private static ResponseHeaders toResponseHeaders(MetaData.Response info) {

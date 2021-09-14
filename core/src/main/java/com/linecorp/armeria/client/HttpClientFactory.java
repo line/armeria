@@ -30,8 +30,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,11 +39,13 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TransportType;
@@ -285,14 +285,22 @@ final class HttpClientFactory implements ClientFactory {
         final Class<?> clientType = params.clientType();
         validateClientType(clientType);
 
-        final HttpClient delegate = params.options().decoration().decorate(clientDelegate);
+        final ClientOptions options = params.options();
+        final HttpClient delegate = options.decoration().decorate(clientDelegate);
 
         if (clientType == HttpClient.class) {
             return delegate;
         }
 
         if (clientType == WebClient.class) {
-            return new DefaultWebClient(params, delegate, meterRegistry);
+            final RedirectConfig redirectConfig = options.redirectConfig();
+            final HttpClient delegate0;
+            if (redirectConfig == RedirectConfig.disabled()) {
+                delegate0 = delegate;
+            } else {
+                delegate0 = RedirectingClient.newDecorator(params, redirectConfig).apply(delegate);
+            }
+            return new DefaultWebClient(params, delegate0, meterRegistry);
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
@@ -366,6 +374,11 @@ final class HttpClientFactory implements ClientFactory {
         } else {
             closeable.close();
         }
+    }
+
+    @Override
+    public int numConnections() {
+        return pools.values().stream().mapToInt(HttpChannelPool::numConnections).sum();
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {

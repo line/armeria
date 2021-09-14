@@ -18,14 +18,14 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -84,8 +84,8 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
-        delegate.subscribe(subscriber, executor);
+    public CompletableFuture<List<HttpObject>> collect(EventExecutor executor, SubscriptionOption... options) {
+        return delegate.collect(executor, options);
     }
 
     @Override

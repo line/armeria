@@ -1,0 +1,237 @@
+---
+menuTitle: "Implement UPDATE"
+order: 6
+type: step
+tags:
+  - rest
+  - request
+  - requestobject
+level: basic
+---
+
+# Implementing UPDATE operation
+
+In this step, you'll write a method for updating a blog post. By completing this step, you'll learn to map your service with the HTTP PUT (<type://@Put>) method, use parameter injection, and convert request body into a Java object using a request object (<type://@RequestObject>).
+
+<TutorialSteps current={6} />
+
+## What you need
+
+You must have the following files ready for updating a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+
+- Main.java from [Step 1. Create a server](/tutorials/rest/blog/create-server)
+- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object)
+- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server)
+
+<Warning>
+
+To test updating a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implement-create) for instructions.
+
+</Warning>
+
+## 1. Map HTTP method
+
+Let's start [mapping the HTTP PUT method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+
+1. Declare a service method, `updateBlogPost()`, in the class `BlogService`.
+2. Map this service method with the HTTP PUT method by adding the <type://@Put> annotation.
+3. Bind the endpoint `/blogs` to the method.
+
+```java filename=BlogService.java highlight=6
+import com.linecorp.armeria.server.annotation.Put;
+
+public final class BlogService {
+  ...
+
+  @Put("/blogs")
+  public void updateBlogPost(int id, BlogPost blogPost) {
+    // Update a blog post
+  }
+}
+```
+
+## 2. Handle parameters
+
+For updating a blog post, let's take a blog post ID (`id`) and new blog post information to update with. For [creating a blog post](/tutorials/rest/blog/implement-create), we've used Armeria's <type://RequestConverter> to convert a request body into a Java object. For a change, let's try using <type://@RequestObject> to convert a request body.
+
+1. Take in the ID value as a path parameter by adding `/blogs/:id` to the <type://@Put> annotation.
+2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the parameter with <type://@Param>.
+3. [Convert request body](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) into a Java object by annotating the `BlogPost` parameter with <type://@RequestObject>.
+
+  ```java filename=BlogService.java
+  import com.linecorp.armeria.server.annotation.Param;
+  import com.linecorp.armeria.server.annotation.RequestObject;
+
+  public final class BlogService {
+    ...
+
+    // Instructions 1 to 3
+    @Put("/blogs/:id")
+    public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
+      // Update a blog post
+    }
+  }
+  ```
+4. For conversion, annotate blog post constructor to map JSON object keys to blog post object members. You can find more information on `@JsonCreator` [here](https://www.baeldung.com/jackson-annotations#1-jsoncreator).
+
+  ```java filename=BlogPost.java highlight=7-9
+  import com.fasterxml.jackson.annotation.JsonCreator;
+  import com.fasterxml.jackson.annotation.JsonProperty;
+
+  public final class BlogPost {
+    ...
+
+    @JsonCreator
+    BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
+             @JsonProperty("content") String content) {
+      ...
+    }
+  }
+  ```
+
+## 3. Implement service code
+
+In this step, write the code required for service itself. You need to update the information contained in the `blogPosts` map. In real services, you'll be retrieving and updating the blog post information from and to a database.
+
+To update a blog post, copy the following code inside the `updateBlogPost()` method.
+
+```java filename=BlogService.java
+  @Put("/blogs/:id")
+  public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
+    BlogPost oldBlogPost = blogPosts.get(id);
+    // Check if the given blog post exists
+    if (oldBlogPost == null) {
+      // Return a Not Found error. See the next section for instructions
+    }
+    BlogPost newBlogPost = new BlogPost(id, blogPost.getTitle(),
+                                        blogPost.getContent(),
+                                        oldBlogPost.getCreatedAt(),
+                                        blogPost.getCreatedAt());
+    blogPosts.put(id, newBlogPost); // Update the info in the map
+    ...
+  }
+```
+
+## 4. Return response
+
+Two possibilities are available for the response. If the blog post to update exists, we respond to the client that the update has been successful. The other response informs the client that the blog post doesn't exist.
+
+### Return error
+
+Let's return an error for the request to update a blog post that doesn't exist.
+
+1. Replace the return type of the `updateBlogPost()` method from `void` to <type://HttpResponse>.
+2. Return a response using Armeria's <type://HttpResponse> containing <type://HttpStatus#NOT_FOUND>.
+
+```java filename=BlogService.java highlight=8,11
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+
+public final class BlogService {
+  ...
+
+  @Put("/blogs/:id")
+  public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
+    ...
+    if (oldBlogPost == null) {
+      return HttpResponse.of(HttpStatus.NOT_FOUND);
+    }
+    ...
+  }
+}
+```
+
+### Return success
+
+Let's return the information updated when the target blog post exists:
+
+1. Replace the return type of the `updateBlogPost()` method from `void` to <type://HttpResponse>.
+2. Return a response using Armeria's <type://HttpResponse> containing the updated information of the post.
+
+```java filename=BlogService.java highlight=7,9
+import com.linecorp.armeria.common.HttpResponse;
+
+public final class BlogService {
+  ...
+
+  @Put("/blogs/:id")
+  public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
+    ...
+    return HttpResponse.ofJson(newBlogPost);
+  }
+}
+```
+
+## 5. Test updating a blog post
+
+Let's test updating a blog post.
+
+1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
+2. Create a couple of blog posts to test updating a blog post and get the ID value returned. Enter the cURL commands below.
+
+  ```bash
+  $ curl --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"First post for testing", "content":"Test updating."}'
+  ```
+
+  ```bash
+  $ curl --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Second post for testing", "content":"Test updating a post."}'
+  ```
+
+  For each command, you'll get a response similar to the following.
+
+  ```bash
+  {"id":0,"title":"First post for testing","content":"Test updating.","createdAt":...,"modifiedAt":...}
+
+  {"id":1,"title":"Second post for testing","content":"Test updating a post.","createdAt":...,"modifiedAt":...}
+  ```
+
+3. Let's update the second blog with the ID, `1`. Change the value for the `"title"` and `"content"` properties.
+
+  ```bash
+  $ curl --request PUT 'localhost:8080/blogs/1' \
+  -H 'Content-Type: application/json' \
+  -d '{
+      "title": "Update title to this title",
+      "content": "Update blog content with this content."
+  }'
+  ```
+
+  You'll get a response similar to this. Not only the title and content are changed, but the last updated time (`modifiedAt`) is changed, too.
+
+  ```bash
+  {"id":1,"title":"Update title to this title","content":"Update blog content with this content.","createdAt":...,
+  "modifiedAt":...}
+  ```
+
+4. Let's retrieve the same blog post to see if the change has been applied successfully.
+
+  ```bash
+  $ curl --request GET 'localhost:8080/blogs/1'
+  ```
+
+  The response we get confirms that the change is applied.
+
+  ```bash
+  {
+    "id": 1,
+    "title": "Update title to this title",
+    "content": "Update blog content with this content.",
+    "createdAt": ...,
+    "modifiedAt": ...
+  }
+  ```
+
+You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+
+## Next step
+
+In this step, we've implemented a method for an UPDATE operation and used Armeria's annotations; <type://@Put>, <type://@Param>, and <type://@RequestObject>.
+
+Next, at [Step 7. Implement DELETE](/tutorials/rest/blog/implement-delete), we'll implement a DELETE operation to delete
+blog posts.
+
+<TutorialSteps current={6} />

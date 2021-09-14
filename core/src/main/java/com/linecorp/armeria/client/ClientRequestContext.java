@@ -28,8 +28,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -42,6 +40,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -221,12 +220,12 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         if (oldCtx == null) {
-            return () -> RequestContextUtil.pop(this, null);
+            return RequestContextUtil.invokeHookAndPop(this, null);
         }
 
         final ServiceRequestContext root = root();
         if (oldCtx.root() == root) {
-            return () -> RequestContextUtil.pop(this, oldCtx);
+            return RequestContextUtil.invokeHookAndPop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
@@ -283,13 +282,13 @@ public interface ClientRequestContext extends RequestContext {
     long writeTimeoutMillis();
 
     /**
-     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
 
     /**
-     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeout(Duration writeTimeout);

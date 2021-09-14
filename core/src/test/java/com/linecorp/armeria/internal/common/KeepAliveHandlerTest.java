@@ -53,6 +53,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -70,12 +71,16 @@ class KeepAliveHandlerTest {
 
     @BeforeEach
     void setUp() {
+        final EventLoop eventLoop = KeepAliveHandlerTest.eventLoop.get();
         channel = spy(new EmbeddedChannel());
-        when(channel.eventLoop()).thenReturn(eventLoop.get());
+        when(channel.eventLoop()).thenReturn(eventLoop);
         ctx = mock(ChannelHandlerContext.class);
         when(ctx.channel()).thenReturn(channel);
         meterRegistry = new SimpleMeterRegistry();
         keepAliveTimer = MoreMeters.newTimer(meterRegistry, CONNECTION_LIFETIME, ImmutableList.of());
+
+        // Warm up the event loop to reduce timing errors.
+        eventLoop.submit(() -> {}).syncUninterruptibly();
     }
 
     @AfterEach
@@ -117,7 +122,7 @@ class KeepAliveHandlerTest {
 
         idleTimeoutScheduler.initialize(ctx);
         await().timeout(20, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(10));
-        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(15));
+        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25));
         idleTimeoutScheduler.destroy();
     }
 
@@ -198,7 +203,7 @@ class KeepAliveHandlerTest {
 
     @Test
     void testMaxConnectionAge() throws InterruptedException {
-        final long maxConnectionAgeMillis = 100;
+        final long maxConnectionAgeMillis = 500;
         final AbstractKeepAliveHandler
                 keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
                                                                 maxConnectionAgeMillis, 0) {
@@ -227,8 +232,9 @@ class KeepAliveHandlerTest {
         };
         keepAliveHandler.initialize(ctx);
 
-        Thread.sleep(maxConnectionAgeMillis + 100);
-        assertThat(keepAliveHandler.needToCloseConnection()).isTrue();
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        await().untilAsserted(() -> assertThat(keepAliveHandler.needToCloseConnection()).isTrue());
+        assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isBetween(500L, 1000L);
     }
 
     @CsvSource({

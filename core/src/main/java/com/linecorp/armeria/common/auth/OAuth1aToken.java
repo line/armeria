@@ -23,11 +23,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -182,25 +181,27 @@ public final class OAuth1aToken {
         if (headerValue != null) {
             return headerValue;
         }
-        final StringBuilder builder = TemporaryThreadLocals.get().stringBuilder();
-        builder.append("OAuth ");
-        if (!isNullOrEmpty(realm)) {
-            appendValue(builder, REALM, realm, true);
-        }
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder builder = tempThreadLocals.stringBuilder();
+            builder.append("OAuth ");
+            if (!isNullOrEmpty(realm)) {
+                appendValue(builder, REALM, realm, true);
+            }
 
-        appendValue(builder, OAUTH_CONSUMER_KEY, consumerKey, true);
-        appendValue(builder, OAUTH_TOKEN, token, true);
-        appendValue(builder, OAUTH_SIGNATURE_METHOD, signatureMethod, true);
-        appendValue(builder, OAUTH_SIGNATURE, signature, true);
-        appendValue(builder, OAUTH_TIMESTAMP, timestamp, true);
-        appendValue(builder, OAUTH_NONCE, nonce, true);
-        appendValue(builder, OAUTH_VERSION, version, false);
-        for (Entry<String, String> entry : additionals.entrySet()) {
-            builder.append(',');
-            appendValue(builder, entry.getKey(), entry.getValue(), false);
-        }
+            appendValue(builder, OAUTH_CONSUMER_KEY, consumerKey, true);
+            appendValue(builder, OAUTH_TOKEN, token, true);
+            appendValue(builder, OAUTH_SIGNATURE_METHOD, signatureMethod, true);
+            appendValue(builder, OAUTH_SIGNATURE, signature, true);
+            appendValue(builder, OAUTH_TIMESTAMP, timestamp, true);
+            appendValue(builder, OAUTH_NONCE, nonce, true);
+            appendValue(builder, OAUTH_VERSION, version, false);
+            for (Entry<String, String> entry : additionals.entrySet()) {
+                builder.append(',');
+                appendValue(builder, entry.getKey(), entry.getValue(), false);
+            }
 
-        return headerValue = builder.toString();
+            return headerValue = builder.toString();
+        }
     }
 
     private static void appendValue(StringBuilder builder, String key, String value, boolean addComma) {

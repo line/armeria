@@ -34,7 +34,6 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
@@ -51,6 +50,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -61,10 +61,12 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
+import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 import com.linecorp.armeria.spring.Ssl;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -99,7 +101,8 @@ public final class ArmeriaConfigurationUtil {
             MeterRegistry meterRegistry,
             List<HealthChecker> healthCheckers,
             List<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
-            MeterIdPrefixFunction meterIdPrefixFunction) {
+            MeterIdPrefixFunction meterIdPrefixFunction,
+            List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators) {
 
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
@@ -109,6 +112,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(meterRegistry, "meterRegistry");
         requireNonNull(healthCheckers, "healthCheckers");
         requireNonNull(healthCheckServiceConfigurators, "healthCheckServiceConfigurators");
+        requireNonNull(metricCollectingServiceConfigurators, "metricCollectingServiceConfigurators");
 
         configurePorts(server, settings.getPorts());
         armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
@@ -138,7 +142,16 @@ public final class ArmeriaConfigurationUtil {
         server.meterRegistry(meterRegistry);
 
         if (settings.isEnableMetrics()) {
-            server.decorator(MetricCollectingService.newDecorator(meterIdPrefixFunction));
+            if (!metricCollectingServiceConfigurators.isEmpty()) {
+                final MetricCollectingServiceBuilder builder = MetricCollectingService
+                        .builder(meterIdPrefixFunction);
+                for (MetricCollectingServiceConfigurator configurator : metricCollectingServiceConfigurators) {
+                    configurator.configure(builder);
+                }
+                server.decorator(builder.newDecorator());
+            } else {
+                server.decorator(MetricCollectingService.newDecorator(meterIdPrefixFunction));
+            }
 
             if (!Strings.isNullOrEmpty(settings.getMetricsPath())) {
                 final boolean hasPrometheus = hasAllClasses(

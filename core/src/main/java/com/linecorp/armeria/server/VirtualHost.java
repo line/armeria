@@ -25,13 +25,12 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -72,6 +71,7 @@ public final class VirtualHost {
 
     private final Logger accessLogger;
 
+    private final ServiceNaming defaultServiceNaming;
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
     private final boolean verboseResponses;
@@ -84,6 +84,7 @@ public final class VirtualHost {
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
                 Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
+                @Nullable ServiceNaming defaultServiceNaming,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
@@ -94,6 +95,7 @@ public final class VirtualHost {
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
         this.sslContext = sslContext;
+        this.defaultServiceNaming = defaultServiceNaming;
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.verboseResponses = verboseResponses;
@@ -117,7 +119,7 @@ public final class VirtualHost {
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
                                serviceConfigs(), fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, requestTimeoutMillis(),
+                               host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                accessLogWriter(), shutdownAccessLogWriterOnStop());
     }
@@ -249,6 +251,15 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns a default naming rule for the name of services.
+     *
+     * @see ServiceConfig#defaultServiceNaming()
+     */
+    public ServiceNaming defaultServiceNaming() {
+        return defaultServiceNaming;
+    }
+
+    /**
      * Returns the timeout of a request.
      *
      * @see ServiceConfig#requestTimeoutMillis()
@@ -370,7 +381,7 @@ public final class VirtualHost {
 
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, requestTimeoutMillis(),
+                               host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                accessLogWriter(), shutdownAccessLogWriterOnStop());
     }
@@ -396,6 +407,8 @@ public final class VirtualHost {
         buf.append(serviceConfigs);
         buf.append(", accessLogger: ");
         buf.append(accessLogger());
+        buf.append(", defaultServiceNaming: ");
+        buf.append(defaultServiceNaming());
         buf.append(", requestTimeoutMillis: ");
         buf.append(requestTimeoutMillis());
         buf.append(", maxRequestLength: ");

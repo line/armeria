@@ -16,16 +16,15 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -34,10 +33,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -67,7 +66,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         final SubscriptionImpl actualSubscription = subscribe(subscription);
         if (actualSubscription != subscription) {
             // Failed to subscribe.
-            failLateSubscriber(actualSubscription, subscriber);
+            failLateSubscriber(actualSubscription, subscription);
         }
     }
 
@@ -103,14 +102,15 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      */
     protected void onRemoval(T obj) {}
 
-    static void failLateSubscriber(SubscriptionImpl subscription, Subscriber<?> lateSubscriber) {
-        final Subscriber<?> oldSubscriber = subscription.subscriber();
-        final Throwable cause = abortedOrLate(oldSubscriber);
+    static void failLateSubscriber(SubscriptionImpl actualSubscription, SubscriptionImpl lateSubscription) {
+        final Subscriber<?> actualSubscriber = actualSubscription.subscriber();
+        final Subscriber<?> lateSubscriber = lateSubscription.subscriber();
+        final Throwable cause = abortedOrLate(actualSubscriber);
 
-        if (subscription.needsDirectInvocation()) {
+        if (lateSubscription.needsDirectInvocation()) {
             handleLateSubscriber(lateSubscriber, cause);
         } else {
-            subscription.executor().execute(() -> {
+            lateSubscription.executor().execute(() -> {
                 handleLateSubscriber(lateSubscriber, cause);
             });
         }
@@ -126,14 +126,9 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
-    final T prepareObjectForNotification(SubscriptionImpl subscription, T o) {
+    final T prepareObjectForNotification(T o, boolean withPooledObjects) {
         onRemoval(o);
-        if (!subscription.withPooledObjects()) {
-            o = PooledObjects.copyAndClose(o);
-        } else {
-            PooledObjects.touch(o);
-        }
-        return o;
+        return touchOrCopyAndClose(o, withPooledObjects);
     }
 
     /**
@@ -196,10 +191,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
         boolean withPooledObjects() {
             return withPooledObjects;
-        }
-
-        boolean notifyCancellation() {
-            return notifyCancellation;
         }
 
         boolean cancelRequested() {

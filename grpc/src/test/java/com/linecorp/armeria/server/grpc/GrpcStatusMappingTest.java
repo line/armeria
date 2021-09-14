@@ -24,8 +24,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -37,6 +35,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -44,6 +43,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.CallOptions;
@@ -58,11 +58,16 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import io.netty.util.AttributeKey;
 
 class GrpcStatusMappingTest {
 
     private static final Metadata.Key<String> TEST_KEY =
             Metadata.Key.of("test_key", Metadata.ASCII_STRING_MARSHALLER);
+    private static final Metadata.Key<String> METHOD_KEY =
+            Metadata.Key.of("method_key", Metadata.ASCII_STRING_MARSHALLER);
+    private static final AttributeKey<String> METHOD_ATTR =
+            AttributeKey.valueOf(GrpcStatusMappingTest.class, "METHOD");
 
     @RegisterExtension
     static ServerExtension serverWithMapping = new ServerExtension() {
@@ -77,12 +82,12 @@ class GrpcStatusMappingTest {
                                                     Status.UNIMPLEMENTED.withDescription("UNIMPLEMENTED"))
                                .addExceptionMapping(A1Exception.class, Status.RESOURCE_EXHAUSTED)
                                .addExceptionMapping(B2Exception.class,
-                                                    (throwable, metadata) -> {
+                                                    (ctx, throwable, metadata) -> {
                                                         metadata.put(TEST_KEY, "B2");
                                                         return Status.NOT_FOUND.withDescription("NOT_FOUND");
                                                     })
                                .addExceptionMapping(B1Exception.class,
-                                                    (throwable, metadata) -> {
+                                                    (ctx, throwable, metadata) -> {
                                                         metadata.put(TEST_KEY, "B1");
                                                         return Status.UNAUTHENTICATED
                                                                 .withDescription("UNAUTHENTICATED");
@@ -98,7 +103,12 @@ class GrpcStatusMappingTest {
             sb.service(
                     GrpcService.builder()
                                .addService(new TestServiceImpl())
-                               .exceptionMapping((cause, metadata) -> {
+                               .exceptionMapping((ctx, cause, metadata) -> {
+                                   final String attr = ctx.attr(METHOD_ATTR);
+                                   if (attr != null) {
+                                       metadata.put(METHOD_KEY, attr);
+                                   }
+
                                    if (cause instanceof A3Exception) {
                                        return Status.UNAUTHENTICATED.withDescription("UNAUTHENTICATED");
                                    }
@@ -136,10 +146,10 @@ class GrpcStatusMappingTest {
                 TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.emptyCall(Empty.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))
-                .satisfies(throwable -> assertMetadata(throwable, meta));
+                .satisfies(throwable -> assertMetadata(throwable, meta, null));
         assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))
-                .satisfies(throwable -> assertMetadata(throwable, meta));
+                .satisfies(throwable -> assertMetadata(throwable, meta, null));
     }
 
     @ArgumentsSource(ExceptionMappingsProvider.class)
@@ -152,10 +162,10 @@ class GrpcStatusMappingTest {
                 TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.emptyCall(Empty.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))
-                .satisfies(throwable -> assertMetadata(throwable, meta));
+                .satisfies(throwable -> assertMetadata(throwable, meta, "emptyCall"));
         assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))
-                .satisfies(throwable -> assertMetadata(throwable, meta));
+                .satisfies(throwable -> assertMetadata(throwable, meta, "unaryCall"));
     }
 
     @Test
@@ -205,11 +215,15 @@ class GrpcStatusMappingTest {
         assertThat(e.getStatus().getDescription()).isEqualTo(expectedDescription);
     }
 
-    private static void assertMetadata(Throwable actual, Map<Metadata.Key<?>, String> expectedEntries) {
+    private static void assertMetadata(Throwable actual, Map<Key<?>, String> expectedEntries,
+                                       @Nullable String methodName) {
         final StatusRuntimeException e = (StatusRuntimeException) actual;
         final Metadata metadata = e.getTrailers();
         for (Entry<Key<?>, String> entry : expectedEntries.entrySet()) {
             assertThat(metadata.get(entry.getKey())).isEqualTo(entry.getValue());
+        }
+        if (methodName != null) {
+            assertThat(metadata.get(METHOD_KEY)).isEqualTo(methodName);
         }
     }
 
@@ -238,11 +252,13 @@ class GrpcStatusMappingTest {
 
         @Override
         public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            ServiceRequestContext.current().setAttr(METHOD_ATTR, "emptyCall");
             responseObserver.onError(exceptionRef.get());
         }
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            ServiceRequestContext.current().setAttr(METHOD_ATTR, "unaryCall");
             throw exceptionRef.get();
         }
 

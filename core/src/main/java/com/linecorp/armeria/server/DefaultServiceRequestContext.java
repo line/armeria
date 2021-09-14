@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.ContextAwareEventLoop;
@@ -48,13 +47,16 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -98,8 +100,6 @@ public final class DefaultServiceRequestContext
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private ContextAwareScheduledExecutorService blockingTaskExecutor;
-    @Nullable
-    private Runnable requestTimeoutHandler;
     private long maxRequestLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
@@ -427,6 +427,32 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
+    public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of(drainDurationMicros));
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of());
+    }
+
+    private CompletableFuture<Void> initiateConnectionShutdown(InitiateConnectionShutdown event) {
+        if (!ch.isActive()) {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        ch.closeFuture().addListener(f -> {
+            if (f.cause() == null) {
+                completableFuture.complete(null);
+            } else {
+                completableFuture.completeExceptionally(f.cause());
+            }
+        });
+        ch.pipeline().fireUserEventTriggered(event);
+        return completableFuture;
+    }
+
+    @Override
     public RequestLogAccess log() {
         return log;
     }
@@ -460,23 +486,25 @@ public final class DefaultServiceRequestContext
         final String method = method().name();
 
         // Build the string representation.
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("[sreqId=").append(sreqId)
-           .append(", chanId=").append(chanId);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("[sreqId=").append(sreqId)
+               .append(", chanId=").append(chanId);
 
-        if (!Objects.equals(caddr, raddr.getAddress())) {
-            buf.append(", caddr=");
-            TextFormatter.appendInetAddress(buf, caddr);
+            if (!Objects.equals(caddr, raddr.getAddress())) {
+                buf.append(", caddr=");
+                TextFormatter.appendInetAddress(buf, caddr);
+            }
+
+            buf.append(", raddr=");
+            TextFormatter.appendSocketAddress(buf, raddr);
+            buf.append(", laddr=");
+            TextFormatter.appendSocketAddress(buf, laddr);
+            buf.append("][")
+               .append(proto).append("://").append(authority).append(path).append('#').append(method)
+               .append(']');
+
+            return strVal = buf.toString();
         }
-
-        buf.append(", raddr=");
-        TextFormatter.appendSocketAddress(buf, raddr);
-        buf.append(", laddr=");
-        TextFormatter.appendSocketAddress(buf, laddr);
-        buf.append("][")
-           .append(proto).append("://").append(authority).append(path).append('#').append(method)
-           .append(']');
-
-        return strVal = buf.toString();
     }
 }

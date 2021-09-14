@@ -19,8 +19,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
@@ -37,6 +35,9 @@ import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.Serializers;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 final class ThriftJacksonSerializers extends Serializers.Base implements Serializable {
 
@@ -117,7 +118,15 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
     }
 
     private static String serializeTBaseLike(Consumer<TProtocol> writer, boolean useNamedEnums) {
-        final TMemoryBuffer buffer = new TMemoryBuffer(1024);
+        final TMemoryBuffer buffer;
+        try {
+            buffer = new TMemoryBuffer(1024);
+        } catch (Exception ex) {
+            // TTransportException is added as a checked exception in Thrift 0.14.0
+            // However, a TTransportException should not be raised by the Armeria Thrift implementations.
+            return Exceptions.throwUnsafely(ex);
+        }
+
         final TProtocolFactory factory = useNamedEnums ? ThriftProtocolFactories.TEXT_NAMED_ENUM
                                                        : ThriftProtocolFactories.TEXT;
         final TProtocol protocol = factory.getProtocol(buffer);

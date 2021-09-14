@@ -16,12 +16,11 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
 import java.nio.channels.ClosedChannelException;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -29,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -54,11 +55,8 @@ import io.netty.handler.codec.http2.Http2Error;
 final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
-
     private static final AggregatedHttpResponse internalServerErrorResponse =
             AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    private static final AggregatedHttpResponse serviceUnavailableResponse =
-            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     enum State {
         NEEDS_HEADERS,
@@ -76,6 +74,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private Subscription subscription;
     private State state = State.NEEDS_HEADERS;
     private boolean isComplete;
+
+    private boolean isSubscriptionCompleted;
 
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
@@ -106,13 +106,16 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         assert this.subscription == null;
         this.subscription = subscription;
         if (state == State.DONE) {
-            subscription.cancel();
+            if (!isSubscriptionCompleted) {
+                isSubscriptionCompleted = true;
+                subscription.cancel();
+            }
             return;
         }
 
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(), 0,
-                                                   RequestTimeoutException.get());
+        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(),
+                                                   0, /* server */ true);
 
         // Start consuming.
         subscription.request(1);
@@ -122,9 +125,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     @Override
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
-            failAndRespond(new IllegalArgumentException(
+            req.abortResponse(new IllegalArgumentException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
-                    " (service: " + service() + ')'));
+                    " (service: " + service() + ')'), true);
             return;
         }
 
@@ -138,9 +141,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             case NEEDS_HEADERS: {
                 logBuilder().startResponse();
                 if (!(o instanceof ResponseHeaders)) {
-                    failAndRespond(new IllegalStateException(
+                    req.abortResponse(new IllegalStateException(
                             "published an HttpData without a preceding ResponseHeaders: " + o +
-                            " (service: " + service() + ')'));
+                            " (service: " + service() + ')'), true);
                     return;
                 }
 
@@ -149,13 +152,20 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 final ResponseHeaders merged;
                 if (status.isInformational()) {
                     if (endOfStream) {
-                        failAndRespond(new IllegalStateException(
+                        req.abortResponse(new IllegalStateException(
                                 "published an informational headers whose endOfStream is true: " + o +
-                                " (service: " + service() + ')'));
+                                " (service: " + service() + ')'), true);
                         return;
                     }
                     merged = headers;
                 } else {
+                    if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
+                        // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
+                        isComplete = true;
+                        setDone(true);
+                        return;
+                    }
+
                     if (req.method() == HttpMethod.HEAD) {
                         endOfStream = true;
                     } else if (status.isContentAlwaysEmpty()) {
@@ -177,9 +187,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             }
             case NEEDS_TRAILERS: {
                 if (o instanceof ResponseHeaders) {
-                    failAndRespond(new IllegalStateException(
+                    req.abortResponse(new IllegalStateException(
                             "published a ResponseHeaders: " + o +
-                            " (expected: an HTTP trailers). service: " + service()));
+                            " (expected: an HTTP trailers). service: " + service()), true);
                     return;
                 }
                 if (o instanceof HttpData) {
@@ -195,12 +205,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailers = (HttpHeaders) o;
                     if (trailers.contains(HttpHeaderNames.STATUS)) {
-                        failAndRespond(new IllegalArgumentException(
+                        req.abortResponse(new IllegalArgumentException(
                                 "published an HTTP trailers with status: " + o +
-                                " (service: " + service() + ')'));
+                                " (service: " + service() + ')'), true);
                         return;
                     }
-                    setDone(true);
+                    setDone(false);
+
                     final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
                     logBuilder().responseTrailers(merged);
                     responseEncoder.writeTrailers(req.id(), req.streamId(), merged)
@@ -210,7 +221,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
-                        setDone(true);
+                        setDone(false);
                     }
 
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -228,6 +239,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 break;
             }
             case DONE:
+                isSubscriptionCompleted = true;
+                subscription.cancel();
                 PooledObjects.close(o);
                 return;
         }
@@ -254,7 +267,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     }
 
     private State setDone(boolean cancel) {
-        if (cancel && subscription != null) {
+        if (cancel && subscription != null && !isSubscriptionCompleted) {
+            isSubscriptionCompleted = true;
             subscription.cancel();
         }
         reqCtx.requestCancellationScheduler().clearTimeout(false);
@@ -265,9 +279,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public void onError(Throwable cause) {
+        isSubscriptionCompleted = true;
         if (cause instanceof HttpResponseException) {
             // Timeout may occur when the aggregation of the error response takes long.
-            // If timeout occurs, respond with 503 Service Unavailable.
+            // If timeout occurs, the response is sent by newCancellationTask().
             ((HttpResponseException) cause).httpResponse()
                                            .aggregate(ctx.executor())
                                            .handleAsync((res, throwable) -> {
@@ -281,14 +296,19 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                                                return null;
                                            }, ctx.executor());
         } else if (cause instanceof HttpStatusException) {
-            failAndRespond(cause,
-                           AggregatedHttpResponse.of(((HttpStatusException) cause).httpStatus()),
-                           Http2Error.CANCEL, false);
+            final HttpStatus status = ((HttpStatusException) cause).httpStatus();
+            final Throwable cause0 = firstNonNull(cause.getCause(), cause);
+            failAndRespond(cause0, AggregatedHttpResponse.of(status), Http2Error.CANCEL, false);
         } else if (Exceptions.isStreamCancelling(cause)) {
             failAndReset(cause);
         } else {
-            logger.warn("{} Unexpected exception from a service or a response publisher: {}",
-                        ctx.channel(), service(), cause);
+            if (!(cause instanceof CancellationException)) {
+                logger.warn("{} Unexpected exception from a service or a response publisher: {}",
+                            ctx.channel(), service(), cause);
+            } else {
+                // Ignore CancellationException and its subtypes, which can be triggered when the request
+                // was cancelled or timed out even before the subscription attempt is made.
+            }
 
             failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, false);
         }
@@ -296,10 +316,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public void onComplete() {
-        if (reqCtx.requestCancellationScheduler().isFinished()) {
-            // We have already returned a failed response due to a timeout.
-            return;
-        }
+        isSubscriptionCompleted = true;
 
         final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
@@ -327,13 +344,17 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private void fail(Throwable cause) {
         if (tryComplete()) {
             setDone(true);
-            logBuilder().endRequest(cause);
-            logBuilder().endResponse(cause);
+            endLogRequestAndResponse(cause);
             final ServiceConfig config = reqCtx.config();
             if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
                 reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
             }
         }
+    }
+
+    private void endLogRequestAndResponse(Throwable cause) {
+        logBuilder().endRequest(cause);
+        logBuilder().endResponse(cause);
     }
 
     private boolean tryComplete() {
@@ -344,29 +365,28 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         return true;
     }
 
-    private void failAndRespond(Throwable cause) {
-        failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, true);
-    }
-
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error, boolean cancel) {
         final State oldState = setDone(cancel);
         final int id = req.id();
         final int streamId = req.streamId();
 
-        final ChannelFuture future;
+        ChannelFuture future;
         final boolean isReset;
         if (oldState == State.NEEDS_HEADERS) { // ResponseHeaders is not sent yet, so we can send the response.
             final ResponseHeaders headers = res.headers();
             logBuilder().responseHeaders(headers);
 
             final HttpData content = res.content();
-            // Did not write anything yet; we can send an error response instead of resetting the stream.
-            if (content.isEmpty()) {
-                future = responseEncoder.writeHeaders(id, streamId, headers, true);
-            } else {
-                responseEncoder.writeHeaders(id, streamId, headers, false);
+            final HttpHeaders trailers = res.trailers();
+            final boolean trailersEmpty = trailers.isEmpty();
+            future = responseEncoder.writeHeaders(id, streamId, headers,
+                                                  content.isEmpty() && trailersEmpty, trailersEmpty);
+            if (!content.isEmpty()) {
                 logBuilder().increaseResponseLength(content);
-                future = responseEncoder.writeData(id, streamId, content, true);
+                future = responseEncoder.writeData(id, streamId, content, trailersEmpty);
+            }
+            if (!trailersEmpty) {
+                future = responseEncoder.writeTrailers(id, streamId, trailers);
             }
             isReset = false;
         } else {
@@ -395,8 +415,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
-                        logBuilder().endRequest(cause);
-                        logBuilder().endResponse(cause);
+                        endLogRequestAndResponse(cause);
                         final ServiceConfig config = reqCtx.config();
                         if (config.transientServiceOptions().contains(
                                 TransientServiceOption.WITH_ACCESS_LOGGING)) {
@@ -421,7 +440,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 // This method will be invoked only when `canSchedule()` returns true.
                 assert state != State.DONE;
 
-                failAndRespond(cause, serviceUnavailableResponse, Http2Error.INTERNAL_ERROR, true);
+                if (cause instanceof ClosedStreamException) {
+                    // A stream or connection was already closed by a client
+                    fail(cause);
+                } else {
+                    req.abortResponse(cause, false);
+                }
             }
         };
     }
@@ -509,8 +533,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
                     }
                 }
-            } else {
+            }
+
+            if (!isSubscriptionCompleted) {
                 assert subscription != null;
+                // Even though an 'endOfStream' is received, we still need to send a request signal to the
+                // upstream for completing or canceling this 'HttpResponseSubscriber'
                 subscription.request(1);
             }
             return;

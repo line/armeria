@@ -1,11 +1,5 @@
-plugins {
-    id 'scala'
-    id 'cz.alenkacz.gradle.scalafmt' version '1.14.0'
-}
-
 dependencies {
     implementation project(':grpc')
-    implementation 'org.scala-lang:scala-library:2.13.4'
 
     // ScalaPB
     api "com.thesamet.scalapb:scalapb-json4s_2.13"
@@ -15,54 +9,10 @@ dependencies {
     testImplementation 'io.monix:monix-reactive_2.13'
 }
 
-compileScala.targetCompatibility = 1.8
-ScalaCompileOptions.metaClass.useAnt = false
-
-tasks.withType(ScalaCompile) {
-    scalaCompileOptions.with {
-        // Disable incremental compilation to avoid intermittent compile errors.
-        force = true
-    }
-}
-
-tasks.withType(Test) {
-    useJUnitPlatform {
-        // A workaround for 'java.lang.InternalError: Malformed class name'
-        // when testing scalapb module with Java 8. This bug was fixed in Java 9.
-        // - https://github.com/gradle/gradle/issues/8432
-        // - https://bugs.openjdk.java.net/browse/JDK-8057919
-        if (System.env.TEST_JAVA_VERSION == '8') {
-            exclude("**/*\$*\$*.class")
-        }
-    }
-}
-
 sourceSets {
     test {
         scala {
             srcDirs "${protobuf.generatedFilesBaseDir}/test/scalapb"
-        }
-    }
-}
-
-// Run `scalafmt` to automatically format scala code from source sets
-// https://github.com/alenkacz/gradle-scalafmt#tasks
-project.ext.getLintTask().dependsOn tasks.checkScalafmt
-
-task aggregatedScaladocs(
-        type: ScalaDoc,
-        description: 'Generate scaladocs from all child projects',
-        group: 'Documentation') {
-    destinationDir = file("$buildDir/docs/scaladoc")
-    title = "$project.name $version API"
-
-    subprojects.each { proj ->
-        proj.tasks.withType(ScalaDoc).each {
-            source += proj.sourceSets.main.allJava
-            source += proj.sourceSets.main.allScala
-            classpath += proj.sourceSets.main.compileClasspath
-            excludes += scaladoc.excludes
-            includes += scaladoc.includes
         }
     }
 }

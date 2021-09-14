@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,12 +26,15 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.AsciiString;
@@ -74,6 +78,13 @@ class HttpRequestBuilderTest {
     }
 
     @Test
+    void shouldNotAllowEmptyPath() {
+        assertThatThrownBy(() -> HttpRequest.builder().path(""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("empty");
+    }
+
+    @Test
     void buildWithHeaders() {
         final HttpHeaders headers = HttpHeaders.of(AUTHORIZATION, "foo", "bar", "baz");
         final HttpRequest request = HttpRequest.builder().get("/")
@@ -84,16 +95,6 @@ class HttpRequestBuilderTest {
                 ImmutableMap.of(AUTHORIZATION, "foo", AsciiString.of("bar"), "baz",
                                 AsciiString.of("x-header"), "foo").entrySet().asList();
         assertThat(request.headers()).containsAll(finalHeaders);
-        assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
-    }
-
-    @Test
-    void buildWithQueryParams() {
-        final HttpRequest request = HttpRequest.builder().get("/")
-                                               .queryParam("foo", "bar")
-                                               .queryParams(QueryParams.of("from", 0, "limit", 10))
-                                               .build();
-        assertThat(request.path()).isEqualTo("/?foo=bar&from=0&limit=10");
         assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
     }
 
@@ -120,16 +121,218 @@ class HttpRequestBuilderTest {
                                             .build())
                 .isInstanceOf(IllegalStateException.class);
 
-        request = HttpRequest.builder().get("/{foo}/{bar}/:id/:/{/foo/}/::/a{")
-                             .pathParams(ImmutableMap.of("id", 3, "bar", 2, "foo", 1, "", 4, "/foo/", 5))
-                             .pathParam(":", 6)
+        request = HttpRequest.builder().get("/{foo}/{bar}/:id/{/foo/}/::/a{")
+                             .pathParams(ImmutableMap.of("id", 3, "bar", 2, "foo", 1, "/foo/", 4))
+                             .pathParam(":", 5)
                              .build();
-        assertThat(request.path()).isEqualTo("/1/2/3/4/5/6/a{");
+        assertThat(request.path()).isEqualTo("/1/2/3/4/5/a{");
+    }
 
-        request = HttpRequest.builder().get("/{}/:")
-                             .pathParams(ImmutableMap.of("", "foo"))
-                             .build();
-        assertThat(request.path()).isEqualTo("/foo/foo");
+    @Test
+    void shouldRejectEmptyPathParams() {
+        assertThatThrownBy(() -> HttpRequest.builder().pathParam("", "foo"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("empty");
+
+        assertThatThrownBy(() -> HttpRequest.builder().pathParams(ImmutableMap.of("", "foo")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("empty");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void shouldFailOnMissingPathParam(boolean curly) {
+        assertThatThrownBy(() -> HttpRequest.builder()
+                                            .get(curly ? "/{foo}" : "/:foo")
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("param 'foo'");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "https://host:8080,        https://host:8080",
+            "https://host:8080/,       https://host:8080/",
+            "https://host:8080/foo,    https://host:8080/foo",
+            "https://host:8080/foo/,   https://host:8080/foo/",
+            "https://host:8080/:,      https://host:8080/:",
+            "https://host:8080/:/,     https://host:8080/:/",
+            "https://host:8080/{}/{},  https://host:8080/{}/{}",
+            "https://host:8080/{}/:,   https://host:8080/{}/:",
+            "https://host:8080/:/{},   https://host:8080/:/{}",
+            "https://host:8080/:/:,    https://host:8080/:/:",
+            "https://host:8080/{}/{}/, https://host:8080/{}/{}/",
+            "https://host:8080/{}/:/,  https://host:8080/{}/:/",
+            "https://host:8080/:/{}/,  https://host:8080/:/{}/",
+            "https://host:8080/:/:/,   https://host:8080/:/:/",
+    })
+    void absoluteUriWithoutPathParams(@Nullable String uri, String expectedUri) {
+        uri = firstNonNull(uri, "");
+        final HttpRequest req = HttpRequest.builder()
+                                           .get(uri)
+                                           .build();
+        assertThat(req.path()).isEqualTo(expectedUri);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/,           /",
+            "/foo,        /foo",
+            "/foo/,       /foo/",
+            "/{},         /{}",
+            "/:,          /:",
+            "/{}/,        /{}/",
+            "/:/,         /:/",
+            "/{}/{},      /{}/{}",
+            "/{}/:,       /{}/:",
+            "/:/:,        /:/:",
+            "/:/{},       /:/{}",
+            "/{}/{}/,     /{}/{}/",
+            "/{}/:/,      /{}/:/",
+            "/:/:/,       /:/:/",
+            "/:/{}/,      /:/{}/",
+            "/{unmatched, /{unmatched"
+    })
+    void pathWithoutPathParams(String path, String expectedPath) {
+        final HttpRequest req = HttpRequest.builder().get(path).build();
+        assertThat(req.path()).isEqualTo(expectedPath);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "https://host:8080/{path},        https://host:8080/ping",
+            "https://host:8080/:path,         https://host:8080/ping",
+            "https://host:8080/{path}/,       https://host:8080/ping/",
+            "https://host:8080/:path/,        https://host:8080/ping/",
+            "https://host:8080/{path}/:,      https://host:8080/ping/:",
+            "https://host:8080/:path/:,       https://host:8080/ping/:",
+            "https://host:8080/{path}/:/,     https://host:8080/ping/:/",
+            "https://host:8080/:path/:/,      https://host:8080/ping/:/",
+            "https://host:8080/{path}/:/pong, https://host:8080/ping/:/pong",
+            "https://host:8080/:path/:/pong,  https://host:8080/ping/:/pong",
+            // Note: We don't test '{}' because absolute URIs don't accept '{' or '}'.
+    })
+    void absoluteUriWithPathParam(String path, String expectedPath) {
+        final HttpRequest req = HttpRequest.builder()
+                                           .get(path)
+                                           .pathParam("path", "ping")
+                                           .build();
+        assertThat(req.path()).isEqualTo(expectedPath);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/{path},         /ping",
+            "/:path,          /ping",
+            "/{path}/,        /ping/",
+            "/:path/,         /ping/",
+            "/{path}/{},      /ping/{}",
+            "/:path/{},       /ping/{}",
+            "/{path}/:,       /ping/:",
+            "/:path/:,        /ping/:",
+            "/{path}/{}/,     /ping/{}/",
+            "/:path/{}/,      /ping/{}/",
+            "/{path}/:/,      /ping/:/",
+            "/:path/:/,       /ping/:/",
+            "/{path}/{}/pong, /ping/{}/pong",
+            "/:path/{}/pong,  /ping/{}/pong",
+            "/{path}/:/pong,  /ping/:/pong",
+            "/:path/:/pong,   /ping/:/pong",
+    })
+    void pathWithPathParam(String path, String expectedPath) {
+        final HttpRequest req = HttpRequest.builder()
+                                           .get(path)
+                                           .pathParam("path", "ping")
+                                           .build();
+        assertThat(req.path()).isEqualTo(expectedPath);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void buildWithQueryParams(boolean disablePathParams) {
+        final HttpRequestBuilder builder = HttpRequest.builder();
+        if (disablePathParams) {
+            builder.disablePathParams();
+        }
+
+        final HttpRequest req = builder.get("/")
+                                           .queryParam("foo", "bar")
+                                           .queryParams(QueryParams.of("from", 0, "limit", 10))
+                                           .build();
+        assertThat(req.path()).isEqualTo("/?foo=bar&from=0&limit=10");
+        assertThat(req).isInstanceOf(EmptyFixedHttpRequest.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void buildWithQueryParamsInPath(boolean disablePathParams) {
+        final HttpRequestBuilder builder = HttpRequest.builder();
+        if (disablePathParams) {
+            builder.disablePathParams();
+        }
+
+        final HttpRequest req = builder.get("/query?alice=bob").build();
+        assertThat(req.path()).isEqualTo("/query?alice=bob");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void buildWithQueryParamsMixed(boolean disablePathParams) {
+        final HttpRequestBuilder builder = HttpRequest.builder();
+        if (disablePathParams) {
+            builder.disablePathParams();
+        }
+
+        final HttpRequest req = builder.get("/query?foo=bar")
+                                       .queryParam("alice", "bob")
+                                       .build();
+        assertThat(req.path()).isEqualTo("/query?foo=bar&alice=bob");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            // No query string in path
+            "/{path},         /ping?alice=bob",
+            "/:path,          /ping?alice=bob",
+            "/{path}/,        /ping/?alice=bob",
+            "/:path/,         /ping/?alice=bob",
+            "/{path}/{},      /ping/{}?alice=bob",
+            "/:path/{},       /ping/{}?alice=bob",
+            "/{path}/:,       /ping/:?alice=bob",
+            "/:path/:,        /ping/:?alice=bob",
+            "/{path}/{}/,     /ping/{}/?alice=bob",
+            "/:path/{}/,      /ping/{}/?alice=bob",
+            "/{path}/:/,      /ping/:/?alice=bob",
+            "/:path/:/,       /ping/:/?alice=bob",
+            "/{path}/{}/pong, /ping/{}/pong?alice=bob",
+            "/:path/{}/pong,  /ping/{}/pong?alice=bob",
+            "/{path}/:/pong,  /ping/:/pong?alice=bob",
+            "/:path/:/pong,   /ping/:/pong?alice=bob",
+            // A query string in path
+            "/{path}?foo=bar,         /ping?foo=bar&alice=bob",
+            "/:path?foo=bar,          /ping?foo=bar&alice=bob",
+            "/{path}/?foo=bar,        /ping/?foo=bar&alice=bob",
+            "/:path/?foo=bar,         /ping/?foo=bar&alice=bob",
+            "/{path}/{}?foo=bar,      /ping/{}?foo=bar&alice=bob",
+            "/:path/{}?foo=bar,       /ping/{}?foo=bar&alice=bob",
+            "/{path}/:?foo=bar,       /ping/:?foo=bar&alice=bob",
+            "/:path/:?foo=bar,        /ping/:?foo=bar&alice=bob",
+            "/{path}/{}/?foo=bar,     /ping/{}/?foo=bar&alice=bob",
+            "/:path/{}/?foo=bar,      /ping/{}/?foo=bar&alice=bob",
+            "/{path}/:/?foo=bar,      /ping/:/?foo=bar&alice=bob",
+            "/:path/:/?foo=bar,       /ping/:/?foo=bar&alice=bob",
+            "/{path}/{}/pong?foo=bar, /ping/{}/pong?foo=bar&alice=bob",
+            "/:path/{}/pong?foo=bar,  /ping/{}/pong?foo=bar&alice=bob",
+            "/{path}/:/pong?foo=bar,  /ping/:/pong?foo=bar&alice=bob",
+            "/:path/:/pong?foo=bar,   /ping/:/pong?foo=bar&alice=bob",
+    })
+    void pathParamAndQueryParams(String path, String expectedPath) {
+        final HttpRequest req = HttpRequest.builder()
+                                           .get(path)
+                                           .pathParam("path", "ping")
+                                           .queryParam("alice", "bob")
+                                           .build();
+        assertThat(req.path()).isEqualTo(expectedPath);
     }
 
     @Test

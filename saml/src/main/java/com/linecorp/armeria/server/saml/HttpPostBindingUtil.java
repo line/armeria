@@ -25,8 +25,6 @@ import static net.shibboleth.utilities.java.support.xml.SerializeSupport.nodeToS
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.common.SAMLObject;
 import org.opensaml.saml.common.SignableSAMLObject;
@@ -39,6 +37,7 @@ import com.google.common.html.HtmlEscapers;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.saml.SamlService.SamlParameters;
 
 /**

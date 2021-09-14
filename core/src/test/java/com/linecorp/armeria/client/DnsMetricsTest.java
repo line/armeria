@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.DnsTimeoutUtil.assertDnsTimeoutException;
 import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
@@ -33,7 +34,6 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -42,9 +42,9 @@ import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -57,12 +57,11 @@ import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
 
-public class DnsMetricsTest {
+class DnsMetricsTest {
 
     @Test
     void success() {
@@ -73,12 +72,14 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("foo.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -122,12 +123,13 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
         ), new AlwaysTimeoutHandler())) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
                                       })
                                       .meterRegistry(meterRegistry)
@@ -154,8 +156,7 @@ public class DnsMetricsTest {
                         () -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
                                      .aggregate().join());
                 assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class);
-                assertThat(Throwables.getRootCause(cause))
-                        .isInstanceOfAny(DnsTimeoutException.class, DnsNameResolverTimeoutException.class);
+                assertDnsTimeoutException(cause);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
@@ -173,11 +174,16 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("bar.com.", A),
                 new DefaultDnsResponse(0, DnsOpCode.QUERY, DnsResponseCode.NXDOMAIN)
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
+                                          // Should set maxQueriesPerResolve() and queryTimeout() to avoid
+                                          // flakiness. The default value of maxQueriesPerResolve depends on
+                                          // the configuration in /etc/resolve.conf
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
@@ -218,11 +224,16 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("bar.com.", A),
                 new DefaultDnsResponse(0, DnsOpCode.QUERY, DnsResponseCode.NOTZONE)
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
+                                          // Should set maxQueriesPerResolve() and queryTimeout() to avoid
+                                          // flakiness. The default value of maxQueriesPerResolve depends on
+                                          // the configuration in /etc/resolve.conf
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
@@ -251,11 +262,13 @@ public class DnsMetricsTest {
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
                         .hasRootCauseInstanceOf(UnknownHostException.class);
 
-                assertThat(MoreMeters.measureAll(meterRegistry))
-                        .containsEntry(writtenMeterId, 2.0)
-                        .containsEntry(noAnswerMeterId, 1.0)
-                        .containsEntry(nxDomainMeterId, 1.0)
-                        .doesNotContainKey(otherExceptionId);
+                await().untilAsserted(() -> {
+                    assertThat(MoreMeters.measureAll(meterRegistry))
+                            .containsEntry(writtenMeterId, 2.0)
+                            .containsEntry(noAnswerMeterId, 1.0)
+                            .containsEntry(nxDomainMeterId, 1.0)
+                            .doesNotContainKey(otherExceptionId);
+                });
             }
         }
     }
@@ -268,10 +281,15 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("baz.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "127.0.0.1"))
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
+                                          // Should set maxQueriesPerResolve() and queryTimeout() to avoid
+                                          // flakiness. The default value of maxQueriesPerResolve depends on
+                                          // the configuration in /etc/resolve.conf
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
@@ -302,6 +320,45 @@ public class DnsMetricsTest {
                             .containsEntry(successMeterId, 2.0)
                             .doesNotContainKey(otherExceptionId);
                 });
+            }
+        }
+    }
+
+    @Test
+    void disableMetrics() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
+                                         .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4"))
+        ))) {
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
+                                          builder.disableDnsQueryMetrics();
+                                      })
+                                      .meterRegistry(meterRegistry)
+                                      .build()) {
+
+                final WebClient client = WebClient.builder()
+                                                  .factory(factory)
+                                                  .build();
+
+                assertThat(MoreMeters.measureAll(meterRegistry).entrySet().stream()
+                                     .anyMatch(entry -> entry.getKey().startsWith("armeria.client.dns.")))
+                        .isFalse();
+
+                client.get("http://foo.com:1/").aggregate();
+
+                // Give enough time for metrics to be collected by the MeterRegistry
+                Thread.sleep(1000);
+                assertThat(MoreMeters.measureAll(meterRegistry).entrySet().stream()
+                                     .anyMatch(entry -> entry.getKey().startsWith("armeria.client.dns.")))
+                        .isFalse();
             }
         }
     }

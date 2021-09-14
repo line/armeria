@@ -19,15 +19,15 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
 
 import com.codahale.metrics.json.MetricsModule;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
@@ -317,6 +317,7 @@ public class ArmeriaSettings {
      * SSL configuration that the {@link Server} uses.
      */
     @Nullable
+    @NestedConfigurationProperty
     private Ssl ssl;
 
     /**

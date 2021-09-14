@@ -17,11 +17,15 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -49,10 +53,19 @@ public final class MetricCollectingRpcClient extends AbstractMetricCollectingCli
     public static Function<? super RpcClient, MetricCollectingRpcClient> newDecorator(
             MeterIdPrefixFunction meterIdPrefixFunction) {
         requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        return delegate -> new MetricCollectingRpcClient(delegate, meterIdPrefixFunction);
+        return builder(meterIdPrefixFunction).newDecorator();
     }
 
-    MetricCollectingRpcClient(RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
-        super(delegate, meterIdPrefixFunction);
+    /**
+     * Returns a new {@link MetricCollectingRpcClientBuilder} instance.
+     */
+    public static MetricCollectingRpcClientBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
+        return new MetricCollectingRpcClientBuilder(meterIdPrefixFunction);
+    }
+
+    MetricCollectingRpcClient(
+            RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        super(delegate, meterIdPrefixFunction, successFunction);
     }
 }

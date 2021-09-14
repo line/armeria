@@ -16,6 +16,9 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
+import com.google.common.collect.ImmutableSet;
 
 final class DefaultResponseHeadersBuilder
         extends AbstractHttpHeadersBuilder<ResponseHeadersBuilder>
@@ -48,6 +51,35 @@ final class DefaultResponseHeadersBuilder
 
         // No headers were set.
         throw new IllegalStateException(STATUS_HEADER_MISSING);
+    }
+
+    @Override
+    public ResponseHeadersBuilder cookie(Cookie cookie) {
+        requireNonNull(cookie, "cookie");
+        setters().setCookie(ImmutableSet.of(cookie));
+        return this;
+    }
+
+    @Override
+    public Cookies cookies() {
+        final HttpHeadersBase getters = getters();
+        if (getters == null) {
+            return Cookies.of();
+        }
+        return getters.setCookie();
+    }
+
+    @Override
+    public ResponseHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookie");
+        setters().setCookie(cookies);
+        return this;
+    }
+
+    @Override
+    public ResponseHeadersBuilder cookies(Cookie... cookies) {
+        requireNonNull(cookies, "cookie");
+        return cookies(ImmutableSet.copyOf(cookies));
     }
 
     @Override

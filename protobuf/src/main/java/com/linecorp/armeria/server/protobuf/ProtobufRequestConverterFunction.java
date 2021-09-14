@@ -34,8 +34,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableCollection;
@@ -50,6 +48,7 @@ import com.google.protobuf.util.JsonFormat.Parser;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -63,7 +62,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * The {@link Parser} for JSON is applied only when the {@code content-type} of
  * the {@link RequestHeaders} is either {@link MediaType#JSON} or ends with {@code +json}.
  *
- * <h3>Conversion of multiple Protobuf messages</h3>
+ * <h2>Conversion of multiple Protobuf messages</h2>
  * A sequence of Protocol Buffer messages can not be handled by this {@link RequestConverterFunction},
  * because Protocol Buffers wire format is not self-delimiting.
  * See
@@ -229,8 +228,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
     }
 
     static boolean isJson(@Nullable MediaType contentType) {
-        return contentType != null &&
-               (contentType.is(MediaType.JSON) || contentType.subtype().endsWith("+json"));
+        return contentType != null && contentType.isJson();
     }
 
     private static Message.Builder getMessageBuilder(Class<?> clazz) {

@@ -15,20 +15,20 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
-import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<RequestHeadersBuilder>
         implements RequestHeadersBuilder {
@@ -132,18 +132,8 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder acceptLanguages(Iterable<LanguageRange> acceptLanguages) {
         requireNonNull(acceptLanguages, "acceptLanguages");
-        final Collection<LanguageRange> languageRangeCollection;
-        if (acceptLanguages instanceof Collection) {
-            languageRangeCollection = (Collection<LanguageRange>) acceptLanguages;
-        } else {
-            languageRangeCollection = ImmutableList.copyOf(acceptLanguages);
-        }
-        Preconditions.checkArgument(!languageRangeCollection.isEmpty(), "acceptLanguages cannot be empty");
-        final String acceptLanguagesValue = languageRangeCollection
-                .stream()
-                .map(it -> (it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight())
-                .collect(Collectors.joining(", "));
-        set(HttpHeaderNames.ACCEPT_LANGUAGE, acceptLanguagesValue);
+        checkArgument(!Iterables.isEmpty(acceptLanguages), "acceptLanguages cannot be empty");
+        setters().acceptLanguages(acceptLanguages);
         return self();
     }
 
@@ -152,5 +142,54 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     public Locale selectLocale(Iterable<Locale> supportedLocales) {
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.selectLocale(supportedLocales) : null;
+    }
+
+    @Override
+    public RequestHeadersBuilder cookie(Cookie cookie) {
+        requireNonNull(cookie, "cookie");
+        return cookies(ImmutableSet.of(cookie));
+    }
+
+    @Override
+    public Cookies cookies() {
+        final HttpHeadersBase getters = getters();
+        if (getters == null) {
+            return Cookies.of();
+        }
+        return getters.cookie();
+    }
+
+    @Override
+    public RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookie");
+        setters().cookie(cookies);
+        return this;
+    }
+
+    @Override
+    public RequestHeadersBuilder cookies(Cookie... cookies) {
+        requireNonNull(cookies, "cookie");
+        return cookies(ImmutableSet.copyOf(cookies));
+    }
+
+    @Override
+    public List<MediaType> accept() {
+        final HttpHeadersBase getters = getters();
+        if (getters == null) {
+            return ImmutableList.of();
+        }
+        return getters.accept();
+    }
+
+    @Override
+    public RequestHeadersBuilder accept(MediaType... mediaTypes) {
+        requireNonNull(mediaTypes, "mediaTypes");
+        return accept(ImmutableList.copyOf(mediaTypes));
+    }
+
+    @Override
+    public RequestHeadersBuilder accept(Iterable<MediaType> mediaTypes) {
+        setters().accept(mediaTypes);
+        return this;
     }
 }

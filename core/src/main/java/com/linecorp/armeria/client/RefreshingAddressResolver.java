@@ -28,8 +28,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +36,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
 
@@ -99,7 +98,10 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 if (entry.hasCacheableCause() && negativeTtl > 0) {
                     executor().schedule(() -> cache.invalidate(hostname), negativeTtl, TimeUnit.SECONDS);
                 } else {
-                    cache.invalidate(hostname);
+                    // cache.get() must not directly invoke cache.invalidate().
+                    // It causes an infinity loop or an `IllegalStateException: Recurse update`.
+                    // https://bugs.openjdk.java.net/browse/JDK-8074374
+                    executor().execute(() -> cache.invalidate(hostname));
                 }
                 promise.tryFailure(cause);
                 return null;

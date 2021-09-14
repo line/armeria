@@ -38,10 +38,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An interface defining an
@@ -97,6 +97,65 @@ public interface Cookie extends Comparable<Cookie> {
             return Cookies.of();
         }
         return ServerCookieDecoder.decode(strict, cookieHeader);
+    }
+
+    /**
+     * Decodes the specified {@code "Cookie"} header values into a set of {@link Cookie}s.
+     *
+     * @param cookieHeaders the {@code "Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromCookieHeaders(String... cookieHeaders) {
+        return fromCookieHeaders(true, cookieHeaders);
+    }
+
+    /**
+     * Decodes the specified {@code "Cookie"} header values into a set of {@link Cookie}s.
+     *
+     * @param cookieHeaders the {@code "Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromCookieHeaders(Iterable<String> cookieHeaders) {
+        return fromCookieHeaders(true, cookieHeaders);
+    }
+
+    /**
+     * Decodes the specified {@code "Cookie"} header values into a set of {@link Cookie}s.
+     *
+     * @param strict whether to validate that the cookie names and values are in the valid scope
+     *               defined in RFC 6265.
+     * @param cookieHeaders the {@code "Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromCookieHeaders(boolean strict, String... cookieHeaders) {
+        requireNonNull(cookieHeaders, "cookieHeaders");
+        return fromCookieHeaders(strict, ImmutableList.copyOf(cookieHeaders));
+    }
+
+    /**
+     * Decodes the specified {@code "Cookie"} header values into a set of {@link Cookie}s.
+     *
+     * @param strict whether to validate that the cookie names and values are in the valid scope
+     *               defined in RFC 6265.
+     * @param cookieHeaders the {@code "Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromCookieHeaders(boolean strict, Iterable<String> cookieHeaders) {
+        requireNonNull(cookieHeaders, "cookieHeaders");
+        final Iterator<String> it = cookieHeaders.iterator();
+        if (!it.hasNext()) {
+            return Cookies.of();
+        }
+
+        final ImmutableSet.Builder<Cookie> builder = ImmutableSet.builder();
+        do {
+            final String v = it.next();
+            requireNonNull(v, "cookieHeaders contains null.");
+            final Cookies cookies = fromCookieHeader(strict, v);
+            builder.addAll(cookies);
+        } while (it.hasNext());
+
+        return Cookies.of(builder.build());
     }
 
     /**

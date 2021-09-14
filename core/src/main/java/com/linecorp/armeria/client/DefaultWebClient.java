@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
+import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
@@ -29,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -43,7 +45,10 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     }
 
     @Override
-    public HttpResponse execute(HttpRequest req) {
+    public HttpResponse execute(HttpRequest req, RequestOptions requestOptions) {
+        requireNonNull(req, "req");
+        requireNonNull(requestOptions, "requestOptions");
+
         if (Clients.isUndefinedUri(uri())) {
             final URI uri;
             if (isAbsoluteUri(req.path())) {
@@ -71,14 +76,9 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
-            String path = uri.getRawPath();
-            if (Strings.isNullOrEmpty(path)) {
-                path = query == null ? "/" : "/?" + query;
-            } else if (query != null) {
-                path = path + '?' + query;
-            }
+            final String path = pathWithQuery(uri, query);
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(path));
-            return execute(endpoint, newReq, protocol);
+            return execute(endpoint, newReq, protocol, requestOptions);
         }
 
         if (isAbsoluteUri(req.path())) {
@@ -96,17 +96,22 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         } else {
             newReq = req;
         }
-        return execute(endpointGroup(), newReq, scheme().sessionProtocol());
+        return execute(endpointGroup(), newReq, scheme().sessionProtocol(), requestOptions);
     }
 
-    private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req, SessionProtocol protocol) {
+    private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req, SessionProtocol protocol,
+                                 RequestOptions requestOptions) {
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             return abortRequestAndReturnFailureResponse(req, cause);
         }
+        final String newPath = pathAndQuery.toString();
+        if (!newPath.equals(req.path())) {
+            req = req.withHeaders(req.headers().toBuilder().path(newPath));
+        }
         return execute(protocol, endpointGroup, req.method(),
-                       pathAndQuery.path(), pathAndQuery.query(), null, req);
+                       pathAndQuery.path(), pathAndQuery.query(), null, req, requestOptions);
     }
 
     @Override
@@ -123,5 +128,15 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     @Override
     public HttpClient unwrap() {
         return (HttpClient) super.unwrap();
+    }
+
+    static String pathWithQuery(URI uri, @Nullable String query) {
+        String path = uri.getRawPath();
+        if (Strings.isNullOrEmpty(path)) {
+            path = query == null ? "/" : "/?" + query;
+        } else if (query != null) {
+            path = path + '?' + query;
+        }
+        return path;
     }
 }

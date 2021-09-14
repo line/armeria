@@ -37,12 +37,12 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.internal.InternalThreadLocalMap;
@@ -251,7 +251,6 @@ final class CookieUtil {
     }
 
     // The methods newly added in the fork.
-
     static Cookies fromSetCookieHeaders(ImmutableSet.Builder<Cookie> builder,
                                         boolean strict, Iterator<String> it) {
         assert it.hasNext();

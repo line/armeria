@@ -28,11 +28,11 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -76,10 +76,12 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -318,10 +320,17 @@ class HttpClientIntegrationTest {
 
             sb.service("glob:/oneparam/**", (ctx, req) -> {
                 // The client was able to send a request with an escaped path param. Armeria servers always
-                // decode the path so ctx.path == '/oneparam/foo/bar' here.
-                if ("/oneparam/foo%2Fbar".equals(req.headers().path()) &&
-                    "/oneparam/foo/bar".equals(ctx.path())) {
+                // decode the path so ctx.path == '/oneparam/foo' here (without query string).
+                if ("/oneparam/foo?bar".equals(req.headers().path()) &&
+                    "/oneparam/foo".equals(ctx.path())) {
                     return HttpResponse.of("routed");
+                }
+                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            });
+
+            sb.service("/escaping/{name}", (ctx, req) -> {
+                if (Objects.equals(req.path(), ctx.path()) && "/escaping/foo%20bar".equals(req.path())) {
+                    return HttpResponse.of(ctx.pathParam("name"));
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
             });
@@ -436,8 +445,30 @@ class HttpClientIntegrationTest {
      */
     @Test
     void testAuthorityOverridableByClientOption() throws Exception {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .addressResolverGroupFactory(
+                                                          unused -> MockAddressResolverGroup.localhost())
+                                                  .build()) {
 
-        testHeaderOverridableByClientOption("/authority", HttpHeaderNames.AUTHORITY, "foo:8080");
+            // An authority header should not be overridden on a client created with a base URI.
+            WebClient client = WebClient.builder(server.httpUri())
+                                        .setHeader(HttpHeaderNames.AUTHORITY, "foo:8080")
+                                        .factory(factory)
+                                        .build();
+
+            AggregatedHttpResponse response = client.get("/authority").aggregate().get();
+            assertThat(response.contentUtf8()).isEqualTo("127.0.0.1:" + server.httpPort());
+
+            // An authority header should override an Endpoint on a client created with a non-base URI.
+            final String additionalAuthority = "foo:" + server.httpPort();
+            client = WebClient.builder()
+                              .setHeader(HttpHeaderNames.AUTHORITY, additionalAuthority)
+                              .factory(factory)
+                              .build();
+
+            response = client.get(server.httpUri().resolve("/authority").toString()).aggregate().get();
+            assertThat(response.contentUtf8()).isEqualTo(additionalAuthority);
+        }
     }
 
     /**
@@ -464,6 +495,21 @@ class HttpClientIntegrationTest {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator())
+                                          .build();
+
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(response.contentUtf8()).isEqualTo(
+                "some content to compress more content to compress");
+    }
+
+    @Test
+    void httpDecoding_gzip() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .factory(clientFactory)
+                                          .decorator(DecodingClient.newDecorator(
+                                                  StreamDecoderFactory.gzip()))
                                           .build();
 
         final AggregatedHttpResponse response =
@@ -629,9 +675,22 @@ class HttpClientIntegrationTest {
     void testEscapedPathParam() throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
 
-        final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/oneparam/foo%3Fbar").aggregate().get();
 
         assertThat(response.contentUtf8()).isEqualTo("routed");
+    }
+
+    @Test
+    void testEscapingPathParam() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse response = client.execute(
+                HttpRequest.builder()
+                           .get("/escaping/{name}")
+                           .pathParam("name", "foo bar")
+                           .build()).aggregate().get();
+
+        assertThat(response.contentUtf8()).isEqualTo("foo bar");
     }
 
     @Test

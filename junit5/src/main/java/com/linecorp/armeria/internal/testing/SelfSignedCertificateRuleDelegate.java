@@ -28,9 +28,8 @@ import java.time.Instant;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 
-import javax.annotation.Nullable;
-
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 /**
  * A delegate that has common testing methods of {@link SelfSignedCertificate}.

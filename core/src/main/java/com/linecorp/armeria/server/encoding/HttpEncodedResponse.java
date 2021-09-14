@@ -20,10 +20,8 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.function.Predicate;
-import java.util.zip.DeflaterOutputStream;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
@@ -39,6 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 
 /**
@@ -56,9 +55,11 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
     private ByteArrayOutputStream encodedStream;
 
     @Nullable
-    private DeflaterOutputStream encodingStream;
+    private OutputStream encodingStream;
 
     private boolean headersSent;
+
+    private boolean encoderClosed;
 
     HttpEncodedResponse(HttpResponse delegate,
                         HttpEncodingType encodingType,
@@ -103,6 +104,9 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                     break;
                 case DEFLATE:
                     mutable.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
+                    break;
+                case BROTLI:
+                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "br");
                     break;
             }
             mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
@@ -155,16 +159,23 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         return cause;
     }
 
+    @Override
+    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+        closeEncoder();
+    }
+
     private void closeEncoder() {
+        if (encoderClosed) {
+            return;
+        }
+        encoderClosed = true;
         if (encodingStream == null) {
             return;
         }
         try {
             encodingStream.close();
         } catch (IOException e) {
-            throw new IllegalStateException(
-                    "Error closing encodingStream, this should not happen with byte arrays.",
-                    e);
+            logger.warn("Unexpected exception is raised while closing the encoding stream.", e);
         }
     }
 
@@ -193,7 +204,10 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         // We switch to chunked encoding and compress the response if it's reasonably
         // large or the content length is unknown because the compression savings should
         // outweigh the chunked encoding overhead.
-        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, Long.MAX_VALUE);
+        long contentLength = headers.contentLength();
+        if (contentLength == -1) {
+            contentLength = Long.MAX_VALUE;
+        }
         return contentLength >= minBytesToForceChunkedAndEncoding;
     }
 }

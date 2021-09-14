@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -42,6 +40,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponent;
@@ -261,6 +260,7 @@ final class AccessLogFormats {
     /**
      * A condition based on {@link HttpStatus} of the HTTP response.
      */
+    // TODO(ikhoon): Use Predicate<ResponseHeaders>
     private static final class Condition implements Function<ResponseHeaders, Boolean> {
 
         private final Set<HttpStatus> statusSet;

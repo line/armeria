@@ -45,7 +45,7 @@ export default class ThriftTransport extends Transport {
     headers: { [name: string]: string },
     bodyJson?: string,
     endpointPath?: string,
-  ): Promise<string> {
+  ): Promise<Response> {
     if (!bodyJson) {
       throw new Error('A Thrift request must have body.');
     }
@@ -59,12 +59,10 @@ export default class ThriftTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    const httpResponse = await fetch(endpoint.pathMapping, {
+    return fetch(endpoint.pathMapping, {
       headers: hdrs,
       method: 'POST',
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,
     });
-    const response = await httpResponse.text();
-    return response.length > 0 ? response : 'Request sent to one-way function';
   }
 }

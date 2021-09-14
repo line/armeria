@@ -16,23 +16,22 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import javax.annotation.Nullable;
 
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -81,6 +80,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
+    private static final int INITIAL_CAPACITY = 32;
+
     private final Queue<Object> queue;
 
     @Nullable
@@ -104,7 +105,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * Creates a new instance.
      */
     public DefaultStreamMessage() {
-        queue = new MpscChunkedArrayQueue<>(32, 1 << 30);
+        queue = new MpscChunkedArrayQueue<>(INITIAL_CAPACITY, 1 << 30);
     }
 
     @Override
@@ -145,6 +146,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             // to other Publishers.
             invokedOnSubscribe = true;
             subscriber.onSubscribe(subscription);
+            if (!queue.isEmpty()) {
+                notifySubscriber0();
+            }
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
                 notifySubscriberOfCloseEvent(subscription, newCloseEvent(t));
@@ -284,37 +288,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            Throwable cause = event.cause;
+            final Throwable cause = event.cause;
             if (state == State.CLEANUP) {
                 cleanupCause = cause;
             }
-            for (;;) {
-                final Object e = queue.poll();
-                if (e == null) {
-                    break;
-                }
-
-                // We already notified to the subscriber so skip.
-                if (e instanceof CloseEvent) {
-                    continue;
-                }
-
-                if (e instanceof CompletableFuture) {
-                    if (cause == null) {
-                        cause = ClosedStreamException.get();
-                    }
-                    ((CompletableFuture<?>) e).completeExceptionally(cause);
-                    continue;
-                }
-
-                try {
-                    @SuppressWarnings("unchecked")
-                    final T obj = (T) e;
-                    onRemoval(obj);
-                } finally {
-                    StreamMessageUtil.closeOrAbort(e, cause);
-                }
-            }
+            cleanupObjects(cause);
         }
     }
 
@@ -362,23 +340,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         final SubscriptionImpl subscription = this.subscription;
         if (!invokedOnSubscribe) {
-            final Executor executor = subscription.executor();
-
             // Subscriber.onSubscribe() was not invoked yet.
-            // Reschedule the notification so that onSubscribe() is invoked before other events.
-            //
-            // Note:
-            // The rescheduling will occur at most once because the invocation of onSubscribe() must have been
-            // scheduled already by subscribe(), given that this.subscription is not null at this point and
-            // subscribe() is the only place that sets this.subscription.
-
-            executor.execute(this::notifySubscriber0);
+            // The notification will be resumed after onSubscribe().
             return;
         }
 
         for (;;) {
             if (state == State.CLEANUP) {
-                cleanupObjects();
+                cleanupObjects(null);
                 return;
             }
 
@@ -418,7 +387,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         T o = (T) queue.remove();
         inOnNext = true;
         try {
-            o = prepareObjectForNotification(subscription, o);
+            o = prepareObjectForNotification(o, subscription.withPooledObjects());
             subscriber.onNext(o);
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
@@ -485,8 +454,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return stateUpdater.compareAndSet(this, oldState, newState);
     }
 
-    private void cleanupObjects() {
-        Throwable cause = null;
+    private void cleanupObjects(@Nullable Throwable cause) {
         for (;;) {
             final Object e = queue.poll();
             if (e == null) {

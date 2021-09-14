@@ -34,7 +34,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
@@ -42,6 +41,7 @@ import org.slf4j.Logger;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -86,6 +86,26 @@ public interface RequestContext {
     }
 
     /**
+     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, propagating
+     * the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor service is only used from a single request then it's better to use
+     * {@link #makeContextAware(ExecutorService)}
+     */
+    static ExecutorService makeContextPropagating(ExecutorService executor) {
+        return new PropagatingContextAwareExecutorService(executor);
+    }
+
+    /**
+     * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
+     * propagating the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor service is only used from a single request then it's better to use
+     * {@link #makeContextAware(ScheduledExecutorService)}
+     */
+    static ScheduledExecutorService makeContextPropagating(ScheduledExecutorService executor) {
+        return new PropagatingContextAwareScheduledExecutorService(executor);
+    }
+
+    /**
      * Maps the context of the {@link Request} that is being handled in the current thread.
      *
      * @param mapper the {@link Function} that maps the {@link RequestContext}
@@ -95,7 +115,8 @@ public interface RequestContext {
      */
     @Nullable
     static <T> T mapCurrent(
-            Function<? super RequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
+            Function<? super RequestContext, T> mapper,
+            @Nullable Supplier<@Nullable T> defaultValueSupplier) {
 
         final RequestContext ctx = currentOrNull();
         if (ctx != null) {
@@ -484,7 +505,9 @@ public interface RequestContext {
 
     /**
      * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, making
-     * sure to propagate the current {@link RequestContext} into the callback execution.
+     * sure to propagate this {@link RequestContext} into the callback execution.
+     * If this executor service will be used for callbacks from several different requests, use
+     * {@link #makeContextPropagating(ExecutorService)} instead.
      */
     default ExecutorService makeContextAware(ExecutorService executor) {
         return ContextAwareExecutorService.of(this, executor);
@@ -492,7 +515,9 @@ public interface RequestContext {
 
     /**
      * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
-     * making sure to propagate the current {@link RequestContext} into the callback execution.
+     * making sure to propagate this {@link RequestContext} into the callback execution.
+     * If this executor service will be used for callbacks from several different requests, use
+     * {@link #makeContextPropagating(ScheduledExecutorService)} instead.
      */
     default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
         return ContextAwareScheduledExecutorService.of(this, executor);

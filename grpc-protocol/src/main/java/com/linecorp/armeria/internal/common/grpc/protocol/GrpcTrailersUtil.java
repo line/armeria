@@ -20,12 +20,12 @@ import static io.netty.util.AsciiString.c2b;
 
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -45,7 +45,7 @@ public final class GrpcTrailersUtil {
     public static void addStatusMessageToTrailers(
             HttpHeadersBuilder trailersBuilder, int code, @Nullable String message) {
         trailersBuilder.endOfStream(true);
-        trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS, Integer.toString(code));
+        trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS, StringUtil.toString(code));
         if (message != null) {
             trailersBuilder.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(message));
         }

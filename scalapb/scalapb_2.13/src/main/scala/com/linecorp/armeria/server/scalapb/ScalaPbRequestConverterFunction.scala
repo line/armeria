@@ -16,23 +16,23 @@
 
 package com.linecorp.armeria.server.scalapb
 
+import java.lang.invoke.{MethodHandle, MethodHandles, MethodType}
+import java.lang.reflect.{ParameterizedType, Type}
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentMap
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.google.common.collect._
+import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet, MapMaker}
 import com.google.protobuf.CodedInputStream
 import com.linecorp.armeria.common.AggregatedHttpRequest
-import com.linecorp.armeria.common.annotation.UnstableApi
+import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.RequestConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.ResultType._
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil._
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunction._
-import java.lang.invoke.{MethodHandle, MethodHandles, MethodType}
-import java.lang.reflect.{ParameterizedType, Type}
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.ConcurrentMap
-import javax.annotation.Nullable
+
 import scalapb.json4s.Parser
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof}
 
 /**
  * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts either
@@ -65,7 +65,7 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 @UnstableApi
 object ScalaPbRequestConverterFunction {
 
-  private val methodCache: ConcurrentMap[Class[_], MethodHandle] =
+  private val toOneofMethodCache: ConcurrentMap[Class[_], MethodHandle] =
     new MapMaker().weakKeys.makeMap()
 
   private val defaultInstanceCache: ConcurrentMap[Class[_], GeneratedMessage] =
@@ -94,9 +94,10 @@ object ScalaPbRequestConverterFunction {
       clazz,
       key =>
         try {
+          val genClass = extractGeneratedMessageType(key)
           val lookup = MethodHandles.publicLookup()
-          val mt = MethodType.methodType(key)
-          val methodHandle = lookup.findStatic(key, "defaultInstance", mt)
+          val mt = MethodType.methodType(genClass)
+          val methodHandle = lookup.findStatic(genClass, "defaultInstance", mt)
           methodHandle.invoke()
         } catch {
           case _: NoSuchMethodError | _: IllegalAccessException =>
@@ -109,26 +110,49 @@ object ScalaPbRequestConverterFunction {
   }
 
   /**
-   * Returns a [[java.lang.invoke.MethodHandle]] for [[scalapb.GeneratedMessageCompanion.merge()]].
+   * Extracts a [[scalapb.GeneratedMessage]] class from the specified [[scalapb.GeneratedSealedOneof]] or
+   * returns itself.
+   *
+   * @param clazz Either `Class[GeneratedMessage]` or `Class[GeneratedSealedOneof]`.
    */
-  private def getMergeMethod(clazz: Class[_]): MethodHandle = {
-    val methodHandle: MethodHandle = methodCache.computeIfAbsent(
-      clazz,
-      key =>
-        try {
-          val lookup = MethodHandles.publicLookup()
-          val mt = MethodType.methodType(key, key, classOf[CodedInputStream])
-          lookup.findStatic(key, "merge", mt)
-        } catch {
-          case _: NoSuchFieldException | _: ClassNotFoundException =>
-            unknownMethodHandle
-        }
-    )
-
-    if (methodHandle eq unknownMethodHandle)
-      throw new IllegalStateException(s"Failed to find a static merge method from $clazz")
-    methodHandle
+  private def extractGeneratedMessageType(clazz: Class[_]): Class[GeneratedMessage] = {
+    val isOneOf = classOf[GeneratedSealedOneof].isAssignableFrom(clazz)
+    val messageType =
+      if (isOneOf)
+        clazz.getDeclaredMethod("asMessage").getReturnType
+      else
+        clazz
+    messageType.asInstanceOf[Class[GeneratedMessage]]
   }
+
+  /**
+   * Converts a [[scalapb.GeneratedMessage]] into a [[scalapb.GeneratedSealedOneof]]
+   * if the `expectedResultType` is a subtype of [[scalapb.GeneratedSealedOneof]].
+   */
+  private def toGenerateMessageOrOneof(
+      expectedResultType: Class[_],
+      result: GeneratedMessage): Any with Serializable =
+    if (classOf[GeneratedSealedOneof].isAssignableFrom(expectedResultType)) {
+      val methodHandle = toOneofMethodCache.computeIfAbsent(
+        expectedResultType,
+        key =>
+          try {
+            val lookup = MethodHandles.publicLookup()
+            val mt = MethodType.methodType(key)
+            lookup.findVirtual(result.getClass, s"to${key.getSimpleName}", mt)
+          } catch {
+            case _: NoSuchFieldException | _: ClassNotFoundException =>
+              unknownMethodHandle
+          }
+      )
+
+      if (methodHandle eq unknownMethodHandle)
+        throw new IllegalStateException(
+          s"Failed to find to${expectedResultType.getSimpleName} method from $result")
+
+      methodHandle.invoke(result)
+    } else
+      result
 
   /**
    * Returns a companion object used to convert JSON to a [[scalapb.GeneratedMessage]].
@@ -180,21 +204,24 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
       else contentType.charset(StandardCharsets.UTF_8)
 
     if (resultType == ResultType.PROTOBUF ||
-      (resultType == ResultType.UNKNOWN &&
-      classOf[GeneratedMessage].isAssignableFrom(expectedResultType))) {
-      val mergeMH = getMergeMethod(expectedResultType)
+      (resultType == ResultType.UNKNOWN && isProtobufMessage(expectedResultType))) {
       if (contentType == null || isProtobuf(contentType)) {
         val is = request.content.toInputStream
-        try return mergeMH.invoke(getDefaultInstance(expectedResultType), CodedInputStream.newInstance(is))
-        finally if (is != null)
+        try {
+          val message = getDefaultInstance(expectedResultType).companion
+            .asInstanceOf[GeneratedMessageCompanion[GeneratedMessage]]
+            .merge(getDefaultInstance(expectedResultType), CodedInputStream.newInstance(is))
+            .asInstanceOf[GeneratedMessage]
+          return toGenerateMessageOrOneof(expectedResultType, message).asInstanceOf[Object]
+        } finally if (is != null)
           is.close()
       }
-      if (isJson(contentType)) {
+      if (contentType.isJson) {
         val jsonString = request.content(charset)
-        return toJsonGeneratedMessage(expectedResultType, jsonString).asInstanceOf[Object]
+        return jsonToScalaPbMessage(expectedResultType, jsonString).asInstanceOf[Object]
       }
 
-      if (!isJson(contentType) || expectedParameterizedResultType == null)
+      if (!contentType.isJson || expectedParameterizedResultType == null)
         return RequestConverterFunction.fallthrough
     }
 
@@ -223,27 +250,26 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
       val iter = jsonNode.iterator()
       resultType match {
         case LIST_PROTOBUF | SET_PROTOBUF =>
-          val builder = {
-            if (resultType == LIST_PROTOBUF) ImmutableList.builderWithExpectedSize[GeneratedMessage](size)
-            else ImmutableSet.builderWithExpectedSize[GeneratedMessage](size)
-          }
+          val builder =
+            if (resultType == LIST_PROTOBUF) ImmutableList.builderWithExpectedSize[Any with Serializable](size)
+            else ImmutableSet.builderWithExpectedSize[Any with Serializable](size)
 
           while (iter.hasNext)
-            builder.add(toJsonGeneratedMessage(messageType, iter.next()))
+            builder.add(jsonToScalaPbMessage(messageType, iter.next()))
           builder.build
 
         case SCALA_LIST_PROTOBUF | SCALA_VECTOR_PROTOBUF | SCALA_SET_PROTOBUF =>
           val builder =
             if (resultType == SCALA_LIST_PROTOBUF)
-              List.newBuilder[GeneratedMessage]
+              List.newBuilder[Any]
             else if (resultType == SCALA_VECTOR_PROTOBUF)
-              Vector.newBuilder[GeneratedMessage]
+              Vector.newBuilder[Any]
             else
-              Set.newBuilder[GeneratedMessage]
+              Set.newBuilder[Any]
           builder.sizeHint(size)
 
           while (iter.hasNext)
-            builder += toJsonGeneratedMessage(messageType, iter.next())
+            builder += jsonToScalaPbMessage(messageType, iter.next())
           builder.result()
 
         case _ => RequestConverterFunction.fallthrough
@@ -253,20 +279,20 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
       val iter = jsonNode.fields
       resultType match {
         case MAP_PROTOBUF =>
-          val builder = ImmutableMap.builderWithExpectedSize[String, GeneratedMessage](size)
+          val builder = ImmutableMap.builderWithExpectedSize[String, Any](size)
 
           while (iter.hasNext) {
             val entry = iter.next
-            builder.put(entry.getKey, toJsonGeneratedMessage(messageType, entry.getValue))
+            builder.put(entry.getKey, jsonToScalaPbMessage(messageType, entry.getValue))
           }
           builder.build
         case SCALA_MAP_PROTOBUF =>
-          val builder = Map.newBuilder[String, GeneratedMessage]
+          val builder = Map.newBuilder[String, Any]
           builder.sizeHint(size)
 
           while (iter.hasNext) {
             val entry = iter.next
-            builder += entry.getKey -> toJsonGeneratedMessage(messageType, entry.getValue)
+            builder += entry.getKey -> jsonToScalaPbMessage(messageType, entry.getValue)
           }
           builder.result()
 
@@ -276,11 +302,21 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
       RequestConverterFunction.fallthrough
   }
 
-  private def toJsonGeneratedMessage(expectedResultType: Class[_], node: JsonNode): GeneratedMessage = {
+  /**
+   * Returns a deserialized [[scalapb.GeneratedMessage]] or [[scalapb.GeneratedSealedOneof]] from the
+   * `JsonNode`.
+   */
+  private def jsonToScalaPbMessage(expectedResultType: Class[_], node: JsonNode): Any with Serializable = {
     val json = mapper.writeValueAsString(node)
-    toJsonGeneratedMessage(expectedResultType, json)
+    jsonToScalaPbMessage(expectedResultType, json)
   }
 
-  private def toJsonGeneratedMessage(expectedResultType: Class[_], json: String): GeneratedMessage =
-    jsonParser.fromJsonString(json)(getCompanion(expectedResultType))
+  /**
+   * Returns a deserialized [[scalapb.GeneratedMessage]] or [[scalapb.GeneratedSealedOneof]] from the `json`.
+   */
+  private def jsonToScalaPbMessage(expectedResultType: Class[_], json: String): Any with Serializable = {
+    val messageType = extractGeneratedMessageType(expectedResultType)
+    val message: GeneratedMessage = jsonParser.fromJsonString(json)(getCompanion(messageType))
+    toGenerateMessageOrOneof(expectedResultType, message)
+  }
 }

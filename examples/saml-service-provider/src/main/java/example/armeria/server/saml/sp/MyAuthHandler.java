@@ -5,8 +5,6 @@ import static com.linecorp.armeria.server.saml.SamlUtil.getNameId;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.saml2.core.NameID;
 import org.opensaml.saml.saml2.core.Response;
@@ -24,6 +22,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.saml.SamlNameIdFormat;
@@ -80,11 +79,11 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
                                     .maxAge(60)
                                     .path("/")
                                     .build();
-        return HttpResponse.of(
-                ResponseHeaders.of(HttpStatus.OK,
-                                   HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
-                                   HttpHeaderNames.SET_COOKIE, cookie.toSetCookieHeader(false)),
-                HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
+        return HttpResponse.of(ResponseHeaders.builder(HttpStatus.OK)
+                                              .contentType(MediaType.HTML_UTF_8)
+                                              .cookies(cookie).build(),
+                               HttpData.ofUtf8(
+                                       "<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
     }
 
     /**

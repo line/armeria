@@ -15,21 +15,20 @@
  */
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.internal.common.stream.SubscriptionArbiter;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -84,18 +83,13 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, EMPTY_OPTIONS);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options, this);
+        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options, executor, this);
         final OuterSubscriber<T> outerSubscriber = new OuterSubscriber<>(innerSubscriber, executor);
         if (outerSubscriberUpdater.compareAndSet(this, null, outerSubscriber)) {
             subscriber.onSubscribe(innerSubscriber);
@@ -215,8 +209,9 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         // Happen-Before is guaranteed in cancel() because 'cancelled' was written before.
         private boolean error;
 
-        InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options,
+        InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options, EventExecutor executor,
                         ConcatPublisherStreamMessage<T> publisher) {
+            super(executor);
             this.downstream = downstream;
             this.options = options;
             this.publisher = publisher;

@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -46,17 +44,19 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -83,9 +83,11 @@ import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerCall;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoop;
 
 /**
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
@@ -103,6 +105,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
 
     private final MethodDescriptor<I, O> method;
+    private final String simpleMethodName;
 
     private final StreamMessage<DeframedMessage> deframedRequest;
     private final ArmeriaMessageFramer responseFramer;
@@ -150,6 +153,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     ArmeriaServerCall(HttpRequest req,
                       MethodDescriptor<I, O> method,
+                      String simpleMethodName,
                       CompressorRegistry compressorRegistry,
                       DecompressorRegistry decompressorRegistry,
                       HttpResponseWriter res,
@@ -164,6 +168,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       @Nullable GrpcStatusFunction statusFunction) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
+        this.simpleMethodName = requireNonNull(simpleMethodName, "simpleMethodName");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
@@ -174,7 +179,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final RequestHeaders clientHeaders = req.headers();
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
-                new HttpStreamDeframer(decompressorRegistry, this, statusFunction,
+                new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
                                        maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc, byteBufConverter(alloc, grpcWebText));
@@ -192,16 +197,27 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
         this.statusFunction = statusFunction;
 
-        res.whenComplete().handleAsync((unused, t) -> {
-            if (!closeCalled) {
-                // Closed by client, not by server.
-                cancelled = true;
-                try (SafeCloseable ignore = ctx.push()) {
-                    close(Status.CANCELLED, new Metadata());
-                }
+        res.whenComplete().handle((unused, t) -> {
+            final EventLoop eventLoop = ctx.eventLoop();
+            if (eventLoop.inEventLoop()) {
+                maybeCancel();
+            } else {
+                eventLoop.execute(this::maybeCancel);
             }
             return null;
-        }, ctx.eventLoop());
+        });
+    }
+
+    /**
+     * Cancels a call when the call was closed by a client, not by server.
+     */
+    private void maybeCancel() {
+        if (!closeCalled) {
+            cancelled = true;
+            try (SafeCloseable ignore = ctx.push()) {
+                close(Status.CANCELLED, new Metadata());
+            }
+        }
     }
 
     @Override
@@ -258,7 +274,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         sendHeadersCalled = true;
-        res.write(headers);
+        if (!res.tryWrite(headers)) {
+            maybeCancel();
+        }
     }
 
     @Override
@@ -284,22 +302,21 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         try {
-            res.write(responseFramer.writePayload(marshaller.serializeResponse(message)));
-            res.whenConsumed().thenRun(() -> {
-                if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    if (blockingExecutor != null) {
-                        blockingExecutor.execute(this::invokeOnReady);
-                    } else {
-                        invokeOnReady();
+            if (res.tryWrite(responseFramer.writePayload(marshaller.serializeResponse(message)))) {
+                res.whenConsumed().thenRun(() -> {
+                    if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
+                        if (blockingExecutor != null) {
+                            blockingExecutor.execute(this::invokeOnReady);
+                        } else {
+                            invokeOnReady();
+                        }
                     }
-                }
-            });
-        } catch (RuntimeException e) {
+                });
+            } else {
+                maybeCancel();
+            }
+        } catch (Throwable e) {
             close(e, new Metadata());
-            throw e;
-        } catch (Throwable t) {
-            close(t, new Metadata());
-            throw new RuntimeException(t);
         }
     }
 
@@ -321,20 +338,20 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
+            doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
+                doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
             });
         }
     }
 
     private void close(Throwable exception, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
+            doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
+                doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
             });
         }
     }
@@ -344,6 +361,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             // No need to write anything to client if cancelled already.
             closeListener(status);
             return;
+        }
+
+        if (status.getCode() == Code.CANCELLED) {
+            final Throwable cause = status.getCause();
+            if (cause instanceof ClosedStreamException) {
+                closeListener(status);
+                return;
+            }
         }
 
         checkState(!closeCalled, "call already closed");
@@ -441,7 +466,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             request = marshaller.deserializeRequest(message, grpcWebText);
 
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, request),
+                                                null);
             }
 
             if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
@@ -474,7 +500,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         clientStreamClosed = true;
         if (!closeCalled) {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
 
             if (blockingExecutor != null) {

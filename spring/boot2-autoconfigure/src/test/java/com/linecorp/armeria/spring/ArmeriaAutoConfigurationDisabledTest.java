@@ -28,11 +28,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithConsumerTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaAutoConfigurationDisabledTest.TestConfiguration;
 
 /**
- * This test {@link ArmeriaAutoConfiguration} could be disabed.
- * application-disalbed.yml will set armeria.server-enabled to false:
+ * This test {@link ArmeriaAutoConfiguration} could be disabled.
+ * application-disabled.yml will set armeria.server-enabled to false:
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)

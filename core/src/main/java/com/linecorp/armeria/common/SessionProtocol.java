@@ -22,11 +22,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
@@ -127,6 +127,26 @@ public enum SessionProtocol {
         this.uriText = uriText;
         this.isMultiplex = isMultiplex;
         this.defaultPort = defaultPort;
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #HTTP}, {@link #H1C} and
+     * {@link #H2C}.
+     *
+     * @see #httpValues()
+     */
+    public boolean isHttp() {
+        return HTTP_VALUES.contains(this);
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #HTTPS}, {@link #H1} and
+     * {@link #H2}.
+     *
+     * @see #httpsValues()
+     */
+    public boolean isHttps() {
+        return HTTPS_VALUES.contains(this);
     }
 
     /**

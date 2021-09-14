@@ -22,19 +22,21 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.RpcService;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A fluent builder to build an instance of {@link THttpService}. This builder allows to bind multiple thrift
@@ -61,7 +63,9 @@ import com.linecorp.armeria.server.RpcService;
  */
 public final class THttpServiceBuilder {
 
-    private static final SerializationFormat[] EMPTY_FORMATS = new SerializationFormat[0];
+    private static final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            defaultExceptionHandler = (ctx, cause) -> RpcResponse.ofFailure(cause);
+
     private final ImmutableListMultimap.Builder<String, Object> implementationsBuilder =
             ImmutableListMultimap.builder();
     private SerializationFormat defaultSerializationFormat = ThriftSerializationFormats.BINARY;
@@ -69,21 +73,10 @@ public final class THttpServiceBuilder {
     private boolean createOtherSerializations = true;
     @Nullable
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
+    private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            exceptionHandler = defaultExceptionHandler;
 
     THttpServiceBuilder() { }
-
-    private static SerializationFormat[] newAllowedSerializationFormats(
-            SerializationFormat defaultSerializationFormat,
-            Iterable<SerializationFormat> otherAllowedSerializationFormats) {
-
-        requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
-        requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
-
-        final Set<SerializationFormat> set = new LinkedHashSet<>();
-        set.add(defaultSerializationFormat);
-        Iterables.addAll(set, otherAllowedSerializationFormats);
-        return set.toArray(EMPTY_FORMATS);
-    }
 
     /**
      * Adds a new {@code TMultiplexed} service to the builder.
@@ -131,8 +124,8 @@ public final class THttpServiceBuilder {
      * protocol and setting the {@code "Content-Type"} header to the appropriate
      * {@link SerializationFormat#mediaType()}.
      */
-    public THttpServiceBuilder otherSerializationFormats(Iterable<SerializationFormat>
-                                                                 otherSerializationFormats) {
+    public THttpServiceBuilder otherSerializationFormats(
+            Iterable<SerializationFormat> otherSerializationFormats) {
         requireNonNull(otherSerializationFormats, "otherSerializationFormats");
         if (createOtherSerializations) {
             this.otherSerializationFormats = new LinkedHashSet<>();
@@ -153,6 +146,17 @@ public final class THttpServiceBuilder {
     public THttpServiceBuilder defaultSerializationFormat(SerializationFormat defaultSerializationFormat) {
         requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
         this.defaultSerializationFormat = defaultSerializationFormat;
+        return this;
+    }
+
+    /**
+     * Sets the {@link BiFunction} that returns an {@link RpcResponse} using the given {@link Throwable}
+     * and {@link ServiceRequestContext}.
+     */
+    public THttpServiceBuilder exceptionHandler(
+            BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+                    exceptionHandler) {
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
         return this;
     }
 
@@ -184,7 +188,21 @@ public final class THttpServiceBuilder {
         final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
 
         final ThriftCallService tcs = ThriftCallService.of(implementations);
-        return new THttpService(decorate(tcs), newAllowedSerializationFormats(defaultSerializationFormat,
-                                                                              otherSerializationFormats));
+        return build0(tcs);
+    }
+
+    /**
+     * Returns a newly-created {@link THttpService} decorator with the properties of this builder.
+     */
+    public Function<? super RpcService, THttpService> newDecorator() {
+        return this::build0;
+    }
+
+    private THttpService build0(RpcService tcs) {
+        final ImmutableSet.Builder<SerializationFormat> builder = ImmutableSet.builder();
+        builder.add(defaultSerializationFormat);
+        builder.addAll(otherSerializationFormats);
+
+        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(), exceptionHandler);
     }
 }

@@ -27,7 +27,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableMap;
@@ -44,6 +43,8 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -75,7 +76,7 @@ public enum BuiltInProperty {
      */
     REMOTE_PORT("remote.port", log -> {
         final InetSocketAddress addr = log.context().remoteAddress();
-        return addr != null ? String.valueOf(addr.getPort()) : null;
+        return addr != null ? StringUtil.toString(addr.getPort()) : null;
     }),
     /**
      * {@code "local.host"} - the host name part of the local socket address. Unavailable if the connection
@@ -99,7 +100,7 @@ public enum BuiltInProperty {
      */
     LOCAL_PORT("local.port", log -> {
         final InetSocketAddress addr = log.context().localAddress();
-        return addr != null ? String.valueOf(addr.getPort()) : null;
+        return addr != null ? StringUtil.toString(addr.getPort()) : null;
     }),
     /**
      * {@code "client.ip"} - the IP address who initiated a request. Unavailable if the connection is not
@@ -156,6 +157,14 @@ public enum BuiltInProperty {
      */
     REQ_ID("req.id", log -> log.context().id().text()),
     /**
+     * {@code "req.root_id"} - the ID of the root service request.
+     * {@code null} if {@link RequestContext#root()} returns {@code null}.
+     */
+    REQ_ROOT_ID("req.root_id", log -> {
+        final ServiceRequestContext rootCtx = log.context().root();
+        return rootCtx != null ? rootCtx.id().text() : null;
+    }),
+    /**
      * {@code "req.path"} - the path of the request.
      */
     REQ_PATH("req.path", log -> log.context().path()),
@@ -197,7 +206,7 @@ public enum BuiltInProperty {
      */
     REQ_CONTENT_LENGTH("req.content_length", log -> {
         if (log.isAvailable(RequestLogProperty.REQUEST_LENGTH)) {
-            return String.valueOf(log.requestLength());
+            return StringUtil.toString(log.requestLength());
         }
         return null;
     }),
@@ -249,7 +258,7 @@ public enum BuiltInProperty {
      */
     RES_CONTENT_LENGTH("res.content_length", log -> {
         if (log.isAvailable(RequestLogProperty.RESPONSE_LENGTH)) {
-            return String.valueOf(log.responseLength());
+            return StringUtil.toString(log.responseLength());
         }
         return null;
     }),

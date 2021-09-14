@@ -19,13 +19,12 @@ package com.linecorp.armeria.server.protobuf;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-
-import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +47,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -56,12 +56,16 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesProtobuf;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 
 class ProtobufResponseAnnotatedServiceTest {
+
+    private static final byte RECORD_SEPARATOR = 0x1E;
+    private static final byte LINE_FEED = 0x0A;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -125,6 +129,26 @@ class ProtobufResponseAnnotatedServiceTest {
                              SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
         }
 
+        @Get("/protobuf+json-seq/publisher")
+        @ProducesJsonSequences
+        public Publisher<SimpleResponse> protobufJsonSeqPublisher() {
+            return Flux.just(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                             SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
+        }
+
+        @Get("/protobuf+json-seq/stream")
+        @ProducesJsonSequences
+        public Stream<SimpleResponse> protobufJsonSeqStream() {
+            return Stream.of(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                             SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
+        }
+
+        @Get("/protobuf+json-seq/unary")
+        @ProducesJsonSequences
+        public SimpleResponse protobufJsonSeqUnary() {
+            return SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build();
+        }
+
         @Get("/protobuf+json/list")
         @Produces("application/protobuf+json")
         public List<SimpleResponse> protobufJsonList() {
@@ -182,7 +206,7 @@ class ProtobufResponseAnnotatedServiceTest {
 
     @CsvSource({ "/protobuf/stream", "/protobuf/publisher" })
     @ParameterizedTest
-    void protobufStreamResponse(String path) throws IOException {
+    void protobufStreamResponse(String path) {
         final AggregatedHttpResponse response = client.get(path).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(cause).isInstanceOf(IllegalArgumentException.class)
@@ -190,7 +214,7 @@ class ProtobufResponseAnnotatedServiceTest {
     }
 
     @Test
-    void protobufJsonPublisherResponse() throws InvalidProtocolBufferException {
+    void protobufJsonPublisherResponse() {
         final AggregatedHttpResponse response = client.get("/protobuf+json/publisher").aggregate().join();
         final MediaType mediaType = response.headers().contentType();
         assertThat(mediaType.is(MediaType.JSON)).isTrue();
@@ -198,9 +222,30 @@ class ProtobufResponseAnnotatedServiceTest {
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
 
+    @CsvSource({ "/protobuf+json-seq/stream", "/protobuf+json-seq/publisher", "/protobuf+json-seq/unary" })
+    @ParameterizedTest
+    void protobufJsonSeqResponse(String path) throws IOException {
+        final AggregatedHttpResponse response = client.get(path).aggregate().join();
+        final MediaType mediaType = response.headers().contentType();
+        assertThat(mediaType.is(MediaType.JSON_SEQ)).isTrue();
+
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(RECORD_SEPARATOR);
+        out.write("{\n  \"message\": \"Hello, Armeria1!\"\n}".getBytes());
+        out.write(LINE_FEED);
+
+        if (!"/protobuf+json-seq/unary".equals(path)) {
+            out.write(RECORD_SEPARATOR);
+            out.write("{\n  \"message\": \"Hello, Armeria2!\"\n}".getBytes());
+            out.write(LINE_FEED);
+        }
+
+        assertThatJson(response.content().array()).isEqualTo(out.toByteArray());
+    }
+
     @CsvSource({"stream", "list", "set"})
     @ParameterizedTest
-    void protobufJsonCollectionResponse(String type) throws InvalidProtocolBufferException {
+    void protobufJsonCollectionResponse(String type) {
         final AggregatedHttpResponse response = client.get("/protobuf+json/" + type).aggregate().join();
         final MediaType mediaType = response.headers().contentType();
         assertThat(mediaType.subtype()).isEqualTo("protobuf+json");

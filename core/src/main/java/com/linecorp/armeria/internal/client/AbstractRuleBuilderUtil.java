@@ -19,13 +19,12 @@ package com.linecorp.armeria.internal.client;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -37,6 +36,7 @@ public final class AbstractRuleBuilderUtil {
      * if all rules in the {@link AbstractRuleBuilder} match
      * a given {@link ClientRequestContext} and {@link Throwable}.
      */
+    // TODO(ikhoon): Use BiPredicate.
     public static BiFunction<? super ClientRequestContext, ? super Throwable, Boolean>
     buildFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
                 @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,

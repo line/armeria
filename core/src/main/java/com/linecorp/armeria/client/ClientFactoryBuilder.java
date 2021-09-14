@@ -38,7 +38,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
@@ -55,7 +54,10 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -129,6 +131,17 @@ public final class ClientFactoryBuilder {
         option(ClientFactoryOptions.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
         option(ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE, shutdownOnClose);
         return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Client#execute(ClientRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link ClientFactory} is closed.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ClientFactoryBuilder workerGroup(int numThreads) {
+        return workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
     }
 
     /**
@@ -736,7 +749,7 @@ public final class ClientFactoryBuilder {
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
         long idleTimeoutMillis = newOptions.idleTimeoutMillis();
-        final long pingIntervalMillis = newOptions.pingIntervalMillis();
+        long pingIntervalMillis = newOptions.pingIntervalMillis();
         final ImmutableList.Builder<ClientFactoryOptionValue<?>> adjustedOptionsBuilder =
                 ImmutableList.builderWithExpectedSize(2);
 
@@ -750,12 +763,19 @@ public final class ClientFactoryBuilder {
             final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
             if (clampedPingIntervalMillis >= idleTimeoutMillis) {
                 adjustedOptionsBuilder.add(ZERO_PING_INTERVAL);
+                pingIntervalMillis = 0;
             } else if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 // no-op, clampedPingIntervalMillis is equal to pingIntervalMillis
             } else if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 adjustedOptionsBuilder.add(MIN_PING_INTERVAL);
+                pingIntervalMillis = MIN_PING_INTERVAL_MILLIS;
             }
         }
+
+        final Map<ChannelOption<?>, Object> newChannelOptions =
+                ChannelUtil.applyDefaultChannelOptions(
+                        newOptions.channelOptions(), idleTimeoutMillis, pingIntervalMillis);
+        adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
 
         final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
         if (!adjustedOptions.isEmpty()) {

@@ -54,8 +54,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +77,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
@@ -145,11 +144,6 @@ public final class AnnotatedServiceFactory {
             }
         }
     };
-
-    /**
-     * A default {@link ExceptionHandlerFunction}.
-     */
-    private static final ExceptionHandlerFunction defaultExceptionHandler = new DefaultExceptionHandler();
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -297,7 +291,7 @@ public final class AnnotatedServiceFactory {
                         .addAll(baseResponseConverters).build();
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
-                        .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
+                        .addAll(baseExceptionHandlers).build();
 
         final ResponseHeadersBuilder defaultHeaders = ResponseHeaders.builder(defaultResponseStatus(method));
 

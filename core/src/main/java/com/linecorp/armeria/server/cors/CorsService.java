@@ -22,21 +22,18 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -113,24 +110,11 @@ public final class CorsService extends SimpleDecoratingHttpService {
             return forbidden();
         }
 
-        return new FilteredHttpResponse(unwrap().serve(ctx, req)) {
-            @Override
-            protected HttpObject filter(HttpObject obj) {
-                if (!(obj instanceof ResponseHeaders)) {
-                    return obj;
-                }
-
-                final ResponseHeaders headers = (ResponseHeaders) obj;
-                final HttpStatus status = headers.status();
-                if (status.isInformational()) {
-                    return headers;
-                }
-
-                final ResponseHeadersBuilder builder = headers.toBuilder();
-                setCorsResponseHeaders(ctx, req, builder);
-                return builder.build();
-            }
-        };
+        return unwrap().serve(ctx, req).mapHeaders(headers -> {
+            final ResponseHeadersBuilder builder = headers.toBuilder();
+            setCorsResponseHeaders(ctx, req, builder);
+            return builder.build();
+        });
     }
 
     /**

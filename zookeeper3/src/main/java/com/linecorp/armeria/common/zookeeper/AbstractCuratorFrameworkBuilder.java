@@ -23,8 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
@@ -34,6 +32,7 @@ import org.apache.zookeeper.common.PathUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

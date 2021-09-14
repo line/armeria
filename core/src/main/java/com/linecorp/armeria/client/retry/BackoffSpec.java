@@ -21,14 +21,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A specification of a {@link Backoff} configuration represented by a string. The string syntax is

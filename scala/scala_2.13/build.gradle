@@ -1,0 +1,11 @@
+dependencies {
+    implementation 'org.scala-lang.modules:scala-java8-compat_2.13'
+
+    // Added for supporting Scala types in Jackson{Request,Response}ConverterFunction
+    implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.13'
+}
+
+project.sourceSets.all { sourceSet ->
+    // Add the source directories for Scala 2.13 only.
+    sourceSet.scala.srcDir file("src/${sourceSet.name}/scala_2.13")
+}

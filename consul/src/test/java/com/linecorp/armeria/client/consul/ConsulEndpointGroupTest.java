@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.consul;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
@@ -36,25 +37,33 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListener;
 
 class ConsulEndpointGroupTest extends ConsulTestBase {
 
-    static final List<Server> servers = new ArrayList<>();
+    private static final List<Server> servers = new ArrayList<>();
+    private static volatile List<Endpoint> sampleEndpoints;
 
     @BeforeAll
     static void startServers() {
-
-        for (Endpoint endpoint : sampleEndpoints) {
-            final Server server = Server.builder()
-                                        .http(endpoint.port())
-                                        .service("/", new EchoService())
-                                        .build();
-            final ServerListener listener =
-                    ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                   serviceName)
-                                          .consulToken(CONSUL_TOKEN)
-                                          .build();
-            server.addListener(listener);
-            server.start().join();
-            servers.add(server);
-        }
+        await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            assertThatCode(() -> {
+                final List<Endpoint> endpoints = newSampleEndpoints();
+                servers.clear();
+                for (Endpoint endpoint : endpoints) {
+                    final Server server = Server.builder()
+                                                .http(endpoint.port())
+                                                .service("/", new EchoService())
+                                                .build();
+                    final ServerListener listener =
+                            ConsulUpdatingListener
+                                    .builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                             serviceName)
+                                    .consulToken(CONSUL_TOKEN)
+                                    .build();
+                    server.addListener(listener);
+                    server.start().join();
+                    servers.add(server);
+                }
+                sampleEndpoints = endpoints;
+            }).doesNotThrowAnyException();
+        });
     }
 
     @AfterAll
@@ -72,19 +81,27 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchIntervalMillis(1000)
                                         .build()) {
-            await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() ->
-                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
+            await().atMost(5, TimeUnit.SECONDS)
+                   .untilAsserted(() -> {
+                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
+                   });
+
             // stop a server
-            servers.get(0).stop();
-            await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() ->
-                                  assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1));
+            servers.get(0).stop().join();
+            await().atMost(5, TimeUnit.SECONDS)
+                   .untilAsserted(() -> {
+                       assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1);
+                   });
+
             // restart the server
-            servers.get(0).start();
-            await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() ->
-                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
+            await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+                // The port bound to the server could be stolen while stopping the server.
+                assertThatCode(servers.get(0).start()::join).doesNotThrowAnyException();
+            });
+            await().atMost(5, TimeUnit.SECONDS)
+                   .untilAsserted(() -> {
+                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
+                   });
         }
     }
 
@@ -96,19 +113,27 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
-            await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() ->
-                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
+            await().atMost(5, TimeUnit.SECONDS)
+                   .untilAsserted(() -> {
+                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
+                   });
+
             // stop a server
             servers.get(0).stop().join();
-            await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() ->
-                                  assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1));
+            await().atMost(5, TimeUnit.SECONDS)
+                   .untilAsserted(() -> {
+                       assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1);
+                   });
+
             // restart the server
-            servers.get(0).start().join();
-            await().atMost(3, TimeUnit.SECONDS)
-                   .untilAsserted(() ->
-                                  assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
+            await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+                // The port bound to the server could be stolen while stopping the server.
+                assertThatCode(servers.get(0).start()::join).doesNotThrowAnyException();
+            });
+            await().atMost(5, TimeUnit.SECONDS)
+                   .untilAsserted(() -> {
+                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
+                   });
         }
     }
 
@@ -120,7 +145,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
-            await().atMost(3, TimeUnit.SECONDS)
+            await().atMost(5, TimeUnit.SECONDS)
                    .untilAsserted(() -> assertThat(endpointGroup.selectNow(null))
                            .isNotEqualTo(endpointGroup.selectNow(null)));
         }
@@ -136,12 +161,12 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                                    .registryFetchIntervalMillis(1000);
         // default datacenter
         try (ConsulEndpointGroup endpointGroup = builder.datacenter("dc1").build()) {
-            await().atMost(3, TimeUnit.SECONDS)
+            await().atMost(5, TimeUnit.SECONDS)
                    .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
         }
         // non-existent datacenter
         try (ConsulEndpointGroup endpointGroup = builder.datacenter("dc2").build()) {
-            await().atMost(3, TimeUnit.SECONDS)
+            await().atMost(5, TimeUnit.SECONDS)
                    .untilAsserted(() -> assertThat(endpointGroup.endpoints()).isEmpty());
         }
     }
@@ -160,7 +185,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .filter("ServicePort == " + endpoint.port())
                                         .build()) {
-            await().atMost(3, TimeUnit.SECONDS)
+            await().atMost(5, TimeUnit.SECONDS)
                    .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(1));
         }
     }

@@ -42,8 +42,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.Nullable;
-
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -54,6 +52,7 @@ import org.junit.rules.Timeout;
 
 import com.google.common.base.Stopwatch;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 

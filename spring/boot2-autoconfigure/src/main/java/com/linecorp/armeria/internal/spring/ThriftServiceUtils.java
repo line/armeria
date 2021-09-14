@@ -25,11 +25,11 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.thrift.THttpService;
 
 /**
@@ -45,11 +45,11 @@ final class ThriftServiceUtils {
     private static final Method interfacesMethod;
 
     static {
-        thriftServiceClass = findClass("com.linecorp.armeria.server.thrift.THttpService");
+        final String serverPackageName = Server.class.getPackage().getName();
+        thriftServiceClass = findClass(serverPackageName + ".thrift.THttpService");
         entriesMethod = thriftServiceClass != null ? findMethod(thriftServiceClass, "entries") : null;
 
-        final Class<?> thriftServiceEntryClass =
-                findClass("com.linecorp.armeria.server.thrift.ThriftServiceEntry");
+        final Class<?> thriftServiceEntryClass = findClass(serverPackageName + ".thrift.ThriftServiceEntry");
         interfacesMethod = thriftServiceEntryClass != null ? findMethod(thriftServiceEntryClass,
                                                                         "interfaces") : null;
     }

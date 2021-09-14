@@ -15,10 +15,13 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds an {@link HttpHeaders}.
@@ -46,6 +49,11 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * Sets whether the headers will be the last frame in an HTTP/2 stream.
      */
     HttpHeadersBuilder endOfStream(boolean endOfStream);
+
+    /**
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a> header.
+     */
+    HttpHeadersBuilder contentLength(long contentLength);
 
     /**
      * Sets the {@code "content-type"} header.
@@ -231,6 +239,16 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     /**
+     * Adds all header names and values of the specified {@code entries}.
+     *
+     * @return {@code this}
+     */
+    default HttpHeadersBuilder add(Map<? extends CharSequence, String> entries) {
+        requireNonNull(entries, "entries");
+        return add(entries.entrySet());
+    }
+
+    /**
      * Adds a new header. The specified header value is converted into a {@link String}, as explained
      * in <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      *
@@ -376,6 +394,18 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @return {@code this}
      */
     HttpHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> entries);
+
+    /**
+     * Retains all current headers but calls {@link #set(CharSequence, String)} for each header in
+     * the specified {@code entries}.
+     *
+     * @param entries the headers used to set the header values
+     * @return {@code this}
+     */
+    default HttpHeadersBuilder set(Map<? extends CharSequence, String> entries) {
+        requireNonNull(entries, "entries");
+        return set(entries.entrySet());
+    }
 
     /**
      * Copies the entries missing in this headers from the specified {@code entries}.

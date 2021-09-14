@@ -18,14 +18,17 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTest.validateContextAndRequest;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -38,6 +41,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -51,31 +55,146 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class AnnotatedServiceExceptionHandlerTest {
+class AnnotatedServiceExceptionHandlerTest {
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/1", new MyService1(),
-                                LoggingService.newDecorator());
+            sb.annotatedService("/1", new MyService1())
+              .annotatedService("/2", new MyService2())
+              .annotatedService("/3", new MyService3())
+              .annotatedService("/4", new MyService4())
+              .annotatedService("/5", new MyService5());
 
-            sb.annotatedService("/2", new MyService2(),
-                                LoggingService.newDecorator());
-
-            sb.annotatedService("/3", new MyService3(),
-                                LoggingService.newDecorator());
-
-            sb.annotatedService("/4", new MyService4(),
-                                LoggingService.newDecorator());
-
-            sb.annotatedService("/5", new MyService5());
-
-            sb.requestTimeoutMillis(500L);
+            sb.decorator(LoggingService.newDecorator())
+              .requestTimeoutMillis(500L);
         }
     };
+
+    private WebClient client;
+
+    @BeforeEach
+    void setUp() {
+        client = WebClient.of(server.httpUri());
+    }
+
+    @Test
+    void sync() {
+        NoExceptionHandler.counter.set(0);
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/sync"))
+                                                      .aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler1");
+        assertThat(NoExceptionHandler.counter.get()).isEqualTo(1);
+    }
+
+    @Test
+    void async() {
+        NoExceptionHandler.counter.set(0);
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/async"))
+                                                      .aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler1");
+        assertThat(NoExceptionHandler.counter.get()).isEqualTo(1);
+    }
+
+    @Test
+    void resp1() {
+        NoExceptionHandler.counter.set(0);
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp1"))
+                                                      .aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler1");
+        assertThat(NoExceptionHandler.counter.get()).isEqualTo(1);
+    }
+
+    @Test
+    void resp2() {
+        NoExceptionHandler.counter.set(0);
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp2")).aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler2");
+        assertThat(NoExceptionHandler.counter.get()).isEqualTo(1);
+    }
+
+    @Test
+    void sync2() {
+        // By default exception handler.
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/sync")).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void async2() {
+        // The method returns CompletionStage<?>. It throws an exception immediately if it is called.
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async")).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void async2Aggregation() {
+        // The method returns CompletionStage<?>. It throws an exception after the request is aggregated.
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async/aggregation"))
+                      .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void bad1() {
+        // Timeout because of bad exception handler.
+        // As a response headers was written already, RST_STREAM will be received.
+        assertThatThrownBy(
+                () -> client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad1")).aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasRootCauseInstanceOf(ClosedStreamException.class)
+                .hasRootCauseMessage("received a RST_STREAM frame: INTERNAL_ERROR");
+    }
+
+    @Test
+    void bad2() {
+        // Internal server error would be returned due to invalid response.
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad2"))
+                                                      .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    void bad3() {
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad3"))
+                                                      .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void handler3() {
+        NoExceptionHandler.counter.set(0);
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/4/handler3"))
+                                                      .aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler3");
+        assertThat(NoExceptionHandler.counter.get()).isZero();
+    }
+
+    @Test
+    void handle3WithBadDecorator() {
+        // A decorator throws an exception.
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/5/handler3"))
+                                                      .aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @ExceptionHandler(NoExceptionHandler.class)
@@ -141,6 +260,12 @@ public class AnnotatedServiceExceptionHandlerTest {
         @Get("/bad2")
         @ExceptionHandler(BadExceptionHandler2.class)
         public HttpResponse bad2(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.from(completeExceptionallyLater(ctx));
+        }
+
+        @Get("/bad3")
+        @ExceptionHandler(BadExceptionHandler3.class)
+        public HttpResponse bad3(ServiceRequestContext ctx, HttpRequest req) {
             return HttpResponse.from(completeExceptionallyLater(ctx));
         }
     }
@@ -242,70 +367,13 @@ public class AnnotatedServiceExceptionHandlerTest {
         }
     }
 
-    @Test
-    public void testExceptionHandler() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
-
-        AggregatedHttpResponse response;
-
-        NoExceptionHandler.counter.set(0);
-
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/sync")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("handler1");
-
-        assertThat(NoExceptionHandler.counter.get()).isEqualTo(1);
-
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/async")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("handler1");
-
-        assertThat(NoExceptionHandler.counter.get()).isEqualTo(2);
-
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp1")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("handler1");
-
-        assertThat(NoExceptionHandler.counter.get()).isEqualTo(3);
-
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp2")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("handler2");
-
-        assertThat(NoExceptionHandler.counter.get()).isEqualTo(4);
-
-        // By default exception handler.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/sync")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-        // The method returns CompletionStage<?>. It throws an exception immediately if it is called.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-        // The method returns CompletionStage<?>. It throws an exception after the request is aggregated.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async/aggregation"))
-                         .aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-        // Timeout because of bad exception handler.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad1")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-
-        // Internal server error would be returned due to invalid response.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad2")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-
-        NoExceptionHandler.counter.set(0);
-
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/4/handler3")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("handler3");
-
-        assertThat(NoExceptionHandler.counter.get()).isZero();
-
-        // A decorator throws an exception.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/5/handler3")).aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("handler3");
+    static class BadExceptionHandler3 implements ExceptionHandlerFunction {
+        @Override
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+            final HttpResponseWriter response = HttpResponse.streaming();
+            // Timeout may occur before responding.
+            ctx.eventLoop().schedule((Runnable) response::close, 10, TimeUnit.SECONDS);
+            return response;
+        }
     }
 }

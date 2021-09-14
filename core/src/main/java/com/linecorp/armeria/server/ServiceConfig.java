@@ -21,11 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
@@ -47,6 +46,7 @@ public final class ServiceConfig {
     private final HttpService service;
     @Nullable
     private final String defaultServiceName;
+    private final ServiceNaming defaultServiceNaming;
     @Nullable
     private final String defaultLogName;
 
@@ -62,28 +62,31 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(Route route, HttpService service,
-                  @Nullable String defaultServiceName, @Nullable String defaultLogName,
-                  long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                  AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
-        this(null, route, service, defaultServiceName, defaultLogName, requestTimeoutMillis, maxRequestLength,
-             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
-             extractTransientServiceOptions(service));
+    ServiceConfig(Route route, HttpService service, @Nullable String defaultLogName,
+                  @Nullable String defaultServiceName, ServiceNaming defaultServiceNaming,
+                  long requestTimeoutMillis, long maxRequestLength,
+                  boolean verboseResponses, AccessLogWriter accessLogWriter,
+                  boolean shutdownAccessLogWriterOnStop) {
+        this(null, route, service, defaultLogName, defaultServiceName, defaultServiceNaming,
+             requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
+             shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service));
     }
 
     /**
      * Creates a new instance.
      */
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
-                          @Nullable String defaultServiceName, @Nullable String defaultLogName,
-                          long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+                          @Nullable String defaultLogName, @Nullable String defaultServiceName,
+                          ServiceNaming defaultServiceNaming, long requestTimeoutMillis, long maxRequestLength,
+                          boolean verboseResponses, AccessLogWriter accessLogWriter,
+                          boolean shutdownAccessLogWriterOnStop,
                           Set<TransientServiceOption> transientServiceOptions) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
-        this.defaultServiceName = defaultServiceName;
         this.defaultLogName = defaultLogName;
+        this.defaultServiceName = defaultServiceName;
+        this.defaultServiceNaming = defaultServiceNaming;
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         this.verboseResponses = verboseResponses;
@@ -123,16 +126,23 @@ public final class ServiceConfig {
 
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
-        return new ServiceConfig(virtualHost, route, service, defaultServiceName, defaultLogName,
-                                 requestTimeoutMillis, maxRequestLength, verboseResponses,
+        return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
+                                 defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-        return new ServiceConfig(virtualHost, route, service.decorate(decorator),
-                                 defaultServiceName, defaultLogName,
-                                 requestTimeoutMillis, maxRequestLength, verboseResponses,
+        return new ServiceConfig(virtualHost, route, service.decorate(decorator), defaultLogName,
+                                 defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
+                                 maxRequestLength, verboseResponses,
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+    }
+
+    ServiceConfig withRoute(Route route) {
+        requireNonNull(route, "route");
+        return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
+                                 defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
     }
 
@@ -177,10 +187,22 @@ public final class ServiceConfig {
      *       {@code com.foo.ThriftService$Iface})</li>
      *   <li>{@link HttpService} and annotated service - an innermost class name</li>
      * </ul>
+     *
+     * @deprecated Use {@link #defaultServiceNaming()} instead.
      */
     @Nullable
+    @Deprecated
     public String defaultServiceName() {
         return defaultServiceName;
+    }
+
+    /**
+     * Returns a default naming rule for the name of services.
+     *
+     * @see VirtualHost#defaultServiceNaming()
+     */
+    public ServiceNaming defaultServiceNaming() {
+        return defaultServiceNaming;
     }
 
     /**
@@ -272,6 +294,7 @@ public final class ServiceConfig {
         }
         return toStringHelper.add("route", route)
                              .add("service", service)
+                             .add("defaultServiceNaming", defaultServiceNaming)
                              .add("defaultLogName", defaultLogName)
                              .add("requestTimeoutMillis", requestTimeoutMillis)
                              .add("maxRequestLength", maxRequestLength)

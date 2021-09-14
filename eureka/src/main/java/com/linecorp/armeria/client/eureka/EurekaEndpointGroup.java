@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,15 +45,15 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.eureka.Application;
 import com.linecorp.armeria.internal.common.eureka.Applications;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
@@ -173,7 +171,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();
         headersBuilder.method(HttpMethod.GET);
-        headersBuilder.add(HttpHeaderNames.ACCEPT, MediaTypeNames.JSON_UTF_8);
+        headersBuilder.accept(MediaType.JSON_UTF_8);
         responseConverter = responseConverter(headersBuilder, appName, instanceId,
                                               vipAddress, secureVipAddress, regions);
         requestHeaders = headersBuilder.build();

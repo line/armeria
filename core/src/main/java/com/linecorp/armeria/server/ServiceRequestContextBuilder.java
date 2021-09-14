@@ -27,7 +27,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
@@ -37,6 +36,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -86,8 +86,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     private static final CancellationScheduler noopRequestCancellationScheduler = new CancellationScheduler(0);
 
     static {
-        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0,
-                                              RequestTimeoutException.get());
+        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask,
+                                              0, /* server */ true);
         noopRequestCancellationScheduler.finishNow();
     }
 
@@ -95,7 +95,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
     private HttpService service = fakeService;
     @Nullable
-    private String defaultServiceName;
+    private ServiceNaming defaultServiceNaming;
     @Nullable
     private String defaultLogName;
     @Nullable
@@ -125,7 +125,18 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * @param defaultServiceName the default log name.
      */
     public ServiceRequestContextBuilder defaultServiceName(String defaultServiceName) {
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        requireNonNull(defaultServiceName, "defaultServiceName");
+        return defaultServiceNaming(ServiceNaming.of(defaultServiceName));
+    }
+
+    /**
+     * Sets the default naming rule for the {@link RequestLog#serviceName()}.
+     * If set, the service name will be converted according to given naming rule.
+     *
+     * @param defaultServiceNaming the default service naming.
+     */
+    public ServiceRequestContextBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         return this;
     }
 
@@ -200,8 +211,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             serviceBindingBuilder = serverBuilder.route().path(path());
         }
 
-        if (defaultServiceName != null) {
-            serviceBindingBuilder.defaultServiceName(defaultServiceName);
+        if (defaultServiceNaming != null) {
+            serviceBindingBuilder.defaultServiceNaming(defaultServiceNaming);
         }
         if (defaultLogName != null) {
             serviceBindingBuilder.defaultLogName(defaultLogName);
@@ -241,8 +252,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             requestCancellationScheduler = new CancellationScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0,
-                                                  RequestTimeoutException.get());
+                requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ true);
                 latch.countDown();
             });
 

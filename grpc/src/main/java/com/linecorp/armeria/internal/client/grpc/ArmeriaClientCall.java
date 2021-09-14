@@ -16,21 +16,20 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
-import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
+import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
 import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -46,12 +45,13 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
@@ -108,6 +109,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final HttpClient httpClient;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
+    private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
     private final CallOptions callOptions;
     private final ArmeriaMessageFramer requestFramer;
     private final GrpcMessageMarshaller<I, O> marshaller;
@@ -144,6 +146,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             HttpClient httpClient,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
+            Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
             int maxOutboundMessageSizeBytes,
             int maxInboundMessageSizeBytes,
             CallOptions callOptions,
@@ -158,6 +161,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.httpClient = httpClient;
         this.req = req;
         this.method = method;
+        this.simpleMethodNames = simpleMethodNames;
         this.callOptions = callOptions;
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
@@ -182,7 +186,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         req.whenComplete().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 // Can reach here if the request stream was empty.
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName()), null);
             }
             return null;
         });
@@ -234,7 +238,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         final HttpStreamDeframer deframer =
-                new HttpStreamDeframer(decompressorRegistry, this, null, maxInboundMessageSizeBytes);
+                new HttpStreamDeframer(decompressorRegistry, ctx, this, null, maxInboundMessageSizeBytes);
         final ByteBufAllocator alloc = ctx.alloc();
         final StreamMessage<DeframedMessage> deframed =
                 res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
@@ -337,7 +341,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         try {
             if (!log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, message), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName(), message),
+                                                null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
             req.write(requestFramer.writePayload(serialized));
@@ -374,7 +379,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void onNext(DeframedMessage message) {
-        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
+        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.isTrailer()) {
             final ByteBuf buf;
             try {
                 buf = messageBuf(message, ctx.alloc());
@@ -557,5 +562,13 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             }
         }
+    }
+
+    private String simpleMethodName() {
+        String simpleMethodName = simpleMethodNames.get(method);
+        if (simpleMethodName == null) {
+            simpleMethodName = method.getBareMethodName();
+        }
+        return simpleMethodName;
     }
 }

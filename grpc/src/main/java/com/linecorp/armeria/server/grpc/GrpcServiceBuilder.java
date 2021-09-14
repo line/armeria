@@ -33,20 +33,20 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -88,7 +88,9 @@ public final class GrpcServiceBuilder {
 
     static {
         boolean useCoroutineContextInterceptor;
-        final String className = "io.grpc.kotlin.CoroutineContextServerInterceptor";
+        final String className =
+                BindableService.class.getPackage().getName() +
+                ".kotlin.CoroutineContextServerInterceptor";
         try {
             Class.forName(className, false, GrpcServiceBuilder.class.getClassLoader());
             useCoroutineContextInterceptor = true;
@@ -115,6 +117,9 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private GrpcStatusFunction statusFunction;
+
+    @Nullable
+    private ImmutableList.Builder<ServerInterceptor> interceptors;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -258,6 +263,29 @@ public final class GrpcServiceBuilder {
         }
 
         return addService(path, bindableService.bindService(), methodDescriptor);
+    }
+
+    /**
+     * Adds {@linkplain ServerInterceptor server interceptors} into the gRPC service. The last
+     * interceptor will have its {@link ServerInterceptor#interceptCall} called first.
+     *
+     * @param interceptors array of interceptors to apply to the service.
+     */
+    public GrpcServiceBuilder intercept(ServerInterceptor... interceptors) {
+        requireNonNull(interceptors, "interceptors");
+        return intercept(ImmutableList.copyOf(interceptors));
+    }
+
+    /**
+     * Adds {@linkplain ServerInterceptor server interceptors} into the gRPC service. The last
+     * interceptor will have its {@link ServerInterceptor#interceptCall} called first.
+     *
+     * @param interceptors list of interceptors to apply to the service.
+     */
+    public GrpcServiceBuilder intercept(Iterable<? extends ServerInterceptor> interceptors) {
+        requireNonNull(interceptors, "interceptors");
+        this.interceptors().addAll(interceptors);
+        return this;
     }
 
     private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
@@ -496,7 +524,7 @@ public final class GrpcServiceBuilder {
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
      */
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
-        return addExceptionMapping(exceptionType, (throwable, meta) -> status);
+        return addExceptionMapping(exceptionType, (ctx, throwable, meta) -> status);
     }
 
     /**
@@ -504,7 +532,10 @@ public final class GrpcServiceBuilder {
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     *
+     * @deprecated Use {@link #addExceptionMapping(Class, GrpcStatusFunction)} instead.
      */
+    @Deprecated
     public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
             Class<T> exceptionType, BiFunction<T, Metadata, Status> statusFunction) {
         requireNonNull(exceptionType, "exceptionType");
@@ -517,8 +548,31 @@ public final class GrpcServiceBuilder {
             exceptionMappings = new LinkedList<>();
         }
 
+        //noinspection unchecked
         addExceptionMapping(exceptionMappings, exceptionType,
-                            (throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
+                            (ctx, throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
+        return this;
+    }
+
+    /**
+     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping is used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     */
+    public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType,
+                                                  GrpcStatusFunction statusFunction) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(statusFunction, "statusFunction");
+
+        checkState(this.statusFunction == null,
+                   "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
+
+        if (exceptionMappings == null) {
+            exceptionMappings = new LinkedList<>();
+        }
+
+        addExceptionMapping(exceptionMappings, exceptionType, statusFunction);
         return this;
     }
 
@@ -559,15 +613,22 @@ public final class GrpcServiceBuilder {
         final List<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> mappings =
                 ImmutableList.copyOf(exceptionMappings);
 
-        return (throwable, metadata) -> {
+        return (ctx, throwable, metadata) -> {
             for (Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> mapping : mappings) {
                 if (mapping.getKey().isInstance(throwable)) {
-                    final Status status = mapping.getValue().apply(throwable, metadata);
+                    final Status status = mapping.getValue().apply(ctx, throwable, metadata);
                     return status == null ? null : status.withCause(throwable);
                 }
             }
             return null;
         };
+    }
+
+    private ImmutableList.Builder<ServerInterceptor> interceptors() {
+        if (interceptors == null) {
+            interceptors = ImmutableList.builder();
+        }
+        return interceptors;
     }
 
     /**
@@ -582,12 +643,15 @@ public final class GrpcServiceBuilder {
         if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
             final ServerInterceptor coroutineContextInterceptor =
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+            interceptors().add(coroutineContextInterceptor);
+        }
+        if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
-                        ServerInterceptors.intercept(entry.service(), coroutineContextInterceptor);
+                        ServerInterceptors.intercept(entry.service(), interceptors.build());
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
             }
             handlerRegistry = newRegistryBuilder.build();

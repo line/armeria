@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.ArgumentMatchers.same;
@@ -31,9 +32,13 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -88,28 +93,6 @@ class LoggingServiceTest {
     void defaultsError() throws Exception {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final IllegalStateException cause = new IllegalStateException("Failed");
-        final Logger logger = errorResponse(ctx, cause);
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
-                            same(cause));
-    }
-
-    @Test
-    void httpStatusAndResponseExceptionsAreNotLogged() throws Exception {
-        ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        Logger logger = errorResponse(ctx, HttpResponseException.of(200));
-        // Note that unlike defaultsError(), same(cause) is not specified when warn(...) is called.
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=com\\.linecorp\\.armeria\\.server\\.HttpResponseException.*"));
-
-        ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        logger = errorResponse(ctx, HttpStatusException.of(200));
-        // Note that unlike defaultsError(), same(cause) is not specified when warn(...) is called.
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=com\\.linecorp\\.armeria\\.server\\.HttpStatusException.*"));
-    }
-
-    private Logger errorResponse(ServiceRequestContext ctx, Exception cause) throws Exception {
         ctx.logBuilder().endResponse(cause);
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isWarnEnabled()).thenReturn(true);
@@ -125,7 +108,48 @@ class LoggingServiceTest {
         verify(logger).isWarnEnabled();
         verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
                             matches(".*headers=\\[:method=GET, :path=/].*"));
-        return logger;
+        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
+                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
+                            same(cause));
+    }
+
+    @MethodSource("expectedException")
+    @ParameterizedTest
+    void shouldNotLogHttpStatusAndResponseExceptions(Exception exception) throws Exception {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        final Throwable cause = exception.getCause();
+        ctx.logBuilder().endResponse(exception);
+
+        if (cause == null) {
+            when(logger.isDebugEnabled()).thenReturn(true);
+        } else {
+            when(logger.isWarnEnabled()).thenReturn(true);
+        }
+        final LoggingService service =
+                LoggingService.builder()
+                              .logger(logger)
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        if (cause == null) {
+            // Log a response without an HttpResponseException or HttpStatusException
+            verify(logger).debug(eq(REQUEST_FORMAT), same(ctx), anyString());
+            verify(logger).debug(eq(RESPONSE_FORMAT), same(ctx), anyString());
+        } else {
+            verify(logger).warn(eq(REQUEST_FORMAT), same(ctx), anyString());
+            verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
+                                matches(".*cause=" + cause.getClass().getName() + ".*"), same(cause));
+        }
+    }
+
+    private static Stream<Arguments> expectedException() {
+        return Stream.of(HttpStatusException.of(500),
+                         HttpStatusException.of(500, new IllegalStateException("status")),
+                         HttpResponseException.of(HttpResponse.of("OK")),
+                         HttpResponseException.of(HttpResponse.of("OK"), new IllegalStateException("body")))
+                     .map(Arguments::of);
     }
 
     @Test
@@ -391,10 +415,16 @@ class LoggingServiceTest {
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
-        ctx.logBuilder().endResponse(new Exception("not sanitized"));
+        final Exception cause = new Exception("not sanitized");
+        ctx.logBuilder().endResponse(cause);
+
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
         when(logger.isWarnEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains("test.com");
 
         final LoggingService service =
                 LoggingService.builder()
@@ -406,11 +436,24 @@ class LoggingServiceTest {
                                       Pattern.compile("com")))
                               .newDecorator().apply(delegate);
 
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
         service.serve(ctx, ctx.request());
-        assertThat(ctx.logBuilder().toString()).doesNotContain("trustin");
-        assertThat(ctx.logBuilder().toString()).doesNotContain("com");
+
+        // After the sanitization.
+        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(1)).isWarnEnabled();
+
+        // verify request logs
+        for (int i = 0; i < 2; i++) {
+            verify(logger).info(eq("{} Request: {}"), eq(ctx),
+                                argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+        }
+
+        // verify response log
+        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
+                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))),
+                            eq(cause));
+
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -422,8 +465,12 @@ class LoggingServiceTest {
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
+
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
 
         final LoggingService service =
                 LoggingService.builder()
@@ -431,12 +478,23 @@ class LoggingServiceTest {
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
                               .requestContentSanitizer(RegexBasedSanitizer.of(
-                                                       Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                                      Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
                               .newDecorator().apply(delegate);
 
-        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
         service.serve(ctx, ctx.request());
-        assertThat(ctx.logBuilder().toString()).doesNotContain("333-490-4499");
+
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
+        verify(logger, times(2)).isInfoEnabled();
+
+        // verify request log
+        verify(logger).info(eq("{} Request: {}"), eq(ctx),
+                            argThat((String text) -> !text.contains("333-490-4499")));
+
+        // verify response log
+        verify(logger).info(eq("{} Response: {}"), eq(ctx),
+                            argThat((String text) -> !text.contains("333-490-4499")));
+
+        verifyNoMoreInteractions(logger);
     }
 
     @Test

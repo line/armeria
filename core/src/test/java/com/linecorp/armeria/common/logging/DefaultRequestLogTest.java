@@ -26,14 +26,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -43,11 +46,20 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
 
 class DefaultRequestLogTest {
+
+    private static final BiFunction<RequestContext, HttpHeaders, String> headersSanitizer =
+            (ctx, headers) -> "sanitized_headers";
+    private static final BiFunction<RequestContext, Object, String> contentSanitizer =
+            (ctx, content) -> "sanitized_content";
+    private static final BiFunction<RequestContext, HttpHeaders, String> trailersSanitizer =
+            (ctx, trailers) -> "sanitized_trailers";
 
     @Mock
     private RequestContext ctx;
@@ -190,9 +202,14 @@ class DefaultRequestLogTest {
         assertThatThrownBy(() -> log.responseFirstBytesTransferredTimeNanos())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
-        final ResponseHeaders bar = ResponseHeaders.of(200);
-        child.responseHeaders(bar);
+        final ResponseHeaders responseHeaders = ResponseHeaders.of(200);
+        child.responseHeaders(responseHeaders);
         assertThatThrownBy(() -> log.responseHeaders())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+
+        final HttpHeaders responseTrailers = HttpHeaders.of("status", 0);
+        child.responseTrailers(responseTrailers);
+        assertThatThrownBy(() -> log.responseTrailers())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
         log.endResponseWithLastChild();
@@ -200,7 +217,8 @@ class DefaultRequestLogTest {
 
         assertThat(log.responseFirstBytesTransferredTimeNanos())
                 .isEqualTo(child.responseFirstBytesTransferredTimeNanos());
-        assertThat(log.responseHeaders()).isSameAs(bar);
+        assertThat(log.responseHeaders()).isSameAs(responseHeaders);
+        assertThat(log.responseTrailers()).isSameAs(responseTrailers);
 
         final String responseContent = "baz1";
         final String rawResponseContent = "qux1";
@@ -288,6 +306,7 @@ class DefaultRequestLogTest {
         log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
         log.endRequest();
         assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo(DefaultRequestLogTest.class.getName());
     }
 
     @Test
@@ -322,5 +341,232 @@ class DefaultRequestLogTest {
         await().untilAsserted(() -> {
             assertThat(log.whenRequestComplete()).isDone();
         });
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.simpleTypeName())
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith(DefaultRequestLogTest.class.getSimpleName());
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_of() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ServiceNaming.of("hardCodedServiceName"))
+                                     .build();
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo("hardCodedServiceName");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_shorten50() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten(50))
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.armeria.common.logging.DefaultRequestLogTest");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_shorten() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten())
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.a.c.l.DefaultRequestLogTest");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_custom() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ctx -> "customServiceName")
+                                     .build();
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo("customServiceName");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_null() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ctx -> null)
+                                     .build();
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith(DefaultRequestLogTest.class.getName());
+    }
+
+    @Test
+    void toStringRequestOnlyCache() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        log = new DefaultRequestLog(sctx);
+
+        final String a = log.toStringRequestOnly();
+        assertThat(log.toStringRequestOnly()).isSameAs(a); // The second call must be cached.
+
+        // Cache must be invalidated when request state changes.
+        log.endRequest();
+        final String b = log.toStringRequestOnly();
+        assertThat(b).isNotEqualTo(a);
+        assertThat(log.toStringRequestOnly()).isSameAs(b); // The second call must be cached.
+    }
+
+    @Test
+    void toStringRequestOnlyCacheWithSanitizer() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(
+                        RequestHeaders.of(HttpMethod.GET, "/", "foo", "secret")));
+
+        log = new DefaultRequestLog(sctx);
+        log.requestContent("secret", "secret");
+        log.requestTrailers(HttpHeaders.of("bar", "secret"));
+        log.endRequest();
+
+        // Cache must be invalidated when sanitizers change.
+        final String a = log.toStringRequestOnly();
+        final String b = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(b).isNotEqualTo(a)
+                     .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
+
+        // Must be cached when sanitizers were not changed.
+        final String c = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(c).isSameAs(b);
+
+        // Must not contain the secret.
+        assertThat(c).doesNotContain("secret");
+    }
+
+    @Test
+    void toStringResponseOnlyCache() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        log = new DefaultRequestLog(sctx);
+
+        final String a = log.toStringResponseOnly();
+        assertThat(log.toStringResponseOnly()).isSameAs(a); // The second call must be cached.
+
+        // Cache must be invalidated when request state changes.
+        log.endResponse();
+        final String b = log.toStringResponseOnly();
+        assertThat(b).isNotEqualTo(a);
+        assertThat(log.toStringResponseOnly()).isSameAs(b); // The second call must be cached.
+    }
+
+    @Test
+    void toStringResponseOnlyCacheInvalidationWithSanitizer() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        log = new DefaultRequestLog(sctx);
+        log.responseHeaders(ResponseHeaders.of(HttpStatus.OK, "foo", "secret"));
+        log.responseContent("secret", "secret");
+        log.responseTrailers(HttpHeaders.of("bar", "secret"));
+        log.endResponse();
+
+        // Cache must be invalidated when sanitizers change.
+        final String a = log.toStringResponseOnly();
+        final String b = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(b).isNotEqualTo(a)
+                     .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
+
+        // Must be cached when sanitizers were not changed.
+        final String c = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(c).isSameAs(b);
+
+        // Must not contain the secret.
+        assertThat(c).doesNotContain("secret");
+    }
+
+    @Test
+    void toStringWithoutChildren() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        log = new DefaultRequestLog(sctx);
+        log.endRequest();
+        log.endResponse();
+
+        assertThat(log.toString()).matches("^\\{req=\\{.*}, res=\\{.*}}$");
+    }
+
+    @Test
+    void toStringWithChildren() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        log = new DefaultRequestLog(sctx);
+        final DefaultRequestLog child1 = new DefaultRequestLog(sctx);
+        final DefaultRequestLog child2 = new DefaultRequestLog(sctx);
+        log.addChild(child1);
+        log.addChild(child2);
+        child1.endRequest();
+        child1.endResponse();
+        child2.endRequest();
+        child2.endResponse();
+        log.endRequest();
+        log.endResponse();
+
+        final String logStr = log.toString();
+        assertThat(logStr).doesNotEndWith("\n");
+
+        final String[] lines = logStr.split("\\r?\\n");
+        assertThat(lines).hasSize(4);
+        assertThat(lines[0]).matches("^\\{req=\\{.*}, res=\\{.*}}$");
+        assertThat(lines[1]).matches("^Children:$");
+        assertThat(lines[2]).matches("^\\t\\{req=\\{.*}, res=\\{.*}}$");
+        assertThat(lines[3]).matches("^\\t\\{req=\\{.*}, res=\\{.*}}$");
     }
 }

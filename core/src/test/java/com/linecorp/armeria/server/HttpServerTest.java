@@ -43,8 +43,6 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +55,9 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.aayushatharva.brotli4j.decoder.Decoder;
+import com.aayushatharva.brotli4j.decoder.DecoderJNI.Status;
+import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 
@@ -79,6 +80,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -592,10 +594,10 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTooLargeContentToNonExistentService(WebClient client) throws Exception {
+    void testTooLargeContentToNonExistentService(WebClient client) {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
-        final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
         assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
     }
 
@@ -611,6 +613,25 @@ class HttpServerTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(res.headers().get(HttpHeaderNames.VARY)).isNull();
         assertThat(res.contentUtf8()).isEqualTo("Armeria is awesome!");
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ClientAndProtocolProvider.class)
+    void testStrings_acceptEncodingBrotli(WebClient client) throws Exception {
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "br");
+        final CompletableFuture<AggregatedHttpResponse> f = client.execute(req).aggregate();
+
+        final AggregatedHttpResponse res = f.get();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(res.headers().get(HttpHeaderNames.VARY)).isEqualTo("accept-encoding");
+
+        final DirectDecompress decoded = Decoder.decompress(res.content().array());
+
+        assertThat(decoded.getResultStatus()).isEqualTo(Status.DONE);
+        assertThat(new String(decoded.getDecompressedData())).isEqualTo("Armeria is awesome!");
     }
 
     @ParameterizedTest
@@ -929,7 +950,7 @@ class HttpServerTest {
                                      (delegate, ctx, req) -> {
                                          ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
                                          if (clientResponseTimeoutMillis == 0) {
-                                            ctx.clearResponseTimeout();
+                                             ctx.clearResponseTimeout();
                                          } else {
                                              ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW,
                                                                           clientResponseTimeoutMillis);

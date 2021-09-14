@@ -1,4 +1,4 @@
-final def TOMCAT_VERSION = '8.5.61'
+final def TOMCAT_VERSION = '8.5.69'
 
 dependencies {
     // Tomcat
@@ -24,13 +24,18 @@ dependencies {
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-tasks.compileJava.source "${rootProject.projectDir}/tomcat9/src/main/java"
-tasks.compileJava.exclude '**/ConfigFileLoaderInitializer*'
-tasks.processResources.from "${rootProject.projectDir}/tomcat9/src/main/resources"
-tasks.compileTestJava.source "${rootProject.projectDir}/tomcat9/src/test/java"
-tasks.processTestResources.from "${rootProject.projectDir}/tomcat9/src/test/resources"
-tasks.sourcesJar.from "${rootProject.projectDir}/tomcat9/src/main/java"
-tasks.sourcesJar.from "${rootProject.projectDir}/tomcat9/src/main/resources"
-tasks.sourcesJar.exclude '**/ConfigFileLoaderInitializer*'
-tasks.javadoc.source "${rootProject.projectDir}/tomcat9/src/main/java"
-tasks.javadoc.exclude '**/ConfigFileLoaderInitializer*'
+def tomcat9ProjectDir = "${rootProject.projectDir}/tomcat9"
+// Copy common files from tomcat9 module to gen-src directory in order to use them as a source set.
+task generateSources(type: Copy) {
+    from "${tomcat9ProjectDir}/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+    exclude '**/ArmeriaProcessor*'
+    exclude '**/ConfigFileLoaderInitializer*'
+    exclude '**/package-info.java'
+}
+
+tasks.compileJava.dependsOn(generateSources)
+tasks.compileTestJava.source "${tomcat9ProjectDir}/src/test/java"
+tasks.processResources.from "${tomcat9ProjectDir}/src/main/resources"
+tasks.processTestResources.from "${tomcat9ProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${tomcat9ProjectDir}/src/main/resources"

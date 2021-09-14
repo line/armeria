@@ -22,8 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -38,6 +36,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
@@ -64,7 +63,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS;
-    private static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
     static {
         EMPTY_TRAILERS = new HeadersFuture<>();
@@ -133,8 +131,8 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, EMPTY_OPTIONS);
+    public EventExecutor defaultSubscriberExecutor() {
+        return upstreamExecutor;
     }
 
     @Override

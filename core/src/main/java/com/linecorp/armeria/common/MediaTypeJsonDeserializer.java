@@ -17,13 +17,13 @@ package com.linecorp.armeria.common;
 
 import java.io.IOException;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Jackson {@link JsonDeserializer} for {@link MediaType}.

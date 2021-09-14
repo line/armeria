@@ -29,13 +29,12 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;

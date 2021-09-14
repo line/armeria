@@ -17,13 +17,12 @@ package com.linecorp.armeria.unsafe;
 
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -105,8 +104,8 @@ public final class PooledObjects {
      *
      * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
      */
-    public static void touch(Object obj) {
-        touch(obj, obj);
+    public static <T> T touch(T obj) {
+        return touch(obj, obj);
     }
 
     /**
@@ -116,10 +115,11 @@ public final class PooledObjects {
      * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
      * @param hint the hint to specify when calling {@link ByteBuf#touch(Object)}
      */
-    public static void touch(Object obj, @Nullable Object hint) {
+    public static <T> T touch(T obj, @Nullable Object hint) {
         if (obj instanceof HttpData) {
             ((HttpData) obj).touch(hint);
         }
+        return obj;
     }
 
     /**

@@ -35,12 +35,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
@@ -99,7 +98,7 @@ import io.netty.handler.ssl.SslProvider;
  * ...
  *
  * }</pre>
- * TODO(ikhoon): Merge this DroppWizard ArmeriaSettings with c.l.a.spring.ArmeriaSettings
+ * TODO(ikhoon): Merge this DropWizard ArmeriaSettings with c.l.a.spring.ArmeriaSettings
  *               to provide common API to configure Server from JSON and YAML.
  */
 class ArmeriaSettings {

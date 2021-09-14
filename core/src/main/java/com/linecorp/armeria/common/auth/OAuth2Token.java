@@ -19,9 +19,8 @@ package com.linecorp.armeria.common.auth;
 import static com.linecorp.armeria.common.auth.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * The bearer token of <a href="https://datatracker.ietf.org/doc/rfc6750/">OAuth 2.0 authentication</a>.

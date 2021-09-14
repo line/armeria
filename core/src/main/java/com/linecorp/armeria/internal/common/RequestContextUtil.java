@@ -24,8 +24,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +33,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -172,7 +174,6 @@ public final class RequestContextUtil {
      * Returns the current {@link RequestContext} in the {@link RequestContextStorage}.
      */
     @Nullable
-    @SuppressWarnings("unchecked")
     public static <T extends RequestContext> T get() {
         return requestContextStorage.currentOrNull();
     }
@@ -182,7 +183,6 @@ public final class RequestContextUtil {
      * returns the old {@link RequestContext}.
      */
     @Nullable
-    @SuppressWarnings("unchecked")
     public static <T extends RequestContext> T getAndSet(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return requestContextStorage.push(ctx);
@@ -215,6 +215,56 @@ public final class RequestContextUtil {
     public static void pop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
         requestContextStorage.pop(current, toRestore);
+    }
+
+    /**
+     * Invokes {@link DefaultServiceRequestContext#hook()} or {@link DefaultClientRequestContext#hook()} and
+     * returns {@link SafeCloseable} which pops the current {@link RequestContext} in the storage and pushes
+     * back the specified {@code toRestore}.
+     */
+    public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
+        requireNonNull(current, "current");
+
+        final SafeCloseable closeable = invokeHook(current);
+        if (closeable == null) {
+            return () -> requestContextStorage.pop(current, toRestore);
+        } else {
+            return () -> {
+                closeable.close();
+                requestContextStorage.pop(current, toRestore);
+            };
+        }
+    }
+
+    @Nullable
+    private static SafeCloseable invokeHook(RequestContext ctx) {
+        final Supplier<? extends SafeCloseable> hook;
+        if (ctx instanceof DefaultServiceRequestContext) {
+            hook = ((DefaultServiceRequestContext) ctx).hook();
+        } else if (ctx instanceof DefaultClientRequestContext) {
+            hook = ((DefaultClientRequestContext) ctx).hook();
+        } else {
+            hook = null;
+        }
+
+        if (hook == null) {
+            return null;
+        }
+
+        final SafeCloseable closeable;
+        try {
+            closeable = hook.get();
+        } catch (Throwable t) {
+            logger.warn("Unexpected exception while executing RequestContext.hook().get(). ctx: {}", ctx, t);
+            return null;
+        }
+
+        if (closeable == null) {
+            logger.warn("RequestContext.hook().get() returned null. ctx: {}", ctx);
+            return null;
+        }
+
+        return closeable;
     }
 
     private RequestContextUtil() {}

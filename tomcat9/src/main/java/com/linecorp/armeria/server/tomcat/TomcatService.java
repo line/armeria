@@ -31,8 +31,6 @@ import java.util.ArrayDeque;
 import java.util.Map.Entry;
 import java.util.Queue;
 
-import javax.annotation.Nullable;
-
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
@@ -62,6 +60,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -81,6 +80,8 @@ public abstract class TomcatService implements HttpService {
     private static final MethodHandle INPUT_BUFFER_CONSTRUCTOR;
     private static final MethodHandle OUTPUT_BUFFER_CONSTRUCTOR;
     static final Class<?> PROTOCOL_HANDLER_CLASS;
+
+    private static final MethodHandle PROCESSOR_CONSTRUCTOR;
 
     static {
         final String prefix = TomcatVersion.class.getPackage().getName() + '.';
@@ -110,6 +111,22 @@ public abstract class TomcatService implements HttpService {
                     "; using a wrong armeria-tomcat JAR?", e);
         }
 
+        try {
+            final Class<?> processorClass = ArmeriaProcessor.class;
+            if (TomcatVersion.major() >= 9) {
+                PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                        processorClass,
+                        MethodType.methodType(void.class, Adapter.class));
+            } else {
+                PROCESSOR_CONSTRUCTOR = MethodHandles.lookup().findConstructor(
+                        processorClass, MethodType.methodType(void.class));
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(
+                    "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
+                            "; using a wrong armeria-tomcat JAR?", e);
+        }
+
         if (TomcatVersion.major() >= 9) {
             try {
                 final Class<?> initClass =
@@ -124,10 +141,14 @@ public abstract class TomcatService implements HttpService {
     }
 
     private static final ResponseHeaders INVALID_AUTHORITY_HEADERS =
-            ResponseHeaders.of(HttpStatus.BAD_REQUEST,
-                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+            ResponseHeaders.builder(HttpStatus.BAD_REQUEST)
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                           .build();
+
     private static final HttpData INVALID_AUTHORITY_DATA =
             HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nInvalid authority");
+
+    private static final byte[] HOST_BYTES = { 'h', 'o', 's', 't' };
 
     /**
      * Creates a new {@link TomcatService} with the web application at the specified document base, which can
@@ -354,7 +375,8 @@ public abstract class TomcatService implements HttpService {
                     return null;
                 }
 
-                final Request coyoteReq = convertRequest(ctx, aReq);
+                final ArmeriaProcessor processor = createProcessor(coyoteAdapter);
+                final Request coyoteReq = convertRequest(ctx, aReq, processor.getRequest());
                 if (coyoteReq == null) {
                     if (res.tryWrite(INVALID_AUTHORITY_HEADERS)) {
                         if (res.tryWrite(INVALID_AUTHORITY_DATA)) {
@@ -363,7 +385,7 @@ public abstract class TomcatService implements HttpService {
                     }
                     return null;
                 }
-                final Response coyoteRes = new Response();
+                final Response coyoteRes = coyoteReq.getResponse();
                 coyoteReq.setResponse(coyoteRes);
                 coyoteRes.setRequest(coyoteReq);
 
@@ -421,10 +443,18 @@ public abstract class TomcatService implements HttpService {
         }
     }
 
+    private static ArmeriaProcessor createProcessor(Adapter coyoteAdapter) throws Throwable {
+        if (TomcatVersion.major() >= 9) {
+            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke(coyoteAdapter);
+        } else {
+            return (ArmeriaProcessor) PROCESSOR_CONSTRUCTOR.invoke();
+        }
+    }
+
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req) throws Throwable {
+    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req,
+                                   Request coyoteReq) throws Throwable {
         final String mappedPath = ctx.mappedPath();
-        final Request coyoteReq = new Request();
 
         coyoteReq.scheme().setString(req.scheme());
 
@@ -492,13 +522,20 @@ public abstract class TomcatService implements HttpService {
             final AsciiString k = e.getKey();
             final String v = e.getValue();
 
-            if (k.isEmpty() || k.byteAt(0) == ':') {
+            if (k.isEmpty()) {
                 continue;
             }
 
-            final MessageBytes cValue = cHeaders.addValue(k.array(), k.arrayOffset(), k.length());
-            final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
-            cValue.setBytes(valueBytes, 0, valueBytes.length);
+            if (k.byteAt(0) != ':') {
+                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
+                cHeaders.addValue(k.array(), k.arrayOffset(), k.length())
+                        .setBytes(valueBytes, 0, valueBytes.length);
+            } else if (HttpHeaderNames.AUTHORITY.equals(k) && !headers.contains(HttpHeaderNames.HOST)) {
+                // Convert `:authority` to `host`.
+                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
+                cHeaders.addValue(HOST_BYTES, 0, HOST_BYTES.length)
+                        .setBytes(valueBytes, 0, valueBytes.length);
+            }
         }
     }
 
@@ -514,7 +551,7 @@ public abstract class TomcatService implements HttpService {
         final long contentLength = coyoteRes.getBytesWritten(true); // 'true' will trigger flush.
         final String method = coyoteRes.getRequest().method().toString();
         if (!"HEAD".equals(method)) {
-            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+            headers.contentLength(contentLength);
         }
 
         final MimeHeaders cHeaders = coyoteRes.getMimeHeaders();

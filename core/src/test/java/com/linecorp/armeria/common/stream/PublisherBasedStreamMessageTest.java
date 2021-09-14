@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
@@ -25,8 +26,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-
-import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,7 +37,10 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableSubscriber;
+
+import io.netty.buffer.ByteBuf;
 
 class PublisherBasedStreamMessageTest {
 
@@ -97,9 +99,11 @@ class PublisherBasedStreamMessageTest {
 
     @Test
     void notifyCancellation() {
+        final ByteBuf buf = newPooledBuffer();
         final DefaultStreamMessage<HttpData> delegate = new DefaultStreamMessage<>();
+        delegate.write(HttpData.wrap(buf));
         final PublisherBasedStreamMessage<HttpData> p = new PublisherBasedStreamMessage<>(delegate);
-        SubscriptionOptionTest.notifyCancellation(p);
+        SubscriptionOptionTest.notifyCancellation(buf, p);
     }
 
     @Test

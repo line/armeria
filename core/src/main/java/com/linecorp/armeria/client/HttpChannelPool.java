@@ -35,8 +35,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +49,7 @@ import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
@@ -394,18 +393,35 @@ final class HttpChannelPool implements AsyncCloseable {
 
         final Bootstrap bootstrap = getBootstrap(desiredProtocol);
 
-        final Channel channel = bootstrap.register().channel();
-        configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
-        final ChannelFuture connectFuture = channel.connect(remoteAddress);
+        bootstrap.register().addListener((ChannelFuture registerFuture) -> {
+            if (!registerFuture.isSuccess()) {
+                sessionPromise.tryFailure(registerFuture.cause());
+                return;
+            }
 
-        connectFuture.addListener((ChannelFuture future) -> {
-            if (future.isSuccess()) {
-                initSession(desiredProtocol, poolKey, future, sessionPromise);
-            } else {
-                invokeProxyConnectFailed(desiredProtocol, poolKey, future.cause());
-                sessionPromise.tryFailure(future.cause());
+            try {
+                final Channel channel = registerFuture.channel();
+                configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
+                channel.connect(remoteAddress).addListener((ChannelFuture connectFuture) -> {
+                    if (connectFuture.isSuccess()) {
+                        initSession(desiredProtocol, poolKey, connectFuture, sessionPromise);
+                    } else {
+                        invokeProxyConnectFailed(desiredProtocol, poolKey, connectFuture.cause());
+                        sessionPromise.tryFailure(connectFuture.cause());
+                    }
+                });
+            } catch (Throwable cause) {
+                invokeProxyConnectFailed(desiredProtocol, poolKey, cause);
+                sessionPromise.tryFailure(cause);
             }
         });
+    }
+
+    /**
+     * Returns the number of open connections on this {@link HttpChannelPool}.
+     */
+    int numConnections() {
+        return allChannels.size();
     }
 
     void invokeProxyConnectFailed(SessionProtocol protocol, PoolKey poolKey, Throwable cause) {
@@ -415,7 +431,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
                 final ProxyConfigSelector proxyConfigSelector = clientFactory.proxyConfigSelector();
-                proxyConfigSelector.connectFailed(protocol, Endpoint.of(poolKey.host, poolKey.port),
+                proxyConfigSelector.connectFailed(protocol, Endpoint.unsafeCreate(poolKey.host, poolKey.port),
                                                   proxyAddress, UnprocessedRequestException.of(cause));
             }
         } catch (Throwable t) {

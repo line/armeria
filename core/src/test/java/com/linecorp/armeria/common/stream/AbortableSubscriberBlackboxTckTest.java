@@ -18,14 +18,13 @@ package com.linecorp.armeria.common.stream;
 
 import java.util.stream.LongStream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.tck.SubscriberBlackboxVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableSubscriber;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -53,7 +52,8 @@ public class AbortableSubscriberBlackboxTckTest extends SubscriberBlackboxVerifi
 
     @Override
     public Subscriber<Object> createSubscriber() {
-        return new AbortableSubscriber(publisher, NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE, false);
+        return new AbortableSubscriber(publisher, NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE,
+                                       false, false);
     }
 
     @Test(enabled = false)

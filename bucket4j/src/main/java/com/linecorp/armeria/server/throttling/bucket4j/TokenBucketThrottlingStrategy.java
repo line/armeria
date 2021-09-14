@@ -21,10 +21,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.throttling.ThrottlingHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -33,6 +32,7 @@ import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 import io.github.bucket4j.AsyncBucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.ConfigurationBuilder;
+import io.github.bucket4j.TokensInheritanceStrategy;
 import io.github.bucket4j.local.LocalBucketBuilder;
 
 /**
@@ -103,7 +103,8 @@ public final class TokenBucketThrottlingStrategy<T extends Request> extends Thro
             builder.addLimit(limit.bandwidth());
         }
         // reconfigure the bucket
-        return asyncBucket.replaceConfiguration(builder.build())
+        return asyncBucket.replaceConfiguration(builder.build(),
+                                                TokensInheritanceStrategy.PROPORTIONALLY)
                           .thenRun(() -> quota = sendQuota ? tokenBucket.toSpecString() : null);
     }
 
