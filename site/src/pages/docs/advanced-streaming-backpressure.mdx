@@ -1,13 +1,18 @@
 # Sending streaming responses using backpressure
 
-When you design a service that sends an <type://HttpResponse> whose payload is large, you should consider how
-you load data into memory. Otherwise, you will encounter an `OutOfMemoryError` when the service serves
-multiple requests at the same time.
+Let's say that we want to serve a static file whose size is larger than your available memory.
+How are we going to serve that file?
 
-One of the options to solve the issue is splitting the payload into chunks and loading them one by one
-into memory. Then, the API sends the chunks one by one as a streaming response using backpressure.
-Backpressure basically means that the API sends the streaming response when it's able to send and when
-the client is ready to receive the responses.
+If we load the file into the memory at once, we will definitely get an `OutOfMemoryError`.
+In order to avoid the error, we should:
+- Divide the file into chunks
+- Load the first chunk into memory
+- Send the chunk to the client
+- Wait until the chunk is written to the sending socket buffer
+  - So we don't load data into memory when the client is not ready to receive. This is called __backpressure__.
+- Load the second chunk and repeat the steps until we send all chunks
+
+Now, we can send the large file without spending much memory.
 
 <Tip>
 
@@ -16,44 +21,59 @@ to understand backpressure and the situation when an `OutOfMemoryError` is raise
 
 </Tip>
 
-Let's look at how we can create a streaming <type://HttpResponse> before we get to the backpressure.
-You can create an <type://HttpResponseWriter> from <type://HttpResponse#streaming()> and write
-<type://ResponseHeaders> and chunks in order:
-
+It's always easy to say, but what should we do to send the file using Armeria?
 ```java
+HttpFile bigFile = HttpFile.of(new File("/var/www/big_file.dat"));
+Server.builder()
+      .service("/bif_file.dat", bigFile.asService())
+      .build();
+```
+That's it! The <type://HttpFile> loads chunks one by one and send them to the client using backpressure.
+
+What if you want to send large data from other than files (e.g. database) using backpressure?
+To answer that question, let's implement the simplified version of <type://HttpFile>.
+
+First, we use <type://HttpResponseWriter> from <type://HttpResponse#streaming()> to send streaming responses:
+```java
+// This code has a problem. Do not copy/paste and use it.
 ServerBuilder sb = ...;
-sb.service("/", (ctx, req) -> {
+sb.service("/big_file.dat", (ctx, req) -> {
     HttpResponseWriter response = HttpResponse.streaming();
+    // We must write the response headers first.
     response.write(ResponseHeaders.of(200));
-    response.write(HttpData.ofUtf8("first chunk"));
-    response.write(HttpData.ofUtf8("second chunk"));
-    ... // Write more chunks.
-    // Call close to end the response.
+    response.write(produceChunk(0));
+    response.write(produceChunk(1));
+    response.write(produceChunk(2));
+    ... // Write more chunks until we send all chunks.
+    // Call close() to end the response.
     response.close();
     return response;
-});
+}
+
+...
+private HttpData produceChunk(int index) {
+    // Divide the file by the pre-defined chunk size(e.g. 8192 bytes)
+    // and read it using index.
+    // If index is 0, 0 to 8192 bytes from the file is read.
+    // If index is 1, 8193 to 16384 is read and so on.
+}
 ```
-
-Then, the chunks are put into [frames](https://tools.ietf.org/html/rfc7540#section-4) and sent to the client
-when HTTP/2 is used. For HTTP/1.1, [Chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding)
-is used.
-
-If you send the streaming response like the code above, you will get an `OutOfMemoryError` because you produced
-all chunks before you send them. You need to use <type://StreamWriter#whenConsumed()> to produce and send
-the chunk one by one:
-
+Now we can send the streaming response to the client. However, this has a problem. Even though it divides
+the file, it loads all chunks into the memory before each chunk is sent to the client,
+so the server will get the `OutOfMemoryError`. To solve it, we have to implement backpressure using
+<type://StreamWriter#whenConsumed()>:
 ```java
-sb.service("/", (ctx, req) -> {
+sb.service("/big_file.dat", (ctx, req) -> {
     HttpResponseWriter response = HttpResponse.streaming();
     response.write(ResponseHeaders.of(200));
     response.whenConsumed().thenRun(() -> {
         // Produce the first chunk when the ResponseHeaders is
         // written to the socket.
-        response.write(produceChunk(1));
+        response.write(produceChunk(0));
         response.whenConsumed().thenRun(() -> {
             // Produce the second chunk when the first chunk is
             // written to the socket.
-            response.write(produceChunk(2));
+            response.write(produceChunk(1));
             ...
         });
     });
@@ -61,9 +81,10 @@ sb.service("/", (ctx, req) -> {
 });
 ```
 
-<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the current chunks in
-the <type://StreamWriter> are written to the socket. So, you can just add a callback (`thenRun()` in the example)
-and produce the chunk in the callback.
+<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the chunk,
+which is written to the <type://HttpResponseWriter>, is finally written to the socket. So, you can add
+the next task by adding a callback (`thenRun()` in the example). We produced the next chunk using callback
+in the example.
 
 <Tip>
 
@@ -72,17 +93,17 @@ to understand how the network layer is involved in backpressure.
 
 </Tip>
 
-You can use recursion to simplify the code:
+Of course, we need to use recursion not to implement the callback endlessly.
 ```java
-sb.service("/", (ctx, req) -> {
-    final HttpResponseWriter response = HttpResponse.streaming();
+sb.service("/big_file.dat", (ctx, req) -> {
+    HttpResponseWriter response = HttpResponse.streaming();
     response.write(ResponseHeaders.of(200));
-    streamingResponse(response, 1);
+    streamingResponse(response, 0);
     return response;
 });
 
 private void streamingResponse(HttpResponseWriter response, int index) {
-    if (index == Integer.MAX_VALUE) {
+    if (isEndOfFile() {
         // Close the response when we send all chunks.
         response.close();
         return;
@@ -96,29 +117,13 @@ private void streamingResponse(HttpResponseWriter response, int index) {
     });
 }
 ```
+So far we have implemented the simplified version of <type://HttpFile>. Now, we can implement streaming
+responses using backpressure from any other sources (e.g. database) by simply changing the `produceChunk()`
+method to fetch data from the sources.
 
 <Tip>
 
 You can find [a funny working example](https://github.com/line/armeria-examples/blob/master/proxy-server/src/main/java/example/armeria/proxy/AnimationService.java)
 that sends the streaming response using backpressure.
-
-</Tip>
-
-You can also send a streaming <type://HttpRequest> in the same manner except specifying a
-<type://RequestHeaders> when you create the <type://HttpRequestWriter>.
-```java
-HttpRequestWriter request = HttpRequest.streaming(
-    RequestHeaders.of(HttpMethod.POST, "/"));
-request.write(HttpData.ofUtf8("first chunk"));
-...
-```
-
-<Tip>
-
-The difference between <type://HttpRequest> and <type://HttpResponse> in Armeria is that you always need to
-specify a <type://RequestHeaders> when you create an <type://HttpRequest>. So you can get the headers via
-<type://HttpRequest#headers()>. On the other hand, a <type://ResponseHeaders> is put into the queue with chunks
-for <type://HttpResponse>, so you cannot get the <type://ResponseHeaders> directly from an
-<type://HttpResponse>.
 
 </Tip>
