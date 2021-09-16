@@ -62,7 +62,7 @@ class HelloServiceTest {
                              .join()
                              .contentUtf8();
         assertThat(response).isEqualTo(
-                "{\"code\":\"FAILED_PRECONDITION\",\"message\":\"Name cannot be empty\"}");
+                "{\"grpc-code\":\"FAILED_PRECONDITION\",\"message\":\"Name cannot be empty\"}");
     }
 
     @Test

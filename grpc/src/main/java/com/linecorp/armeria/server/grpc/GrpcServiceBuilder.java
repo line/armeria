@@ -665,9 +665,6 @@ public final class GrpcServiceBuilder {
             throw new IllegalStateException(
                     "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
         }
-        if (unframedGrpcErrorHandler == null) {
-            unframedGrpcErrorHandler = UnframedGrpcErrorHandler.of();
-        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
@@ -708,7 +705,11 @@ public final class GrpcServiceBuilder {
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes);
-        return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry,
-                                                                unframedGrpcErrorHandler) : grpcService;
+        if (!enableUnframedRequests) {
+            return grpcService;
+        }
+        return new UnframedGrpcService(grpcService, handlerRegistry,
+                                       unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
+                                                                        : UnframedGrpcErrorHandler.of());
     }
 }

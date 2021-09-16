@@ -22,12 +22,12 @@ public class HelloServiceImpl extends HelloServiceImplBase {
     @Override
     public void hello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
         if (request.getName().isEmpty()) {
-            responseObserver.onError(Status.FAILED_PRECONDITION.withDescription("Name cannot be empty").asException());
+            responseObserver.onError(
+                    Status.FAILED_PRECONDITION.withDescription("Name cannot be empty").asException());
         } else {
             responseObserver.onNext(buildReply(toMessage(request.getName())));
             responseObserver.onCompleted();
         }
-
     }
 
     /**

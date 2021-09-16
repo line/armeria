@@ -63,7 +63,7 @@ public interface UnframedGrpcErrorHandler {
             final Code grpcCode = status.getCode();
             final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcCode);
             final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-            builder.put("code", grpcCode.name());
+            builder.put("grpc-code", grpcCode.name());
             final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 builder.put("message", grpcMessage);
