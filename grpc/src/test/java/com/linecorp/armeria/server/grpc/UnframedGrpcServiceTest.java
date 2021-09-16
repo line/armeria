@@ -143,7 +143,7 @@ class UnframedGrpcServiceTest {
 
     @Test
     void shouldThrowExceptionIfUnframedRequestHandlerAddedButUnframedRequestsAreDisabled() {
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+        final IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
                 GrpcService.builder()
                            .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
                            .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
@@ -151,6 +151,7 @@ class UnframedGrpcServiceTest {
                            .enableUnframedRequests(false)
                            .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
                            .build());
-        assertThat(exception).hasMessage("'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+        assertThat(exception).hasMessage(
+                "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
     }
 }
