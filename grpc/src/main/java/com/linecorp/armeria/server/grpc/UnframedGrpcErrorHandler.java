@@ -70,8 +70,8 @@ public interface UnframedGrpcErrorHandler {
             }
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.JSON_UTF_8)
-                                                                   .add(GrpcHeaderNames.GRPC_STATUS,
-                                                                        String.valueOf(grpcCode.value()))
+                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                                                           grpcCode.value())
                                                                    .build();
             return HttpResponse.ofJson(responseHeaders, builder.build());
         };
@@ -86,13 +86,7 @@ public interface UnframedGrpcErrorHandler {
                                         response.trailers() : response.headers();
             final Code grpcCode = status.getCode();
             final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcCode);
-            final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
-            message.append(", ").append(httpStatus.reasonPhrase()).append('\n');
-            message.append("Caused by: ").append('\n');
-            message.append("grpc-status: ")
-                   .append(grpcCode.value())
-                   .append(", ")
-                   .append(grpcCode.name());
+            final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());
             final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
