@@ -40,7 +40,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.ResourceUtil;
+import com.linecorp.armeria.internal.common.util.ResourceUtil;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
@@ -124,7 +124,7 @@ public final class GraphqlServiceBuilder {
                                       try {
                                           return ResourceUtil.getURL(url);
                                       } catch (FileNotFoundException e) {
-                                          throw new IllegalStateException("Not found schema file(s)");
+                                          throw new IllegalStateException("Not found schema file(s)", e);
                                       }
                                   }).collect(toImmutableList()));
     }
@@ -278,18 +278,18 @@ public final class GraphqlServiceBuilder {
         return schema;
     }
 
-    private static TypeDefinitionRegistry typeDefinitionRegistry(List<URL> schemaURLs) {
+    private static TypeDefinitionRegistry typeDefinitionRegistry(List<URL> schemaUrls) {
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
         final SchemaParser parser = new SchemaParser();
-        if (schemaURLs.isEmpty()) {
-            schemaURLs = defaultSchemaURLs();
+        if (schemaUrls.isEmpty()) {
+            schemaUrls = defaultSchemaUrls();
         }
-        if (schemaURLs.isEmpty()) {
+        if (schemaUrls.isEmpty()) {
             throw new IllegalStateException("Not found schema file(s)");
         }
 
-        logger.info("Found schema files: {}", schemaURLs);
-        schemaURLs.forEach(url -> {
+        logger.info("Found schema files: {}", schemaUrls);
+        schemaUrls.forEach(url -> {
             try (InputStream inputStream = url.openStream()) {
                 registry.merge(parser.parse(inputStream));
             } catch (IOException e) {
@@ -306,7 +306,7 @@ public final class GraphqlServiceBuilder {
         return runtimeWiringBuilder.build();
     }
 
-    private static List<URL> defaultSchemaURLs() {
+    private static List<URL> defaultSchemaUrls() {
         final ClassLoader classLoader = GraphqlServiceBuilder.class.getClassLoader();
         return DEFAULT_SCHEMA_FILE_NAMES
                 .stream()

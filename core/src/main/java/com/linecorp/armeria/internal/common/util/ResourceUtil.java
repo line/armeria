@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.internal.common.util;
 
 import java.io.File;
 import java.io.FileNotFoundException;
