@@ -93,8 +93,8 @@ public interface UnframedGrpcErrorHandler {
             }
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                                                   .add(GrpcHeaderNames.GRPC_STATUS,
-                                                                        String.valueOf(grpcCode.value()))
+                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                                                           grpcCode.value())
                                                                    .build();
             return HttpResponse.of(responseHeaders, HttpData.ofUtf8(message.toString()));
         };
