@@ -101,7 +101,7 @@ public interface UnframedGrpcErrorHandler {
     }
 
     /**
-     * Maps the gRPC error response to the http response.
+     * Maps the gRPC error response to the {@link HttpResponse}.
      *
      * @param ctx the service context.
      * @param status the gRPC {@link Status} code.
