@@ -72,7 +72,7 @@ class GraphqlServiceBuilderTest {
         assertThatThrownBy(() -> {
             new GraphqlServiceBuilder().schemaUrls("test.graphqls")
                                        .build();
-        }).isInstanceOf(UncheckedIOException.class).hasMessageContaining("(No such file or directory)");
+        }).isInstanceOf(UncheckedIOException.class).hasMessageContaining("java.io.FileNotFoundException");
     }
 
     @Test
