@@ -107,7 +107,7 @@ public interface UnframedGrpcErrorHandler {
      * @param status the gRPC {@link Status} code.
      * @param response the gRPC response.
      *
-     * @return the http response.
+     * @return the {@link HttpResponse}.
      */
     HttpResponse handle(ServiceRequestContext ctx, Status status, AggregatedHttpResponse response);
 }
