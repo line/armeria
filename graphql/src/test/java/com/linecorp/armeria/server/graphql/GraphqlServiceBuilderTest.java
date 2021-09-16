@@ -20,8 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.File;
+import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -62,9 +62,17 @@ class GraphqlServiceBuilderTest {
 
     @Test
     void specifySchemaUrl() throws Exception {
-        final URL graphqlSchemaUrl = getClass().getResource("/test.graphqls");
-        final GraphqlService service = new GraphqlServiceBuilder().schemaUrls(graphqlSchemaUrl).build();
+        final GraphqlService service = new GraphqlServiceBuilder().schemaUrls("classpath:test.graphqls")
+                                                                  .build();
         assertThat(service).isNotNull();
+    }
+
+    @Test
+    void notFoundSpecifySchemaUrl() throws Exception {
+        assertThatThrownBy(() -> {
+            new GraphqlServiceBuilder().schemaUrls("test.graphqls")
+                                       .build();
+        }).isInstanceOf(UncheckedIOException.class).hasMessageContaining("(No such file or directory)");
     }
 
     @Test
@@ -76,7 +84,7 @@ class GraphqlServiceBuilderTest {
 
     @ParameterizedTest
     @MethodSource("provideSpecifySchemaArguments")
-    void specifySchema(List<URL> urls, List<RuntimeWiringConfigurator> runtimeWiringConfigurators,
+    void specifySchema(List<String> urls, List<RuntimeWiringConfigurator> runtimeWiringConfigurators,
                        List<GraphQLTypeVisitor> typeVisitors) throws Exception {
         final GraphQLSchema schema = makeGraphQLSchema();
         final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
@@ -94,11 +102,11 @@ class GraphqlServiceBuilderTest {
 
     private static Stream<Arguments> provideSpecifySchemaArguments() throws URISyntaxException {
         return Stream.of(
-                Arguments.of(ImmutableList.of(GraphqlServiceBuilderTest.class.getResource("/test.graphqls")),
-                             ImmutableList.of(), ImmutableList.of()),
+                Arguments.of(ImmutableList.of("classpath:test.graphqls"), ImmutableList.of(),
+                             ImmutableList.of()),
                 Arguments.of(ImmutableList.of(),
                              ImmutableList.of((RuntimeWiringConfigurator) builder -> {
-                                    // noop
+                                 // noop
                              }),
                              ImmutableList.of()),
                 Arguments.of(ImmutableList.of(), ImmutableList.of(),

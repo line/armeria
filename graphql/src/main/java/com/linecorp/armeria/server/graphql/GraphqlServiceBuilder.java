@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -39,6 +40,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.ResourceUtil;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
@@ -93,29 +95,41 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
         requireNonNull(schemaFiles, "schemaFiles");
-        return schemaUrls(Streams.stream(schemaFiles)
-                                 .map(file -> {
-                                     try {
-                                         return file.toURI().toURL();
-                                     } catch (MalformedURLException e) {
-                                         throw new UncheckedIOException(e);
-                                     }
-                                 }).collect(toImmutableList()));
+        return schemaUrls0(Streams.stream(schemaFiles)
+                                  .map(file -> {
+                                      try {
+                                          return file.toURI().toURL();
+                                      } catch (MalformedURLException e) {
+                                          throw new UncheckedIOException(e);
+                                      }
+                                  }).collect(toImmutableList()));
     }
 
     /**
-     * Adds the schema {@link URL}s.
+     * Adds the schema {@code schemaUrl}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphqlServiceBuilder schemaUrls(URL... schemaUrls) {
+    public GraphqlServiceBuilder schemaUrls(String... schemaUrls) {
         return schemaUrls(ImmutableList.copyOf(requireNonNull(schemaUrls, "schemaUrls")));
     }
 
     /**
-     * Adds the schema {@link URL}s.
+     * Adds the schema {@code schemaUrl}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphqlServiceBuilder schemaUrls(Iterable<URL> schemaUrls) {
+    public GraphqlServiceBuilder schemaUrls(Iterable<String> schemaUrls) {
+        requireNonNull(schemaUrls, "schemaUrls");
+        return schemaUrls0(Streams.stream(schemaUrls)
+                                  .map(url -> {
+                                      try {
+                                          return ResourceUtil.getURL(url);
+                                      } catch (FileNotFoundException e) {
+                                          throw new IllegalStateException("Not found schema file(s)");
+                                      }
+                                  }).collect(toImmutableList()));
+    }
+
+    private GraphqlServiceBuilder schemaUrls0(Iterable<URL> schemaUrls) {
         this.schemaUrls.addAll(requireNonNull(schemaUrls, "schemaUrls"));
         return this;
     }
