@@ -25,8 +25,9 @@ public class HelloServiceImpl extends HelloServiceImplBase {
             responseObserver.onError(Status.FAILED_PRECONDITION.withDescription("Name cannot be empty").asException());
         } else {
             responseObserver.onNext(buildReply(toMessage(request.getName())));
+            responseObserver.onCompleted();
         }
-        responseObserver.onCompleted();
+
     }
 
     /**
