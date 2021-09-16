@@ -3,14 +3,41 @@ syntax = "proto3";
 package example.armeria.server.blog.grpc;
 option java_package = "example.armeria.server.blog.grpc";
 
-import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
 
 service BlogService {
-  rpc CreateBlogPost (BlogPost) returns (BlogPost) {}
-  rpc GetBlogPost (BlogId) returns (BlogPost) {}
-  rpc GetBlogPosts (Sort) returns (stream BlogPost) {}
-  rpc UpdateBlogPost (BlogPost) returns (BlogPost) {}
-  rpc DeleteBlogPost (BlogId) returns (BlogId) {}
+  rpc CreateBlogPost (CreateBlogPostRequest) returns (BlogPost) {}
+  rpc GetBlogPost (GetBlogPostRequest) returns (BlogPost) {}
+  rpc ListBlogPosts (ListBlogPostsRequest) returns (ListBlogPostsResponse) {}
+  rpc UpdateBlogPost (UpdateBlogPostRequest) returns (BlogPost) {}
+  rpc DeleteBlogPost (DeleteBlogPostRequest) returns (google.protobuf.Empty) {}
+}
+
+message CreateBlogPostRequest {
+  string title = 1;
+  string content = 2;
+}
+
+message GetBlogPostRequest {
+  int32 id = 1;
+}
+
+message ListBlogPostsRequest {
+  string order_by = 1;
+}
+
+message ListBlogPostsResponse {
+  repeated BlogPost blogs = 1;
+}
+
+message UpdateBlogPostRequest {
+  int32 id = 1;
+  string title = 2;
+  string content = 3;
+}
+
+message DeleteBlogPostRequest {
+  int32 id = 1;
 }
 
 message BlogPost {
@@ -19,12 +46,4 @@ message BlogPost {
   string content = 3;
   int64 createdAt = 4;
   int64 modifiedAt = 5;
-}
-
-message BlogId {
-  int32 id = 1;
-}
-
-message Sort {
-  bool descending = 1;
 }
