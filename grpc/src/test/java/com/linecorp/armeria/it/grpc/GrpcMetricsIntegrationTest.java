@@ -189,7 +189,7 @@ public class GrpcMetricsIntegrationTest {
         assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL,
                                    "http.status", "200", "grpc.status", "0")).isEqualTo(0.0);
         assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL,
-                                   "http.status", "500", "grpc.status", "2")).isEqualTo(225.0);
+                                   "http.status", "500", "grpc.status", "2")).isEqualTo(54.0);
     }
 
     @Nullable
