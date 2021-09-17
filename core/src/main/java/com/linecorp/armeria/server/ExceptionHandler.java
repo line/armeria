@@ -21,9 +21,10 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
- * Converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+ * Converts a {@link Throwable} to an {@link HttpResponse}.
  * Use this {@link ExceptionHandler} to send a different response depending on the {@link Throwable}:
  *
  * <pre>{@code
@@ -45,6 +46,23 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Server.builder().exceptionHandler(handler)...
  *
  * }</pre>
+ *
+ * <p>Please note that the {@link Throwable} is set to {@link RequestLog#responseCause()}. If you don't want
+ * to log the {@link Throwable}, use {@link HttpStatusException} or {@link HttpResponseException}:
+ * <pre>{@code
+ * ExceptionHandler handler = (ctx, cause) -> {
+ *     if (cause instanceof IllegalArgumentException) {
+ *         // IllegalArgumentException is set to RequestLog#responseCause().
+ *         return HttpResponse.of(HttpStatus.BAD_REQUEST);
+ *     }
+ *
+ *     if (cause instanceof NotFoundException) {
+ *         // NotFoundException is NOT set to RequestLog#responseCause().
+ *         return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.NOT_FOUND));
+ *     }
+ *
+ *     ...
+ * }
  *
  * @see ServerBuilder#exceptionHandler(ExceptionHandler)
  */

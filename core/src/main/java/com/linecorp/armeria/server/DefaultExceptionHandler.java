@@ -21,8 +21,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -45,22 +43,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
 
     /**
      * Converts the specified {@link Throwable} to an {@link HttpResponse}.
-     *
-     * <p>Implementation note:
-     * A failed {@link HttpResponse} should be returned in order to let a {@link RequestLog} complete deferred
-     * values. The given cause could be raised before setting deferred values of a {@link RequestLog}.
-     * See https://github.com/line/armeria/issues/3719.
-     *
-     * <p>For example:<pre>{@code
-     * // Bad - Deferred values will not be completed.
-     * HttpResponse.of(HttpStatus.BAD_REQUEST);
-     * // Good - A LoggingService will not log any exception and complete deferred values.
-     * HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST));
-     * // Good - A LoggingService will log the IllegalStateException and complete deferred values.
-     * HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST, new IllegalStateException(...)));
-     * }</pre>
      */
-    @Nullable
     @Override
     public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
         // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
