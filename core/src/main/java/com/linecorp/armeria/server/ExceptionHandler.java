@@ -63,7 +63,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
  *
  *     ...
  * }
- *
+ * }</pre>
  * @see ServerBuilder#exceptionHandler(ExceptionHandler)
  */
 @UnstableApi
