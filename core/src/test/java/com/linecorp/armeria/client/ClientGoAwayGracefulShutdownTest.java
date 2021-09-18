@@ -83,7 +83,7 @@ class ClientGoAwayGracefulShutdownTest {
                                               .responseTimeoutMillis(0)
                                               .build();
             client.get("/foo").aggregate().join();
-            // Trigger idle timeout and wait for a connection to initiate the graceful shutdown.
+            // Trigger the idle timeout and wait for a connection to initiate the graceful shutdown.
             Thread.sleep(2000);
             assertThat(opened).hasValue(1);
 
