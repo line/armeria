@@ -22,6 +22,7 @@ package com.linecorp.armeria.internal.common.kotlin
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil
 import com.linecorp.armeria.server.ServiceRequestContext
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -37,6 +38,7 @@ import kotlin.reflect.jvm.kotlinFunction
 /**
  * Invokes a suspending function and returns [CompletableFuture].
  */
+@OptIn(DelicateCoroutinesApi::class)
 internal fun callKotlinSuspendingMethod(
     method: Method,
     obj: Any,

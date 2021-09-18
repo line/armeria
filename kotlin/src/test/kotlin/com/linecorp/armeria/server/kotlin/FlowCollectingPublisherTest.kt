@@ -27,11 +27,11 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.flow
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
-import org.junit.jupiter.api.Test
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
 import org.reactivestreams.tck.PublisherVerification
 import org.reactivestreams.tck.TestEnvironment
+import org.testng.annotations.Test
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedTransferQueue
@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 private val ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"))
 
-@org.testng.annotations.Test
 internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnvironment(5000L, 2000L)) {
     override fun createPublisher(elements: Long): FlowCollectingPublisher<Long> =
         FlowCollectingPublisher(
