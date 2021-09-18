@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.sse.ServerSentEvent
 import com.linecorp.armeria.server.Route
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
-import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.ProducesEventStream
 import com.linecorp.armeria.server.annotation.ProducesJson
@@ -41,7 +40,6 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import reactor.test.StepVerifier
@@ -93,14 +91,6 @@ internal class FlowAnnotatedServiceTest {
     }
 
     @Test
-    @Disabled
-    fun test_blockingAnnotation(): Unit = runBlocking {
-        val res = client.get("/flow/blocking-annotation").aggregate().await()
-        assertThat(res.status()).isEqualTo(HttpStatus.OK)
-        assertThat(res.contentUtf8()).isEqualTo("OK")
-    }
-
-    @Test
     fun test_customContext(): Unit = runBlocking {
         val res = client.get("/flow/custom-context").aggregate().await()
         assertThat(res.status()).isEqualTo(HttpStatus.OK)
@@ -125,6 +115,13 @@ internal class FlowAnnotatedServiceTest {
         assertThat(cancelled.get()).isTrue
     }
 
+    @Test
+    fun test_runsWithinEventLoop(): Unit = runBlocking {
+        val res = client.get("/flow/runs-within-event-loop").aggregate().await()
+        assertThat(res.status()).isEqualTo(HttpStatus.OK)
+        assertThat(res.contentUtf8()).isEqualTo("OK")
+    }
+
     companion object {
         @JvmField
         @RegisterExtension
@@ -135,21 +132,21 @@ internal class FlowAnnotatedServiceTest {
                     annotatedService("/flow", object {
                         @Get("/byte-streaming")
                         @ProducesOctetStream
-                        suspend fun byteStreaming(): Flow<ByteArray> = flow {
+                        fun byteStreaming(): Flow<ByteArray> = flow {
                             emit("hello".toByteArray())
                             emit("world".toByteArray())
                         }
 
                         @Get("/json-string-streaming")
                         @ProducesJsonSequences
-                        suspend fun jsonStreamingString(): Flow<String> = flow {
+                        fun jsonStreamingString(): Flow<String> = flow {
                             emit("hello")
                             emit("world")
                         }
 
                         @Get("/json-obj-streaming")
                         @ProducesJsonSequences
-                        suspend fun jsonStreamingObj(): Flow<Member> = flow {
+                        fun jsonStreamingObj(): Flow<Member> = flow {
                             emit(Member(name = "foo", age = 10))
                             emit(Member(name = "bar", age = 20))
                             emit(Member(name = "baz", age = 30))
@@ -157,7 +154,7 @@ internal class FlowAnnotatedServiceTest {
 
                         @Get("/event-streaming")
                         @ProducesEventStream
-                        suspend fun eventStreaming(): Flow<ServerSentEvent> = flow {
+                        fun eventStreaming(): Flow<ServerSentEvent> = flow {
                             emit(
                                 ServerSentEvent
                                     .builder()
@@ -184,18 +181,9 @@ internal class FlowAnnotatedServiceTest {
                             emit(Member(name = "baz", age = 30))
                         }
 
-                        @Blocking
-                        @Get("/blocking-annotation")
-                        @ProducesText
-                        suspend fun blockingAnnotation(): Flow<String> = flow {
-                            ServiceRequestContext.current()
-                            assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
-                            emit("OK")
-                        }
-
                         @Get("/custom-context")
                         @ProducesText
-                        suspend fun userContext() = flow {
+                        fun userContext() = flow {
                             val user = checkNotNull(coroutineContext[User])
                             assertThat(user.name).isEqualTo("Armeria")
                             assertThat(user.role).isEqualTo("Admin")
@@ -204,14 +192,14 @@ internal class FlowAnnotatedServiceTest {
 
                         @Get("/custom-dispatcher")
                         @ProducesText
-                        suspend fun dispatcherContext() = flow {
+                        fun dispatcherContext() = flow {
                             assertThat(Thread.currentThread().name).contains("custom-thread")
                             emit("OK")
                         }
 
                         @Get("/cancellation")
                         @ProducesJsonSequences
-                        suspend fun cancellation() = flow {
+                        fun cancellation() = flow {
                             try {
                                 emit("OK")
                                 delay(2500L)
@@ -219,6 +207,14 @@ internal class FlowAnnotatedServiceTest {
                             } catch (e: CancellationException) {
                                 cancelled.set(true)
                             }
+                        }
+
+                        @Get("/runs-within-event-loop")
+                        @ProducesText
+                        fun runsWithinEventLoop() = flow {
+                            ServiceRequestContext.current()
+                            assertThat(Thread.currentThread().name).contains("armeria-common-worker")
+                            emit("OK")
                         }
                     })
                     decorator(

@@ -48,7 +48,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                     emit(it)
                 }
             },
-            ctx
+            ctx.eventLoop()
         )
 
     override fun createFailedPublisher(): FlowCollectingPublisher<Long> =
@@ -56,7 +56,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
             flow {
                 currentCoroutineContext().cancel()
             },
-            ctx
+            ctx.eventLoop()
         )
 
     @Test
@@ -71,7 +71,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                     queue.add(it)
                 }
             },
-            ctx
+            ctx.eventLoop()
         ).subscribe(object : Subscriber<Int> {
             private lateinit var subscription: Subscription
 
@@ -108,7 +108,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                     queue.add(it)
                 }
             }.buffer(capacity = 1),
-            ctx
+            ctx.eventLoop()
         ).subscribe(object : Subscriber<Int> {
             private lateinit var subscription: Subscription
 
@@ -141,12 +141,12 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
         val coroutineNameCaptor = AtomicReference<CoroutineName>()
 
         FlowCollectingPublisher(
-            flow = flow {
+            flow {
                 coroutineNameCaptor.set(currentCoroutineContext()[CoroutineName])
                 emit(1)
             },
-            ctx = ctx,
-            context = context
+            ctx.eventLoop(),
+            context
         ).subscribe(object : Subscriber<Int> {
             override fun onSubscribe(s: Subscription) {}
 

@@ -22,6 +22,7 @@ package com.linecorp.armeria.internal.common.kotlin
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil
 import com.linecorp.armeria.server.ServiceRequestContext
+import io.netty.util.concurrent.EventExecutor
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -74,9 +75,9 @@ internal fun callKotlinSuspendingMethod(
  * @see FlowCollectingPublisher
  */
 internal fun <T : Any> Flow<T>.asPublisher(
-    executorService: ExecutorService,
+    executor: EventExecutor,
     ctx: ServiceRequestContext
-): Publisher<T> = FlowCollectingPublisher(this, ctx, newCoroutineCtx(executorService, ctx))
+): Publisher<T> = FlowCollectingPublisher(this, executor, newCoroutineCtx(executor, ctx))
 
 private fun newCoroutineCtx(executorService: ExecutorService, ctx: ServiceRequestContext) =
     // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
