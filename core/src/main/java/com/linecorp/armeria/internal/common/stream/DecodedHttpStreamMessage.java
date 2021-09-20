@@ -61,6 +61,9 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     private RequestHeaders requestHeaders;
     @Nullable
     private Subscription upstream;
+    // For checking if subscribed.
+    @Nullable
+    private EventExecutor executor;
 
     private boolean handlerProduced;
     private boolean sawLeadingHeaders;
@@ -116,6 +119,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
 
     @Override
     protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
+        this.executor = executor;
         publisher.subscribe(subscriber, executor, options);
     }
 
@@ -163,7 +167,8 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
      * {@link StreamMessage}. It is useful when the {@link HttpDecoder} emits another {@link StreamMessage}s.
      */
     public void askUpstreamForElements(long n) {
-        assert subscriber != null;
+        // Make sure that this API should be called after subscribing.
+        assert executor != null;
         // Update in an event loop which subscribed this stream message.
         directRequest += n;
         // Call the original API.
