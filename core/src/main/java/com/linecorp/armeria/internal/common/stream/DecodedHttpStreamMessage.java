@@ -67,6 +67,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     private boolean initialized;
     private boolean askedUpstreamForElement;
     private boolean cancelled;
+    private long directRequest;
 
     /**
      * Returns a new {@link DecodedHttpStreamMessage} with the specified {@link HttpDecoder} and
@@ -162,15 +163,19 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
      * {@link StreamMessage}. It is useful when the {@link HttpDecoder} emits another {@link StreamMessage}s.
      */
     public void askUpstreamForElements(long n) {
-        if (!askedUpstreamForElement) {
-            askedUpstreamForElement = true;
-            assert upstream != null;
-            upstream.request(n);
-        }
+        assert subscriber != null;
+        // Update in an event loop which subscribed this stream message.
+        directRequest += n;
+        // Call the original API.
+        askUpstreamForElement();
     }
 
     private void askUpstreamForElement() {
-        askUpstreamForElements(1);
+        if (!askedUpstreamForElement) {
+            askedUpstreamForElement = true;
+            assert upstream != null;
+            upstream.request(1);
+        }
     }
 
     private void cancelAndCleanup() {
@@ -231,6 +236,15 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                     }
                 }
 
+                if (directRequest > 0) {
+                    directRequest--;
+                }
+                // If there is a remaining demand, ask upstream for more elements
+                if (directRequest > 0) {
+                    askUpstreamForElement();
+                    return;
+                }
+
                 if (handlerProduced) {
                     // Handler produced something.
                     if (!askedUpstreamForElement) {
@@ -250,11 +264,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 } else {
                     // Handler didn't produce anything, which means it needs more elements from the upstream
                     // to produce something.
-                    if (demand() > 0) {
-                        askUpstreamForElement();
-                    } else {
-                        // The subscriber doesn't request any T type message.
-                    }
+                    askUpstreamForElement();
                 }
             } catch (Throwable ex) {
                 decoder.processOnError(ex);

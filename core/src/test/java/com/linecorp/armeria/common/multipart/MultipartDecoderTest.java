@@ -240,7 +240,7 @@ public class MultipartDecoderTest {
     }
 
     @Test
-    void testMulitiplePartsWithOneByOneSubscriber() {
+    void testMultiplePartsWithOneByOneSubscriber() {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +

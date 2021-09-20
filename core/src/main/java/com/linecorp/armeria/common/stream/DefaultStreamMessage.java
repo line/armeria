@@ -250,14 +250,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void doRequest(long n) {
+        onRequest(n);
+
         final long oldDemand = demand;
         if (oldDemand >= Long.MAX_VALUE - n) {
             demand = Long.MAX_VALUE;
         } else {
             demand = oldDemand + n;
         }
-
-        onRequest(n);
 
         if (oldDemand == 0 && !queue.isEmpty()) {
             notifySubscriber0();

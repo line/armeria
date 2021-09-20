@@ -32,7 +32,7 @@ package com.linecorp.armeria.common.multipart;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
+import java.util.function.LongConsumer;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -113,7 +113,7 @@ final class MimeParser {
      * The publisher that emits body part contents.
      */
     @Nullable
-    private DefaultStreamMessage<HttpData> bodyPartPublisher;
+    private BodyPartPublisher bodyPartPublisher;
 
     /**
      * Read and process body parts until we see the terminating boundary line.
@@ -138,13 +138,15 @@ final class MimeParser {
     /**
      * Request HttpData for BodyPart content.
      */
-    private final Consumer<Long> onBodyPartRequestHttpData;
+    private final LongConsumer onBodyPartRequestHttpData;
+
+    private boolean parsing;
 
     /**
      * Parses the MIME content.
      */
     MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary,
-               Consumer<Long> onBodyPartRequestHttpData) {
+               LongConsumer onBodyPartRequestHttpData) {
         this.in = in;
         this.out = out;
         boundaryBytes = getBytes("--" + boundary);
@@ -190,6 +192,7 @@ final class MimeParser {
             throw new MimeParsingException("Parser is closed");
         }
 
+        parsing = true;
         try {
             while (true) {
                 switch (state) {
@@ -237,15 +240,7 @@ final class MimeParser {
                         state = State.BODY;
                         startOfLine = true;
 
-                        bodyPartPublisher = new DefaultStreamMessage<HttpData>() {
-                            @Override
-                            protected void onRequest(long n) {
-                                // Should we limit this to 1? Because downstream can request aggressively
-                                // and ignore the demand number of BodyPart. Or how can we control
-                                // this stop when we meet END_PART.
-                                onBodyPartRequestHttpData.accept(n);
-                            }
-                        };
+                        bodyPartPublisher = new BodyPartPublisher();
                         final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
                                                                  .content(bodyPartPublisher)
                                                                  .build();
@@ -258,12 +253,18 @@ final class MimeParser {
                         if (boundaryStart == -1 || bodyContent == NEED_MORE) {
                             if (bodyContent == NEED_MORE) {
                                 // Need more data
+                                if (bodyPartPublisher.demand() > 0) {
+                                    onBodyPartRequestHttpData.accept(1);
+                                }
                                 return;
                             }
                         } else {
                             startOfLine = false;
                         }
                         bodyPartPublisher.write(HttpData.wrap(bodyContent));
+                        if (bodyPartPublisher.demand() > 0) {
+                            onBodyPartRequestHttpData.accept(1);
+                        }
                         break;
 
                     case END_PART:
@@ -293,6 +294,8 @@ final class MimeParser {
             throw ex;
         } catch (Throwable ex) {
             throw new MimeParsingException(ex);
+        } finally {
+            parsing = false;
         }
     }
 
@@ -636,5 +639,19 @@ final class MimeParser {
          * The state set when all parts are complete. It is set only once.
          */
         END_MESSAGE
+    }
+
+    private class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
+
+        @Override
+        protected void onRequest(long n) {
+            if (!isOpen()) {
+                return;
+            }
+            if (parsing) {
+                return;
+            }
+            onBodyPartRequestHttpData.accept(1);
+        }
     }
 }
