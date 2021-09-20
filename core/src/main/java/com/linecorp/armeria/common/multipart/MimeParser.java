@@ -262,9 +262,6 @@ final class MimeParser {
                             startOfLine = false;
                         }
                         bodyPartPublisher.write(HttpData.wrap(bodyContent));
-                        if (bodyPartPublisher.demand() > 0) {
-                            onBodyPartRequestHttpData.accept(1);
-                        }
                         break;
 
                     case END_PART:
@@ -319,7 +316,7 @@ final class MimeParser {
                 final int bodyLength = length - (boundaryLength + 1);
                 return in.readBytes(bodyLength);
             }
-            // remaining data can be an complete boundary, force it to be
+            // remaining data can be a complete boundary, force it to be
             // processed during next iteration
             return NEED_MORE;
         }
@@ -595,7 +592,7 @@ final class MimeParser {
         final int size = chars.length;
         final byte[] bytes = new byte[size];
 
-        for (int i = 0; i < size;) {
+        for (int i = 0; i < size; ) {
             bytes[i] = (byte) chars[i++];
         }
         return bytes;
@@ -641,13 +638,18 @@ final class MimeParser {
         END_MESSAGE
     }
 
+    /**
+     * Subscriber may request after parser handle HttpData completely.
+     * So we need to re-trigger the upstream if there is no upstream request anymore.
+     */
     private class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
-
         @Override
         protected void onRequest(long n) {
+            // If publisher is closed, we can't allow subscriber request upstream.
             if (!isOpen()) {
                 return;
             }
+            // Still is parse() loop, let BODY case handle request upstream or not.
             if (parsing) {
                 return;
             }
