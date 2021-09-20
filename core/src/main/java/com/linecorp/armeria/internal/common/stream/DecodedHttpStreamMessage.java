@@ -171,7 +171,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
         assert executor != null;
         // Update in an event loop which subscribed this stream message.
         directRequest += n;
-        // Call the original API.
         askUpstreamForElement();
     }
 
