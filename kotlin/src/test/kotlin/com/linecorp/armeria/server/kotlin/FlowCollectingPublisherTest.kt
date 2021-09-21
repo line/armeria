@@ -54,7 +54,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
     override fun createFailedPublisher(): FlowCollectingPublisher<Long> =
         FlowCollectingPublisher(
             flow {
-                currentCoroutineContext().cancel()
+                throw Throwable()
             },
             ctx.eventLoop()
         )

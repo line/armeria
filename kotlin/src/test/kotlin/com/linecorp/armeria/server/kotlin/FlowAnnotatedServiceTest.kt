@@ -206,6 +206,7 @@ internal class FlowAnnotatedServiceTest {
                                 emit("world")
                             } catch (e: CancellationException) {
                                 cancelled.set(true)
+                                throw e
                             }
                         }
 
