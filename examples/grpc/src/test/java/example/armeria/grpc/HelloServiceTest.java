@@ -53,14 +53,15 @@ class HelloServiceTest {
 
     @Test
     void testsTheErrorUnframedResponseWithJsonContentType() throws InvalidProtocolBufferException {
-        var client = WebClient.builder(server.httpUri())
-                              .addHeader("content-type", "application/json; charset=utf-8; protocol=gRPC")
-                              .build();
-        var response = client.post("example.grpc.hello.HelloService/Hello",
-                                   JsonFormat.printer().print(HelloRequest.getDefaultInstance()))
-                             .aggregate()
-                             .join()
-                             .contentUtf8();
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .addHeader("content-type",
+                                                     "application/json; charset=utf-8; protocol=gRPC")
+                                          .build();
+        final String response = client.post("example.grpc.hello.HelloService/Hello",
+                                            JsonFormat.printer().print(HelloRequest.getDefaultInstance()))
+                                      .aggregate()
+                                      .join()
+                                      .contentUtf8();
         assertThat(response).isEqualTo(
                 "{\"grpc-code\":\"FAILED_PRECONDITION\",\"message\":\"Name cannot be empty\"}");
     }
