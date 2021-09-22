@@ -302,7 +302,7 @@ final class ArmeriaConfigurationUtil {
             return null;
         }
         final KeyStore store = KeyStore.getInstance(firstNonNull(type, "JKS"));
-        final URL url = ResourceUtil.getURL(resource);
+        final URL url = ResourceUtil.getUrl(resource);
         store.load(url.openStream(), password != null ? password.toCharArray()
                                                       : null);
         return store;

@@ -106,7 +106,7 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Adds the schema {@code schemaUrl}s.
+     * Adds the schema loaded from the given URLs.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
     public GraphqlServiceBuilder schemaUrls(String... schemaUrls) {
@@ -114,7 +114,7 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Adds the schema {@code schemaUrl}s.
+     * Adds the schema loaded from the given URLs.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
     public GraphqlServiceBuilder schemaUrls(Iterable<String> schemaUrls) {
@@ -122,7 +122,7 @@ public final class GraphqlServiceBuilder {
         return schemaUrls0(Streams.stream(schemaUrls)
                                   .map(url -> {
                                       try {
-                                          return ResourceUtil.getURL(url);
+                                          return ResourceUtil.getUrl(url);
                                       } catch (FileNotFoundException e) {
                                           throw new IllegalStateException("Not found schema file(s)", e);
                                       }
@@ -234,7 +234,7 @@ public final class GraphqlServiceBuilder {
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
-        final GraphQLSchema schema = makeSchema();
+        final GraphQLSchema schema = buildSchema();
         GraphQL.Builder builder = GraphQL.newGraphQL(schema);
         final List<Instrumentation> instrumentations = this.instrumentations.build();
         if (!instrumentations.isEmpty()) {
@@ -255,7 +255,7 @@ public final class GraphqlServiceBuilder {
         return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
     }
 
-    private GraphQLSchema makeSchema() {
+    private GraphQLSchema buildSchema() {
         final List<URL> schemaUrls = this.schemaUrls.build();
         final List<RuntimeWiringConfigurator> runtimeWiringConfigurators =
                 this.runtimeWiringConfigurators.build();

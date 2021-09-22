@@ -37,7 +37,7 @@ public final class ResourceUtil {
      * @return a corresponding URL object
      * @throws FileNotFoundException if the resource cannot be resolved to a URL
      */
-    public static URL getURL(String resourceLocation) throws FileNotFoundException {
+    public static URL getUrl(String resourceLocation) throws FileNotFoundException {
         // Forked from Spring 5.2.2
         // https://github.com/spring-projects/spring-framework/blob/22a888b53df620b0905ce8beb6b0cf71981086d8/spring-core/src/main/java/org/springframework/util/ResourceUtils.java#L129
         if (resourceLocation.startsWith("classpath:")) {
