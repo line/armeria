@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.server.Server
-import com.linecorp.armeria.server.ServerPort
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences
 import kotlinx.coroutines.flow.Flow
@@ -62,10 +61,7 @@ open class AnnotatedServiceFlowBenchmark {
             .build()
             .also { it.start().join() }
 
-        val httpPort = server.activePorts().values
-            .first { obj: ServerPort -> obj.hasHttp() }.localAddress().port
-
-        client = WebClient.of("h2c://127.0.0.1:$httpPort")
+        client = WebClient.of("h2c://127.0.0.1:${server.activeLocalPort()}")
     }
 
     @TearDown

@@ -21,7 +21,6 @@ import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.internal.common.kotlin.FlowCollectingPublisher
 import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.flow
