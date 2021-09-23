@@ -1,6 +1,4 @@
 armeria:
-  ports:
-    - port: 0
   max-num-connections: 8
   idle-timeout: 2s
   ping-interval: 1s
