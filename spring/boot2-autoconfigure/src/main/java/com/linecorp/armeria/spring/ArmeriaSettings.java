@@ -270,7 +270,6 @@ public class ArmeriaSettings {
 
         /**
          * The access log format.
-         * Please note that this format is used only when the specified {@code type} is {@code "custom"}.
          */
         @Nullable
         private String format;
@@ -292,6 +291,7 @@ public class ArmeriaSettings {
 
         /**
          * Returns the access log format.
+         * Please note that this format is used only when the specified {@code type} is {@code "custom"}.
          */
         @Nullable
         public String getFormat() {
@@ -300,6 +300,7 @@ public class ArmeriaSettings {
 
         /**
          * Sets the access log format.
+         * Please note that this format is used only when the specified {@code type} is {@code "custom"}.
          */
         public void setFormat(@Nullable String format) {
             this.format = format;
