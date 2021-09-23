@@ -48,7 +48,7 @@ public final class ArmeriaConfigurationSettingsUtil {
         configureIfNonNull(settings.getMaxNumRequestsPerConnection(), server::maxNumRequestsPerConnection);
 
         configureIfNonNull(settings.getHttp2InitialConnectionWindowSize(),
-                           http2InitialConnectionWindowSize -> server.http2InitialStreamWindowSize(
+                           http2InitialConnectionWindowSize -> server.http2InitialConnectionWindowSize(
                                    Ints.saturatedCast(parseDataSize(http2InitialConnectionWindowSize))));
         configureIfNonNull(settings.getHttp2InitialStreamWindowSize(),
                            http2InitialStreamWindowSize -> server.http2InitialStreamWindowSize(
