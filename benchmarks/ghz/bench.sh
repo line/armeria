@@ -35,7 +35,7 @@ trap stop_server INT
 if [ "${GRPC_SERVER_START}" = "true" ]; then
   echo "==> 🚀 Starting gRPC server..."
   BASEDIR=$(dirname $0)
-  "${BASEDIR}"/../../../gradlew :it:grpc:ghz:run -PnoWeb -q &
+  "${BASEDIR}"/../../gradlew :benchmark:ghz:run -PnoWeb -q &
   GRPC_SERVER_PID=$!
 
   sleep "${GRPC_SERVER_STARTUP_TIME}"
