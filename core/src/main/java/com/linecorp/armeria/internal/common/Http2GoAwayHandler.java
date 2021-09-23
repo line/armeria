@@ -79,7 +79,7 @@ public final class Http2GoAwayHandler {
 
         if (lastStreamId == Integer.MAX_VALUE && errorCode == Http2Error.NO_ERROR.code()) {
             // Should not close a connection if a last stream identifier is 2^31-1 and a NO_ERROR code.
-            // A server attempted to gracefully shut down a connection.
+            // The server attempted to gracefully shut a connection down.
             // The server will send another GOAWAY frame with an updated last stream identifier.
             // https://datatracker.ietf.org/doc/html/rfc7540#section-6.8
             return;
