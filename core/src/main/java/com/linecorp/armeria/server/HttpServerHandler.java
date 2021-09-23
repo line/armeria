@@ -59,7 +59,6 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
@@ -402,18 +401,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
 
             serviceResponse = serviceResponse.recover(cause -> {
-                // Recover a failed response with the exception handler.
-                final HttpResponse converted = exceptionHandler.convert(reqCtx, cause);
-                assert converted != null;
-                if (converted instanceof AbortedHttpResponse) {
-                    return converted;
-                }
-                // Wraps the converted HttpResponse using HttpResponse.ofFailure(...) so that
-                // - We can log the responseCause.
-                // - The log is complete even though deferred values of such as
-                //   responseContent and responseContentPreview are not set.
-                // See https://github.com/line/armeria/issues/3719.
-                return HttpResponse.ofFailure(HttpResponseException.of(converted, cause));
+                // Store the cause to set as the log.responseCause().
+                RecoveredCause.set(reqCtx, cause);
+                return exceptionHandler.convert(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();

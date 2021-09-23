@@ -99,7 +99,7 @@ class ExceptionHandlerTest {
     }
 
     @Test
-    void logIsCompleteEvenResponseContentIsDeferred() throws InterruptedException {
+    void logIsCompleteEvenIfResponseContentIsDeferred() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         client.get("/throw-exception").aggregate().join();
         final ServiceRequestContext ctx = server.requestContextCaptor().poll();
