@@ -142,11 +142,6 @@ public final class ArmeriaHttpUtil {
     private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST = new CharSequenceMap();
 
     /**
-     * The set of headers that must not be directly copied when converting response headers.
-     */
-    private static final CharSequenceMap HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST = new CharSequenceMap();
-
-    /**
      * The set of headers that must not be directly copied when converting trailers.
      */
     private static final CharSequenceMap HTTP_TRAILER_DISALLOWED_LIST = new CharSequenceMap();
@@ -175,13 +170,6 @@ public final class ArmeriaHttpUtil {
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
-
-        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
-        // Request Pseudo-Headers are not allowed for response headers.
-        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.AUTHORITY, EMPTY_STRING);
-        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.METHOD, EMPTY_STRING);
-        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
-        HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
 
         // https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
         // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1
@@ -220,12 +208,6 @@ public final class ArmeriaHttpUtil {
 
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
-
-    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST =
-            ImmutableSet.<AsciiString>builder()
-                        .addAll(HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.names())
-                        .add(HttpHeaderNames.STATUS)
-                        .build();
 
     public static final String SERVER_HEADER =
             "Armeria/" + Version.get("armeria", ArmeriaHttpUtil.class.getClassLoader())
@@ -409,6 +391,26 @@ public final class ArmeriaHttpUtil {
         return request.method() == HttpMethod.OPTIONS &&
                request.headers().contains(HttpHeaderNames.ORIGIN) &&
                request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    }
+
+    /**
+     * Returns whether the specified header name is disallowed for additional trailers.
+     */
+    public static boolean isDisallowedAdditionalTrailer(AsciiString name) {
+        // Pseudo headers are not allowed for additional trailers.
+        return !name.isEmpty() && name.charAt(0) == ':';
+    }
+
+    /**
+     * Returns whether the specified header name is disallowed for response headers.
+     */
+    public static boolean isDisallowedResponseHeader(AsciiString name) {
+        // Request Pseudo-Headers are not allowed for response headers.
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
+        if (HttpHeaderNames.STATUS.equals(name)) {
+            return false;
+        }
+        return isDisallowedAdditionalTrailer(name);
     }
 
     /**
@@ -753,7 +755,7 @@ public final class ArmeriaHttpUtil {
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
                 continue;
             }
-            if (HTTP2_RESPONSE_HEADERS_DISALLOWED_LIST.contains(name)) {
+            if (isDisallowedResponseHeader(name)) {
                 continue;
             }
             outputHeaders.add(name, value);
@@ -774,7 +776,7 @@ public final class ArmeriaHttpUtil {
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
                 continue;
             }
-            if (ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST.contains(name)) {
+            if (isDisallowedAdditionalTrailer(name)) {
                 continue;
             }
             if (isTrailerDisallowed(name)) {
