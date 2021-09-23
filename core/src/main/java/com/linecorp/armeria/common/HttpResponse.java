@@ -166,7 +166,7 @@ public interface HttpResponse extends Response, HttpMessage {
                                                  CommonPools.workerGroup()::next));
     }
 
-    /***
+    /**
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
      * delegates to the provided {@link HttpResponse} {@link Supplier},
      * beginning publishing after {@code delay} has passed from the provided {@link ScheduledExecutorService}.
