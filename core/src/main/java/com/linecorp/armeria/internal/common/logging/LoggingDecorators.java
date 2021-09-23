@@ -49,18 +49,27 @@ public final class LoggingDecorators {
     public static void logWhenComplete(
             Logger logger, RequestContext ctx,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
-        ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                logger.warn("{} Unexpected exception while logging request: ", ctx, e);
+        ctx.log().whenRequestComplete().thenAccept(log -> {
+            try {
+                requestLogger.accept(log);
+            } catch (Throwable t) {
+                logException(logger, ctx, "request", t);
             }
-            return null;
         });
-        ctx.log().whenComplete().thenAccept(responseLogger).exceptionally(e -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                logger.warn("{} Unexpected exception while logging response: ", ctx, e);
+        ctx.log().whenComplete().thenAccept(log -> {
+            try {
+                responseLogger.accept(log);
+            } catch (Throwable t) {
+                logException(logger, ctx, "response", t);
             }
-            return null;
         });
+    }
+
+    private static void logException(Logger logger, RequestContext ctx,
+                                     String requestOrResponse, Throwable cause) {
+        try (SafeCloseable ignored = ctx.push()) {
+            logger.warn("{} Unexpected exception while logging {}: ", ctx, requestOrResponse, cause);
+        }
     }
 
     /**
