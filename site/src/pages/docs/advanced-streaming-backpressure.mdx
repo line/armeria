@@ -38,7 +38,7 @@ The <type://HttpFile> loads chunks one by one and send them to the client with b
 If we want to send large data from other than files (e.g. database) with backpressure, we need to implement
 the backpressure by ourselves. Let's start it by implementing the simplified version of <type://HttpFile>.
 
-First, we use <type://HttpResponseWriter> from <type://HttpResponse#streaming()> to send streaming responses:
+First, we use <type://HttpResponseWriter> from <type://HttpResponse#streaming()> to send a streaming response:
 ```java
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
@@ -128,12 +128,12 @@ private void streamingResponse(HttpResponseWriter response, int index) {
     });
 }
 ```
-So far we have implemented the simplified version of <type://HttpFile>. Now, we can implement streaming
-responses with backpressure from any other sources (e.g. database) by simply changing the `produceChunk()`
+So far we have implemented the simplified version of <type://HttpFile>. Now, we can implement the streaming
+response with backpressure from any other sources (e.g. database) by simply changing the `produceChunk()`
 method to fetch data from the sources.
 
 You can also implement backpressure with other libraries, such as [Reactor](https://projectreactor.io) and
-[RxJava](https://github.com/ReactiveX/RxJava). Then, you can simply return it using
+[RxJava](https://github.com/ReactiveX/RxJava). With the implementation, you can simply return it using
 <type://HttpResponse#of(ResponseHeaders,Publisher)>:
 ```java
 sb.service("/big_data.dat", (ctx, req) -> {
