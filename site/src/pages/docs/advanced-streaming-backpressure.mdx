@@ -1,18 +1,36 @@
-# Sending streaming responses using backpressure
+# Sending a streaming response with backpressure
 
 Let's say that we want to serve a static file whose size is larger than your available memory.
 How are we going to serve that file?
 
 If we load the file into the memory at once, we will definitely get an `OutOfMemoryError`.
 In order to avoid the error, we should:
-- Divide the file into chunks
-- Load the first chunk into memory
-- Send the chunk to the client
-- Wait until the chunk is written to the sending socket buffer
-  - So we don't load data into memory when the client is not ready to receive. This is called __backpressure__.
-- Load the second chunk and repeat the steps until we send all chunks
+1. Divide the file into chunks
+2. Load the first chunk into memory
+3. Send the chunk to the client
+4. Wait until the chunk is written to the sending socket buffer
+   - So we don't load data into memory when the client is not ready to receive. This is called __backpressure__.
+5. Load the second chunk and repeat the steps until we send all chunks
 
 Now, we can send the large file without spending much memory.
+This flowchart illustrates the process:
+```flowchart
+st=>start: Divide the file into chunks
+e=>end: We sent all chunks
+op1=>operation: Set i = 0
+op2=>operation: Load the ith chunk
+cond=>condition: Is the chunk empty?
+
+op3=>operation: Send the chunk to the client
+op4=>operation: Load the ith chunk into memory
+op5=>operation: Send the chunk to the client
+op6=>operation: Increase i by 1
+op7=>operation: We sent all chunks
+
+st->op1->op2->cond
+cond(yes)->e
+cond(no, right)->op5(right)->op6(right)->op2
+```
 
 <Tip>
 
@@ -21,20 +39,33 @@ to understand backpressure and the situation when an `OutOfMemoryError` is raise
 
 </Tip>
 
-It's always easy to say, but what should we do to send the file using Armeria?
+## Sending a file using <type://HttpFile>
+
+It's always easy to say, but what should we do to send the file with backpressure using Armeria?
 ```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.file.HttpFile;
+
 HttpFile bigFile = HttpFile.of(new File("/var/www/big_file.dat"));
 Server.builder()
       .service("/bif_file.dat", bigFile.asService())
       .build();
 ```
-That's it! The <type://HttpFile> loads chunks one by one and send them to the client using backpressure.
+That's it! The <type://HttpFile> loads chunks one by one and send them to the client with backpressure.
 
-What if you want to send large data from other than files (e.g. database) using backpressure?
+## Sending a streaming response using <type://HttpResponseWriter>
+
+What if you want to send large data from other than files (e.g. database) with backpressure?
 To answer that question, let's implement the simplified version of <type://HttpFile>.
 
 First, we use <type://HttpResponseWriter> from <type://HttpResponse#streaming()> to send streaming responses:
 ```java
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.server.ServerBuilder;
+
 // This code has a problem. Do not copy/paste and use it.
 ServerBuilder sb = ...;
 sb.service("/big_file.dat", (ctx, req) -> {
@@ -103,7 +134,7 @@ sb.service("/big_file.dat", (ctx, req) -> {
 });
 
 private void streamingResponse(HttpResponseWriter response, int index) {
-    if (isEndOfFile() {
+    if (isEndOfFile()) {
         // Close the response when we send all chunks.
         response.close();
         return;
@@ -118,12 +149,22 @@ private void streamingResponse(HttpResponseWriter response, int index) {
 }
 ```
 So far we have implemented the simplified version of <type://HttpFile>. Now, we can implement streaming
-responses using backpressure from any other sources (e.g. database) by simply changing the `produceChunk()`
+responses with backpressure from any other sources (e.g. database) by simply changing the `produceChunk()`
 method to fetch data from the sources.
+
+You can also implement backpressure with other libraries, such as [Reactor](https://projectreactor.io) and
+[RxJava](https://github.com/ReactiveX/RxJava). Then, you can simply return it using
+<type://HttpResponse#of(ResponseHeaders,Publisher)>:
+```java
+sb.service("/big_data.dat", (ctx, req) -> {
+    Flux<HttpData> flux = ... // Fetch data from other source with backpressure.
+    return HttpResponse.of(ResponseHeaders.of(200), flux);
+});
+```
 
 <Tip>
 
 You can find [a funny working example](https://github.com/line/armeria-examples/blob/master/proxy-server/src/main/java/example/armeria/proxy/AnimationService.java)
-that sends the streaming response using backpressure.
+that sends the streaming response with backpressure.
 
 </Tip>

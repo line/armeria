@@ -89,6 +89,7 @@
     "react-helmet": "^6.1.0",
     "react-mixitup": "^2.3.0",
     "react-reveal": "^1.2.2",
+    "react-simple-flowchart": "^1.2.4",
     "react-sticky-box": "^0.9.3",
     "react-syntax-highlighter": "^15.4.3",
     "react-twitter-embed": "^3.0.3",
