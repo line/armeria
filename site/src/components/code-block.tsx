@@ -2,7 +2,6 @@ import { CopyOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import React, { useCallback, useRef, useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
-import Flowchart from 'react-simple-flowchart';
 import {
   PrismLight as Prism,
   SyntaxHighlighterProps,
@@ -58,10 +57,6 @@ const supportedLanguages = {
 Object.entries(supportedLanguages).forEach(([name, func]) => {
   Prism.registerLanguage(name, func);
 });
-
-function isFlowChart(language?: string) {
-  return language?.toLowerCase() === 'flowchart';
-}
 
 function filterLanguage(language?: string) {
   // eslint-disable-next-line no-param-reassign
@@ -148,23 +143,6 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
     }
     timeoutRef.current = setTimeout(() => setCopied(false), 1000);
   }, []);
-
-  if (isFlowChart(props.language)) {
-    const code = process(props.children);
-    if (code.length === 0) {
-      return null;
-    }
-    const opt = {
-      x: 0,
-      y: 0,
-    };
-
-    return (
-      <div>
-        <Flowchart chartCode={code} options={opt} />
-      </div>
-    );
-  }
 
   const code = process(props.children);
   if (code.length === 0) {

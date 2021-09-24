@@ -1,8 +1,6 @@
 # Sending a streaming response with backpressure
 
 Let's say that we want to serve a static file whose size is larger than your available memory.
-How are we going to serve that file?
-
 If we load the file into the memory at once, we will definitely get an `OutOfMemoryError`.
 In order to avoid the error, we should:
 1. Divide the file into chunks
@@ -13,24 +11,6 @@ In order to avoid the error, we should:
 5. Load the second chunk and repeat the steps until we send all chunks
 
 Now, we can send the large file without spending much memory.
-This flowchart illustrates the process:
-```flowchart
-st=>start: Divide the file into chunks
-e=>end: We sent all chunks
-op1=>operation: Set i = 0
-op2=>operation: Load the ith chunk
-cond=>condition: Is the chunk empty?
-
-op3=>operation: Send the chunk to the client
-op4=>operation: Load the ith chunk into memory
-op5=>operation: Send the chunk to the client
-op6=>operation: Increase i by 1
-op7=>operation: We sent all chunks
-
-st->op1->op2->cond
-cond(yes)->e
-cond(no, right)->op5(right)->op6(right)->op2
-```
 
 <Tip>
 
@@ -39,24 +19,24 @@ to understand backpressure and the situation when an `OutOfMemoryError` is raise
 
 </Tip>
 
-## Sending a file using <type://HttpFile>
+## Sending a file with backpressure
 
-It's always easy to say, but what should we do to send the file with backpressure using Armeria?
+We can easily send the file with backpressure using <type://HttpFile>:
 ```java
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.file.HttpFile;
 
 HttpFile bigFile = HttpFile.of(new File("/var/www/big_file.dat"));
 Server.builder()
-      .service("/bif_file.dat", bigFile.asService())
+      .service("/big_file.dat", bigFile.asService())
       .build();
 ```
-That's it! The <type://HttpFile> loads chunks one by one and send them to the client with backpressure.
+The <type://HttpFile> loads chunks one by one and send them to the client with backpressure.
 
 ## Sending a streaming response using <type://HttpResponseWriter>
 
-What if you want to send large data from other than files (e.g. database) with backpressure?
-To answer that question, let's implement the simplified version of <type://HttpFile>.
+If we want to send large data from other than files (e.g. database) with backpressure, we need to implement
+the backpressure by ourselves. Let's start it by implementing the simplified version of <type://HttpFile>.
 
 First, we use <type://HttpResponseWriter> from <type://HttpResponse#streaming()> to send streaming responses:
 ```java
