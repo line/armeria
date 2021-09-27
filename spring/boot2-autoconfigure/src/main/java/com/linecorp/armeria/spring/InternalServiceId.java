@@ -20,13 +20,15 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 
 /**
- * Defines the IDs of internal {@link HttpService}s that should not be exposed to the external network.
+ * Defines the IDs of internal {@code HttpService}s that should not be exposed to the external network.
  */
+@UnstableApi
 public enum InternalServiceId {
     /**
      * The ID of {@link DocService}.
