@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public final class DropwizardExpositionService implements HttpService {
+final class DropwizardExpositionService implements HttpService {
 
     private final MetricRegistry meterRegistry;
     private final ObjectMapper mapper;

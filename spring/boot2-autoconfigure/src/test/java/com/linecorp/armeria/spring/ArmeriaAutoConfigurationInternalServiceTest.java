@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,19 +31,19 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.spring.InternalServices;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaCompressionConfigurationTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaAutoConfigurationInternalServiceTest.TestConfiguration;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class,
+        properties = "management.metrics.export.defaults.enabled=true")
 @ActiveProfiles({ "local", "internalServiceTest" })
 @DirtiesContext
-class ArmeriaAutoConfigurationInternalServiceTest {
+public class ArmeriaAutoConfigurationInternalServiceTest {
 
     @SpringBootApplication
-    static class TestConfiguration {}
+    public static class TestConfiguration {}
 
     @Inject
     private Server server;
@@ -53,7 +53,7 @@ class ArmeriaAutoConfigurationInternalServiceTest {
     InternalServices internalServices;
 
     @Test
-    void exposeInternalServicesToInternalPort() throws Exception {
+    public void exposeInternalServicesToInternalPort() throws Exception {
         final Port internalServicePort = internalServices.internalServicePort();
         assertThat(internalServicePort).isNotNull();
         assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);

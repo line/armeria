@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.maybeNewPort;
 
@@ -29,22 +29,22 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
-import com.linecorp.armeria.spring.DocServiceConfigurator;
-import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * A collection of internal {@link HttpService}s and their {@link Port}s.
+ * A collection of internal {@code HttpService}s and their {@code Port}s.
  */
+@UnstableApi
 public final class InternalServices {
 
     private static final Logger logger = LoggerFactory.getLogger(InternalServices.class);
@@ -60,6 +60,10 @@ public final class InternalServices {
         return true;
     }
 
+    /**
+     * Returns a newly created {@link InternalServices} from the specified properties.
+     */
+    @UnstableApi
     public static InternalServices of(
             ArmeriaSettings settings,
             MeterRegistry meterRegistry,
@@ -89,21 +93,30 @@ public final class InternalServices {
 
         HttpService expositionService = null;
         if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
+            final String prometheusMeterRegistryClassName = "io.micrometer.prometheus.PrometheusMeterRegistry";
             final boolean hasPrometheus = hasAllClasses(
-                    "io.micrometer.prometheus.PrometheusMeterRegistry",
+                    prometheusMeterRegistryClassName,
                     "io.prometheus.client.CollectorRegistry");
 
             if (hasPrometheus) {
                 expositionService = PrometheusSupport.newExpositionService(meterRegistry);
             }
+
+            final String dropwizardMeterRegistryClassName =
+                    "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry";
             if (expositionService == null) {
                 final boolean hasDropwizard = hasAllClasses(
-                        "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
+                        dropwizardMeterRegistryClassName,
                         "com.codahale.metrics.MetricRegistry",
                         "com.codahale.metrics.json.MetricsModule");
                 if (hasDropwizard) {
                     expositionService = DropwizardSupport.newExpositionService(meterRegistry);
                 }
+            }
+            if (expositionService == null) {
+                logger.debug("Failed to expose metrics to '{}' with {} (expected: either {} or {})",
+                             settings.getMetricsPath(), meterRegistry, prometheusMeterRegistryClassName,
+                             dropwizardMeterRegistryClassName);
             }
         }
 
@@ -141,16 +154,25 @@ public final class InternalServices {
         this.managementServerPort = managementServerPort;
     }
 
+    /**
+     * Returns the {@link DocService}.
+     */
     @Nullable
     public DocService docService() {
         return docService;
     }
 
+    /**
+     * Returns the metrics exposition {@link HttpService}.
+     */
     @Nullable
     public HttpService metricsExpositionService() {
         return metricsExpositionService;
     }
 
+    /**
+     * Returns the {@link HealthCheckService}.
+     */
     @Nullable
     public HealthCheckService healthCheckService() {
         return healthCheckService;

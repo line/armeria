@@ -114,7 +114,7 @@ class PortBasedVirtualHostTest {
             assertThat(response.contentUtf8()).isEqualTo("normal");
 
             response = client.get("/managed").aggregate().join();
-            assertThat(response.contentUtf8()).isEqualTo("managed");
+            assertThat(response.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
             response = client.get("/foo").aggregate().join();
             assertThat(response.contentUtf8()).isEqualTo("foo with port");

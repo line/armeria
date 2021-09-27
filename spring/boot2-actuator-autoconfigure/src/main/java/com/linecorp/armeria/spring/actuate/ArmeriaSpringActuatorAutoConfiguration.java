@@ -107,7 +107,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         Class<?> internalServicesClass = null;
         try {
             internalServicesClass =
-                    Class.forName("com.linecorp.armeria.internal.spring.InternalServices", true,
+                    Class.forName("com.linecorp.armeria.spring.InternalServices", true,
                                   ArmeriaSpringActuatorAutoConfiguration.class.getClassLoader());
         } catch (ClassNotFoundException ignored) {
         }
@@ -279,6 +279,9 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
         try {
             final Port port = (Port) MANAGEMENT_SERVER_PORT_METHOD.invoke(internalServices);
+            if (port == null) {
+                return null;
+            }
             return port.getPort();
         } catch (IllegalAccessException | InvocationTargetException e) {
             return null;

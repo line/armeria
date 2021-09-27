@@ -5,8 +5,7 @@ spring:
 
 armeria:
   ports:
-    - port: 8080
-    - port: 18080
+    - port: 0
   internal-services:
     include: metrics, health
     port: 0
