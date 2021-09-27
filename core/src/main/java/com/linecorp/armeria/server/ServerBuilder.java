@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -1351,6 +1352,31 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Port-based">port-based virtual host</a>
+     * with the specified {@code port}. The returned virtual host will have a catch-all (wildcard host) name
+     * pattern that allows all host names.
+     *
+     * @param port the port number that this virtual host binds to
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    public VirtualHostBuilder virtualHost(int port) {
+        checkArgument(port >= 1 && port <= 65535, "port: %s (expected: 1-65535)", port);
+
+        // Look for a virtual host that has already been made and reuse it.
+        final Optional<VirtualHostBuilder> vhost =
+                virtualHostBuilders.stream()
+                                   .filter(v -> v.port() == port && v.defaultVirtualHost())
+                                   .findFirst();
+        if (vhost.isPresent()) {
+            return vhost.get();
+        }
+
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, port);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
@@ -1663,10 +1689,26 @@ public final class ServerBuilder {
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
         final Collection<ServerPort> ports;
 
-        this.ports.forEach(
-                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
-                                   "protocols: %s (expected: at least one %s or %s)",
-                                   port.protocols(), HTTP, HTTPS));
+        for (ServerPort port : this.ports) {
+            checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
+                       "protocols: %s (expected: at least one %s or %s)",
+                       port.protocols(), HTTP, HTTPS);
+        }
+
+        // The port numbers of port-based virtual hosts must exist in 'ServerPort's.
+        final List<VirtualHost> portBasedVirtualHosts = virtualHosts.stream()
+                                                                    .filter(v -> v.port() > 0)
+                                                                    .collect(toImmutableList());
+        final List<Integer> portNumbers = this.ports.stream()
+                                                    .map(port -> port.localAddress().getPort())
+                                                    .filter(port -> port > 0)
+                                                    .collect(toImmutableList());
+        for (VirtualHost virtualHost : portBasedVirtualHosts) {
+            final int virtualHostPort = virtualHost.port();
+            final boolean portMatched = portNumbers.stream().anyMatch(port -> port == virtualHostPort);
+            checkState(portMatched, "virtual host port: %s (expected: one of %s)",
+                       virtualHostPort, portNumbers);
+        }
 
         if (defaultSslContext == null) {
             sslContexts = null;

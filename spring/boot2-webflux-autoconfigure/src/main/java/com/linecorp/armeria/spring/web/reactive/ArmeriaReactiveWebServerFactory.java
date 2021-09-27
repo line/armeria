@@ -59,15 +59,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
+import com.linecorp.armeria.internal.spring.InternalServices;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
-import com.linecorp.armeria.spring.DocServiceConfigurator;
-import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -156,13 +154,11 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         if (armeriaSettings != null) {
             configureServerWithArmeriaSettings(sb, armeriaSettings,
+                                               findBean(InternalServices.class),
                                                findBeans(ArmeriaServerConfigurator.class),
                                                findBeans(Consumer.class, ServerBuilder.class),
-                                               findBeans(DocServiceConfigurator.class),
                                                firstNonNull(findBean(MeterRegistry.class),
                                                             Metrics.globalRegistry),
-                                               findBeans(HealthChecker.class),
-                                               findBeans(HealthCheckServiceConfigurator.class),
                                                meterIdPrefixFunctionOrDefault(),
                                                findBeans(MetricCollectingServiceConfigurator.class));
         }

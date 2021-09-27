@@ -61,8 +61,11 @@ public final class VirtualHost {
     @Nullable
     private ServerConfig serverConfig;
 
+    private final String originalDefaultHostname;
+    private final String originalHostnamePattern;
     private final String defaultHostname;
     private final String hostnamePattern;
+    private final int port;
     @Nullable
     private final SslContext sslContext;
     private final Router<ServiceConfig> router;
@@ -78,7 +81,7 @@ public final class VirtualHost {
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
 
-    VirtualHost(String defaultHostname, String hostnamePattern,
+    VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
@@ -88,12 +91,16 @@ public final class VirtualHost {
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
-        defaultHostname = normalizeDefaultHostname(defaultHostname);
-        hostnamePattern = normalizeHostnamePattern(hostnamePattern);
-        ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
-
-        this.defaultHostname = defaultHostname;
-        this.hostnamePattern = hostnamePattern;
+        originalDefaultHostname = defaultHostname;
+        originalHostnamePattern = hostnamePattern;
+        if (port > 0) {
+            this.defaultHostname = defaultHostname + ':' + port;
+            this.hostnamePattern = hostnamePattern + ':' + port;
+        } else {
+            this.defaultHostname = defaultHostname;
+            this.hostnamePattern = hostnamePattern;
+        }
+        this.port = port;
         this.sslContext = sslContext;
         this.defaultServiceNaming = defaultServiceNaming;
         this.requestTimeoutMillis = requestTimeoutMillis;
@@ -117,7 +124,7 @@ public final class VirtualHost {
     }
 
     VirtualHost withNewSslContext(SslContext sslContext) {
-        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
                                serviceConfigs(), fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
@@ -226,6 +233,14 @@ public final class VirtualHost {
      */
     public String hostnamePattern() {
         return hostnamePattern;
+    }
+
+    /**
+     * Returns the port of this virtual host.
+     * {@code -1} means that the port number is not specified.
+     */
+    public int port() {
+        return port;
     }
 
     /**
@@ -379,7 +394,7 @@ public final class VirtualHost {
         final ServiceConfig fallbackServiceConfig =
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
-        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext(),
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
