@@ -135,7 +135,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Nullable
     private O firstResponse;
-    private boolean cancelCalled;
+    private boolean closed;
 
     private int pendingRequests;
     private volatile int pendingMessages;
@@ -289,10 +289,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             cause = new CancellationException("Cancelled without a message or cause");
             logger.warn("Cancelling without a message or cause is suboptimal", cause);
         }
-        if (cancelCalled) {
+        if (closed) {
             return;
         }
-        cancelCalled = true;
         Status status = Status.CANCELLED;
         if (message != null) {
             status = status.withDescription(message);
@@ -442,9 +441,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status, Metadata metadata) {
-        if (cancelCalled) {
-            return;
-        }
         close(status, metadata);
     }
 
@@ -469,6 +465,13 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void close(Status status, Metadata metadata) {
+        if (closed) {
+            // 'close()' could be called twice if a call is closed with non-OK status.
+            // See: https://github.com/line/armeria/issues/3799
+            return;
+        }
+        closed = true;
+
         final Deadline deadline = callOptions.getDeadline();
         if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
             status = Status.DEADLINE_EXCEEDED;

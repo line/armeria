@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -80,6 +82,8 @@ public final class VirtualHost {
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
+    private final ScheduledExecutorService blockingTaskExecutor;
+    private final boolean shutdownBlockingTaskExecutorOnStop;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
@@ -90,7 +94,9 @@ public final class VirtualHost {
                 @Nullable ServiceNaming defaultServiceNaming,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
-                AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
+                AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+                ScheduledExecutorService blockingTaskExecutor,
+                boolean shutdownBlockingTaskExecutorOnStop) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
         if (port > 0) {
@@ -108,6 +114,8 @@ public final class VirtualHost {
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = accessLogWriter;
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
+        this.blockingTaskExecutor = blockingTaskExecutor;
+        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
@@ -128,7 +136,8 @@ public final class VirtualHost {
                                serviceConfigs(), fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
-                               accessLogWriter(), shutdownAccessLogWriterOnStop());
+                               accessLogWriter(), shutdownAccessLogWriterOnStop(),
+                               blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop());
     }
 
     /**
@@ -237,7 +246,7 @@ public final class VirtualHost {
 
     /**
      * Returns the port of this virtual host.
-     * {@code -1} means that the port number is not specified.
+     * {@code -1} means that no port number is specified.
      */
     public int port() {
         return port;
@@ -323,6 +332,24 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the blocking task executor.
+     *
+     * @see ServiceConfig#blockingTaskExecutor()
+     */
+    public ScheduledExecutorService blockingTaskExecutor() {
+        return blockingTaskExecutor;
+    }
+
+    /**
+     * Returns whether the blocking task {@link Executor} is shut down when the {@link Server} stops.
+     *
+     * @see ServiceConfig#shutdownBlockingTaskExecutorOnStop()
+     */
+    public boolean shutdownBlockingTaskExecutorOnStop() {
+        return shutdownBlockingTaskExecutorOnStop;
+    }
+
+    /**
      * Finds the {@link HttpService} whose {@link Router} matches the {@link RoutingContext}.
      *
      * @param routingCtx a context to find the {@link HttpService}.
@@ -398,7 +425,8 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
-                               accessLogWriter(), shutdownAccessLogWriterOnStop());
+                               accessLogWriter(), shutdownAccessLogWriterOnStop(),
+                               blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop());
     }
 
     @Override
@@ -434,6 +462,10 @@ public final class VirtualHost {
         buf.append(accessLogWriter());
         buf.append(", shutdownAccessLogWriterOnStop: ");
         buf.append(shutdownAccessLogWriterOnStop());
+        buf.append(", blockingTaskExecutor: ");
+        buf.append(blockingTaskExecutor());
+        buf.append(", shutdownBlockingTaskExecutorOnStop: ");
+        buf.append(shutdownBlockingTaskExecutorOnStop());
         buf.append(')');
         return buf.toString();
     }

@@ -776,7 +776,7 @@ public final class ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            @Nullable ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
             @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
@@ -852,10 +852,12 @@ public final class ServerConfig {
         buf.append(gracefulShutdownQuietPeriod);
         buf.append(", gracefulShutdownTimeout: ");
         buf.append(gracefulShutdownTimeout);
-        buf.append(", blockingTaskExecutor: ");
-        buf.append(blockingTaskExecutor);
-        buf.append(", shutdownBlockingTaskExecutorOnStop: ");
-        buf.append(shutdownBlockingTaskExecutorOnStop);
+        if (blockingTaskExecutor != null) {
+            buf.append(", blockingTaskExecutor: ");
+            buf.append(blockingTaskExecutor);
+            buf.append(", shutdownBlockingTaskExecutorOnStop: ");
+            buf.append(shutdownBlockingTaskExecutorOnStop);
+        }
         if (meterRegistry != null) {
             buf.append(", meterRegistry: ");
             buf.append(meterRegistry);
