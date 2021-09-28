@@ -17,11 +17,13 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -91,6 +93,7 @@ class ClientGoAwayGracefulShutdownTest {
             // should not send a request using the closing connection.
             final AggregatedHttpResponse response = client.get("/foo").aggregate().join();
             assertThat(response.contentUtf8()).isEqualTo("OK");
+            await().untilAtomic(opened, Matchers.is(2));
         }
     }
 }
