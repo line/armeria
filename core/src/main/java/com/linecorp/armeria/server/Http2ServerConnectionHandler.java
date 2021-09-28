@@ -156,6 +156,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         @Override
         public void onDrainStart(ChannelHandlerContext ctx) {
             goAway(ctx, Integer.MAX_VALUE);
+            ctx.flush();
         }
 
         /**
