@@ -526,10 +526,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             if (endOfStream) {
                 if (tryComplete()) {
-                    final Throwable recoveredCause = RecoveredCause.get(reqCtx);
-                    if (recoveredCause != null) {
-                        logBuilder().endRequest(recoveredCause);
-                        logBuilder().endResponse(recoveredCause);
+                    final Throwable capturedException = CapturedServiceException.get(reqCtx);
+                    if (capturedException != null) {
+                        logBuilder().endRequest(capturedException);
+                        logBuilder().endResponse(capturedException);
                     } else {
                         logBuilder().endRequest();
                         logBuilder().endResponse();

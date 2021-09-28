@@ -19,19 +19,20 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-final class RecoveredCause {
+@SuppressWarnings("NonExceptionNameEndsWithException")
+final class CapturedServiceException {
 
-    private static final AttributeKey<Throwable> RECOVERED_CAUSE =
-            AttributeKey.valueOf(RecoveredCause.class, "RECOVERED_CAUSE");
+    private static final AttributeKey<Throwable> CAPTURED_SERVICE_EXCEPTION =
+            AttributeKey.valueOf(CapturedServiceException.class, "CAPTURED_SERVICE_EXCEPTION");
 
     static void set(ServiceRequestContext ctx, Throwable cause) {
-        ctx.setAttr(RECOVERED_CAUSE, cause);
+        ctx.setAttr(CAPTURED_SERVICE_EXCEPTION, cause);
     }
 
     @Nullable
     static Throwable get(ServiceRequestContext ctx) {
-        return ctx.attr(RECOVERED_CAUSE);
+        return ctx.attr(CAPTURED_SERVICE_EXCEPTION);
     }
 
-    private RecoveredCause() {}
+    private CapturedServiceException() {}
 }
