@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -51,6 +50,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -68,9 +69,7 @@ public final class ServerConfig {
     private final VirtualHost defaultVirtualHost;
     private final List<VirtualHost> virtualHosts;
     @Nullable
-    private final Mapping<String, VirtualHost> virtualHostMapping;
-    @Nullable
-    private final Map<Integer, Mapping<String, VirtualHost>> virtualHostAndPortMapping;
+    private final Int2ObjectMap<Mapping<String, VirtualHost>> virtualHostAndPortMapping;
     private final List<ServiceConfig> services;
 
     private final EventLoopGroup workerGroup;
@@ -229,10 +228,8 @@ public final class ServerConfig {
         virtualHostsCopy.add(defaultVirtualHost);
 
         if (virtualHosts.isEmpty()) {
-            virtualHostMapping = null;
             virtualHostAndPortMapping = null;
         } else {
-            virtualHostMapping = buildDomainMapping(defaultVirtualHost, virtualHosts);
             virtualHostAndPortMapping = buildDomainAndPortMapping(defaultVirtualHost, virtualHosts);
         }
 
@@ -279,7 +276,7 @@ public final class ServerConfig {
         return mappingBuilder.build();
     }
 
-    private static Map<Integer, Mapping<String, VirtualHost>> buildDomainAndPortMapping(
+    private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
             VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts) {
 
         final List<VirtualHost> portMappingVhosts = virtualHosts.stream()
@@ -290,13 +287,13 @@ public final class ServerConfig {
                                  .filter(v -> v.hostnamePattern().startsWith("*:"))
                                  .collect(toImmutableMap(VirtualHost::port, Function.identity()));
 
-        final Map<Integer, DomainMappingBuilder<VirtualHost>> mappings = new HashMap<>();
+        final Map<Integer, DomainMappingBuilder<VirtualHost>> mappingsBuilder = new HashMap<>();
         for (VirtualHost virtualHost : portMappingVhosts) {
             final int port = virtualHost.port();
             final VirtualHost defaultVhost =
                     firstNonNull(portMappingDefaultVhosts.get(port), defaultVirtualHost);
             final DomainMappingBuilder<VirtualHost> mappingBuilder =
-                    mappings.computeIfAbsent(port, key -> new DomainMappingBuilder<>(defaultVhost));
+                    mappingsBuilder.computeIfAbsent(port, key -> new DomainMappingBuilder<>(defaultVhost));
 
             if (defaultVhost == virtualHost) {
                 // Added already as the default virtual host of the DomainMapping.
@@ -305,8 +302,13 @@ public final class ServerConfig {
             }
         }
 
-        return mappings.entrySet().stream()
-                       .collect(toImmutableMap(Entry::getKey, e -> e.getValue().build()));
+        final Int2ObjectMap<Mapping<String, VirtualHost>> mappings =
+                new Int2ObjectOpenHashMap<>(mappingsBuilder.size() + 1);
+
+        mappingsBuilder.forEach((port, builder) -> mappings.put(port, builder.build()));
+        // Add name-based virtual host mappings.
+        mappings.put(-1, buildDomainMapping(defaultVirtualHost, virtualHosts));
+        return mappings;
     }
 
     private static ScheduledExecutorService monitorBlockingTaskExecutor(ScheduledExecutorService executor,
@@ -423,9 +425,10 @@ public final class ServerConfig {
      */
     @Deprecated
     public VirtualHost findVirtualHost(String hostname) {
-        if (virtualHostMapping == null) {
+        if (virtualHostAndPortMapping == null) {
             return defaultVirtualHost;
         }
+        final Mapping<String, VirtualHost> virtualHostMapping = virtualHostAndPortMapping.get(-1);
         return virtualHostMapping.map(hostname);
     }
 
@@ -439,22 +442,22 @@ public final class ServerConfig {
      * @see ServerBuilder#virtualHost(int)
      */
     public VirtualHost findVirtualHost(String hostname, int port) {
-        if (virtualHostMapping == null) {
+        if (virtualHostAndPortMapping == null) {
             return defaultVirtualHost;
         }
 
-        if (virtualHostAndPortMapping != null) {
-            final Mapping<String, VirtualHost> virtualHostMapping = virtualHostAndPortMapping.get(port);
-            if (virtualHostMapping != null) {
-                final VirtualHost virtualHost = virtualHostMapping.map(hostname + ':' + port);
-                // Exclude the default virtual host from port-based virtual hosts.
-                if (virtualHost != defaultVirtualHost) {
-                    return virtualHost;
-                }
+        final Mapping<String, VirtualHost> virtualHostMapping = virtualHostAndPortMapping.get(port);
+        if (virtualHostMapping != null) {
+            final VirtualHost virtualHost = virtualHostMapping.map(hostname + ':' + port);
+            // Exclude the default virtual host from port-based virtual hosts.
+            if (virtualHost != defaultVirtualHost) {
+                return virtualHost;
             }
         }
-
-        return virtualHostMapping.map(hostname);
+        // No port-based virtual host is configured. Look for named-based virtual host.
+        final Mapping<String, VirtualHost> nameBasedMapping = virtualHostAndPortMapping.get(-1);
+        assert nameBasedMapping != null;
+        return nameBasedMapping.map(hostname);
     }
 
     /**

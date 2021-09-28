@@ -111,7 +111,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      *
      * <p>Note that if a service path is either {@code null} or empty, the associated service will not be
      * initiated. For example, {@link ArmeriaSettings#getHealthCheckPath()} is {@code null},
-     * {@link HealthCheckService} will not automatically be created.
+     * {@link HealthCheckService} will not be created automatically.
      *
      * @see ArmeriaSettings#getDocsPath()
      * @see ArmeriaSettings#getMetricsPath()

@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
@@ -214,6 +215,8 @@ public final class ServerBuilder {
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        hostnamePattern = hostAndPort.getHost();
         final String[] elements = hostnamePattern.split("\\.");
         final StringBuilder name = new StringBuilder(
                 DEFAULT_ACCESS_LOGGER_PREFIX.length() + hostnamePattern.length() + 1);
@@ -225,6 +228,10 @@ public final class ServerBuilder {
             }
             name.append('.');
             name.append(element);
+        }
+        if (hostAndPort.hasPort()) {
+            name.append(':');
+            name.append(hostAndPort.getPort());
         }
         return name.toString();
     }
