@@ -163,7 +163,7 @@ class HttpResponseTest {
         final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
         final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse, Duration.ofSeconds(1L));
         final Stopwatch stopwatch = Stopwatch.createStarted();
-        
+
         assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
         assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
                 .isGreaterThanOrEqualTo(1L);
