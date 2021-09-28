@@ -30,6 +30,7 @@
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
 *.developer.app
+*.digitaloceanspaces.com
 *.diher.solutions
 *.dweb.link
 *.elb.amazonaws.com
@@ -270,7 +271,6 @@ agrar.hu
 agric.za
 agriculture.museum
 agrigento.it
-agrinet.tn
 agro.bo
 agro.pl
 aguni.okinawa.jp
@@ -785,6 +785,7 @@ beskidy.pl
 best
 bestbuy
 bet
+bet.ar
 beta.bounty-full.com
 betainabox.com
 better-than.tv
@@ -1690,6 +1691,7 @@ cooking
 cookingchannel
 cool
 coop
+coop.ar
 coop.br
 coop.ht
 coop.km
@@ -1849,7 +1851,6 @@ debian.net
 decorativearts.museum
 dedyn.io
 def.br
-defense.tn
 definima.io
 definima.net
 degree
@@ -2211,7 +2212,6 @@ education.museum
 educational.museum
 educator.aero
 edugit.org
-edunet.tn
 ee
 ee.eu.org
 eero-stage.online
@@ -3651,6 +3651,7 @@ ingatlan.hu
 ink
 ino.kochi.jp
 instance.datadetect.com
+instances.spawn.cc
 instantcloud.cn
 institute
 insurance
@@ -5247,6 +5248,7 @@ musica.bo
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
 mutual
+mutual.ar
 mv
 mw
 mw.gov.pl
@@ -6759,9 +6761,6 @@ rmit
 rn.gov.br
 rn.it
 rn.leg.br
-rnrt.tn
-rns.tn
-rnu.tn
 ro
 ro.eu.org
 ro.gov.br
@@ -7113,6 +7112,7 @@ sells-it.net
 sellsyourhome.org
 semboku.akita.jp
 semine.miyagi.jp
+senasa.ar
 sener
 sennan.osaka.jp
 senseering.net
@@ -8041,7 +8041,6 @@ tunk.org
 tur.ar
 tur.br
 turek.pl
-turen.tn
 turin.it
 turystyka.pl
 tuscany.it

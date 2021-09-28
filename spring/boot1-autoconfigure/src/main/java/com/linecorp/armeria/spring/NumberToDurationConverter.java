@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,12 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server
+package com.linecorp.armeria.spring;
 
-class ExampleService {
-    fun normal(): Int = 1
+import java.time.Duration;
 
-    suspend fun suspendingUnit() {}
+import org.springframework.core.convert.converter.Converter;
 
-    suspend fun suspendingInt(): Int = 1
+/**
+ * Convert {@link Long} to {@link Duration}.
+ */
+class NumberToDurationConverter implements Converter<Number, Duration> {
+    @Override
+    public Duration convert(Number source) {
+        return Duration.ofMillis(source.longValue());
+    }
 }

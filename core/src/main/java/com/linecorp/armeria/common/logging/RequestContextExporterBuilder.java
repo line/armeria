@@ -193,7 +193,6 @@ public final class RequestContextExporterBuilder {
         }
 
         return new RequestContextExporter(
-                builtInProperties.build(), attrs.build(), reqHeaders.build(), resHeaders.build()
-        );
+                builtInProperties.build(), attrs.build(), reqHeaders.build(), resHeaders.build());
     }
 }

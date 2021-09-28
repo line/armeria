@@ -17,10 +17,12 @@
 package com.linecorp.armeria.server;
 
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 interface ServiceConfigSetters {
@@ -117,4 +119,23 @@ interface ServiceConfigSetters {
      * @param defaultLogName the default log name.
      */
     ServiceConfigSetters defaultLogName(String defaultLogName);
+
+    /**
+     * Sets an {@link ScheduledExecutorService executor} to be used when executing blocking tasks.
+     *
+     * @param blockingTaskExecutor the {@link ScheduledExecutorService executor} to be used.
+     * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the {@link Server}
+     *                       stops.
+     */
+    ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                              boolean shutdownOnStop);
+
+    /**
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    ServiceConfigSetters blockingTaskExecutor(int numThreads);
 }

@@ -9,6 +9,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import example.armeria.grpc.Hello.HelloReply;
 import example.armeria.grpc.Hello.HelloRequest;
 import example.armeria.grpc.HelloServiceGrpc.HelloServiceImplBase;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
@@ -20,8 +21,13 @@ public class HelloServiceImpl extends HelloServiceImplBase {
      */
     @Override
     public void hello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
-        responseObserver.onNext(buildReply(toMessage(request.getName())));
-        responseObserver.onCompleted();
+        if (request.getName().isEmpty()) {
+            responseObserver.onError(
+                    Status.FAILED_PRECONDITION.withDescription("Name cannot be empty").asException());
+        } else {
+            responseObserver.onNext(buildReply(toMessage(request.getName())));
+            responseObserver.onCompleted();
+        }
     }
 
     /**
@@ -100,7 +106,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
      */
     @Override
     public StreamObserver<HelloRequest> lotsOfGreetings(StreamObserver<HelloReply> responseObserver) {
-        return new StreamObserver<HelloRequest>() {
+        return new StreamObserver<>() {
             final ArrayList<String> names = new ArrayList<>();
 
             @Override
@@ -127,7 +133,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
      */
     @Override
     public StreamObserver<HelloRequest> bidiHello(StreamObserver<HelloReply> responseObserver) {
-        return new StreamObserver<HelloRequest>() {
+        return new StreamObserver<>() {
             @Override
             public void onNext(HelloRequest value) {
                 // Respond to every request received.

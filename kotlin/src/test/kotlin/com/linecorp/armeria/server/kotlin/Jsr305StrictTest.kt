@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server
+package com.linecorp.armeria.server.kotlin
 
 import com.linecorp.armeria.server.logging.LoggingService
 import org.junit.jupiter.api.Test

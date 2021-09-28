@@ -14,13 +14,14 @@
  * under the License
  */
 
-package com.linecorp.armeria.server
+package com.linecorp.armeria.server.kotlin
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.linecorp.armeria.client.WebClient
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.Default
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.Param
