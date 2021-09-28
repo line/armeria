@@ -59,6 +59,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Re
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -285,16 +286,16 @@ public final class AnnotatedService implements HttpService {
                                 ctx, methodName(), object.getClass().getSimpleName(), Exceptions.peel(cause));
                     return cause;
                 });
-            } else {
-                return response;
             }
-        } else {
-            return response.recover(cause -> {
-                try (SafeCloseable ignored = ctx.push()) {
-                    return exceptionHandler.handleException(ctx, req, cause);
-                }
-            });
         }
+        return response;
+    }
+
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
     }
 
     /**
@@ -489,6 +490,30 @@ public final class AnnotatedService implements HttpService {
             }
 
             return HttpResponse.ofFailure(peeledCause);
+        }
+    }
+
+    private static final class ExceptionHandlingHttpService extends SimpleDecoratingHttpService {
+
+        private final ExceptionHandlerFunction exceptionHandler;
+
+        ExceptionHandlingHttpService(HttpService service, ExceptionHandlerFunction exceptionHandler) {
+            super(service);
+            this.exceptionHandler = exceptionHandler;
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            try {
+                final HttpResponse response = unwrap().serve(ctx, req);
+                return response.recover(cause -> {
+                    try (SafeCloseable ignored = ctx.push()) {
+                        return exceptionHandler.handleException(ctx, req, cause);
+                    }
+                });
+            } catch (Exception ex) {
+                return exceptionHandler.handleException(ctx, req, ex);
+            }
         }
     }
 
