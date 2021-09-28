@@ -259,23 +259,6 @@ public final class ServerConfig {
         this.sslContexts = sslContexts;
     }
 
-    private static Mapping<String, VirtualHost> buildDomainMapping(VirtualHost defaultVirtualHost,
-                                                                   List<VirtualHost> virtualHosts) {
-        // Set virtual host definitions and initialize their domain name mapping.
-        final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
-        for (VirtualHost h : virtualHosts) {
-            if (h == null) {
-                break;
-            }
-            if (h.port() > 0) {
-                // A port-based virtual host will be handled by buildDomainAndPortMapping().
-                continue;
-            }
-            mappingBuilder.add(h.hostnamePattern(), h);
-        }
-        return mappingBuilder.build();
-    }
-
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
             VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts) {
 
@@ -305,10 +288,27 @@ public final class ServerConfig {
         final Int2ObjectMap<Mapping<String, VirtualHost>> mappings =
                 new Int2ObjectOpenHashMap<>(mappingsBuilder.size() + 1);
 
-        mappingsBuilder.forEach((port, builder) -> mappings.put(port, builder.build()));
+        mappingsBuilder.forEach((port, builder) -> mappings.put(port.intValue(), builder.build()));
         // Add name-based virtual host mappings.
         mappings.put(-1, buildDomainMapping(defaultVirtualHost, virtualHosts));
         return mappings;
+    }
+
+    private static Mapping<String, VirtualHost> buildDomainMapping(VirtualHost defaultVirtualHost,
+                                                                   List<VirtualHost> virtualHosts) {
+        // Set virtual host definitions and initialize their domain name mapping.
+        final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
+        for (VirtualHost h : virtualHosts) {
+            if (h == null) {
+                break;
+            }
+            if (h.port() > 0) {
+                // A port-based virtual host will be handled by buildDomainAndPortMapping().
+                continue;
+            }
+            mappingBuilder.add(h.hostnamePattern(), h);
+        }
+        return mappingBuilder.build();
     }
 
     private static ScheduledExecutorService monitorBlockingTaskExecutor(ScheduledExecutorService executor,
