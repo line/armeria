@@ -161,8 +161,8 @@ class HttpResponseTest {
     @Test
     void delayedHttpResponseWithAggregatedHttpResponseUsingCurrentEventLoopOrCommonPools() {
         final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
-        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse, Duration.ofSeconds(1L));
         final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse, Duration.ofSeconds(1L));
 
         assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
         assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
@@ -172,10 +172,10 @@ class HttpResponseTest {
     @Test
     void delayedHttpResponseWithAggregatedHttpResponseUsingScheduledExecutorService() {
         final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
         final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse,
                                                       Duration.ofSeconds(1L),
                                                       Executors.newSingleThreadScheduledExecutor());
-        final Stopwatch stopwatch = Stopwatch.createStarted();
 
         assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
         assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
@@ -184,9 +184,9 @@ class HttpResponseTest {
 
     @Test
     void delayedHttpResponseWithHttpResponseUsingCurrentEventLoopOrCommonPools() {
+        final Stopwatch stopwatch = Stopwatch.createStarted();
         final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
                                                       Duration.ofSeconds(1L));
-        final Stopwatch stopwatch = Stopwatch.createStarted();
         final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
 
         assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
@@ -196,10 +196,10 @@ class HttpResponseTest {
 
     @Test
     void delayedHttpResponseWithHttpResponseUsingScheduledExecutorService() {
+        final Stopwatch stopwatch = Stopwatch.createStarted();
         final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
                                                       Duration.ofSeconds(1L),
                                                       Executors.newSingleThreadScheduledExecutor());
-        final Stopwatch stopwatch = Stopwatch.createStarted();
         final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
 
         assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
@@ -210,9 +210,9 @@ class HttpResponseTest {
     @Test
     void delayedHttpResponseWithHttpResponseSupplierCurrentEventLoopOrCommonPools() {
         final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
         final HttpResponse res = HttpResponse.delayed(responseSupplier,
                                                       Duration.ofSeconds(1L));
-        final Stopwatch stopwatch = Stopwatch.createStarted();
         final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
 
         assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
@@ -223,10 +223,10 @@ class HttpResponseTest {
     @Test
     void delayedHttpResponseWithHttpResponseSupplierUsingScheduledExecutorService() {
         final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
         final HttpResponse res = HttpResponse.delayed(responseSupplier,
                                                       Duration.ofSeconds(1L),
                                                       Executors.newSingleThreadScheduledExecutor());
-        final Stopwatch stopwatch = Stopwatch.createStarted();
         final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
 
         assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
