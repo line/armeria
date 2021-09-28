@@ -29,12 +29,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.ContextAwareEventLoop;
@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -242,8 +243,8 @@ public final class DefaultServiceRequestContext
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(
-                this, config().server().config().blockingTaskExecutor());
+        final ScheduledExecutorService executor = config().blockingTaskExecutor();
+        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(this, executor);
     }
 
     @Override

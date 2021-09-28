@@ -25,12 +25,11 @@ import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 @SuppressWarnings("unchecked")
 final class KotlinUtil {
@@ -65,7 +64,7 @@ final class KotlinUtil {
                             CompletableFuture.class,
                             ImmutableList.of(Method.class, Object.class,
                                              Object[].class, ExecutorService.class,
-                                             RequestContext.class))
+                                             ServiceRequestContext.class))
             );
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
             // ignore

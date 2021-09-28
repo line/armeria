@@ -21,12 +21,11 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.concurrent.CompletionStage;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.RateLimiter;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

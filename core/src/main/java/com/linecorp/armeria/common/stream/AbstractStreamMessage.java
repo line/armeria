@@ -16,17 +16,15 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -35,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;

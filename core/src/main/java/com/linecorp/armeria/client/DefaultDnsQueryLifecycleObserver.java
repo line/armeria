@@ -19,11 +19,10 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 

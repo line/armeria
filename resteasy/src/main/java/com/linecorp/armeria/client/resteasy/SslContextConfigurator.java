@@ -23,12 +23,13 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;

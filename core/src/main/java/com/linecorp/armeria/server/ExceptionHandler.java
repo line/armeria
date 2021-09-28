@@ -17,10 +17,9 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

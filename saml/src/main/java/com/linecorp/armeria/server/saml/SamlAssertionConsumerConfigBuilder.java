@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.saml;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder which builds a {@link SamlAssertionConsumerConfig}.

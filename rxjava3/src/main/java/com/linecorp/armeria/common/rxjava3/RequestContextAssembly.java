@@ -16,11 +16,10 @@
 
 package com.linecorp.armeria.common.rxjava3;
 
-import javax.annotation.Nullable;
-
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;

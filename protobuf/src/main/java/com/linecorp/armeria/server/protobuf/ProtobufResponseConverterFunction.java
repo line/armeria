@@ -33,8 +33,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 
 import com.google.common.collect.Streams;
@@ -48,6 +46,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -204,7 +203,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             if (result instanceof Publisher) {
                 @SuppressWarnings("unchecked")
                 final Publisher<Object> publisher = (Publisher<Object>) result;
-                return aggregateFrom(publisher, headers, trailers, obj -> toJsonHttpData(obj, charset));
+                return aggregateFrom(publisher, headers, trailers, obj -> toJsonHttpData(obj, charset), ctx);
             }
             if (result instanceof Stream) {
                 @SuppressWarnings("unchecked")

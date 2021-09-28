@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.Channel;
 import io.grpc.ServiceDescriptor;

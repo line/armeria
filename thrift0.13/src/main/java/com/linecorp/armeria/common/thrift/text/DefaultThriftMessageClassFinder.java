@@ -30,7 +30,7 @@
 // =================================================================================================
 package com.linecorp.armeria.common.thrift.text;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultThriftMessageClassFinder extends AbstractThriftMessageClassFinder {
 

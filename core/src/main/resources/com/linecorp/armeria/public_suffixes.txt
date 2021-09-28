@@ -17,6 +17,7 @@
 *.bzz.dapps.earth
 *.ck
 *.cloud.metacentrum.cz
+*.cloudera.site
 *.cns.joyent.com
 *.code.run
 *.compute-1.amazonaws.com
@@ -29,6 +30,8 @@
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
 *.developer.app
+*.digitaloceanspaces.com
+*.diher.solutions
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
@@ -74,6 +77,7 @@
 *.platformsh.site
 *.quipelements.com
 *.r.appspot.com
+*.rss.my.id
 *.s5y.io
 *.sapporo.jp
 *.sch.uk
@@ -248,6 +252,7 @@ aeroport.fr
 aetna
 af
 afamilycompany
+affinitylottery.org.uk
 afjord.no
 afl
 africa
@@ -266,7 +271,6 @@ agrar.hu
 agric.za
 agriculture.museum
 agrigento.it
-agrinet.tn
 agro.bo
 agro.pl
 aguni.okinawa.jp
@@ -710,6 +714,7 @@ barsy.online
 barsy.org
 barsy.pro
 barsy.pub
+barsy.ro
 barsy.shop
 barsy.site
 barsy.support
@@ -780,6 +785,7 @@ beskidy.pl
 best
 bestbuy
 bet
+bet.ar
 beta.bounty-full.com
 betainabox.com
 better-than.tv
@@ -795,6 +801,7 @@ bi.it
 bialowieza.pl
 bialystok.pl
 bib.br
+bib.ve
 bibai.hokkaido.jp
 bible
 bible.museum
@@ -1354,6 +1361,8 @@ cl.it
 claims
 clan.rip
 cleaning
+clerk.app
+clerkstage.app
 cleverapps.io
 clic2000.net
 click
@@ -1378,7 +1387,6 @@ cloudapp.net
 cloudapps.digital
 cloudcontrolapp.com
 cloudcontrolled.com
-cloudera.site
 cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
@@ -1683,6 +1691,7 @@ cooking
 cookingchannel
 cool
 coop
+coop.ar
 coop.br
 coop.ht
 coop.km
@@ -1756,7 +1765,6 @@ cust.prod.thingdust.io
 cust.retrosnub.co.uk
 cust.testing.thingdust.io
 custom.metacentrum.cz
-customer.enonic.io
 customer.mythic-beasts.com
 customer.speedpartner.de
 cv
@@ -1843,7 +1851,6 @@ debian.net
 decorativearts.museum
 dedyn.io
 def.br
-defense.tn
 definima.io
 definima.net
 degree
@@ -2058,6 +2065,7 @@ ecn.br
 eco
 eco.br
 ecologia.bo
+ecommerce-shop.pl
 economia.bo
 ed.ao
 ed.ci
@@ -2204,7 +2212,6 @@ education.museum
 educational.museum
 educator.aero
 edugit.org
-edunet.tn
 ee
 ee.eu.org
 eero-stage.online
@@ -2228,6 +2235,9 @@ elburg.museum
 elementor.cloud
 elementor.cool
 elk.pl
+elluciancrmadvance.com
+elluciancrmadvise.com
+elluciancrmrecruit.com
 elvendrell.museum
 elverum.no
 email
@@ -2262,7 +2272,6 @@ engineering
 england.museum
 eniwa.hokkaido.jp
 enna.it
-enonic.io
 ens.tn
 enscaled.sg
 ent.platform.sh
@@ -3388,6 +3397,7 @@ homes
 homesecuritymac.com
 homesecuritypc.com
 homesense
+homesklep.pl
 homeunix.com
 homeunix.net
 homeunix.org
@@ -3641,6 +3651,7 @@ ingatlan.hu
 ink
 ino.kochi.jp
 instance.datadetect.com
+instances.spawn.cc
 instantcloud.cn
 institute
 insurance
@@ -4183,6 +4194,7 @@ kia
 kibichuo.okayama.jp
 kicks-ass.net
 kicks-ass.org
+kids
 kids.museum
 kids.us
 kiev.ua
@@ -5236,6 +5248,7 @@ musica.bo
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
 mutual
+mutual.ar
 mv
 mw
 mw.gov.pl
@@ -5453,7 +5466,6 @@ nba
 nc
 nc.tr
 nc.us
-nctu.me
 nd.us
 ne
 ne.jp
@@ -5756,6 +5768,7 @@ nom.pl
 nom.re
 nom.ro
 nom.tm
+nom.ve
 nom.za
 nombre.bo
 nome.pt
@@ -6286,6 +6299,7 @@ padua.it
 page
 pagefrontapp.com
 pages.dev
+pages.it.hs-heilbronn.de
 pages.torproject.net
 pages.wiardweb.com
 pagespeedmobilizer.com
@@ -6606,6 +6620,7 @@ radio.br
 radio.fm
 radom.pl
 radoy.no
+raffleentry.org.uk
 rag-cloud-ch.hosteur.com
 rag-cloud.hosteur.com
 ragusa.it
@@ -6621,6 +6636,7 @@ rana.no
 randaberg.no
 rankoshi.hokkaido.jp
 ranzan.saitama.jp
+rar.ve
 ras.ru
 rauma.no
 ravendb.community
@@ -6745,9 +6761,6 @@ rmit
 rn.gov.br
 rn.it
 rn.leg.br
-rnrt.tn
-rns.tn
-rnu.tn
 ro
 ro.eu.org
 ro.gov.br
@@ -7099,6 +7112,7 @@ sells-it.net
 sellsyourhome.org
 semboku.akita.jp
 semine.miyagi.jp
+senasa.ar
 sener
 sennan.osaka.jp
 senseering.net
@@ -7126,6 +7140,7 @@ servemp3.com
 servep2p.com
 servepics.com
 servequake.com
+servers.run
 servesarcasm.com
 service.gov.scot
 service.gov.uk
@@ -7587,6 +7602,7 @@ ta.it
 taa.it
 tab
 tabayama.yamanashi.jp
+tabitorder.co.il
 tabuse.yamaguchi.jp
 tachiarai.fukuoka.jp
 tachikawa.tokyo.jp
@@ -8025,7 +8041,6 @@ tunk.org
 tur.ar
 tur.br
 turek.pl
-turen.tn
 turin.it
 turystyka.pl
 tuscany.it
@@ -8450,6 +8465,7 @@ wedding
 wedeploy.io
 wedeploy.me
 wedeploy.sh
+weeklylottery.org.uk
 wegrow.pl
 weibo
 weir

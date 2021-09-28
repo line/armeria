@@ -34,7 +34,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
@@ -42,6 +41,7 @@ import org.slf4j.Logger;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -115,7 +115,8 @@ public interface RequestContext {
      */
     @Nullable
     static <T> T mapCurrent(
-            Function<? super RequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
+            Function<? super RequestContext, T> mapper,
+            @Nullable Supplier<@Nullable T> defaultValueSupplier) {
 
         final RequestContext ctx = currentOrNull();
         if (ctx != null) {

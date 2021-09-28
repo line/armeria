@@ -18,10 +18,10 @@ package com.linecorp.armeria.internal.common;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.math.IntMath;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;

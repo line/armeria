@@ -16,15 +16,17 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
@@ -46,6 +48,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private Boolean verboseResponses;
     @Nullable
     private AccessLogWriter accessLogWriter;
+    @Nullable
+    private ScheduledExecutorService blockingTaskExecutor;
+    private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
 
     ServiceConfigBuilder(Route route, HttpService service) {
@@ -114,6 +119,23 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -133,7 +155,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
                         AccessLogWriter defaultAccessLogWriter,
-                        boolean defaultShutdownAccessLogWriterOnStop) {
+                        boolean defaultShutdownAccessLogWriterOnStop,
+                        ScheduledExecutorService defaultBlockingTaskExecutor,
+                        boolean defaultShutdownBlockingTaskExecutorOnStop) {
         return new ServiceConfig(
                 route, service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
@@ -141,7 +165,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
-                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop);
+                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop,
+                blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
+                blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
+                                             : defaultShutdownBlockingTaskExecutorOnStop);
     }
 
     @Override
@@ -155,6 +182,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("verboseResponses", verboseResponses)
                           .add("accessLogWriter", accessLogWriter)
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
+                          .add("blockingTaskExecutor", blockingTaskExecutor)
+                          .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
                           .toString();
     }
 }

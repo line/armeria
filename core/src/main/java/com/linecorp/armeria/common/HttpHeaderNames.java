@@ -35,11 +35,11 @@ import java.lang.reflect.Modifier;
 import java.util.BitSet;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.IntMath;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 

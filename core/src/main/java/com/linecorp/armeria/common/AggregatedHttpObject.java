@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 
 import java.nio.charset.Charset;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A complete HTTP headers and content that are readily available.

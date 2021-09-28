@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
 import javax.validation.Valid;
 
 import org.eclipse.jetty.server.Handler;
@@ -37,6 +36,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;

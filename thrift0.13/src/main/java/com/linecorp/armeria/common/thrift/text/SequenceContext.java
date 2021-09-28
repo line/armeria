@@ -32,9 +32,9 @@ package com.linecorp.armeria.common.thrift.text;
 
 import java.util.Iterator;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.databind.JsonNode;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A parsing context used for Sequences (lists & sets). Maintains its

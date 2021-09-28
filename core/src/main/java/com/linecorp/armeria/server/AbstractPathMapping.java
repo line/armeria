@@ -19,7 +19,7 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(RoutingContext)}.

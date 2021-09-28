@@ -18,8 +18,7 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 
 /**

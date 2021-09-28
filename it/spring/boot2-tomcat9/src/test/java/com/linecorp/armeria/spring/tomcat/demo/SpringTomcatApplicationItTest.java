@@ -20,9 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -32,15 +31,13 @@ import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-public class SpringTomcatApplicationItTest {
+class SpringTomcatApplicationItTest {
     @Inject
     private ApplicationContext applicationContext;
     @Inject
@@ -55,7 +52,7 @@ public class SpringTomcatApplicationItTest {
     @Value("${armeria-tomcat.version.minor:0}")
     private int tomcatMinorVersion;
 
-    @Before
+    @BeforeEach
     public void init() throws Exception {
         httpPort = server.activePorts()
                          .values()
@@ -68,18 +65,18 @@ public class SpringTomcatApplicationItTest {
     }
 
     @Test
-    public void contextLoads() {
+    void contextLoads() {
         assertThat(greetingController).isNotNull();
     }
 
     @Test
-    public void verifyTomcatVersion() {
+    void verifyTomcatVersion() {
         assertThat(TomcatVersion.major()).isEqualTo(tomcatMajorVersion);
         assertThat(TomcatVersion.minor()).isEqualTo(tomcatMinorVersion);
     }
 
     @Test
-    public void verifySingleConnector() {
+    void verifySingleConnector() {
         // Relevant to Tomcat 9.0
         assertThat(applicationContext).isInstanceOf(WebServerApplicationContext.class);
         final WebServer webServer = ((WebServerApplicationContext) applicationContext).getWebServer();
@@ -91,7 +88,7 @@ public class SpringTomcatApplicationItTest {
     }
 
     @Test
-    public void greetingShouldReturnDefaultMessage() throws Exception {
+    void greetingShouldReturnDefaultMessage() throws Exception {
         assertThat(restTemplate.getForObject("http://localhost:" +
                                              httpPort +
                                              "/tomcat/api/rest/v1/greeting",
@@ -100,7 +97,7 @@ public class SpringTomcatApplicationItTest {
     }
 
     @Test
-    public void greetingShouldReturnUsersMessage() throws Exception {
+    void greetingShouldReturnUsersMessage() throws Exception {
         assertThat(restTemplate.getForObject("http://localhost:" +
                                              httpPort +
                                              "/tomcat/api/rest/v1/greeting?name=Armeria",
@@ -109,7 +106,7 @@ public class SpringTomcatApplicationItTest {
     }
 
     @Test
-    public void greetingShouldReturn404() throws Exception {
+    void greetingShouldReturn404() throws Exception {
         assertThat(restTemplate.getForEntity("http://localhost:" +
                                              httpPort +
                                              "/tomcat/api/rest/v1/greet",

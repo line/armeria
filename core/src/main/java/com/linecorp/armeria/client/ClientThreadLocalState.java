@@ -20,10 +20,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.FastThreadLocal;

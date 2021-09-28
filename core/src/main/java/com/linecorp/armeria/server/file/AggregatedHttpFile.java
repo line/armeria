@@ -17,11 +17,10 @@ package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A complete HTTP file whose attributes and content are readily available.

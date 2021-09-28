@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class UnionMap<K, V> extends AbstractMap<K, V> {
 

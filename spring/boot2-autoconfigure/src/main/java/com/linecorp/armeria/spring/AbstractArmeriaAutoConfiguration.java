@@ -99,16 +99,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
                                            metricCollectingServiceConfigurators.orElse(ImmutableList.of()));
 
-        final Server server = serverBuilder.build();
-
-        server.start().handle((result, t) -> {
-            if (t != null) {
-                throw new IllegalStateException("Armeria server failed to start", t);
-            }
-            return result;
-        }).join();
-        logger.info("Armeria server started at ports: {}", server.activePorts());
-        return server;
+        return serverBuilder.build();
     }
 
     /**

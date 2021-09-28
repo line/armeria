@@ -17,10 +17,9 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised to send a simplistic HTTP response with minimal content

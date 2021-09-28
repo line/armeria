@@ -26,8 +26,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +40,7 @@ import com.google.common.net.HostAndPort;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
@@ -58,7 +57,8 @@ final class HttpHeaderUtil {
     private static final CharMatcher QUOTED_STRING_TRIMMER = CharMatcher.is('"');
 
     @VisibleForTesting
-    static final Function<String, String> FORWARDED_CONVERTER = value -> TOKEN_SPLITTER.split(value).get("for");
+    static final Function<String, @Nullable String> FORWARDED_CONVERTER =
+            value -> TOKEN_SPLITTER.split(value).get("for");
 
     /**
      * Returns {@link ProxiedAddresses} which were delivered through a proxy server.
@@ -111,7 +111,7 @@ final class HttpHeaderUtil {
 
     @VisibleForTesting
     static void getAllValidAddress(@Nullable String headerValue,
-                                   Function<String, String> valueConverter,
+                                   Function<String, @Nullable String> valueConverter,
                                    Predicate<? super InetAddress> filter,
                                    ImmutableList.Builder<InetSocketAddress> accumulator) {
         if (Strings.isNullOrEmpty(headerValue)) {

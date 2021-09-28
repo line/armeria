@@ -16,16 +16,9 @@
 
 package com.linecorp.armeria.internal.client;
 
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Enumeration;
-
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -34,31 +27,6 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 
 public final class DnsUtil {
-
-    private static final Logger logger = LoggerFactory.getLogger(DnsUtil.class);
-
-    /**
-     * Returns {@code true} if any {@link NetworkInterface} supports {@code IPv6}, {@code false} otherwise.
-     */
-    public static boolean anyInterfaceSupportsIpV6() {
-        try {
-            final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                final NetworkInterface iface = interfaces.nextElement();
-                final Enumeration<InetAddress> addresses = iface.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    final InetAddress inetAddress = addresses.nextElement();
-                    if (inetAddress instanceof Inet6Address && !inetAddress.isAnyLocalAddress() &&
-                        !inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress()) {
-                        return true;
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            logger.debug("Unable to detect if any interface supports IPv6, assuming IPv4-only", e);
-        }
-        return false;
-    }
 
     @Nullable
     public static byte[] extractAddressBytes(DnsRecord record, Logger logger, String logPrefix) {

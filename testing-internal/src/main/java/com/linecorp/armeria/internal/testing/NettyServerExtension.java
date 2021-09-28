@@ -20,11 +20,10 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.net.InetSocketAddress;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -52,7 +51,7 @@ public abstract class NettyServerExtension extends AbstractAllOrEachExtension {
     }
 
     public final Endpoint endpoint() {
-        return Endpoint.of(address().getHostString(), address().getPort());
+        return Endpoint.unsafeCreate(address().getHostString(), address().getPort());
     }
 
     protected abstract void configure(Channel ch) throws Exception;

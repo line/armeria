@@ -18,10 +18,10 @@ package com.linecorp.armeria.server.tomcat;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class UnmanagedTomcatService extends TomcatService {
 

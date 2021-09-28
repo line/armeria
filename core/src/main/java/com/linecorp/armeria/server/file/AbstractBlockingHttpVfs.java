@@ -22,11 +22,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal {@link HttpVfs} implementation for accessing file system with blocking I/O.

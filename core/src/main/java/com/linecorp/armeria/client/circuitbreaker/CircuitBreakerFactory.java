@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A functional interface that represents a mapper factory, mapping a combination of host, method and path

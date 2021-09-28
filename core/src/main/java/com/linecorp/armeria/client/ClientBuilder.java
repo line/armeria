@@ -24,11 +24,11 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -248,5 +248,15 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder auth(OAuth2Token token) {
         return (ClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientBuilder followRedirects() {
+        return (ClientBuilder) super.followRedirects();
+    }
+
+    @Override
+    public ClientBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (ClientBuilder) super.followRedirects(redirectConfig);
     }
 }

@@ -21,11 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.jboss.resteasy.plugins.server.embedded.SecurityDomain;
 import org.jboss.resteasy.spi.ResteasyDeployment;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

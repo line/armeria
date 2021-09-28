@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised when a {@link StreamMessage} has been closed unexpectedly.
@@ -67,7 +66,7 @@ public class ClosedStreamException extends RuntimeException {
      * disabled, and writable stack trace enabled or disabled.
      */
     protected ClosedStreamException(@Nullable String message, @Nullable Throwable cause,
-                                  boolean enableSuppression, boolean writableStackTrace) {
+                                    boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

@@ -23,6 +23,7 @@ import org.slf4j.helpers.NOPLogger;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -49,18 +50,20 @@ public class RoutersBenchmark {
         SERVICES = ImmutableList.of(
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
-                                  false, AccessLogWriter.disabled(), false),
+                                  false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
+                                  true),
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
-                                  false, AccessLogWriter.disabled(), false)
+                                  false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
+                                  true)
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
-                                             false);
+                                             false, CommonPools.blockingTaskExecutor(), true);
         HOST = new VirtualHost(
                 "localhost", "localhost", null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
-                AccessLogWriter.disabled(), false);
+                AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(), true);
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }
 

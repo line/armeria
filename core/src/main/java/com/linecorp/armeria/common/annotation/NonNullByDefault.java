@@ -22,7 +22,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.meta.TypeQualifierDefault;
 
 /**

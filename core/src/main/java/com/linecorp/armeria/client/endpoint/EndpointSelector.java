@@ -19,11 +19,10 @@ package com.linecorp.armeria.client.endpoint;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Selects an {@link Endpoint} from an {@link EndpointGroup}.

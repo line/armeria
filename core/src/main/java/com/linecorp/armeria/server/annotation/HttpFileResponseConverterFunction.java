@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -25,6 +23,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.file.HttpFile;
 

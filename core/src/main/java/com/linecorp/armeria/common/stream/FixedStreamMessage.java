@@ -17,22 +17,21 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;

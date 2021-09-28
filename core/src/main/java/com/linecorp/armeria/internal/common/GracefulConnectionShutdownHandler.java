@@ -19,10 +19,10 @@ package com.linecorp.armeria.internal.common;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;

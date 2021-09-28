@@ -24,8 +24,6 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.junit.After;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
@@ -36,6 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.Server;
