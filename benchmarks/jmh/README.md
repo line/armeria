@@ -8,7 +8,7 @@ You must prepend `--no-daemon` and `clean` to your benchmark command due to
 [a known bug in jmh-gradle-plugin](https://github.com/melix/jmh-gradle-plugin/issues/132):
 
 ```
-$ ./gradlew --no-daemon :benchmarks:clean :benchmarks:jmh ...
+$ ./gradlew --no-daemon :benchmarks:jmh:clean :benchmarks:jmh:jmh ...
 ```
 
 ## Options
@@ -63,7 +63,7 @@ $ make
 When running a benchmark, specify `-Pjmh.profilers` option:
 
 ```
-$ ./gradlew --no-daemon :benchmarks:clean :benchmarks:jmh \
+$ ./gradlew --no-daemon :benchmarks:jmh:clean :benchmarks:jmh:jmh \
   "-Pjmh.profilers=jmh.extras.Async:asyncProfilerDir=$HOME/async-profiler;flameGraphDir=$HOME/FlameGraph"
 ```
 
