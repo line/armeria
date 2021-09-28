@@ -396,7 +396,7 @@ public final class ArmeriaHttpUtil {
     /**
      * Returns whether the specified header name is disallowed for additional trailers.
      */
-    public static boolean isDisallowedAdditionalTrailer(AsciiString name) {
+    public static boolean isPseudoHeader(AsciiString name) {
         // Pseudo headers are not allowed for additional trailers.
         return !name.isEmpty() && name.charAt(0) == ':';
     }
@@ -407,10 +407,11 @@ public final class ArmeriaHttpUtil {
     public static boolean isDisallowedResponseHeader(AsciiString name) {
         // Request Pseudo-Headers are not allowed for response headers.
         // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
-        if (HttpHeaderNames.STATUS.equals(name)) {
+        if (isPseudoHeader(name)) {
+            return !HttpHeaderNames.STATUS.equals(name);
+        } else {
             return false;
         }
-        return isDisallowedAdditionalTrailer(name);
     }
 
     /**
@@ -776,7 +777,7 @@ public final class ArmeriaHttpUtil {
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
                 continue;
             }
-            if (isDisallowedAdditionalTrailer(name)) {
+            if (isPseudoHeader(name)) {
                 continue;
             }
             if (isTrailerDisallowed(name)) {

@@ -17,8 +17,7 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isDisallowedAdditionalTrailer;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isDisallowedResponseHeader;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isPseudoHeader;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isTrailerDisallowed;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -41,7 +40,7 @@ public final class HttpHeadersUtil {
 
         final ResponseHeadersBuilder builder = headers.toBuilder();
         for (AsciiString name : additionalHeaders.names()) {
-            if (!isDisallowedResponseHeader(name)) {
+            if (!isPseudoHeader(name)) {
                 builder.remove(name);
                 additionalHeaders.forEachValue(name, value -> builder.add(name, value));
             }
@@ -75,7 +74,7 @@ public final class HttpHeadersUtil {
 
         final HttpHeadersBuilder builder = headers.toBuilder();
         for (AsciiString name : additionalTrailers.names()) {
-            if (!isDisallowedAdditionalTrailer(name) &&
+            if (!isPseudoHeader(name) &&
                 !isTrailerDisallowed(name)) {
                 builder.remove(name);
                 additionalTrailers.forEachValue(name, value -> builder.add(name, value));
