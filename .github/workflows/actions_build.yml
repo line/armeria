@@ -19,16 +19,16 @@ jobs:
       fail-fast: false
       matrix:
         on: [ self-hosted, macos-latest, windows-latest ]
-        java: [ 16 ]
+        java: [ 17 ]
         include:
           - java: 8
             on: self-hosted
           - java: 11
             on: self-hosted
-          - java: 15
+          - java: 16
             on: self-hosted
             leak: true
-          - java: 16
+          - java: 17
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
             on: macos-latest
@@ -38,7 +38,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - id: setup-jre
-      if: ${{ matrix.java != 16 }}
+      if: ${{ matrix.java != 17 }}
       name: Set up JRE ${{ matrix.java }}
       uses: actions/setup-java@v2
       with:
@@ -46,12 +46,12 @@ jobs:
         java-version: ${{ matrix.java }}
         java-package: jre
 
-    - id: setup-jdk-16
-      name: Set up JDK 16
+    - id: setup-jdk-17
+      name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
         distribution: 'adopt'
-        java-version: '16'
+        java-version: '17'
 
     - if: ${{ matrix.on != 'self-hosted' }}
       name: Restore the cache
@@ -73,9 +73,9 @@ jobs:
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PnoLint \
         -PflakyTests=false \
-        -PbuildJdkVersion=16 \
+        -PbuildJdkVersion=17 \
         -PtestJavaVersion=${{ matrix.java }} \
-        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-16.outputs.path }},${{ steps.setup-jre.outputs.path }}
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jre.outputs.path }}
       shell: bash
 
     - name: Clean up the cache
@@ -117,12 +117,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-16
-        name: Set up JDK 16
+      - id: setup-jdk-17
+        name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '16'
+          java-version: '17'
 
       - name: Run the linters
         run: |
@@ -149,12 +149,12 @@ jobs:
           sudo yum -y install cargo && cargo install svgbob_cli --version 0.5.4
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - id: setup-jdk-16
-        name: Set up JDK 16
+      - id: setup-jdk-17
+        name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '16'
+          java-version: '17'
 
       - name: Build the site
         run: |
@@ -175,12 +175,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-16
-        name: Set up JDK 16
+      - id: setup-jdk-17
+        name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '16'
+          java-version: '17'
 
       - name: Run flaky tests
         run: |
