@@ -27,8 +27,8 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.ExampleService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.kotlin.ExampleService;
 
 import kotlin.coroutines.Continuation;
 

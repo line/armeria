@@ -19,6 +19,8 @@
 package com.linecorp.armeria.internal.common.kotlin
 
 import java.lang.reflect.Method
+import java.lang.reflect.Type
+import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 import kotlin.reflect.jvm.kotlinFunction
 
@@ -40,3 +42,8 @@ internal fun isReturnTypeUnit(method: Method): Boolean {
     val kFunction = method.kotlinFunction ?: return false
     return kFunction.returnType.jvmErasure == Unit::class
 }
+
+@Suppress("unused")
+internal fun kFunctionReturnType(method: Method): Type =
+    requireNotNull(method.kotlinFunction) { "method is not a kotlin function" }
+        .returnType.javaType

@@ -14,12 +14,14 @@ dependencies {
     implementation project(':grpc-protocol')
     implementation project(':retrofit2')
     implementation project(':thrift0.14')
+    implementation project(':kotlin')
 
     implementation 'com.squareup.retrofit2:converter-jackson'
     implementation 'com.google.protobuf:protobuf-java-util'
     implementation 'io.grpc:grpc-okhttp'
     implementation 'io.grpc:grpc-netty-shaded'
     implementation 'org.awaitility:awaitility'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
 
     jmh "pl.project13.scala:sbt-jmh-extras:${managedVersions['pl.project13.scala:sbt-jmh-extras']}"
 
