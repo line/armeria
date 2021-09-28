@@ -174,7 +174,28 @@ public final class GrpcStatus {
     }
 
     /**
-     * Maps GRPC status codes to http status, as defined in upstream Google APIs
+     * Maps gRPC {@link Status}to {@link HttpStatus}. If there is no matched rule for the specified
+     * {@link Status}, the mapping rules defined in upstream Google APIs
+     * <a href="https://github.com/googleapis/googleapis/blob/b2a7d2709887e38bcd3b5142424e563b0b386b6f/google/rpc/code.proto">
+     * code.proto</a> will be used to convert the {@linkplain Status#getCode() gRPC code} to
+     * the {@link HttpStatus}.
+     */
+    public static HttpStatus grpcStatusToHttpStatus(Status grpcStatus) {
+        if (grpcStatus.getCode() == Code.CANCELLED) {
+            if ("Request timed out".equals(grpcStatus.getDescription())) {
+                // A call was closed by a server-side timeout.
+                return HttpStatus.SERVICE_UNAVAILABLE;
+            }
+            if ("Completed without a response".equals(grpcStatus.getDescription())) {
+                // A unary call was closed without sending a response.
+                return HttpStatus.INTERNAL_SERVER_ERROR;
+            }
+        }
+        return grpcCodeToHttpStatus(grpcStatus.getCode());
+    }
+
+    /**
+     * Maps gRPC status codes to HTTP status, as defined in upstream Google APIs
      * <a href="https://github.com/googleapis/googleapis/blob/b2a7d2709887e38bcd3b5142424e563b0b386b6f/google/rpc/code.proto">
      * code.proto</a>.
      */
