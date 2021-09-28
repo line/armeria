@@ -373,11 +373,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         ChannelFuture future;
         final boolean isReset;
         if (oldState == State.NEEDS_HEADERS) { // ResponseHeaders is not sent yet, so we can send the response.
-            final ResponseHeaders headers = res.headers();
+            final ResponseHeaders headers =
+                    mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
             logBuilder().responseHeaders(headers);
 
             final HttpData content = res.content();
-            final HttpHeaders trailers = res.trailers();
+            final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
             final boolean trailersEmpty = trailers.isEmpty();
             future = responseEncoder.writeHeaders(id, streamId, headers,
                                                   content.isEmpty() && trailersEmpty, trailersEmpty);
