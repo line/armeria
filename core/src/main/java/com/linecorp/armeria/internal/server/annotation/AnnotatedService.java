@@ -199,6 +199,9 @@ public final class AnnotatedService implements HttpService {
             final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
             warnIfHttpResponseArgumentExists(type, type);
             actualType = type.getActualTypeArguments()[0];
+        } else if (KotlinUtil.isSuspendingFunction(method)) {
+            // Use kotlin reflection since suspending function's java return type is always Object.
+            actualType = KotlinUtil.kFunctionReturnType(method);
         } else {
             actualType = method.getGenericReturnType();
         }

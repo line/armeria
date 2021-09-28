@@ -31,6 +31,7 @@ task generateSources(type: Copy) {
 
     // Copy from /internal/spring package.
     include '**/ArmeriaConfigurationNetUtil.java'
+    include '**/ArmeriaConfigurationSettingsUtil.java'
     include '**/ArmeriaConfigurationUtil.java'
     include '**/CustomAlias*KeyManager*.java'
     include '**/DropwizardSupport.java'

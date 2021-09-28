@@ -64,7 +64,6 @@ task develop(type: NpmTask) {
     args = ['run', 'develop']
 }
 
-
 task eslint(type: NpmTask) {
     dependsOn tasks.generateSiteSources
     args = ['run', 'lint']
