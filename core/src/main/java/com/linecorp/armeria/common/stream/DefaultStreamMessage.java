@@ -441,7 +441,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * @return {@code true} if the stream has been closed by this method call.
      *         {@code false} if the stream has been closed already by other party.
      */
-    protected final boolean tryClose(Throwable cause) {
+    public final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(new CloseEvent(cause));
             return true;

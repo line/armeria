@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
@@ -59,6 +61,9 @@ public final class ServiceConfig {
     private final Set<TransientServiceOption> transientServiceOptions;
     private final boolean handlesCorsPreflight;
 
+    private final ScheduledExecutorService blockingTaskExecutor;
+    private final boolean shutdownBlockingTaskExecutorOnStop;
+
     /**
      * Creates a new instance.
      */
@@ -66,10 +71,13 @@ public final class ServiceConfig {
                   @Nullable String defaultServiceName, ServiceNaming defaultServiceNaming,
                   long requestTimeoutMillis, long maxRequestLength,
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
-                  boolean shutdownAccessLogWriterOnStop) {
+                  boolean shutdownAccessLogWriterOnStop,
+                  ScheduledExecutorService blockingTaskExecutor,
+                  boolean shutdownBlockingTaskExecutorOnStop) {
         this(null, route, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
-             shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service));
+             shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service),
+             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
     }
 
     /**
@@ -80,7 +88,9 @@ public final class ServiceConfig {
                           ServiceNaming defaultServiceNaming, long requestTimeoutMillis, long maxRequestLength,
                           boolean verboseResponses, AccessLogWriter accessLogWriter,
                           boolean shutdownAccessLogWriterOnStop,
-                          Set<TransientServiceOption> transientServiceOptions) {
+                          Set<TransientServiceOption> transientServiceOptions,
+                          ScheduledExecutorService blockingTaskExecutor,
+                          boolean shutdownBlockingTaskExecutorOnStop) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -93,6 +103,8 @@ public final class ServiceConfig {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
         this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -128,7 +140,8 @@ public final class ServiceConfig {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -136,14 +149,16 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service.decorate(decorator), defaultLogName,
                                  defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
     }
 
     ServiceConfig withRoute(Route route) {
         requireNonNull(route, "route");
         return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
     }
 
     /**
@@ -286,6 +301,26 @@ public final class ServiceConfig {
         return handlesCorsPreflight;
     }
 
+    /**
+     * Returns the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations
+     * within this route.
+     * Note that the {@link ScheduledExecutorService} returned by this method does not set the
+     * {@link ServiceRequestContext} when executing a submitted task.
+     * Use {@link ServiceRequestContext#blockingTaskExecutor()} if possible.
+     */
+    public ScheduledExecutorService blockingTaskExecutor() {
+        return blockingTaskExecutor;
+    }
+
+    /**
+     * Returns whether the blocking task {@link Executor} is shut down when the {@link Server} stops.
+     *
+     * @see VirtualHost#shutdownBlockingTaskExecutorOnStop()
+     */
+    public boolean shutdownBlockingTaskExecutorOnStop() {
+        return shutdownBlockingTaskExecutorOnStop;
+    }
+
     @Override
     public String toString() {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
@@ -301,6 +336,8 @@ public final class ServiceConfig {
                              .add("verboseResponses", verboseResponses)
                              .add("accessLogWriter", accessLogWriter)
                              .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
+                             .add("blockingTaskExecutor", blockingTaskExecutor)
+                             .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
                              .toString();
     }
 }
