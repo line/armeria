@@ -32,6 +32,7 @@ import React, {
   useReducer,
   useState,
 } from 'react';
+import loadable from '@loadable/component';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
 import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
@@ -48,7 +49,6 @@ import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
-import GraphqlRequestBody from './GrahpqlRequestBody';
 
 SyntaxHighlighter.registerLanguage('json', json);
 
@@ -112,6 +112,8 @@ const extractUrlPath = (method: Method) => {
   const endpoints = method.endpoints;
   return endpoints[0].pathMapping.substring('exact:'.length);
 };
+
+const GraphqlRequestBody = loadable(() => import('./GrahpqlRequestBody'));
 
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,

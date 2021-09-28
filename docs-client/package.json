@@ -27,7 +27,8 @@
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",
     "react-syntax-highlighter": "^15.4.3",
-    "regenerator-runtime": "^0.13.8"
+    "regenerator-runtime": "^0.13.8",
+    "@loadable/component": "^5.15.0"
   },
   "devDependencies": {
     "@babel/core": "^7.14.2",
@@ -47,6 +48,7 @@
     "@types/react-syntax-highlighter": "^13.5.0",
     "@types/webpack": "^4.41.27",
     "@types/webpack-dev-server": "^3.11.4",
+    "@types/loadable__component": "^5.13.3",
     "@typescript-eslint/eslint-plugin": "^4.23.0",
     "@typescript-eslint/parser": "^4.23.0",
     "babel-loader": "^8.2.2",
