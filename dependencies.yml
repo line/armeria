@@ -504,11 +504,11 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.21' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.31' }
   kotlin-reflect: { version: *KOTLIN_VERSION }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.5.1' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.5.2' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   # kotlinx-coroutines-reactor is only used for testing :it:spring:boot2-kotlin
   kotlinx-coroutines-reactor: { version: *KOTLIN_COROUTINE_VERSION }
