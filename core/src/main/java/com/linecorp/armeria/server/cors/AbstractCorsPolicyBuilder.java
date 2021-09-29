@@ -439,6 +439,7 @@ abstract class AbstractCorsPolicyBuilder {
     public String toString() {
         return CorsPolicy.toString(this, origins, routes,
                                    nullOriginAllowed, credentialsAllowed, maxAge, exposedHeaders,
-                                   allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
+                                   allowedRequestMethods, allowAllRequestHeaders, allowedRequestHeaders,
+                                   preflightResponseHeaders);
     }
 }

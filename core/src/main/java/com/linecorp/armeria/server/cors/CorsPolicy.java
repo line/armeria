@@ -311,13 +311,15 @@ public final class CorsPolicy {
     @Override
     public String toString() {
         return toString(this, origins, routes, nullOriginAllowed, credentialsAllowed, maxAge,
-                        exposedHeaders, allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
+                        exposedHeaders, allowedRequestMethods, allowAllRequestHeaders, allowedRequestHeaders,
+                        preflightResponseHeaders);
     }
 
     static String toString(Object obj, @Nullable Set<String> origins, List<Route> routes,
                            boolean nullOriginAllowed, boolean credentialsAllowed,
                            long maxAge, @Nullable Set<AsciiString> exposedHeaders,
                            @Nullable Set<HttpMethod> allowedRequestMethods,
+                           boolean allowAllRequestHeaders,
                            @Nullable Set<AsciiString> allowedRequestHeaders,
                            @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         return MoreObjects.toStringHelper(obj)
@@ -329,6 +331,7 @@ public final class CorsPolicy {
                           .add("maxAge", maxAge)
                           .add("exposedHeaders", exposedHeaders)
                           .add("allowedRequestMethods", allowedRequestMethods)
+                          .add("allowAllRequestHeaders", allowAllRequestHeaders)
                           .add("allowedRequestHeaders", allowedRequestHeaders)
                           .add("preflightResponseHeaders", preflightResponseHeaders).toString();
     }
