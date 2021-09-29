@@ -62,8 +62,8 @@ abstract class AbstractCorsPolicyBuilder {
     private long maxAge;
     private final Set<AsciiString> exposedHeaders = new HashSet<>();
     private final EnumSet<HttpMethod> allowedRequestMethods = EnumSet.noneOf(HttpMethod.class);
-    private final Set<AsciiString> allowedRequestHeaders = new HashSet<>();
     private boolean allowAllRequestHeaders;
+    private final Set<AsciiString> allowedRequestHeaders = new HashSet<>();
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders = new HashMap<>();
     private boolean preflightResponseHeadersDisabled;
 
