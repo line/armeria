@@ -323,7 +323,7 @@ public enum BuiltInProperty {
     }),
 
     /**
-     * {@code "tls.proto"} - the current {@linkplain SSLSession#getProtocol()} TLS protocol}.
+     * {@code "tls.proto"} - the current {@linkplain SSLSession#getProtocol()} TLS protocol.
      * Unavailable if TLS handshake is not finished or the connection is not a TLS connection, such as
      * {@code "TLSv1.2"}.
      */
