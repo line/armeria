@@ -53,8 +53,6 @@ import io.netty.util.AsciiString;
  */
 abstract class AbstractCorsPolicyBuilder {
 
-    private static final AsciiString WILDCARD = AsciiString.of("*");
-
     private final Set<String> origins;
     private final List<Route> routes = new ArrayList<>();
     private boolean credentialsAllowed;
