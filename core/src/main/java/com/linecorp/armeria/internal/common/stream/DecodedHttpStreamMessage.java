@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
@@ -35,11 +34,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.DelegatingStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
-import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -51,11 +50,10 @@ import io.netty.util.concurrent.EventExecutor;
  * A {@link StreamMessage} which publishes a stream of objects decoded by {@link HttpDecoder}.
  */
 @UnstableApi
-public final class DecodedHttpStreamMessage<T> implements HttpDecoderOutput<T>,
-                                                          StreamMessage<T>, StreamWriter<T> {
+public final class DecodedHttpStreamMessage<T> extends DelegatingStreamMessage<T>
+        implements HttpDecoderOutput<T> {
 
     private final HttpMessageSubscriber subscriber = new HttpMessageSubscriber();
-    private final StreamMessageAndWriter<T> delegate;
 
     private final HttpDecoder<T> decoder;
     private final ByteBufDecoderInput input;
@@ -100,7 +98,7 @@ public final class DecodedHttpStreamMessage<T> implements HttpDecoderOutput<T>,
                                     StreamMessage<? extends HttpObject> streamMessage,
                                     HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                     Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
-        this.delegate = delegate;
+        super(delegate);
         delegate.setCallbackListener(this);
         publisher = requireNonNull(streamMessage, "streamMessage");
         this.decoder = requireNonNull(decoder, "decoder");
@@ -197,62 +195,6 @@ public final class DecodedHttpStreamMessage<T> implements HttpDecoderOutput<T>,
 
     private void cleanup() {
         input.close();
-    }
-
-    @Override
-    public boolean isOpen() {
-        return delegate.isOpen();
-    }
-
-    @Override
-    public boolean tryWrite(T o) {
-        return delegate.tryWrite(o);
-    }
-
-    @Override
-    public CompletableFuture<Void> whenConsumed() {
-        return delegate.whenConsumed();
-    }
-
-    @Override
-    public void close() {
-        delegate.close();
-    }
-
-    @Override
-    public void close(Throwable cause) {
-        delegate.close(cause);
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return delegate.isEmpty();
-    }
-
-    @Override
-    public long demand() {
-        return delegate.demand();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        delegate.subscribe(subscriber, executor, options);
-    }
-
-    @Override
-    public void abort() {
-        delegate.abort();
-    }
-
-    @Override
-    public void abort(Throwable cause) {
-        delegate.abort(cause);
     }
 
     private final class HttpMessageSubscriber implements Subscriber<HttpObject> {

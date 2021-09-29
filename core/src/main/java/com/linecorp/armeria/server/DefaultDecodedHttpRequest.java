@@ -16,31 +16,24 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.concurrent.CompletableFuture;
-
-import org.reactivestreams.Subscriber;
-
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.StreamCallbackListener;
+import com.linecorp.armeria.common.stream.DelegatingStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * TODO: consider deduping with {@link EmptyContentDecodedHttpRequest}.
  */
-final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
-                                                 StreamCallbackListener<HttpObject> {
+final class DefaultDecodedHttpRequest extends DelegatingStreamMessage<HttpObject>
+        implements DecodedHttpRequestWriter {
 
-    private final StreamMessageAndWriter<HttpObject> delegate;
     private final EventLoop eventLoop;
     private final int id;
     private final int streamId;
@@ -60,7 +53,7 @@ final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
                               EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                               boolean keepAlive, InboundTrafficController inboundTrafficController,
                               long maxRequestLength) {
-        this.delegate = delegate;
+        super(delegate);
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
@@ -68,8 +61,6 @@ final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
         this.inboundTrafficController = inboundTrafficController;
         this.maxRequestLength = maxRequestLength;
         this.headers = headers;
-
-        delegate.setCallbackListener(this);
     }
 
     @Override
@@ -112,44 +103,8 @@ final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
     }
 
     @Override
-    public boolean isOpen() {
-        return delegate.isOpen();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return delegate.isEmpty();
-    }
-
-    @Override
-    public long demand() {
-        return delegate.demand();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        delegate.subscribe(subscriber, executor, options);
-    }
-
-    @Override
     public EventLoop defaultSubscriberExecutor() {
         return eventLoop;
-    }
-
-    @Override
-    public void abort() {
-        delegate.abort();
-    }
-
-    @Override
-    public void abort(Throwable cause) {
-        delegate.abort(cause);
     }
 
     @Override
@@ -158,14 +113,14 @@ final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
 
         final boolean published;
         if (obj instanceof HttpHeaders) { // HTTP trailers.
-            published = delegate.tryWrite(obj);
+            published = delegate().tryWrite(obj);
             ctx.logBuilder().requestTrailers((HttpHeaders) obj);
             // Close this stream because HTTP trailers is the last element of the request.
             close();
         } else {
             final HttpData httpData = (HttpData) obj;
             httpData.touch(ctx);
-            published = delegate.tryWrite(httpData);
+            published = delegate().tryWrite(httpData);
             if (published) {
                 ctx.logBuilder().increaseRequestLength(httpData);
                 inboundTrafficController.inc(httpData.length());
@@ -176,21 +131,6 @@ final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
         }
 
         return published;
-    }
-
-    @Override
-    public CompletableFuture<Void> whenConsumed() {
-        return delegate.whenConsumed();
-    }
-
-    @Override
-    public void close() {
-        delegate.close();
-    }
-
-    @Override
-    public void close(Throwable cause) {
-        delegate.close(cause);
     }
 
     @Override
@@ -224,7 +164,7 @@ final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
         }
 
         // Try to close the request first, then abort the response if it is already closed.
-        if (!delegate.tryClose(cause) &&
+        if (!delegate().tryClose(cause) &&
             response != null && !response.isComplete()) {
             response.abort(cause);
         }
