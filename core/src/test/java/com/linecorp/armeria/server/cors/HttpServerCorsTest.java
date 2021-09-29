@@ -97,18 +97,6 @@ public class HttpServerCorsTest {
         public void index() {}
     }
 
-    @CorsDecorator(
-            origins = "http://example.com",
-            allowedRequestMethods = HttpMethod.GET,
-            allowAllRequestHeaders = true,
-            allowedRequestHeaders = "*"
-    )
-    private static class MyAnnotatedService4 {
-        @Get("/index")
-        @StatusCode(200)
-        public void index() {}
-    }
-
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
@@ -295,12 +283,6 @@ public class HttpServerCorsTest {
                                                                 .allowAllRequestHeaders()
                                                                 .newDecorator()));
             sb.annotatedService("/cors14", new MyAnnotatedService3());
-
-            sb.service("/cors15", myService.decorate(CorsService.builder("http://example.com")
-                                                                .allowRequestMethods(HttpMethod.GET)
-                                                                .allowAllRequestHeaders(true)
-                                                                .newDecorator()));
-            sb.annotatedService("/cors16", new MyAnnotatedService4());
         }
     };
 
@@ -397,14 +379,6 @@ public class HttpServerCorsTest {
             service.decorate(decorator).decorate(decorator);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("decorated with a CorsService already");
-
-        assertThatThrownBy(() -> {
-            final HttpService service = (ctx, req) -> HttpResponse.of("OK");
-            service.decorate(CorsService.builderForAnyOrigin()
-                                        .allowAllRequestHeaders()
-                                        .allowRequestHeaders("foo")
-                                        .newDecorator());
-        }).isInstanceOf(IllegalArgumentException.class);
     }
 
     // Makes sure if null origin supported CorsService works properly and it finds the CORS policy
@@ -695,49 +669,5 @@ public class HttpServerCorsTest {
                 .isEqualTo("http://example.com");
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isEqualTo("foo,bar");
-    }
-
-    @Test
-    public void testAllowAllHeadersUsingWildcard() {
-        final WebClient client = client();
-
-        HttpRequest preflightReq = HttpRequest.of(
-                RequestHeaders.of(HttpMethod.OPTIONS, "/cors15",
-                                  HttpHeaderNames.ORIGIN, "http://example.com",
-                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET",
-                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS, "foo,bar"));
-        AggregatedHttpResponse res = client.execute(preflightReq).aggregate().join();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
-                .isEqualTo("http://example.com");
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isEqualTo("*");
-
-        preflightReq = HttpRequest.of(
-                RequestHeaders.of(HttpMethod.OPTIONS, "/cors15",
-                                  HttpHeaderNames.ORIGIN, "http://example.com",
-                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET"));
-        res = client.execute(preflightReq).aggregate().join();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
-                .isEqualTo("http://example.com");
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isNull();
-    }
-
-    @Test
-    public void testAnnotatedServiceAllowAllHeadersUsingWildcard() {
-        final WebClient client = client();
-        final HttpRequest preflightReq = HttpRequest.of(
-                RequestHeaders.of(HttpMethod.OPTIONS, "/cors16/index",
-                                  HttpHeaderNames.ORIGIN, "http://example.com",
-                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET",
-                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS, "foo,bar"));
-        final AggregatedHttpResponse res = client.execute(preflightReq).aggregate().join();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
-                .isEqualTo("http://example.com");
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
-        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isEqualTo("*");
     }
 }

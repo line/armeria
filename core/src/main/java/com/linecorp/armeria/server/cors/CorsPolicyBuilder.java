@@ -102,11 +102,6 @@ public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder {
     }
 
     @Override
-    public CorsPolicyBuilder allowAllRequestHeaders(boolean useWildcard) {
-        return (CorsPolicyBuilder) super.allowAllRequestHeaders(useWildcard);
-    }
-
-    @Override
     public CorsPolicyBuilder allowRequestHeaders(CharSequence... headers) {
         return (CorsPolicyBuilder) super.allowRequestHeaders(headers);
     }

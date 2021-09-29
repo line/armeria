@@ -286,25 +286,7 @@ abstract class AbstractCorsPolicyBuilder {
      * @return {@code this} to support method chaining.
      */
     public AbstractCorsPolicyBuilder allowAllRequestHeaders() {
-        return allowAllRequestHeaders(false);
-    }
-
-    /**
-     * Enables to allow all HTTP headers.
-     *
-     * <p>If {@code useWildcard}, the server will set the CORS {@code "Access-Control-Allow-Headers"} to
-     * {@code "*"}. Please be careful since wildcard may have compatibility issue for some browsers.
-     *
-     * <p>If not {@code useWildcard}, the server will set the CORS {@code "Access-Control-Allow-Headers"} to be
-     * as same as the CORS {@code "Access-Control-Request-Headers"} header in the request.
-     *
-     * @return {@code this} to support method chaining.
-     */
-    public AbstractCorsPolicyBuilder allowAllRequestHeaders(boolean useWildcard) {
         allowAllRequestHeaders = true;
-        if (useWildcard) {
-            allowedRequestHeaders.add(WILDCARD);
-        }
         return this;
     }
 
@@ -320,8 +302,6 @@ abstract class AbstractCorsPolicyBuilder {
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
      * if it allows a request).
-     *
-     * <p>If you add wildcard ({@code "*"}), allows all HTTP headers.
      *
      * @param headers the headers to be added to
      *                the preflight {@code "Access-Control-Allow-Headers"} response header.
@@ -344,8 +324,6 @@ abstract class AbstractCorsPolicyBuilder {
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
      * if it allows a request).
-     *
-     * <p>If you add wildcard ({@code "*"}), allows all HTTP headers.
      *
      * @param headers the headers to be added to
      *                the preflight {@code "Access-Control-Allow-Headers"} response header.
@@ -451,15 +429,6 @@ abstract class AbstractCorsPolicyBuilder {
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
     CorsPolicy build() {
-        final Set<AsciiString> allowedRequestHeaders;
-        if (this.allowedRequestHeaders.contains(WILDCARD)) {
-            allowedRequestHeaders = Collections.singleton(WILDCARD);
-            allowAllRequestHeaders = true;
-        } else {
-            checkArgument(!(allowAllRequestHeaders && !this.allowedRequestHeaders.isEmpty()),
-                          "allowedRequestHeaders should be empty if allowAllRequestHeaders without wildcard");
-            allowedRequestHeaders = this.allowedRequestHeaders;
-        }
         return new CorsPolicy(origins, routes, credentialsAllowed, maxAge, nullOriginAllowed,
                               exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
                               allowedRequestMethods, preflightResponseHeadersDisabled,

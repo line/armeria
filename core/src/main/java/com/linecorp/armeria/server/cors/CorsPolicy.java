@@ -284,7 +284,7 @@ public final class CorsPolicy {
 
     void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
         if (allowAllRequestHeaders) {
-            setCorsAllowAllHeaders(requestHeaders, headers);
+            copyCorsAllowHeaders(requestHeaders, headers);
             return;
         }
 
@@ -299,17 +299,13 @@ public final class CorsPolicy {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
     }
 
-    private void setCorsAllowAllHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
+    private void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
         final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
         if (Strings.isNullOrEmpty(header)) {
             return;
         }
 
-        if (allowedRequestHeaders.isEmpty()) {
-            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
-        } else {
-            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
-        }
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
     }
 
     @Override
