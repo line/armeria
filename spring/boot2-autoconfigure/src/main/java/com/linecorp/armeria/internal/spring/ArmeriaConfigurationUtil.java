@@ -19,6 +19,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationSettingsUtil.configureSettings;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -115,6 +116,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(metricCollectingServiceConfigurators, "metricCollectingServiceConfigurators");
 
         configurePorts(server, settings.getPorts());
+        configureSettings(server, settings);
         armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
         armeriaServerBuilderConsumers.forEach(consumer -> consumer.accept(server));
 

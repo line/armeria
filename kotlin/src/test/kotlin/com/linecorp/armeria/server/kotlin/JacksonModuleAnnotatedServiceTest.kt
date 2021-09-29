@@ -14,11 +14,12 @@
  * under the License
  */
 
-package com.linecorp.armeria.server
+package com.linecorp.armeria.server.kotlin
 
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.Post
 import com.linecorp.armeria.server.annotation.ProducesJson
 import com.linecorp.armeria.testing.junit5.server.ServerExtension

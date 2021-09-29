@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -202,6 +203,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
 
     @Override
     public WebClientBuilder auth(OAuth2Token token) {
+        return (WebClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public WebClientBuilder auth(AuthToken token) {
         return (WebClientBuilder) super.auth(token);
     }
 

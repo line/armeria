@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,13 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+syntax = "proto3";
 
-package com.linecorp.armeria.server
+option java_multiple_files = true;
+option java_package = "com.linecorp.armeria.grpc.ghz";
 
-class ExampleService {
-    fun normal(): Int = 1
+package helloworld;
 
-    suspend fun suspendingUnit() {}
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+}
 
-    suspend fun suspendingInt(): Int = 1
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
 }
