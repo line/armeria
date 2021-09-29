@@ -278,6 +278,16 @@ public final class CorsServiceBuilder {
         return this;
     }
 
+    public CorsServiceBuilder allowAllRequestHeaders() {
+        firstPolicyBuilder.allowAllRequestHeaders();
+        return this;
+    }
+
+    public CorsServiceBuilder allowAllRequestHeaders(boolean useWildcard) {
+        firstPolicyBuilder.allowAllRequestHeaders(useWildcard);
+        return this;
+    }
+
     /**
      * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.

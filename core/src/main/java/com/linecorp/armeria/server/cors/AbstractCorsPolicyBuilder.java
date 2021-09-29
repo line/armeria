@@ -53,6 +53,8 @@ import io.netty.util.AsciiString;
  */
 abstract class AbstractCorsPolicyBuilder {
 
+    private static final AsciiString WILDCARD = AsciiString.of("*");
+
     private final Set<String> origins;
     private final List<Route> routes = new ArrayList<>();
     private boolean credentialsAllowed;
@@ -61,6 +63,7 @@ abstract class AbstractCorsPolicyBuilder {
     private final Set<AsciiString> exposedHeaders = new HashSet<>();
     private final EnumSet<HttpMethod> allowedRequestMethods = EnumSet.noneOf(HttpMethod.class);
     private final Set<AsciiString> allowedRequestHeaders = new HashSet<>();
+    private boolean allowAllRequestHeaders;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders = new HashMap<>();
     private boolean preflightResponseHeadersDisabled;
 
@@ -96,6 +99,9 @@ abstract class AbstractCorsPolicyBuilder {
         }
         if (corsDecorator.allowedRequestHeaders().length > 0) {
             allowRequestHeaders(corsDecorator.allowedRequestHeaders());
+        }
+        if (corsDecorator.allowAllRequestHeaders()) {
+            allowAllRequestHeaders();
         }
         if (corsDecorator.allowedRequestMethods().length > 0) {
             allowRequestMethods(corsDecorator.allowedRequestMethods());
@@ -271,6 +277,18 @@ abstract class AbstractCorsPolicyBuilder {
         return this;
     }
 
+    public AbstractCorsPolicyBuilder allowAllRequestHeaders() {
+        return allowAllRequestHeaders(false);
+    }
+
+    public AbstractCorsPolicyBuilder allowAllRequestHeaders(boolean useWildcard) {
+        allowAllRequestHeaders = true;
+        if (useWildcard) {
+            allowedRequestHeaders.add(WILDCARD);
+        }
+        return this;
+    }
+
     /**
      * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.
@@ -410,9 +428,19 @@ abstract class AbstractCorsPolicyBuilder {
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
     CorsPolicy build() {
+        final Set<AsciiString> allowedRequestHeaders;
+        if (this.allowedRequestHeaders.contains(WILDCARD)) {
+            allowedRequestHeaders = Collections.singleton(WILDCARD);
+            allowAllRequestHeaders = true;
+        } else {
+            checkArgument(!(allowAllRequestHeaders && !this.allowedRequestHeaders.isEmpty()),
+                          "allowedRequestHeaders should be empty if allowAllRequestHeaders without wildcard");
+            allowedRequestHeaders = this.allowedRequestHeaders;
+        }
         return new CorsPolicy(origins, routes, credentialsAllowed, maxAge, nullOriginAllowed,
-                              exposedHeaders, allowedRequestHeaders, allowedRequestMethods,
-                              preflightResponseHeadersDisabled, preflightResponseHeaders);
+                              exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
+                              allowedRequestMethods, preflightResponseHeadersDisabled,
+                              preflightResponseHeaders);
     }
 
     @Override

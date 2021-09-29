@@ -72,6 +72,8 @@ public @interface CorsDecorator {
      */
     String[] exposedHeaders() default {};
 
+    boolean allowAllRequestHeaders() default false;
+
     /**
      * The headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.

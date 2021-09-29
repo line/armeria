@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
@@ -81,6 +83,7 @@ public final class CorsPolicy {
     private final long maxAge;
     private final Set<AsciiString> exposedHeaders;
     private final Set<HttpMethod> allowedRequestMethods;
+    private final boolean allowAllRequestHeaders;
     private final Set<AsciiString> allowedRequestHeaders;
     private final String joinedExposedHeaders;
     private final String joinedAllowedRequestHeaders;
@@ -89,8 +92,8 @@ public final class CorsPolicy {
 
     CorsPolicy(Set<String> origins, List<Route> routes, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
-               Set<AsciiString> allowedRequestHeaders, EnumSet<HttpMethod> allowedRequestMethods,
-               boolean preflightResponseHeadersDisabled,
+               boolean allowAllRequestHeaders, Set<AsciiString> allowedRequestHeaders,
+               EnumSet<HttpMethod> allowedRequestMethods, boolean preflightResponseHeadersDisabled,
                Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         this.origins = ImmutableSet.copyOf(origins);
         this.routes = ImmutableList.copyOf(routes);
@@ -99,6 +102,7 @@ public final class CorsPolicy {
         this.nullOriginAllowed = nullOriginAllowed;
         this.exposedHeaders = ImmutableSet.copyOf(exposedHeaders);
         this.allowedRequestMethods = ImmutableSet.copyOf(allowedRequestMethods);
+        this.allowAllRequestHeaders = allowAllRequestHeaders;
         this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
         joinedExposedHeaders = HEADER_JOINER.join(this.exposedHeaders);
         joinedAllowedRequestMethods = this.allowedRequestMethods
@@ -278,7 +282,12 @@ public final class CorsPolicy {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, joinedAllowedRequestMethods);
     }
 
-    void setCorsAllowHeaders(ResponseHeadersBuilder headers) {
+    void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
+        if (allowAllRequestHeaders) {
+            setCorsAllowAllHeaders(requestHeaders, headers);
+            return;
+        }
+
         if (allowedRequestHeaders.isEmpty()) {
             return;
         }
@@ -288,6 +297,19 @@ public final class CorsPolicy {
 
     void setCorsMaxAge(ResponseHeadersBuilder headers) {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
+    }
+
+    private void setCorsAllowAllHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
+        final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
+        if (Strings.isNullOrEmpty(header)) {
+            return;
+        }
+
+        if (allowedRequestHeaders.isEmpty()) {
+            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
+        } else {
+            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
+        }
     }
 
     @Override
