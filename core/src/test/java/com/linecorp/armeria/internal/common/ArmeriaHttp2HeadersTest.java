@@ -41,7 +41,7 @@ import io.netty.util.AsciiString;
 class ArmeriaHttp2HeadersTest {
 
     // Copied from Http2HeadersTest
-    
+
     @Test
     void testEqualsInsertionOrderSameHeaderName() {
         final Http2Headers h1 = newEmptyHeaders();
