@@ -361,17 +361,29 @@ class ArmeriaHttp2Headers implements Http2Headers {
 
     @Override
     public boolean containsByte(CharSequence name, byte value) {
-        return getByte(name) == value;
+        final Byte byte0 = getByte(name);
+        if (byte0 == null) {
+            return false;
+        }
+        return byte0 == value;
     }
 
     @Override
     public boolean containsChar(CharSequence name, char value) {
-        return getChar(name) == value;
+        final Character char0 = getChar(name);
+        if (char0 == null) {
+            return false;
+        }
+        return char0 == value;
     }
 
     @Override
     public boolean containsShort(CharSequence name, short value) {
-        return getShort(name) == value;
+        final Short short0 = getShort(name);
+        if (short0 == null) {
+            return false;
+        }
+        return short0 == value;
     }
 
     @Override

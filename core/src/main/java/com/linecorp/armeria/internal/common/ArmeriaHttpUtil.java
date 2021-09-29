@@ -135,17 +135,17 @@ public final class ArmeriaHttpUtil {
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/1 to HTTP/2.
      */
-    private static final CharSequenceMap HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST = new CharSequenceMap();
+    private static final CaseInsensitiveMap HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST = new CaseInsensitiveMap();
 
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/2 to HTTP/1.
      */
-    private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST = new CharSequenceMap();
+    private static final CaseInsensitiveMap HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST = new CaseInsensitiveMap();
 
     /**
      * The set of headers that must not be directly copied when converting trailers.
      */
-    private static final CharSequenceMap HTTP_TRAILER_DISALLOWED_LIST = new CharSequenceMap();
+    private static final CaseInsensitiveMap HTTP_TRAILER_DISALLOWED_LIST = new CaseInsensitiveMap();
 
     static {
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
@@ -222,7 +222,7 @@ public final class ArmeriaHttpUtil {
      * only allow a single value in the request. If adding headers that can potentially have multiple values,
      * please check the usage in code accordingly.
      */
-    private static final CharSequenceMap REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap();
+    private static final CaseInsensitiveMap REQUEST_HEADER_TRANSLATIONS = new CaseInsensitiveMap();
 
     static {
         REQUEST_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
@@ -623,7 +623,7 @@ public final class ArmeriaHttpUtil {
         final Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
         // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values,
         // but still allowing for "enough" space in the map to reduce the chance of hash code collision.
-        final CharSequenceMap connectionDisallowedList =
+        final CaseInsensitiveMap connectionDisallowedList =
                 toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
         StringJoiner cookieJoiner = null;
         while (iter.hasNext()) {
@@ -658,9 +658,9 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    private static CharSequenceMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
-                                                  int arraySizeHint) {
-        final CharSequenceMap result = new CharSequenceMap(arraySizeHint);
+    private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
+                                                     int arraySizeHint) {
+        final CaseInsensitiveMap result = new CaseInsensitiveMap(arraySizeHint);
 
         while (valuesIter.hasNext()) {
             final AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
@@ -990,15 +990,15 @@ public final class ArmeriaHttpUtil {
         return HTTP_TRAILER_DISALLOWED_LIST.contains(name);
     }
 
-    private static final class CharSequenceMap
-            extends DefaultHeaders<AsciiString, AsciiString, CharSequenceMap> {
+    private static final class CaseInsensitiveMap
+            extends DefaultHeaders<AsciiString, AsciiString, CaseInsensitiveMap> {
 
-        CharSequenceMap() {
+        CaseInsensitiveMap() {
             super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance());
         }
 
         @SuppressWarnings("unchecked")
-        CharSequenceMap(int size) {
+        CaseInsensitiveMap(int size) {
             super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance(), NameValidator.NOT_NULL, size);
         }
     }

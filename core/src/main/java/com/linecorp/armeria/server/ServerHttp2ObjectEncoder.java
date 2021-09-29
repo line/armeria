@@ -83,30 +83,20 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     }
 
     private Http2Headers convertHeaders(HttpHeaders inputHeaders, boolean isTrailersEmpty) {
-        HttpHeadersBuilder builder = null;
+        final HttpHeadersBuilder builder = inputHeaders.toBuilder();
         if (enableServerHeader && !inputHeaders.contains(HttpHeaderNames.SERVER)) {
-            builder = inputHeaders.toBuilder();
             builder.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
         }
 
         if (enableDateHeader && !inputHeaders.contains(HttpHeaderNames.DATE)) {
-            if (builder == null) {
-                builder = inputHeaders.toBuilder();
-            }
             builder.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
         }
 
         if (!isTrailersEmpty && inputHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-            if (builder == null) {
-                builder = inputHeaders.toBuilder();
-            }
             // We don't apply chunked encoding when the content-length header is set, which would
             // prevent the trailers from being sent so we go ahead and remove content-length to force
             // chunked encoding.
             builder.remove(HttpHeaderNames.CONTENT_LENGTH);
-        }
-        if (builder == null) {
-            builder = inputHeaders.toBuilder();
         }
         return ArmeriaHttpUtil.toNettyHttp2ServerHeaders(builder);
     }

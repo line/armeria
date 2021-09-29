@@ -628,7 +628,6 @@ abstract class StringMultimapBuilder<
             return false;
         }
 
-        @SuppressWarnings("NullableProblems")
         final StringMultimapBuilder<?, ?, ?, ?> that = (StringMultimapBuilder<?, ?, ?, ?>) o;
         if (size() != that.size()) {
             return false;
