@@ -121,6 +121,11 @@ class KeepAliveHandlerTest {
 
         idleTimeoutScheduler.initialize(ctx);
         await().timeout(4, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(1));
+
+        // add another listener to ensure all closeFutures are invoked at this point
+        ctx.channel().closeFuture().addListener(unused -> counter.incrementAndGet());
+        await().timeout(4, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(2));
+
         assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25));
         idleTimeoutScheduler.destroy();
     }
