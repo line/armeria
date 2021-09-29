@@ -17,13 +17,14 @@
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
+import loadable from '@loadable/component';
+
 import {
   buildClientSchema,
   GraphQLSchema,
   getIntrospectionQuery,
 } from 'graphql';
 import TextField from '@material-ui/core/TextField';
-import QueryEditor from './QueryEditor';
 import jsonPrettify from '../../lib/json-prettify';
 import { docServiceDebug } from '../../lib/header-provider';
 
@@ -33,6 +34,8 @@ const graphqlPlaceHolder = `{
   }
 }`;
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
+
+const QueryEditor = loadable(() => import('./QueryEditor'));
 
 interface Props {
   requestBodyOpen: boolean;
