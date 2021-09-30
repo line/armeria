@@ -473,6 +473,18 @@ public final class MediaType {
     public static final MediaType GZIP = createConstant(APPLICATION_TYPE, "x-gzip");
 
     /**
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7932">Brotli Compression format, a lossless data
+     * compression format.</a>.
+     */
+    public static final MediaType BROTLI = createConstant(APPLICATION_TYPE, "brotli");
+
+    /**
+     * <a href="https://datatracker.ietf.org/doc/html/rfc8478">Zstandard Compression format, a lossless data
+     * compression format.</a>.
+     */
+    public static final MediaType ZSTD = createConstant(APPLICATION_TYPE, "zstd");
+
+    /**
      * <a href="https://datatracker.ietf.org/doc/html/draft-kelly-json-hal-08#section-3">JSON Hypertext
      * Application Language (HAL) documents</a>.
      */
