@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.internal.testing.webapp;
 
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -27,6 +30,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.regex.Pattern;
+
+import javax.net.ssl.SSLSession;
 
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -40,6 +45,8 @@ import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+
+import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
@@ -346,5 +353,28 @@ public abstract class WebAppContainerTest {
                                  .count()).isEqualTo(1024);
             }
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = { "H1", "H2" })
+    public void tlsAttrs(SessionProtocol sessionProtocol) throws Exception {
+        final WebClient client = WebClient.builder(server().uri(sessionProtocol))
+                                          .factory(ClientFactory.insecure())
+                                          .build();
+
+        final AggregatedHttpResponse res = client.get("/jsp/tls.jsp").aggregate().join();
+        final SSLSession sslSession = server().requestContextCaptor().take().sslSession();
+        final String expectedId;
+        if (sslSession.getId() != null) {
+            expectedId = BaseEncoding.base16().encode(sslSession.getId());
+        } else {
+            expectedId = "";
+        }
+
+        assertThatJson(res.contentUtf8())
+                .node("sessionId").isStringEqualTo(expectedId)
+                .node("cipherSuite").isStringEqualTo(sslSession.getCipherSuite())
+                .node("keySize").matches(greaterThan(BigDecimal.ZERO))
+                .node("hasPeerCerts").isEqualTo(false);
     }
 }
