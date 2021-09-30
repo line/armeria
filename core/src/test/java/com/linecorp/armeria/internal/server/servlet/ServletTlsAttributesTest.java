@@ -27,7 +27,7 @@ class ServletTlsAttributesTest {
         assertThat(guessKeySize("")).isZero();
         assertThat(guessKeySize("_")).isZero();
         assertThat(guessKeySize("_FOO")).isZero();
-        assertThat(guessKeySize("_WITH")).isZero();
+        assertThat(guessKeySize("_WITH_")).isZero();
         assertThat(guessKeySize("_WITH_BAR")).isZero();
         assertThat(guessKeySize("TLS_")).isZero();
         assertThat(guessKeySize("TLS_FOO")).isZero();
