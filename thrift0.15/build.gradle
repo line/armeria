@@ -1,14 +1,8 @@
-// This module builds and publishes 'armeria-thrift0.14', which is compiled with
-// the source code of ':thrift0.13' and overrides breaking changed source code in Thrift 0.14.0.
-final def THRIFT_VERSION = '0.14.2'
+// This module builds and publishes 'armeria-thrift0.15', which is compiled with
+// the source code of ':thrift0.13' and ':thrift0.14.0'.
 
 dependencies {
-    api("org.apache.thrift:libthrift") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly THRIFT_VERSION
-        }
-    }
+    api("org.apache.thrift:libthrift")
 
     api 'javax.annotation:javax.annotation-api'
 
@@ -22,29 +16,33 @@ dependencies {
     testImplementation 'io.prometheus:simpleclient_common'
 }
 
-// Use the sources from ':thrift0.13'.
+// Use the sources from ':thrift0.13' and ':thrift0.14'.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
 def thrift013ProjectDir = "${rootProject.projectDir}/thrift0.13"
+def thrift014ProjectDir = "${rootProject.projectDir}/thrift0.14"
 
-// Copy common files from thrift0.13 module to gen-src directory in order to use them as a source set.
+// Copy common files from ':thrift0.13' and ':thrift0.14' to gen-src directory
+// in order to use them as a source set.
 task generateSources(type: Copy) {
-    from "${thrift013ProjectDir}/src/main/java"
+    from("${thrift013ProjectDir}/src/main/java") {
+        exclude '**/TByteBufTransport.java'
+        exclude '**/common/thrift/package-info.java'
+    }
+    from "${thrift014ProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
-    exclude '**/TByteBufTransport.java'
-    exclude '**/common/thrift/package-info.java'
 }
 
 task generateTestSources(type: Copy) {
-    from "${thrift013ProjectDir}/src/test/java"
+    from("${thrift013ProjectDir}/src/test/java") {
+        exclude '**/THttp2Client.java'
+    }
+    from "${thrift014ProjectDir}/src/test/java"
     into "${project.ext.genSrcDir}/test/java"
-    exclude '**/THttp2Client.java'
 }
 
 ext {
-    // Use the old compiler.
-    thriftVersion = THRIFT_VERSION.substring(0, THRIFT_VERSION.lastIndexOf('.'));
     testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift"]
 }
 

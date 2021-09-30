@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.MaybeObserver;
 import io.reactivex.rxjava3.core.MaybeSource;
-import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
+import io.reactivex.rxjava3.operators.ScalarSupplier;
 
 final class RequestContextScalarSupplierMaybe<T> extends Maybe<T> implements ScalarSupplier<T> {
     private final MaybeSource<T> source;
