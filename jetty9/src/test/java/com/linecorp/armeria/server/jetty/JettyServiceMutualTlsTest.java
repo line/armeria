@@ -16,17 +16,6 @@
 
 package com.linecorp.armeria.server.jetty;
 
-import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.Collections;
-
-import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
-import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
-import org.eclipse.jetty.plus.annotation.ContainerInitializer;
-import org.eclipse.jetty.util.resource.Resource;
-import org.eclipse.jetty.webapp.WebAppContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerMutualTlsTest;
@@ -54,31 +43,11 @@ class JettyServiceMutualTlsTest extends WebAppContainerMutualTlsTest {
             sb.serviceUnder(
                     "/jsp/",
                     JettyService.builder()
-                                .handler(newWebAppContext())
+                                .handler(JettyServiceTest.newWebAppContext())
                                 .build()
                                 .decorate(LoggingService.newDecorator()));
         }
     };
-
-    static WebAppContext newWebAppContext() throws MalformedURLException {
-        final WebAppContext handler = new WebAppContext();
-        handler.setContextPath("/");
-        handler.setBaseResource(Resource.newResource(webAppRoot()));
-        handler.setClassLoader(new URLClassLoader(
-                new URL[] {
-                        Resource.newResource(new File(webAppRoot(),
-                                                      "WEB-INF" + File.separatorChar +
-                                                      "lib" + File.separatorChar +
-                                                      "hello.jar")).getURI().toURL()
-                },
-                JettyService.class.getClassLoader()));
-
-        handler.addBean(new ServletContainerInitializersStarter(handler), true);
-        handler.setAttribute(
-                "org.eclipse.jetty.containerInitializers",
-                Collections.singletonList(new ContainerInitializer(new JettyJasperInitializer(), null)));
-        return handler;
-    }
 
     @Override
     protected ServerExtension server() {
