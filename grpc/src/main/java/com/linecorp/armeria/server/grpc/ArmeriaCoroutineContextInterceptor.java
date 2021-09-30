@@ -34,10 +34,12 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
 
     @Override
     public CoroutineContext coroutineContext(ServerCall<?, ?> serverCall, Metadata metadata) {
+        final ServiceRequestContext ctx = ServiceRequestContext.current();
+        final ArmeriaRequestCoroutineContext coroutineContext = new ArmeriaRequestCoroutineContext(ctx);
         if (useBlockingTaskExecutor) {
-            return ExecutorsKt.from(ServiceRequestContext.current().blockingTaskExecutor());
+            return ExecutorsKt.from(ctx.blockingTaskExecutor()).plus(coroutineContext);
         } else {
-            return ExecutorsKt.from(ServiceRequestContext.current().eventLoop());
+            return ExecutorsKt.from(ctx.eventLoop()).plus(coroutineContext);
         }
     }
 }

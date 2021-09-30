@@ -18,18 +18,13 @@ class ContextAwareService {
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()
 
-        // Propagate armeria request context.
-        // `BusinessLogic.blockingTask()` is designed to be dispatched to `BusinessLogic.myDispatcher`
-        // to limit the number of parallel executions.
-        // Thus, we have to pass a request context as `ThreadContextElement`.
-        withContext(ArmeriaRequestContext()) {
-            log.info("Start blocking task for $name")
-            BusinessLogic.blockingTask()
-            log.info("Finished blocking task for $name")
+        // Armeria request context will automatically be propagated to myDispatcher's scope.
+        log.info("Start blocking task for $name")
+        BusinessLogic.blockingTask()
+        log.info("Finished blocking task for $name")
 
-            // Make sure that current thread is request context aware
-            ServiceRequestContext.current()
-        }
+        // Make sure that current thread is request context aware
+        ServiceRequestContext.current()
 
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()
