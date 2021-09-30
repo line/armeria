@@ -216,7 +216,7 @@ public final class ArmeriaConfigurationUtil {
         if (internalPort == null) {
             needsPortBasedVirtualHost = false;
         } else {
-            if (internalServiceIds.size() == 1 && internalServiceIds.get(0) == InternalServiceId.ALL) {
+            if (internalServiceIds.contains(InternalServiceId.ALL)) {
                 // All internal services use the internal port.
                 needsPortBasedVirtualHost = true;
             } else {

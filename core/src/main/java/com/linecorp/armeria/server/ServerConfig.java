@@ -217,9 +217,6 @@ public final class ServerConfig {
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
         if (!virtualHosts.isEmpty()) {
             for (VirtualHost h : virtualHosts) {
-                if (h == null) {
-                    break;
-                }
                 virtualHostsCopy.add(h);
             }
         }
@@ -273,13 +270,15 @@ public final class ServerConfig {
         final Map<Integer, DomainMappingBuilder<VirtualHost>> mappingsBuilder = new HashMap<>();
         for (VirtualHost virtualHost : portMappingVhosts) {
             final int port = virtualHost.port();
+            // The default virtual host should be either '*' or '*:<port>'.
             final VirtualHost defaultVhost =
                     firstNonNull(portMappingDefaultVhosts.get(port), defaultVirtualHost);
+            // Builds a 'DomainMappingBuilder' with 'defaultVhost' for the port if absent.
             final DomainMappingBuilder<VirtualHost> mappingBuilder =
                     mappingsBuilder.computeIfAbsent(port, key -> new DomainMappingBuilder<>(defaultVhost));
 
             if (defaultVhost == virtualHost) {
-                // Added already as the default virtual host of the DomainMapping.
+                // The 'virtualHost' was added already as a default value when creating 'DomainMappingBuilder'.
             } else {
                 mappingBuilder.add(virtualHost.hostnamePattern(), virtualHost);
             }
@@ -299,9 +298,6 @@ public final class ServerConfig {
         // Set virtual host definitions and initialize their domain name mapping.
         final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
         for (VirtualHost h : virtualHosts) {
-            if (h == null) {
-                break;
-            }
             if (h.port() > 0) {
                 // A port-based virtual host will be handled by buildDomainAndPortMapping().
                 continue;
