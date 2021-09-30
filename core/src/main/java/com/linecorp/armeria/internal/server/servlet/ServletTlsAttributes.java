@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.netty.util.internal.EmptyArrays;
 
 /**
- * Fills the Servlet attributes related with TLS from {@link SSLSession} into {@code ServletRequest}.
+ * Fills the Servlet TLS attributes from {@link SSLSession} into {@code ServletRequest}.
  * See {@code TomcatService} and {@code JettyService}.
  */
 public final class ServletTlsAttributes {
@@ -76,9 +76,9 @@ public final class ServletTlsAttributes {
     };
 
     /**
-     * Fills the Servlet attributes related with TLS from {@link SSLSession} into {@code ServletRequest}.
+     * Fills the Servlet TLS attributes from {@link SSLSession} into {@code ServletRequest}.
      *
-     * @param session the {@link SSLSession} that provides the information about the current TLS session.
+     * @param session the {@link SSLSession} of the current connection.
      * @param setter the setter that will be invoked with the Servlet attribute name and value.
      */
     public static void fill(@Nullable SSLSession session, BiConsumer<String, Object> setter) {
