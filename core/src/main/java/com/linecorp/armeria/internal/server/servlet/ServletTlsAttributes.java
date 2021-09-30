@@ -34,8 +34,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.netty.util.internal.EmptyArrays;
 
 /**
- * Retrieves and caches the properties related with TLS that are useful for implementing Servlet API
- * compatibility. See {@code TomcatService} and {@code JettyService}.
+ * Fills the Servlet attributes related with TLS from {@link SSLSession} into {@code ServletRequest}.
+ * See {@code TomcatService} and {@code JettyService}.
  */
 public final class ServletTlsAttributes {
 
@@ -50,6 +50,12 @@ public final class ServletTlsAttributes {
 
     private static final String ATTR_NAME = ServletTlsAttributes.class.getName();
 
+    /**
+     * An array of well known algorithms where each algorithm's key size is the value of {@link #KEY_SIZES}
+     * at the same index.
+     *
+     * @see #guessKeySize(String)
+     */
     private static final String[] ALGORITHMS = {
             "_AES_256_", "_RC4_128_", "_AES_128_", "_CHACHA20_",
             "_ARIA256_", "_ARIA128_", "_CAMELLIA256_", "_CAMELLIA128_",
@@ -57,6 +63,11 @@ public final class ServletTlsAttributes {
             "_DES40_CBC_", "_DES_CBC_", "_SEED_"
     };
 
+    /**
+     * An array of key sizes for each algorithm in {@link #ALGORITHMS}.
+     *
+     * @see #guessKeySize(String)
+     */
     private static final int[] KEY_SIZES = {
             256, 128, 128, 256,
             256, 128, 256, 128,
@@ -64,6 +75,12 @@ public final class ServletTlsAttributes {
             40, 56, 128
     };
 
+    /**
+     * Fills the Servlet attributes related with TLS from {@link SSLSession} into {@code ServletRequest}.
+     *
+     * @param session the {@link SSLSession} that provides the information about the current TLS session.
+     * @param setter the setter that will be invoked with the Servlet attribute name and value.
+     */
     public static void fill(@Nullable SSLSession session, BiConsumer<String, Object> setter) {
         if (session == null) {
             return;
