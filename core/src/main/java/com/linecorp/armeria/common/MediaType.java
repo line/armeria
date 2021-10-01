@@ -473,8 +473,8 @@ public final class MediaType {
     public static final MediaType GZIP = createConstant(APPLICATION_TYPE, "x-gzip");
 
     /**
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7932">Brotli Compression format, a lossless data
-     * compression format.</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7932">Brotli Compression format</a>, a lossless data
+     * compression format.
      */
     public static final MediaType BROTLI = createConstant(APPLICATION_TYPE, "brotli");
 
