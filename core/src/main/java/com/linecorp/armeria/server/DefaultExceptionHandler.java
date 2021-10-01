@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import javax.annotation.Nonnull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +46,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
     /**
      * Converts the specified {@link Throwable} to an {@link HttpResponse}.
      */
+    @Nonnull
     @Override
     public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
         // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
@@ -55,7 +58,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
                 if (needsToWarn()) {
                     logger.warn("{} Failed processing a request:", context, cause);
                 }
-                return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST, cause));
+                return HttpResponse.of(HttpStatus.BAD_REQUEST);
             }
         }
 
@@ -72,14 +75,14 @@ enum DefaultExceptionHandler implements ExceptionHandler {
         }
 
         if (cause instanceof RequestTimeoutException) {
-            return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE, cause));
+            return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
         if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
             logger.warn("{} Unhandled exception from a service:", context, cause);
         }
 
-        return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, cause));
+        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     private static boolean needsToWarn() {
