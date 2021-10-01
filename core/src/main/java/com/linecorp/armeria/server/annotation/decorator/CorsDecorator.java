@@ -73,7 +73,7 @@ public @interface CorsDecorator {
     String[] exposedHeaders() default {};
 
     /**
-     * Enables to allow all HTTP headers.
+     * Enables to allow all HTTP headers in the CORS {@code "Access-Control-Request-Headers"} request header.
      *
      * @see CorsPolicyBuilder#allowAllRequestHeaders()
      */
