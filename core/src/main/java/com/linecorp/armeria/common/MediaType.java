@@ -479,8 +479,8 @@ public final class MediaType {
     public static final MediaType BROTLI = createConstant(APPLICATION_TYPE, "brotli");
 
     /**
-     * <a href="https://datatracker.ietf.org/doc/html/rfc8478">Zstandard Compression format, a lossless data
-     * compression format.</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc8478">Zstandard Compression format</a>, a lossless data
+     * compression format.
      */
     public static final MediaType ZSTD = createConstant(APPLICATION_TYPE, "zstd");
 
