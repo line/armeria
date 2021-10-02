@@ -752,7 +752,7 @@ public final class ArmeriaHttpUtil {
      *
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
-    public static Http2Headers toNettyHttp2ServerTrailer(HttpHeaders inputHeaders) {
+    public static Http2Headers toNettyHttp2ServerTrailers(HttpHeaders inputHeaders) {
         final HttpHeadersBuilder builder = inputHeaders.toBuilder();
 
         for (Entry<AsciiString, AsciiString> disallowed : HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST) {
@@ -773,7 +773,7 @@ public final class ArmeriaHttpUtil {
      *
      * @param inputHeaders the HTTP/2 request headers to convert.
      */
-    public static Http2Headers toNettyHttp2ClientHeader(HttpHeaders inputHeaders) {
+    public static Http2Headers toNettyHttp2ClientHeaders(HttpHeaders inputHeaders) {
         final int headerSizeHint = inputHeaders.size() + 3; // User_Agent, :scheme and :authority.
         final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
         toNettyHttp2Client(inputHeaders, outputHeaders, false);
@@ -785,7 +785,7 @@ public final class ArmeriaHttpUtil {
      *
      * @param inputHeaders the HTTP/2 request headers to convert.
      */
-    public static Http2Headers toNettyHttp2ClientTrailer(HttpHeaders inputHeaders) {
+    public static Http2Headers toNettyHttp2ClientTrailers(HttpHeaders inputHeaders) {
         final int headerSizeHint = inputHeaders.size();
         final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
         toNettyHttp2Client(inputHeaders, outputHeaders, true);
@@ -826,7 +826,7 @@ public final class ArmeriaHttpUtil {
      * @param inputHeaders the HTTP/2 response headers to convert.
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
-    public static void toNettyHttp1ServerHeader(
+    public static void toNettyHttp1ServerHeaders(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
         toNettyHttp1Server(inputHeaders, outputHeaders, false);
         HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
@@ -838,7 +838,7 @@ public final class ArmeriaHttpUtil {
      * @param inputHeaders The HTTP/2 response headers to convert.
      * @param outputHeaders The object which will contain the resulting HTTP/1.1 headers.
      */
-    public static void toNettyHttp1ServerTrailer(
+    public static void toNettyHttp1ServerTrailers(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
         toNettyHttp1Server(inputHeaders, outputHeaders, true);
     }
@@ -866,7 +866,7 @@ public final class ArmeriaHttpUtil {
      * @param inputHeaders the HTTP/2 request headers to convert.
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
-    public static void toNettyHttp1ClientHeader(
+    public static void toNettyHttp1ClientHeaders(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming) {
         toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, false);
@@ -879,7 +879,7 @@ public final class ArmeriaHttpUtil {
      * @param inputHeaders the HTTP/2 request headers to convert.
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
-    public static void toNettyHttp1ClientTrailer(
+    public static void toNettyHttp1ClientTrailers(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming) {
         toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, true);

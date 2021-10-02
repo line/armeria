@@ -501,16 +501,16 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
             }
 
-            final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
+            final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
                     ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
-            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
+            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder));
             p.addLast(new HttpServerHandler(configHolder,
                                             gracefulShutdownSupport,
-                                            writer, H1, proxiedAddresses));
+                                            encoder, H1, proxiedAddresses));
         }
 
         @Override

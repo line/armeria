@@ -15,20 +15,30 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+
 import javax.annotation.Nonnull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Throwables;
+
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 /**
- * A default exception handler that is used when a user does not specify an {@link ExceptionHandler}.
+ * The default {@link ServerErrorHandler} that is used when a user didn't specify one.
  * It returns:
  * <ul>
  *     <li>an {@link HttpResponse} with {@code 400 Bad Request} status code when the cause is an
@@ -37,26 +47,26 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
  *     <li>an {@link HttpResponse} with {@code 500 Internal Server Error}.</li>
  * </ul>
  */
-enum DefaultExceptionHandler implements ExceptionHandler {
+enum DefaultServerErrorHandler implements ServerErrorHandler {
 
     INSTANCE;
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultServerErrorHandler.class);
 
     /**
      * Converts the specified {@link Throwable} to an {@link HttpResponse}.
      */
     @Nonnull
     @Override
-    public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
+    public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
         // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
         //                when we reach v2.0. Currently, an IllegalArgumentException is handled only for
         //                annotated services.
-        final boolean isAnnotatedService = context.config().service().as(AnnotatedService.class) != null;
+        final boolean isAnnotatedService = ctx.config().service().as(AnnotatedService.class) != null;
         if (isAnnotatedService) {
             if (cause instanceof IllegalArgumentException) {
                 if (needsToWarn()) {
-                    logger.warn("{} Failed processing a request:", context, cause);
+                    logger.warn("{} Failed processing a request:", ctx, cause);
                 }
                 return HttpResponse.of(HttpStatus.BAD_REQUEST);
             }
@@ -79,7 +89,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
         }
 
         if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
-            logger.warn("{} Unhandled exception from a service:", context, cause);
+            logger.warn("{} Unhandled exception from a service:", ctx, cause);
         }
 
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -88,5 +98,30 @@ enum DefaultExceptionHandler implements ExceptionHandler {
     private static boolean needsToWarn() {
         return Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
                logger.isWarnEnabled();
+    }
+
+    @Nonnull
+    @Override
+    public AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                               HttpStatus status,
+                                               @Nullable String description,
+                                               @Nullable Throwable cause) {
+        if (status.isContentAlwaysEmpty()) {
+            return AggregatedHttpResponse.of(ResponseHeaders.of(status));
+        }
+
+        final HttpData content;
+        try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = ttl.stringBuilder();
+            buf.append("Status: ").append(status.codeAsText()).append('\n');
+            buf.append("Description: ").append(firstNonNull(description, status.reasonPhrase())).append('\n');
+            if (cause != null && config.verboseResponses() && !status.isSuccess()) {
+                buf.append("Stack trace:\n");
+                buf.append(Throwables.getStackTraceAsString(cause));
+            }
+            content = HttpData.ofUtf8(buf);
+        }
+
+        return AggregatedHttpResponse.of(status, MediaType.PLAIN_TEXT_UTF_8, content);
     }
 }

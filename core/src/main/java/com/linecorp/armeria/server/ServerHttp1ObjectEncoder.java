@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -30,6 +31,7 @@ import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -57,6 +59,11 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
+    }
+
+    @Override
+    public KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
     }
 
     public void initiateConnectionShutdown() {
@@ -90,7 +97,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         final HttpResponse res;
         if (headers.status().isInformational()) {
             res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
-            ArmeriaHttpUtil.toNettyHttp1ServerHeader(headers, res.headers());
+            ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers());
         } else if (endStream) {
             res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
@@ -122,7 +129,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     private void convertHeaders(HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
                                 boolean isTrailersEmpty) {
-        ArmeriaHttpUtil.toNettyHttp1ServerHeader(inHeaders, outHeaders);
+        ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders);
 
         if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
@@ -153,12 +160,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        ArmeriaHttpUtil.toNettyHttp1ServerTrailer(inputHeaders, outputHeaders);
-    }
-
-    @Override
-    public KeepAliveHandler keepAliveHandler() {
-        return keepAliveHandler;
+        ArmeriaHttpUtil.toNettyHttp1ServerTrailers(inputHeaders, outputHeaders);
     }
 
     @Override
@@ -173,5 +175,22 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
         return id <= lastResponseHeadersId;
+    }
+
+    @Override
+    public ChannelFuture writeErrorResponse(int id, int streamId,
+                                            ServiceConfig serviceConfig,
+                                            HttpStatus status,
+                                            @Nullable String message,
+                                            @Nullable Throwable cause) {
+
+        // Destroy keepAlive handler before writing headers so that ServerHttp1ObjectEncoder sets
+        // "Connection: close" to the response headers
+        keepAliveHandler().destroy();
+
+        final ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
+                id, streamId, serviceConfig, status, message, cause);
+
+        return future.addListener(ChannelFutureListener.CLOSE);
     }
 }
