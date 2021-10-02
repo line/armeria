@@ -44,7 +44,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.io.BaseEncoding;
 
@@ -107,7 +107,7 @@ public abstract class WebAppContainerTest {
     protected abstract ServerExtension server();
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C", "H1", "H2" })
+    @CsvSource({ "H1C", "H2C", "H1", "H2" })
     public void jsp(SessionProtocol sessionProtocol) throws Exception {
         final WebClient client = WebClient.builder(server().uri(sessionProtocol))
                                           .factory(ClientFactory.insecure())
@@ -356,7 +356,7 @@ public abstract class WebAppContainerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1", "H2" })
+    @CsvSource({ "H1", "H2"})
     public void tlsAttrs(SessionProtocol sessionProtocol) throws Exception {
         final WebClient client = WebClient.builder(server().uri(sessionProtocol))
                                           .factory(ClientFactory.insecure())
