@@ -26,7 +26,7 @@ import javax.net.ssl.SSLSession;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.io.BaseEncoding;
 
@@ -63,7 +63,7 @@ public abstract class WebAppContainerMutualTlsTest {
     protected abstract ServerExtension server();
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1", "H2" })
+    @CsvSource({ "H1", "H2" })
     public void mutualTlsAttrs(SessionProtocol sessionProtocol) throws Exception {
         try (ClientFactory clientFactory = ClientFactory
                 .builder()
