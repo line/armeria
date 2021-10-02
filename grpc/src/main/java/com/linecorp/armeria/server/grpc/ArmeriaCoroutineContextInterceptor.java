@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import java.util.concurrent.ScheduledExecutorService;
+
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;
@@ -36,10 +38,12 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
     public CoroutineContext coroutineContext(ServerCall<?, ?> serverCall, Metadata metadata) {
         final ServiceRequestContext ctx = ServiceRequestContext.current();
         final ArmeriaRequestCoroutineContext coroutineContext = new ArmeriaRequestCoroutineContext(ctx);
+        final ScheduledExecutorService executor;
         if (useBlockingTaskExecutor) {
-            return ExecutorsKt.from(ctx.blockingTaskExecutor()).plus(coroutineContext);
+            executor = ctx.blockingTaskExecutor().withoutContext();
         } else {
-            return ExecutorsKt.from(ctx.eventLoop()).plus(coroutineContext);
+            executor = ctx.eventLoop().withoutContext();
         }
+        return ExecutorsKt.from(executor).plus(coroutineContext);
     }
 }
