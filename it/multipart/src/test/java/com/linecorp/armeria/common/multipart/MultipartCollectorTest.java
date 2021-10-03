@@ -62,7 +62,6 @@ class MultipartCollectorTest {
                                          .append(queryParams.get("param3")).append('\n');
                             final Map<String, List<Path>> files = aggregated.getFiles();
                             try {
-                                System.out.println(files);
                                 stringBuilder.append("file1/")
                                              .append(Files.readAllLines(files.get("file1").get(0)))
                                              .append('\n');

@@ -32,7 +32,6 @@ package com.linecorp.armeria.common.multipart;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.function.LongConsumer;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -42,7 +41,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 
@@ -66,6 +64,8 @@ final class MimeParser {
      * Boundary as bytes.
      */
     private final byte[] boundaryBytes;
+
+    private MultipartDecoder multipartDecoder;
 
     /**
      * Boundary length.
@@ -113,7 +113,7 @@ final class MimeParser {
      * The publisher that emits body part contents.
      */
     @Nullable
-    private BodyPartPublisher bodyPartPublisher;
+    private MultipartDecoder.BodyPartPublisher bodyPartPublisher;
 
     /**
      * Read and process body parts until we see the terminating boundary line.
@@ -136,21 +136,14 @@ final class MimeParser {
     private boolean closed;
 
     /**
-     * Request HttpData for BodyPart content.
-     */
-    private final LongConsumer onBodyPartRequestHttpData;
-
-    private boolean parsing;
-
-    /**
      * Parses the MIME content.
      */
     MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary,
-               LongConsumer onBodyPartRequestHttpData) {
+               MultipartDecoder multipartDecoder) {
         this.in = in;
         this.out = out;
         boundaryBytes = getBytes("--" + boundary);
-        this.onBodyPartRequestHttpData = onBodyPartRequestHttpData;
+        this.multipartDecoder = multipartDecoder;
         boundaryLength = boundaryBytes.length;
         goodSuffixes = new int[boundaryLength];
         compileBoundaryPattern();
@@ -192,7 +185,6 @@ final class MimeParser {
             throw new MimeParsingException("Parser is closed");
         }
 
-        parsing = true;
         try {
             while (true) {
                 switch (state) {
@@ -240,7 +232,7 @@ final class MimeParser {
                         state = State.BODY;
                         startOfLine = true;
 
-                        bodyPartPublisher = new BodyPartPublisher();
+                        bodyPartPublisher = multipartDecoder.onBodyPartBegin();
                         final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
                                                                  .content(bodyPartPublisher)
                                                                  .build();
@@ -252,10 +244,6 @@ final class MimeParser {
                         final ByteBuf bodyContent = readBody();
                         if (boundaryStart == -1 || bodyContent == NEED_MORE) {
                             if (bodyContent == NEED_MORE) {
-                                // Need more data
-                                if (bodyPartPublisher.demand() > 0) {
-                                    onBodyPartRequestHttpData.accept(1);
-                                }
                                 return;
                             }
                         } else {
@@ -272,7 +260,7 @@ final class MimeParser {
                             state = State.START_PART;
                         }
 
-                        // Release body part resources
+                        multipartDecoder.onBodyPartEnd();
                         bodyPartPublisher.close();
                         bodyPartPublisher = null;
                         bodyPartHeadersBuilder = null;
@@ -291,8 +279,6 @@ final class MimeParser {
             throw ex;
         } catch (Throwable ex) {
             throw new MimeParsingException(ex);
-        } finally {
-            parsing = false;
         }
     }
 
@@ -636,24 +622,5 @@ final class MimeParser {
          * The state set when all parts are complete. It is set only once.
          */
         END_MESSAGE
-    }
-
-    /**
-     * Subscriber may request after parser handle HttpData completely.
-     * So we need to re-trigger the upstream if there is no upstream request anymore.
-     */
-    private class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
-        @Override
-        protected void onRequest(long n) {
-            // If publisher is closed, we can't allow subscriber request upstream.
-            if (!isOpen()) {
-                return;
-            }
-            // Still is parse() loop, let BODY case handle request upstream or not.
-            if (parsing) {
-                return;
-            }
-            onBodyPartRequestHttpData.accept(1);
-        }
     }
 }

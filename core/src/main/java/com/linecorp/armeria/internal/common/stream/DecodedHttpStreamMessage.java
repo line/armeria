@@ -70,7 +70,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     private boolean initialized;
     private boolean askedUpstreamForElement;
     private boolean cancelled;
-    private long directRequest;
 
     /**
      * Returns a new {@link DecodedHttpStreamMessage} with the specified {@link HttpDecoder} and
@@ -162,19 +161,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
         }
     }
 
-    /**
-     * Directly requests n elements to the {@code streamMessage} that was specified when creating this
-     * {@link StreamMessage}. It is useful when the {@link HttpDecoder} emits another {@link StreamMessage}s.
-     */
-    public void askUpstreamForElements(long n) {
-        // Make sure that this API should be called after subscribing.
-        assert executor != null;
-        // Update in an event loop which subscribed this stream message.
-        directRequest += n;
-        askUpstreamForElement();
-    }
-
-    private void askUpstreamForElement() {
+    public void askUpstreamForElement() {
         if (!askedUpstreamForElement) {
             askedUpstreamForElement = true;
             assert upstream != null;
@@ -238,15 +225,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                     if (input.add(byteBuf)) {
                         decoder.process(input, DecodedHttpStreamMessage.this);
                     }
-                }
-
-                if (directRequest > 0) {
-                    directRequest--;
-                }
-                // If there is a remaining demand, ask upstream for more elements
-                if (directRequest > 0) {
-                    askUpstreamForElement();
-                    return;
                 }
 
                 if (handlerProduced) {
