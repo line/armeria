@@ -257,10 +257,21 @@ public final class PathAndQuery {
 
                 final int decoded = (digit1 << 4) | digit2;
                 if (isPath) {
-                    if (appendOneByte(buf, decoded, wasSlash, isPath)) {
-                        wasSlash = decoded == '/';
+                    if (decoded == '/') {
+                        // Do not decode '%2F' and '%2f' in the path to '/' for compatibility with
+                        // other echo systems, e.g. HTTP/JSON to gRPC transcoding.
+                        // https://github.com/googleapis/googleapis/blob/02710fa0ea5312d79d7fb986c9c9823fb41049a9/google/api/http.proto#L257-L258
+                        final byte marker = RAW_CHAR_TO_MARKER['/'];
+                        buf.ensure(2);
+                        buf.add((byte) PERCENT_ENCODING_MARKER);
+                        buf.add(marker);
+                        wasSlash = false;
                     } else {
-                        return null;
+                        if (appendOneByte(buf, decoded, wasSlash, isPath)) {
+                            wasSlash = false;
+                        } else {
+                            return null;
+                        }
                     }
                 } else {
                     // If query:
