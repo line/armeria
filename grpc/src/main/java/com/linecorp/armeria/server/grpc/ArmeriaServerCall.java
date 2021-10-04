@@ -127,6 +127,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Nullable
     private ServerCall.Listener<I> listener;
     @Nullable
+    private ResponseHeaders responseHeaders;
+    @Nullable
     private O firstResponse;
     @Nullable
     private final String clientAcceptEncoding;
@@ -145,7 +147,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private volatile boolean cancelled;
     private volatile boolean clientStreamClosed;
     private volatile boolean listenerClosed;
-    private boolean sendHeadersCalled;
     private boolean closeCalled;
 
     private int pendingRequests;
@@ -247,7 +248,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             // call was already closed by client or with non-OK status.
             return;
         }
-        checkState(!sendHeadersCalled, "sendHeaders already called");
+        checkState(responseHeaders == null, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
         if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
@@ -273,10 +274,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             });
         }
 
-        sendHeadersCalled = true;
-        if (!res.tryWrite(headers)) {
-            maybeCancel();
-        }
+        // https://github.com/grpc/proposal/blob/4c4a06d95eb1e7d3d7d84c4c9505a99f2a721db9/A6-client-retries.md#L263
+        // gRPC servers should delay the Response-Headers until the first response message or
+        // until the application code chooses to send headers.
+        responseHeaders = headers;
     }
 
     @Override
@@ -294,10 +295,15 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             // call was already closed by client or with non-OK status
             return;
         }
-        checkState(sendHeadersCalled, "sendHeaders has not been called");
+        checkState(responseHeaders != null, "sendHeaders has not been called");
         checkState(!closeCalled, "call is closed");
 
         if (firstResponse == null) {
+            // Write the response headers when the first response is received.
+            if (!res.tryWrite(responseHeaders)) {
+                maybeCancel();
+                return;
+            }
             firstResponse = message;
         }
 
@@ -374,11 +380,39 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!closeCalled, "call already closed");
         closeCalled = true;
 
-        final HttpHeaders trailers = statusToTrailers(
-                ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
-                status, metadata);
+        final boolean trailersOnly;
+        if (firstResponse != null) {
+            // ResponseHeaders was written successfully.
+            trailersOnly = false;
+        } else {
+            if (!status.isOk() || responseHeaders == null) {
+                // Trailers-Only is permitted for calls that produce an immediate error.
+                // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#responses
+                trailersOnly = true;
+            } else {
+                if (method.getType().serverSendsOneMessage()) {
+                    // Incomplete request.
+                    trailersOnly = true;
+                } else {
+                    // SERVER_STREAMING or BIDI_STREAMING may not produce a response.
+                    // Try to write the pending response headers.
+                    if (res.tryWrite(responseHeaders)) {
+                        trailersOnly = false;
+                    } else {
+                        // A stream was closed already.
+                        closeListener(status);
+                        return;
+                    }
+                }
+            }
+        }
+
+        final HttpHeadersBuilder defaultTrailers =
+                trailersOnly ? defaultHeaders.toBuilder() : HttpHeaders.builder();
+
+        final HttpHeaders trailers = statusToTrailers(ctx, defaultTrailers, status, metadata);
         try {
-            if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
+            if (!trailersOnly && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 GrpcWebTrailers.set(ctx, trailers);
                 // Normal trailers are not supported in grpc-web and must be encoded as a message.
                 final ByteBuf serialized = serializeTrailersAsMessage(ctx.alloc(), trailers);
@@ -413,7 +447,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public synchronized void setCompression(String compressorName) {
-        checkState(!sendHeadersCalled, "sendHeaders has been called");
+        checkState(responseHeaders == null, "sendHeaders has been called");
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));

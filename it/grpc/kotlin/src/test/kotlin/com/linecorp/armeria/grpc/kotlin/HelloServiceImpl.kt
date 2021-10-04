@@ -41,7 +41,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
         } catch (ignored: Exception) { // Do nothing.
         }
         // Make sure that current thread is request context aware
-        ServiceRequestContext.current()
+        ServiceRequestContext.current().addAdditionalResponseHeader("foo", "bar")
         buildReply(toMessage(request.name))
     }
 
