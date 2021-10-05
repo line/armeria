@@ -26,9 +26,6 @@ class ContextAwareService {
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()
 
-        // Make sure that current thread is request context aware
-        ServiceRequestContext.current()
-
         return FooResponse(id = id, name = name)
     }
 
