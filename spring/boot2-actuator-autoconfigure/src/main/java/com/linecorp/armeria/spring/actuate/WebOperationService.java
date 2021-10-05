@@ -17,6 +17,7 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.acceptHeadersResolver;
 
 import java.io.Closeable;
@@ -43,10 +44,12 @@ import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEnd
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.core.io.Resource;
+import org.springframework.util.MimeType;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -192,10 +195,12 @@ final class WebOperationService implements HttpService {
 
         final HttpStatus status;
         final Object body;
+        MediaType contentType = null;
         if (result instanceof WebEndpointResponse) {
             final WebEndpointResponse<?> webResult = (WebEndpointResponse<?>) result;
             status = HttpStatus.valueOf(webResult.getStatus());
             body = webResult.getBody();
+            contentType = toMediaType(webResult.getContentType());
         } else {
             if (result instanceof Health) {
                 status = HttpStatus.valueOf(statusMapper.getStatusCode(((Health) result).getStatus()));
@@ -209,7 +214,10 @@ final class WebOperationService implements HttpService {
             body = result;
         }
 
-        final MediaType contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON_UTF_8);
+        if (contentType == null) {
+            contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON_UTF_8);
+        }
+
         if (contentType.isJson()) {
             final ResponseHeaders headers = ResponseHeaders.builder(status)
                                                            .contentType(contentType)
@@ -258,6 +266,23 @@ final class WebOperationService implements HttpService {
 
         logger.warn("{} Cannot convert an actuator response: {}", ctx, body);
         return HttpResponse.of(status, contentType, body.toString());
+    }
+
+    @Nullable
+    private static MediaType toMediaType(@Nullable MimeType mimeType) {
+        if (mimeType == null) {
+            return null;
+        }
+        final MediaType mediaType = MediaType.create(mimeType.getType(), mimeType.getSubtype());
+        final Map<String, String> parameters = mimeType.getParameters();
+        if (parameters.isEmpty()) {
+            return mediaType;
+        }
+        return mediaType.withParameters(
+                parameters.entrySet()
+                          .stream()
+                          .collect(toImmutableMap(Map.Entry::getKey,
+                                                  entry -> ImmutableSet.of(entry.getValue()))));
     }
 
     // TODO(trustin): A lot of duplication with StreamingHttpFile. Need to add some utility classes for
