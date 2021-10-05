@@ -223,23 +223,23 @@ public final class AnnotatedService implements HttpService {
     }
 
     private static Type getActualReturnType(Method method) {
-        final Function<Method, Class<?>> returnTypeGetter;
-        final Function<Method, Type> genericReturnTypeGetter;
+        final Class<?> returnType;
+        final Type genericReturnType;
 
         if (KotlinUtil.isSuspendingFunction(method)) {
-            returnTypeGetter = KotlinUtil::kFunctionReturnType;
-            genericReturnTypeGetter = KotlinUtil::kFunctionGenericReturnType;
+            returnType = KotlinUtil.kFunctionReturnType(method);
+            genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
         } else {
-            returnTypeGetter = Method::getReturnType;
-            genericReturnTypeGetter = Method::getGenericReturnType;
+            returnType = method.getReturnType();
+            genericReturnType = method.getGenericReturnType();
         }
 
-        if (HttpResult.class.isAssignableFrom(returnTypeGetter.apply(method))) {
-            final ParameterizedType type = (ParameterizedType) genericReturnTypeGetter.apply(method);
+        if (HttpResult.class.isAssignableFrom(returnType)) {
+            final ParameterizedType type = (ParameterizedType) genericReturnType;
             warnIfHttpResponseArgumentExists(type, type);
             return type.getActualTypeArguments()[0];
         } else {
-            return genericReturnTypeGetter.apply(method);
+            return genericReturnType;
         }
     }
 
