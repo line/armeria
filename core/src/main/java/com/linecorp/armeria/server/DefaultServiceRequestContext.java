@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -242,8 +243,8 @@ public final class DefaultServiceRequestContext
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(
-                this, config().server().config().blockingTaskExecutor());
+        final ScheduledExecutorService executor = config().blockingTaskExecutor();
+        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(this, executor);
     }
 
     @Override

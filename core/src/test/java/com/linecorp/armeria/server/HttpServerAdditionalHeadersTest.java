@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class HttpServerAdditionalHeadersTest {
@@ -56,6 +57,20 @@ class HttpServerAdditionalHeadersTest {
                 ctx.log().whenComplete().thenAccept(logHolder::set);
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.CONTINUE),
                                        ResponseHeaders.of(HttpStatus.OK));
+            });
+
+            sb.service("/failed_response", (ctx, req) -> {
+                ctx.setAdditionalResponseHeader("foo", "bar");
+                return HttpResponse.ofFailure(new AnticipatedException());
+            });
+            sb.service("/exception_raised", (ctx, req) -> {
+                ctx.setAdditionalResponseHeader("foo", "bar");
+                throw new AnticipatedException();
+            });
+
+            sb.service("/http_response_exception", (ctx, req) -> {
+                ctx.setAdditionalResponseHeader("foo", "bar");
+                throw HttpResponseException.of(HttpResponse.of(HttpStatus.OK));
             });
         }
 
@@ -131,5 +146,21 @@ class HttpServerAdditionalHeadersTest {
         client.get("/informational").aggregate().join();
         await().until(() -> logHolder.get() != null);
         assertThat(logHolder.get().responseHeaders().names()).contains(HttpHeaderNames.of("foo"));
+    }
+
+    @Test
+    void failedResponseContainsAdditionalHeaders() {
+        final WebClient client = WebClient.of(server.httpUri());
+        AggregatedHttpResponse response = client.get("/failed_response").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.headers().get("foo")).isEqualTo("bar");
+
+        response = client.get("/exception_raised").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.headers().get("foo")).isEqualTo("bar");
+
+        response = client.get("/http_response_exception").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.headers().get("foo")).isEqualTo("bar");
     }
 }

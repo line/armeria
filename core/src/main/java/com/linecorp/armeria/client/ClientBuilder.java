@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -247,6 +248,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
 
     @Override
     public ClientBuilder auth(OAuth2Token token) {
+        return (ClientBuilder) super.auth(token);
+    }
+
+    @Override
+    public ClientBuilder auth(AuthToken token) {
         return (ClientBuilder) super.auth(token);
     }
 

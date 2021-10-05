@@ -30,6 +30,7 @@
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
 *.developer.app
+*.digitaloceanspaces.com
 *.diher.solutions
 *.dweb.link
 *.elb.amazonaws.com
@@ -96,6 +97,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.usercontent.goog
 *.vps.myjino.ru
 *.webhare.dev
 *.webpaas.ovh.net
@@ -270,7 +272,6 @@ agrar.hu
 agric.za
 agriculture.museum
 agrigento.it
-agrinet.tn
 agro.bo
 agro.pl
 aguni.okinawa.jp
@@ -714,6 +715,7 @@ barsy.online
 barsy.org
 barsy.pro
 barsy.pub
+barsy.ro
 barsy.shop
 barsy.site
 barsy.support
@@ -784,6 +786,7 @@ beskidy.pl
 best
 bestbuy
 bet
+bet.ar
 beta.bounty-full.com
 betainabox.com
 better-than.tv
@@ -1362,7 +1365,6 @@ cleaning
 clerk.app
 clerkstage.app
 cleverapps.io
-clic2000.net
 click
 clicketcloud.com
 clickrising.net
@@ -1689,6 +1691,7 @@ cooking
 cookingchannel
 cool
 coop
+coop.ar
 coop.br
 coop.ht
 coop.km
@@ -1848,7 +1851,6 @@ debian.net
 decorativearts.museum
 dedyn.io
 def.br
-defense.tn
 definima.io
 definima.net
 degree
@@ -1899,7 +1901,6 @@ diamonds
 dielddanuorri.no
 diet
 digital
-diher.solutions
 dinosaur.museum
 direct
 direct.quickconnect.to
@@ -2211,7 +2212,6 @@ education.museum
 educational.museum
 educator.aero
 edugit.org
-edunet.tn
 ee
 ee.eu.org
 eero-stage.online
@@ -3651,6 +3651,7 @@ ingatlan.hu
 ink
 ino.kochi.jp
 instance.datadetect.com
+instances.spawn.cc
 instantcloud.cn
 institute
 insurance
@@ -5247,6 +5248,7 @@ musica.bo
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
 mutual
+mutual.ar
 mv
 mw
 mw.gov.pl
@@ -5464,7 +5466,6 @@ nba
 nc
 nc.tr
 nc.us
-nctu.me
 nd.us
 ne
 ne.jp
@@ -6498,6 +6499,7 @@ praxi
 prd.fr
 prd.km
 prd.mg
+prequalifyme.today
 preservation.museum
 presidio.museum
 press
@@ -6756,13 +6758,9 @@ rj.gov.br
 rj.leg.br
 rl.no
 rm.it
-rmit
 rn.gov.br
 rn.it
 rn.leg.br
-rnrt.tn
-rns.tn
-rnu.tn
 ro
 ro.eu.org
 ro.gov.br
@@ -6800,7 +6798,6 @@ rs.ba
 rs.gov.br
 rs.leg.br
 rsc.cdn77.org
-rss.my.id
 rsvp
 ru
 ru.com
@@ -7115,6 +7112,7 @@ sells-it.net
 sellsyourhome.org
 semboku.akita.jp
 semine.miyagi.jp
+senasa.ar
 sener
 sennan.osaka.jp
 senseering.net
@@ -7142,6 +7140,7 @@ servemp3.com
 servep2p.com
 servepics.com
 servequake.com
+servers.run
 servesarcasm.com
 service.gov.scot
 service.gov.uk
@@ -8042,7 +8041,6 @@ tunk.org
 tur.ar
 tur.br
 turek.pl
-turen.tn
 turin.it
 turystyka.pl
 tuscany.it

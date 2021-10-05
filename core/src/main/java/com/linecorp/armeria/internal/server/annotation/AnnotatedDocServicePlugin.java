@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isSuspendingFunction;
+import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionReturnType;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
@@ -153,7 +155,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();
         final String name = method.getName();
-        final TypeSignature returnTypeSignature = toTypeSignature(method.getGenericReturnType());
+        final TypeSignature returnTypeSignature =
+                isSuspendingFunction(method) ? toTypeSignature(kFunctionReturnType(method))
+                                             : toTypeSignature(method.getGenericReturnType());
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
         final Class<?> clazz = service.object().getClass();
         route.methods().forEach(

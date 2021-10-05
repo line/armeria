@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -311,28 +312,40 @@ public class AbstractClientOptionsBuilder {
      * Sets the
      * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>
      * header using {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(BasicToken token) {
-        requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
-        return this;
+        return auth((AuthToken) token);
     }
 
     /**
      * Sets the <a href="https://oauth.net/core/1.0a/">OAuth Core 1.0 Revision A</a> header
      * using {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
-        requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
-        return this;
+        return auth((AuthToken) token);
     }
 
     /**
      * Sets the <a href="https://www.oauth.com/">OAuth 2.0</a> header using
      * {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(OAuth2Token token) {
+        return auth((AuthToken) token);
+    }
+
+    /**
+     * Sets the {@link AuthToken} header using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractClientOptionsBuilder auth(AuthToken token) {
         requireNonNull(token, "token");
         headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;

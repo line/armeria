@@ -166,6 +166,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+        // Should not reuse a connection that received a GOAWAY frame.
+        HttpSession.get(channel()).deactivate();
         disconnectWhenFinished();
         goAwayHandler.onGoAwayReceived(channel(), lastStreamId, errorCode, debugData);
     }

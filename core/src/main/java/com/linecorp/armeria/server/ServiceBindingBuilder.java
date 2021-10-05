@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -206,6 +207,17 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder defaultLogName(String defaultLogName) {
         return (ServiceBindingBuilder) super.defaultLogName(defaultLogName);
+    }
+
+    @Override
+    public ServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                      boolean shutdownOnStop) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+    }
+
+    @Override
+    public ServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
     }
 
     @Override

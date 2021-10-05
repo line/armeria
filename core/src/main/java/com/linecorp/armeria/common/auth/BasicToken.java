@@ -32,11 +32,14 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * The bearer token of
  * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>.
  */
-public final class BasicToken {
+public final class BasicToken extends AuthToken {
 
     /**
      * Creates a new {@link BasicToken} from the given {@code username} and {@code password}.
+     *
+     * @deprecated use {@link AuthToken#ofBasic(String, String)} instead.
      */
+    @Deprecated
     public static BasicToken of(String username, String password) {
         return new BasicToken(username, password);
     }
@@ -46,7 +49,7 @@ public final class BasicToken {
     @Nullable
     private String headerValue;
 
-    private BasicToken(String username, String password) {
+    BasicToken(String username, String password) {
         this.username = requireNonNull(username, "username");
         this.password = requireNonNull(password, "password");
     }
@@ -68,6 +71,7 @@ public final class BasicToken {
     /**
      * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
      */
+    @Override
     public String asHeaderValue() {
         if (headerValue != null) {
             return headerValue;

@@ -358,7 +358,7 @@ org.junit.jupiter:
     - https://junit.org/junit5/docs/5.5.2/api/
 
 me.champeau.jmh:
-  jmh-gradle-plugin: { version: '0.6.5' }
+  jmh-gradle-plugin: { version: '0.6.6' }
 
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.28.0' }
