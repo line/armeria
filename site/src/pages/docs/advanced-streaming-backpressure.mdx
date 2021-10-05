@@ -85,7 +85,7 @@ sb.service("/big_file.dat", (ctx, req) -> {
 });
 ```
 
-<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the chunk written to the <type://HttpResponseWriter> is finally written to the socket. This enables you to add the next task by adding a callback (`thenRun()` in the code example). The next task in the example is set to producing the next chunk.
+<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the chunk written to the <type://HttpResponseWriter> is finally written to the socket. This enables you to add the next task by adding a callback (`thenRun()` in the code example). The next task in the example is set to produce the next chunk.
 
 <Tip>
 
