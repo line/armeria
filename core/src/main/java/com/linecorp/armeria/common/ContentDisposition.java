@@ -109,7 +109,7 @@ public final class ContentDisposition {
      * @param type the disposition type like for example {@code inline}, {@code attachment},
      *             or {@code form-data}
      * @param name the name parameter
-     * @param filename the filename parameter that will be be formatted as quoted-string,
+     * @param filename the filename parameter that will be formatted as quoted-string,
      *                 as defined in RFC 2616, section 2.2, and any quote characters within
      *                 the filename value will be escaped with a backslash,
      *                 e.g. {@code "foo\"bar.txt"} becomes {@code "foo\\\"bar.txt"}
