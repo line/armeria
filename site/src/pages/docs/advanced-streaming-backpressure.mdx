@@ -119,7 +119,7 @@ private void streamingResponse(HttpResponseWriter response, int index) {
 }
 ```
 
-So far, we have implemented a simple version of <type://HttpFile>. Now, we can implement a streaming response with back pressure for any type of source (e.g. database) by simply changing the `produceChunk()` method to fetch data from the  source.
+So far, we have implemented a simple version of <type://HttpFile>. Now, we can implement a streaming response with back pressure for any type of source (e.g. database) by simply changing the `produceChunk()` method to fetch data from the source.
 
 You have other alternatives to implement back pressure with; there are libraries such as [Reactor](https://projectreactor.io) and [RxJava](https://github.com/ReactiveX/RxJava). If you opt to use such alternative, 
 return the response using <type://HttpResponse#of(ResponseHeaders,Publisher)>:
