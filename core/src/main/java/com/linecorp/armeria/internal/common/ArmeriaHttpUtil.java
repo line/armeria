@@ -209,9 +209,6 @@ public final class ArmeriaHttpUtil {
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY);
 
-    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
-
     public static final String SERVER_HEADER =
             "Armeria/" + Version.get("armeria", ArmeriaHttpUtil.class.getClassLoader())
                                 .artifactVersion();
@@ -394,6 +391,27 @@ public final class ArmeriaHttpUtil {
         return request.method() == HttpMethod.OPTIONS &&
                request.headers().contains(HttpHeaderNames.ORIGIN) &&
                request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    }
+
+    /**
+     * Returns whether the specified header name is disallowed for additional trailers.
+     */
+    public static boolean isPseudoHeader(AsciiString name) {
+        // Pseudo headers are not allowed for additional trailers.
+        return !name.isEmpty() && name.charAt(0) == ':';
+    }
+
+    /**
+     * Returns whether the specified header name is disallowed for response headers.
+     */
+    public static boolean isDisallowedResponseHeader(AsciiString name) {
+        // Request Pseudo-Headers are not allowed for response headers.
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
+        if (isPseudoHeader(name)) {
+            return !HttpHeaderNames.STATUS.equals(name);
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -725,17 +743,20 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Converts the specified Armeria HTTP/2 response headers into Netty HTTP/2 headers.
+     * Converts the specified Armeria HTTP/2 {@link ResponseHeaders} into Netty HTTP/2 headers.
      *
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
-    public static Http2Headers toNettyHttp2ServerHeaders(HttpHeaders inputHeaders) {
+    public static Http2Headers toNettyHttp2ServerHeaders(ResponseHeaders inputHeaders) {
         final int headerSizeHint = inputHeaders.size() + 2; // server and data headers
         final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
+                continue;
+            }
+            if (isDisallowedResponseHeader(name)) {
                 continue;
             }
             outputHeaders.add(name, value);
@@ -756,7 +777,7 @@ public final class ArmeriaHttpUtil {
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
                 continue;
             }
-            if (ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST.contains(name)) {
+            if (isPseudoHeader(name)) {
                 continue;
             }
             if (isTrailerDisallowed(name)) {

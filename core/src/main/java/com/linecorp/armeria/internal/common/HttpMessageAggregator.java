@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
@@ -26,6 +26,15 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -36,11 +45,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-final class HttpMessageAggregator {
+public final class HttpMessageAggregator {
 
-    static CompletableFuture<AggregatedHttpRequest> aggregateRequest(HttpRequest request,
-                                                                     EventExecutor executor,
-                                                                     @Nullable ByteBufAllocator alloc) {
+    public static CompletableFuture<AggregatedHttpRequest> aggregateRequest(
+            HttpRequest request, EventExecutor executor, @Nullable ByteBufAllocator alloc) {
         final SubscriptionOption[] options = alloc != null ? POOLED_OBJECTS : EMPTY_OPTIONS;
 
         return UnmodifiableFuture.wrap(request.collect(executor, options).thenApply(objects -> {
@@ -109,9 +117,8 @@ final class HttpMessageAggregator {
         }));
     }
 
-    static CompletableFuture<AggregatedHttpResponse> aggregateResponse(HttpResponse response,
-                                                                       EventExecutor executor,
-                                                                       @Nullable ByteBufAllocator alloc) {
+    public static CompletableFuture<AggregatedHttpResponse> aggregateResponse(
+            HttpResponse response, EventExecutor executor, @Nullable ByteBufAllocator alloc) {
         final SubscriptionOption[] options = alloc != null ? POOLED_OBJECTS : EMPTY_OPTIONS;
 
         return UnmodifiableFuture.wrap(response.collect(executor, options).thenApply(objects -> {
@@ -228,7 +235,9 @@ final class HttpMessageAggregator {
             for (int i = start; i < end; i++) {
                 try (HttpData data = (HttpData) objects.get(i)) {
                     final ByteBuf buf = data.byteBuf();
-                    if (!data.isEmpty()) {
+                    if (data.isEmpty()) {
+                        data.close();
+                    } else {
                         merged.writeBytes(buf, buf.readerIndex(), data.length());
                     }
                 }
@@ -248,11 +257,13 @@ final class HttpMessageAggregator {
         }
     }
 
-    private static HttpData aggregateData(HttpData data1, HttpData data2, @Nullable ByteBufAllocator alloc) {
+    public static HttpData aggregateData(HttpData data1, HttpData data2, @Nullable ByteBufAllocator alloc) {
         if (data2.isEmpty()) {
+            data2.close();
             return data1;
         }
         if (data1.isEmpty()) {
+            data1.close();
             return data2;
         }
 

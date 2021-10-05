@@ -97,6 +97,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.usercontent.goog
 *.vps.myjino.ru
 *.webhare.dev
 *.webpaas.ovh.net
@@ -1364,7 +1365,6 @@ cleaning
 clerk.app
 clerkstage.app
 cleverapps.io
-clic2000.net
 click
 clicketcloud.com
 clickrising.net
@@ -6499,6 +6499,7 @@ praxi
 prd.fr
 prd.km
 prd.mg
+prequalifyme.today
 preservation.museum
 presidio.museum
 press
@@ -6757,7 +6758,6 @@ rj.gov.br
 rj.leg.br
 rl.no
 rm.it
-rmit
 rn.gov.br
 rn.it
 rn.leg.br
