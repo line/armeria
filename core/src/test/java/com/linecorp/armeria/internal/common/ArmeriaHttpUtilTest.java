@@ -568,7 +568,7 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void isDisallowedResponseHeader() {
+    void disallowedResponseHeaderNames() {
         for (AsciiString headerName : ImmutableList.of(HttpHeaderNames.METHOD,
                                                        HttpHeaderNames.AUTHORITY,
                                                        HttpHeaderNames.SCHEME,
