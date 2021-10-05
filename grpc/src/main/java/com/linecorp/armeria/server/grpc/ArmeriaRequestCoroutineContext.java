@@ -24,7 +24,8 @@ import kotlin.coroutines.CoroutineContext;
 import kotlinx.coroutines.ThreadContextElement;
 
 /**
- * Propagates [ServiceRequestContext] over coroutines.
+ * Propagates {@link ServiceRequestContext} over Kotlin coroutines only when using
+ * <a href="https://github.com/grpc/grpc-kotlin>gRPC-Kotlin</a>.
  */
 final class ArmeriaRequestCoroutineContext extends AbstractCoroutineContextElement
         implements ThreadContextElement<SafeCloseable> {
