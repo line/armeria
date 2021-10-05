@@ -39,6 +39,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.actuate.PrometheusMetricExposureTest.TestConfiguration;
 
+import io.prometheus.client.exporter.common.TextFormat;
+
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "managedMetricPath" })
 @DirtiesContext
@@ -76,7 +78,7 @@ class PrometheusMetricExposureTest {
             final AggregatedHttpResponse res =
                     managementClient.get("/internal/actuator/prometheus").aggregate().get();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
-            assertThat(res.contentType().belongsTo(MediaType.PLAIN_TEXT)).isTrue();
+            assertThat(res.contentType()).isEqualTo(MediaType.parse(TextFormat.CONTENT_TYPE_004));
             assertThat(res.contentAscii()).contains("armeria_server_response_duration_seconds");
         });
     }
