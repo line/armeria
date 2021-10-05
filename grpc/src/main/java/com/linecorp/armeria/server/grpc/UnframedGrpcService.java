@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -49,7 +49,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -80,19 +79,20 @@ import io.grpc.Status;
  */
 final class UnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
 
-    private static final char LINE_SEPARATOR = '\n';
-
     private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
+    private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    UnframedGrpcService(GrpcService delegate, HandlerRegistry registry) {
+    UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
+                        UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         super(delegate);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         delegateGrpcService = delegate;
         methodsByName = registry.methods();
+        this.unframedGrpcErrorHandler = requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
     }
 
     @Override
@@ -233,7 +233,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                         if (t != null) {
                             res.completeExceptionally(t);
                         } else {
-                            deframeAndRespond(ctx, framedResponse, res);
+                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler);
                         }
                     }
                     return null;
@@ -244,7 +244,8 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     static void deframeAndRespond(
             ServiceRequestContext ctx,
             AggregatedHttpResponse grpcResponse,
-            CompletableFuture<HttpResponse> res) {
+            CompletableFuture<HttpResponse> res,
+            UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -252,24 +253,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
         if (grpcStatus.getCode() != Status.OK.getCode()) {
             PooledObjects.close(grpcResponse.content());
-            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcStatus.getCode());
-            final StringBuilder message = new StringBuilder("http-status: " + httpStatus.code());
-            message.append(", ").append(httpStatus.reasonPhrase()).append(LINE_SEPARATOR);
-            message.append("Caused by: ").append(LINE_SEPARATOR);
-            message.append("grpc-status: ")
-                   .append(grpcStatusCode)
-                   .append(", ")
-                   .append(grpcStatus.getCode().name());
-            final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
-            if (grpcMessage != null) {
-                message.append(", ").append(grpcMessage);
-            }
-
-            final ResponseHeaders headers = ResponseHeaders.builder(httpStatus)
-                                                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                                           .add(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode)
-                                                           .build();
-            res.complete(HttpResponse.of(headers, HttpData.ofUtf8(message.toString())));
+            res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse));
             return;
         }
 

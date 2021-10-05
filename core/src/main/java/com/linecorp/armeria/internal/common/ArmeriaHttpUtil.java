@@ -49,6 +49,7 @@ import java.util.function.BiConsumer;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -210,8 +211,14 @@ public final class ArmeriaHttpUtil {
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY);
 
-    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
+    private static final Set<AsciiString> REQUEST_PSEUDO_HEADERS = ImmutableSet.of(
+            HttpHeaderNames.METHOD, HttpHeaderNames.SCHEME, HttpHeaderNames.AUTHORITY,
+            HttpHeaderNames.PATH, HttpHeaderNames.PROTOCOL);
+
+    private static final Set<AsciiString> PSEUDO_HEADERS = ImmutableSet.<AsciiString>builder()
+                                                                       .addAll(REQUEST_PSEUDO_HEADERS)
+                                                                       .add(HttpHeaderNames.STATUS)
+                                                                       .build();
 
     public static final String SERVER_HEADER =
             "Armeria/" + Version.get("armeria", ArmeriaHttpUtil.class.getClassLoader())
@@ -399,12 +406,22 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
+     * Returns the disallowed response headers.
+     */
+    @VisibleForTesting
+    static Set<AsciiString> isDisallowedResponseHeader() {
+        // Request Pseudo-Headers are not allowed for response headers.
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
+        return REQUEST_PSEUDO_HEADERS;
+    }
+
+    /**
      * Parses the specified HTTP header directives and invokes the specified {@code callback}
      * with the directive names and values.
      */
     public static void parseDirectives(String directives, BiConsumer<String, String> callback) {
         final int len = directives.length();
-        for (int i = 0; i < len;) {
+        for (int i = 0; i < len; ) {
             final int nameStart = i;
             final String name;
             final String value;
@@ -714,13 +731,18 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Converts the specified Armeria HTTP/2 response headers into Netty HTTP/2 headers.
+     * Converts the specified Armeria HTTP/2 {@link ResponseHeaders} into Netty HTTP/2 headers.
      *
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
     public static Http2Headers toNettyHttp2ServerHeaders(HttpHeadersBuilder inputHeaders) {
         for (Entry<AsciiString, AsciiString> disallowed : HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST) {
-           inputHeaders.remove(disallowed.getKey());
+            inputHeaders.remove(disallowed.getKey());
+        }
+        // TODO(ikhoon): Implement HttpHeadersBuilder.remove(Predicate<AsciiString>) to remove values
+        //               with a predicate.
+        for (AsciiString disallowed : isDisallowedResponseHeader()) {
+            inputHeaders.remove(disallowed);
         }
         return new ArmeriaHttp2Headers(inputHeaders);
     }
@@ -736,12 +758,10 @@ public final class ArmeriaHttpUtil {
         for (Entry<AsciiString, AsciiString> disallowed : HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST) {
             builder.remove(disallowed.getKey());
         }
-
-        for (AsciiString disallowed : ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST) {
-            builder.remove(disallowed);
+        for (AsciiString disallowed : PSEUDO_HEADERS) {
+           builder.remove(disallowed);
         }
-
-        for (Entry<AsciiString, AsciiString> disallowed: HTTP_TRAILER_DISALLOWED_LIST) {
+        for (Entry<AsciiString, AsciiString> disallowed : HTTP_TRAILER_DISALLOWED_LIST) {
             builder.remove(disallowed.getKey());
         }
 

@@ -39,14 +39,15 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -120,6 +121,9 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private ImmutableList.Builder<ServerInterceptor> interceptors;
+
+    @Nullable
+    private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -422,6 +426,18 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
+     * service.
+     * @param unframedGrpcErrorHandler The function which maps the error response to an {@link HttpResponse}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder unframedGrpcErrorHandler(UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
+        this.unframedGrpcErrorHandler = unframedGrpcErrorHandler;
+        return this;
+    }
+
+    /**
      * Sets whether the service executes service methods using the blocking executor. By default, service
      * methods are executed directly on the event loop for implementing fully asynchronous services. If your
      * service uses blocking logic, you should either execute such logic in a separate thread using something
@@ -645,6 +661,10 @@ public final class GrpcServiceBuilder {
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
             interceptors().add(coroutineContextInterceptor);
         }
+        if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
@@ -685,6 +705,11 @@ public final class GrpcServiceBuilder {
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes);
-        return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry) : grpcService;
+        if (!enableUnframedRequests) {
+            return grpcService;
+        }
+        return new UnframedGrpcService(grpcService, handlerRegistry,
+                                       unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
+                                                                        : UnframedGrpcErrorHandler.of());
     }
 }

@@ -29,6 +29,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
+import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
@@ -138,7 +140,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(HttpResponse response, Duration delay) {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
-        return delayed(response, delay, CommonPools.workerGroup().next());
+        return delayed(() -> response, delay);
     }
 
     /**
@@ -149,8 +151,35 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
+        return delayed(() -> response, delay, executor);
+    }
+
+    /**
+     * Invokes the specified {@link Supplier} and creates a new HTTP response that
+     * delegates to the provided {@link HttpResponse} by {@link Supplier},
+     * beginning publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
+     */
+    static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(delay, "delay");
+        return delayed(responseSupplier, delay,
+                       RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                 CommonPools.workerGroup()::next));
+    }
+
+    /**
+     * Invokes the specified {@link Supplier} and creates a new HTTP response that
+     * delegates to the provided {@link HttpResponse} {@link Supplier},
+     * beginning publishing after {@code delay} has passed from the provided {@link ScheduledExecutorService}.
+     */
+    static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier,
+                                Duration delay,
+                                ScheduledExecutorService executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(delay, "delay");
+        requireNonNull(executor, "executor");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.schedule(() -> res.delegate(response), delay.toNanos(), TimeUnit.NANOSECONDS);
+        executor.schedule(() -> res.delegate(responseSupplier.get()), delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }
 

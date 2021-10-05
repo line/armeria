@@ -1,0 +1,150 @@
+# Sending a streaming response with backpressure
+
+Let's say that we want to serve a static file whose size is larger than your available memory.
+If we load the file into the memory at once, we will definitely get an `OutOfMemoryError`.
+In order to avoid the error, we should:
+1. Divide the file into chunks
+2. Load the first chunk into memory
+3. Send the chunk to the client
+4. Wait until the chunk is written to the sending socket buffer
+   - So we don't load data into memory when the client is not ready to receive. This is called __backpressure__.
+5. Load the second chunk and repeat the steps until we send all chunks
+
+Now, we can send the large file without spending much memory.
+
+<Tip>
+
+See [Let’s Play with Reactive Streams on Armeria - 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/)
+to understand backpressure and the situation when an `OutOfMemoryError` is raised.
+
+</Tip>
+
+## Sending a file with backpressure
+
+We can easily send the file with backpressure using <type://HttpFile>:
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.file.HttpFile;
+
+HttpFile bigFile = HttpFile.of(new File("/var/www/big_file.dat"));
+Server.builder()
+      .service("/big_file.dat", bigFile.asService())
+      .build();
+```
+The <type://HttpFile> loads chunks one by one and send them to the client with backpressure.
+
+## Sending a streaming response using <type://HttpResponseWriter>
+
+If we want to send large data from other than files (e.g. database) with backpressure, we need to implement
+the backpressure by ourselves. Let's start it by implementing the simplified version of <type://HttpFile>.
+
+First, we use <type://HttpResponseWriter> from <type://HttpResponse#streaming()> to send a streaming response:
+```java
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.server.ServerBuilder;
+
+// ⚠️ This code has a problem. Do not copy/paste and use it.
+ServerBuilder sb = ...;
+sb.service("/big_file.dat", (ctx, req) -> {
+    HttpResponseWriter response = HttpResponse.streaming();
+    // We must write the response headers first.
+    response.write(ResponseHeaders.of(200));
+    response.write(produceChunk(0));
+    response.write(produceChunk(1));
+    response.write(produceChunk(2));
+    ... // Write more chunks until we send all chunks.
+    // Call close() to end the response.
+    response.close();
+    return response;
+}
+
+...
+private HttpData produceChunk(int index) {
+    // Divide the file by the pre-defined chunk size(e.g. 8192 bytes)
+    // and read it using index.
+    // If index is 0, 0 to 8192 bytes from the file is read.
+    // If index is 1, 8193 to 16384 is read and so on.
+}
+```
+Now we can send the streaming response to the client. However, this has a problem. Even though it divides
+the file, it loads all chunks into the memory before each chunk is sent to the client,
+so the server will get the `OutOfMemoryError`. To solve it, we have to implement backpressure using
+<type://StreamWriter#whenConsumed()>:
+```java
+sb.service("/big_file.dat", (ctx, req) -> {
+    HttpResponseWriter response = HttpResponse.streaming();
+    response.write(ResponseHeaders.of(200));
+    response.whenConsumed().thenRun(() -> {
+        // Produce the first chunk when the ResponseHeaders is
+        // written to the socket.
+        response.write(produceChunk(0));
+        response.whenConsumed().thenRun(() -> {
+            // Produce the second chunk when the first chunk is
+            // written to the socket.
+            response.write(produceChunk(1));
+            ...
+        });
+    });
+    return response;
+});
+```
+
+<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the chunk,
+which is written to the <type://HttpResponseWriter>, is finally written to the socket. So, you can add
+the next task by adding a callback (`thenRun()` in the example). We produced the next chunk using callback
+in the example.
+
+<Tip>
+
+See [Let’s Play with Reactive Streams on Armeria - 2](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-2/)
+to understand how the network layer is involved in backpressure.
+
+</Tip>
+
+Of course, we need to use recursion not to implement the callback endlessly.
+```java
+sb.service("/big_file.dat", (ctx, req) -> {
+    HttpResponseWriter response = HttpResponse.streaming();
+    response.write(ResponseHeaders.of(200));
+    streamingResponse(response, 0);
+    return response;
+});
+
+private void streamingResponse(HttpResponseWriter response, int index) {
+    if (isEndOfFile()) {
+        // Close the response when we send all chunks.
+        response.close();
+        return;
+    }
+    response.whenConsumed().thenRun(() -> {
+        if (response.tryWrite(produceChunk(index))) {
+            streamingResponse(response, index + 1);
+        } else {
+            // The response is completed unexpectedly.
+        }
+    });
+}
+```
+So far we have implemented the simplified version of <type://HttpFile>. Now, we can implement the streaming
+response with backpressure from any other sources (e.g. database) by simply changing the `produceChunk()`
+method to fetch data from the sources.
+
+You can also implement backpressure with other libraries, such as [Reactor](https://projectreactor.io) and
+[RxJava](https://github.com/ReactiveX/RxJava). With the implementation, you can simply return it using
+<type://HttpResponse#of(ResponseHeaders,Publisher)>:
+```java
+sb.service("/big_data.dat", (ctx, req) -> {
+    Flux<HttpData> flux = ... // Fetch data from other source with backpressure.
+    return HttpResponse.of(ResponseHeaders.of(200), flux);
+});
+```
+
+<Tip>
+
+You can find [a funny working example](https://github.com/line/armeria-examples/blob/master/proxy-server/src/main/java/example/armeria/proxy/AnimationService.java)
+that sends the streaming response with backpressure.
+
+</Tip>

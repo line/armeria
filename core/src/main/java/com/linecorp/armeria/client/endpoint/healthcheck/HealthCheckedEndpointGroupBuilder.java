@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 /**
@@ -114,6 +115,11 @@ public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheck
     @Override
     public HealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
         return (HealthCheckedEndpointGroupBuilder) super.maxEndpointCount(maxEndpointCount);
+    }
+
+    @Override
+    public HealthCheckedEndpointGroupBuilder auth(AuthToken token) {
+        return (HealthCheckedEndpointGroupBuilder) super.auth(token);
     }
 
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {

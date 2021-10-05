@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.common.logging;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -50,28 +49,27 @@ public final class LoggingDecorators {
     public static void logWhenComplete(
             Logger logger, RequestContext ctx,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
-        final boolean isTransientService = isTransientService(ctx);
-        final CompletableFuture<RequestOnlyLog> requestCompletionFuture;
-        if (!isTransientService) {
-            requestCompletionFuture = ctx.log().whenRequestComplete().thenApply(log -> {
+        ctx.log().whenRequestComplete().thenAccept(log -> {
+            try {
                 requestLogger.accept(log);
-                return log;
-            });
-        } else {
-            requestCompletionFuture = ctx.log().whenRequestComplete();
+            } catch (Throwable t) {
+                logException(logger, ctx, "request", t);
+            }
+        });
+        ctx.log().whenComplete().thenAccept(log -> {
+            try {
+                responseLogger.accept(log);
+            } catch (Throwable t) {
+                logException(logger, ctx, "response", t);
+            }
+        });
+    }
+
+    private static void logException(Logger logger, RequestContext ctx,
+                                     String requestOrResponse, Throwable cause) {
+        try (SafeCloseable ignored = ctx.push()) {
+            logger.warn("{} Unexpected exception while logging {}: ", ctx, requestOrResponse, cause);
         }
-        requestCompletionFuture.exceptionally(e -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                logger.warn("{} Unexpected exception while logging request: ", ctx, e);
-            }
-            return null;
-        });
-        ctx.log().whenComplete().thenAccept(responseLogger).exceptionally(e -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                logger.warn("{} Unexpected exception while logging response: ", ctx, e);
-            }
-            return null;
-        });
     }
 
     /**
@@ -90,10 +88,15 @@ public final class LoggingDecorators {
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         if (requestLogLevel.isEnabled(logger)) {
             final RequestContext ctx = log.context();
+            if (log.requestCause() == null && isTransientService(ctx)) {
+                return;
+            }
             final String requestStr = log.toStringRequestOnly(requestHeadersSanitizer,
                                                               requestContentSanitizer,
                                                               requestTrailersSanitizer);
             try (SafeCloseable ignored = ctx.push()) {
+                // We don't log requestCause when it's not null because responseCause is the same exception when
+                // the requestCause is not null. That's way we don't have requestCauseSanitizer.
                 requestLogLevel.log(logger, REQUEST_FORMAT, ctx, requestStr);
             }
         }
@@ -126,7 +129,9 @@ public final class LoggingDecorators {
 
         if (responseLogLevel.isEnabled(logger)) {
             final RequestContext ctx = log.context();
-            if (!log.responseHeaders().status().isServerError() && isTransientService(ctx)) {
+            if (responseCause == null &&
+                !log.responseHeaders().status().isServerError() &&
+                isTransientService(ctx)) {
                 return;
             }
 

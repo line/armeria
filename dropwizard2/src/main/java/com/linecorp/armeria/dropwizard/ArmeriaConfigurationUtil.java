@@ -20,12 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URL;
@@ -64,6 +61,7 @@ import com.linecorp.armeria.dropwizard.ArmeriaSettings.Http1;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.Http2;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.Port;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.Proxy;
+import com.linecorp.armeria.internal.common.util.ResourceUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -304,7 +302,7 @@ final class ArmeriaConfigurationUtil {
             return null;
         }
         final KeyStore store = KeyStore.getInstance(firstNonNull(type, "JKS"));
-        final URL url = getURL(resource);
+        final URL url = ResourceUtil.getUrl(resource);
         store.load(url.openStream(), password != null ? password.toCharArray()
                                                       : null);
         return store;
@@ -392,43 +390,6 @@ final class ArmeriaConfigurationUtil {
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid data size text: " + dataSizeText +
                                                " (expected: " + DATA_SIZE_PATTERN + ')', e);
-        }
-    }
-
-    /**
-     * Resolves the given resource location to a {@link URL}.
-     *
-     * <p>Does not check whether the URL actually exists; simply returns
-     * the URL that the given location would correspond to.
-     *
-     * @param resourceLocation the resource location to resolve: either a
-     *                         "classpath:" pseudo URL, a "file:" URL, or a plain file path
-     * @return a corresponding URL object
-     * @throws FileNotFoundException if the resource cannot be resolved to a URL
-     */
-    private static URL getURL(String resourceLocation) throws FileNotFoundException {
-        // Forked from Spring 5.2.2
-        // https://github.com/spring-projects/spring-framework/blob/22a888b53df620b0905ce8beb6b0cf71981086d8/spring-core/src/main/java/org/springframework/util/ResourceUtils.java#L129
-        if (resourceLocation.startsWith("classpath:")) {
-            final String path = resourceLocation.substring("classpath:".length());
-            final URL resource = ArmeriaConfigurationUtil.class.getClassLoader().getResource(path);
-            if (resource == null) {
-                throw new FileNotFoundException("class path resource [" + path +
-                                                "] cannot be resolved to URL because it does not exist");
-            }
-            return resource;
-        }
-        try {
-            // try URL
-            return new URL(resourceLocation);
-        } catch (MalformedURLException ex) {
-            // no URL -> treat as file path
-            try {
-                return new File(resourceLocation).toURI().toURL();
-            } catch (MalformedURLException ex2) {
-                throw new FileNotFoundException("Resource location [" + resourceLocation +
-                                                "] is neither a URL nor a well-formed file path");
-            }
         }
     }
 

@@ -38,6 +38,8 @@ import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -47,6 +49,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 
@@ -439,6 +442,22 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CONTENT_RANGE, "dummy")
                                           .add(HttpHeaderNames.TRAILER, "dummy")
                                           .build();
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get("foo")).isEqualTo("bar");
+    }
+
+    @Test
+    void excludeDisallowedInResponseHeaders() {
+        final ResponseHeadersBuilder in = ResponseHeaders.builder()
+                                                         .add(HttpHeaderNames.STATUS, "200")
+                                                         .add(HttpHeaderNames.AUTHORITY, "dummy")
+                                                         .add(HttpHeaderNames.METHOD, "dummy")
+                                                         .add(HttpHeaderNames.PATH, "dummy")
+                                                         .add(HttpHeaderNames.SCHEME, "dummy");
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get(HttpHeaderNames.STATUS)).isEqualTo("200");
     }
 
     @Test
@@ -546,6 +565,19 @@ class ArmeriaHttpUtilTest {
         assertThat("Armeria/1.0.0").containsPattern(pattern);
         assertThat("Armeria/1.0.0-SNAPSHOT").containsPattern(pattern);
         assertThat(ArmeriaHttpUtil.SERVER_HEADER).containsPattern(pattern);
+    }
+
+    @Test
+    void isDisallowedResponseHeader() {
+        for (AsciiString headerName : ImmutableList.of(HttpHeaderNames.METHOD,
+                                                       HttpHeaderNames.AUTHORITY,
+                                                       HttpHeaderNames.SCHEME,
+                                                       HttpHeaderNames.PATH,
+                                                       HttpHeaderNames.PROTOCOL)) {
+            assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader().contains(headerName)).isTrue();
+        }
+        assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader()).contains(HttpHeaderNames.STATUS);
+        assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader()).contains(HttpHeaderNames.LOCATION);
     }
 
     private static ServerConfig serverConfig() {

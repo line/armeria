@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -408,6 +409,11 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
 
     @Override
     public ArmeriaRetrofitBuilder auth(OAuth2Token token) {
+        return (ArmeriaRetrofitBuilder) super.auth(token);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder auth(AuthToken token) {
         return (ArmeriaRetrofitBuilder) super.auth(token);
     }
 

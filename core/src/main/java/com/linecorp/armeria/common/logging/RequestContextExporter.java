@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -46,8 +47,10 @@ public final class RequestContextExporter {
     @SuppressWarnings("rawtypes")
     private static final ExportEntry[] EMPTY_EXPORT_ENTRIES = new ExportEntry[0];
 
+    private static final AtomicLong EXPORTER_ID_GENERATOR = new AtomicLong();
+
     @VisibleForTesting
-    static final AttributeKey<State> STATE = AttributeKey.valueOf(RequestContextExporter.class, "STATE");
+    final AttributeKey<State> stateAttributeKey;
 
     /**
      * Returns a newly created {@link RequestContextExporterBuilder}.
@@ -72,7 +75,8 @@ public final class RequestContextExporter {
                            Set<ExportEntry<AttributeKey<?>>> attrs,
                            Set<ExportEntry<AsciiString>> reqHeaders,
                            Set<ExportEntry<AsciiString>> resHeaders) {
-
+        stateAttributeKey = AttributeKey.valueOf(RequestContextExporter.class,
+                                                 "STATE_" + EXPORTER_ID_GENERATOR.incrementAndGet());
         if (!builtInPropertySet.isEmpty()) {
             builtInProperties = new BuiltInProperties();
             builtInPropertyArray = builtInPropertySet.toArray(EMPTY_EXPORT_ENTRIES);
@@ -311,13 +315,13 @@ public final class RequestContextExporter {
     }
 
     private State state(RequestContext ctx) {
-        final State state = ctx.ownAttr(STATE);
+        final State state = ctx.ownAttr(stateAttributeKey);
         if (state != null) {
             return state;
         }
 
         final State newState = new State(numAttrs);
-        ctx.setAttr(STATE, newState);
+        ctx.setAttr(stateAttributeKey, newState);
         return newState;
     }
 

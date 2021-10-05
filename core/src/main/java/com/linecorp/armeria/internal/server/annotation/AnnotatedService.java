@@ -121,7 +121,8 @@ public final class AnnotatedService implements HttpService {
     private final ResponseConverterFunction responseConverter;
 
     private final Route route;
-    private final ResponseHeaders defaultHttpHeaders;
+    private final HttpStatus defaultStatus;
+    private final HttpHeaders defaultHttpHeaders;
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
@@ -134,7 +135,8 @@ public final class AnnotatedService implements HttpService {
                      List<ExceptionHandlerFunction> exceptionHandlers,
                      List<ResponseConverterFunction> responseConverters,
                      Route route,
-                     ResponseHeaders defaultHttpHeaders,
+                     HttpStatus defaultStatus,
+                     HttpHeaders defaultHttpHeaders,
                      HttpHeaders defaultHttpTrailers,
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
@@ -157,6 +159,7 @@ public final class AnnotatedService implements HttpService {
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");
 
+        this.defaultStatus = requireNonNull(defaultStatus, "defaultStatus");
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -199,6 +202,9 @@ public final class AnnotatedService implements HttpService {
             final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
             warnIfHttpResponseArgumentExists(type, type);
             actualType = type.getActualTypeArguments()[0];
+        } else if (KotlinUtil.isSuspendingFunction(method)) {
+            // Use kotlin reflection since suspending function's java return type is always Object.
+            actualType = KotlinUtil.kFunctionReturnType(method);
         } else {
             actualType = method.getGenericReturnType();
         }
@@ -429,8 +435,7 @@ public final class AnnotatedService implements HttpService {
             return headers.build();
         }
 
-        final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
-        return headers.status(defaultHttpStatus).build();
+        return headers.status(defaultStatus).build();
     }
 
     /**

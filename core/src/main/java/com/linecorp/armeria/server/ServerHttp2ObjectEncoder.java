@@ -82,7 +82,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         return stream.isHeadersSent();
     }
 
-    private Http2Headers convertHeaders(HttpHeaders inputHeaders, boolean isTrailersEmpty) {
+    private Http2Headers convertHeaders(ResponseHeaders inputHeaders, boolean isTrailersEmpty) {
         final HttpHeadersBuilder builder = inputHeaders.toBuilder();
         if (enableServerHeader && !inputHeaders.contains(HttpHeaderNames.SERVER)) {
             builder.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
