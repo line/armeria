@@ -11,7 +11,7 @@ To prevent such error and send large files without consuming too much memory:
 5. Load the second chunk and repeat the steps 3 and 4 until we send all chunks.
 
 Waiting for the chunk to be written is to avoid loading data into memory when the client is not ready to receive. This is called __back pressure__. 
-See [Let’s Play with Reactive Streams on Armeria - 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/) to learn the conditions under when an `OutOfMemoryError` is raised and back pressure which can help you with the error.
+See [Let’s Play with Reactive Streams on Armeria - 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/) to learn the conditions under which an `OutOfMemoryError` is raised and back pressure which can help you with the error.
 
 ## Sending a file with back pressure
 
