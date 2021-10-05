@@ -259,8 +259,12 @@ public final class PathAndQuery {
                 if (isPath) {
                     if (decoded == '/') {
                         // Do not decode '%2F' and '%2f' in the path to '/' for compatibility with
-                        // other echo systems, e.g. HTTP/JSON to gRPC transcoding.
+                        // other implementations in the ecosystem, e.g. HTTP/JSON to gRPC transcoding.
                         // https://github.com/googleapis/googleapis/blob/02710fa0ea5312d79d7fb986c9c9823fb41049a9/google/api/http.proto#L257-L258
+
+                        // Insert a special mark so we can distinguish a raw character ('/') and
+                        // percent-encoded character ('%2F') in a path string.
+                        // We will encode this mark back into a percent-encoded character later.
                         final byte marker = RAW_CHAR_TO_MARKER['/'];
                         buf.ensure(2);
                         buf.add((byte) PERCENT_ENCODING_MARKER);
