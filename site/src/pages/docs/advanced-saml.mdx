@@ -73,7 +73,7 @@ SamlServiceProvider ssp =
                            .hostname("your-service-domain-name")
                            // Specify an authorizer in order to authenticate a request.
                            .authorizer(new Authorizer<HttpRequest>() { ... })
-                           // Speicify an SAML single sign-on handler
+                           // Specify a SAML single sign-on handler
                            // which sends a response to an end user
                            // after he or she is authenticated or not.
                            .ssoHandler(new SamlSingleSignOnHandler() { ... })
