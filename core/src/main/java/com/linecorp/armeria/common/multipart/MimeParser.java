@@ -260,7 +260,6 @@ final class MimeParser {
                             state = State.START_PART;
                         }
 
-                        multipartDecoder.onBodyPartEnd();
                         bodyPartPublisher.close();
                         bodyPartPublisher = null;
                         bodyPartHeadersBuilder = null;

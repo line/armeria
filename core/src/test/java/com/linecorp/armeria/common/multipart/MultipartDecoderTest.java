@@ -48,13 +48,9 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
@@ -180,19 +176,13 @@ public class MultipartDecoderTest {
                                 "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(4);
-
-        // To make inner subscriber using the same event-loop.
-        final ServiceRequestContext sctx =
-                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                     .build();
-
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             if (counter.decrementAndGet() == 3) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
                 assertThat(part.headers().get("Content-Type")).contains("text/plain");
                 assertThat(part.headers().getAll("Set-Cookie")).contains("bob=alice", "foo=bar");
                 final HttpDataAggregator subscriber = new HttpDataAggregator();
-                part.content().subscribe(subscriber, sctx.eventLoop());
+                part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
                     assertThat(body).isEqualTo("body 1");
@@ -202,7 +192,7 @@ public class MultipartDecoderTest {
                 assertThat(part.headers().get("Content-Type")).contains("text/plain");
                 assertThat(part.headers().getAll("Set-Cookie")).contains("bob=anne", "foo=quz");
                 final HttpDataAggregator subscriber = new HttpDataAggregator();
-                part.content().subscribe(subscriber, sctx.eventLoop());
+                part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
                     assertThat(body).isEqualTo("body 2");
@@ -210,12 +200,9 @@ public class MultipartDecoderTest {
             }
         };
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
-
-        try (SafeCloseable ignored = sctx.push()) {
-            partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5,
-                                                      chunk6, chunk7, chunk8, chunk9, chunk10))
-                    .subscribe(testSubscriber);
-        }
+        partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5,
+                                                  chunk6, chunk7, chunk8, chunk9, chunk10))
+                .subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
     }
@@ -403,6 +390,43 @@ public class MultipartDecoderTest {
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, null);
         decoder.subscribe(testSubscriber);
 
+        assertThatThrownBy(testSubscriber.completionFuture::join)
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("oops");
+    }
+
+    @Test
+    void testUpstreamErrorDuringBody() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id: part1\n" +
+                               '\n' +
+                               "this-is-the-1st-slice-of-the-body\n").getBytes();
+        final byte[] chunk2 = "this-is-the-2nd-slice-of-the-body\n".getBytes();
+        final MultipartDecoder decoder =
+                new MultipartDecoder(
+                        StreamMessage.of(Flux.from(chunksPublisher(ImmutableList.of(chunk1, chunk2)))
+                                             .concatWith(Flux.error(new IllegalStateException("oops")))),
+                        boundary,
+                        ByteBufAllocator.DEFAULT);
+
+        final AtomicInteger counter = new AtomicInteger(2);
+        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+            counter.decrementAndGet();
+            assertThat(part.headers().get("Content-Id")).contains("part1");
+            final HttpDataAggregator subscriber = new HttpDataAggregator();
+            part.content().subscribe(subscriber);
+            subscriber.content().exceptionally(throwable -> {
+                counter.decrementAndGet();
+                assertThat(throwable)
+                        .hasCauseInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("oops");
+                return null;
+            });
+        };
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        decoder.subscribe(testSubscriber);
+        await().untilAtomic(counter, is(0));
         assertThatThrownBy(testSubscriber.completionFuture::join)
                 .hasCauseInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("oops");
