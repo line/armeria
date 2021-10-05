@@ -421,7 +421,7 @@ public final class ArmeriaHttpUtil {
      */
     public static void parseDirectives(String directives, BiConsumer<String, String> callback) {
         final int len = directives.length();
-        for (int i = 0; i < len; ) {
+        for (int i = 0; i < len;) {
             final int nameStart = i;
             final String name;
             final String value;
