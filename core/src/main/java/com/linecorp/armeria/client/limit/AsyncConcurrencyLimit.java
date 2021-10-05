@@ -181,7 +181,7 @@ final class AsyncConcurrencyLimit implements ConcurrencyLimit {
         @Override
         public final void run() {
             final long nanoTime = System.nanoTime();
-            for (; ; ) {
+            for (;;) {
                 final AcquireTask task = pendingAcquireQueue.peek();
                 if (task == null || nanoTime - task.expireNanoTime < 0) {
                     break;
