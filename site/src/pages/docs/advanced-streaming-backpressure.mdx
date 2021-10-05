@@ -58,7 +58,7 @@ sb.service("/big_file.dat", (ctx, req) -> {
 ...
 private HttpData produceChunk(int index) {
     // Divide the file by the pre-defined chunk size(e.g. 8192 bytes)
-    // and read it using index. 
+    // and read it using index.
     // If index is 0, 0 to 8192 bytes from the file is read.
     // If index is 1, 8193 to 16384 is read and so on.
 }
