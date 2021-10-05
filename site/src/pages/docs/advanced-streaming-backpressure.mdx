@@ -64,7 +64,7 @@ private HttpData produceChunk(int index) {
 }
 ```
 
-With the code above, the server would still encounter `OutOf MemoryError`. We still need to take care of preventing loading data chunks into memory before a chunk is sent to the client. To solve the problem, implement back pressure with <type://StreamWriter#whenConsumed()>:
+With the code above, the server would encounter `OutOfMemoryError`. We still need to take care of preventing loading data chunks into memory before a chunk is sent to the client. To solve the problem, implement back pressure with <type://StreamWriter#whenConsumed()>:
 
 ```java
 sb.service("/big_file.dat", (ctx, req) -> {
