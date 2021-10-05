@@ -38,6 +38,8 @@ import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -436,6 +438,23 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CONTENT_RANGE, "dummy")
                                           .add(HttpHeaderNames.TRAILER, "dummy")
                                           .build();
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get("foo")).isEqualTo("bar");
+    }
+
+    @Test
+    void excludeDisallowedInResponseHeaders() {
+        final ResponseHeaders in = ResponseHeaders.builder()
+                                              .add(HttpHeaderNames.STATUS, "200")
+                                              .add(HttpHeaderNames.AUTHORITY, "dummy")
+                                              .add(HttpHeaderNames.METHOD, "dummy")
+                                              .add(HttpHeaderNames.PATH, "dummy")
+                                              .add(HttpHeaderNames.SCHEME, "dummy")
+                                              .build();
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get(HttpHeaderNames.STATUS)).isEqualTo("200");
     }
 
     @Test
@@ -543,6 +562,19 @@ class ArmeriaHttpUtilTest {
         assertThat("Armeria/1.0.0").containsPattern(pattern);
         assertThat("Armeria/1.0.0-SNAPSHOT").containsPattern(pattern);
         assertThat(ArmeriaHttpUtil.SERVER_HEADER).containsPattern(pattern);
+    }
+
+    @Test
+    void isDisallowedResponseHeader() {
+        for (AsciiString headerName : ImmutableList.of(HttpHeaderNames.METHOD,
+                                                       HttpHeaderNames.AUTHORITY,
+                                                       HttpHeaderNames.SCHEME,
+                                                       HttpHeaderNames.PATH,
+                                                       HttpHeaderNames.PROTOCOL)) {
+            assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader(headerName)).isTrue();
+        }
+        assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader(HttpHeaderNames.STATUS)).isFalse();
+        assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader(HttpHeaderNames.LOCATION)).isFalse();
     }
 
     private static ServerConfig serverConfig() {

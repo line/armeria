@@ -81,7 +81,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         return stream.isHeadersSent();
     }
 
-    private Http2Headers convertHeaders(HttpHeaders inputHeaders, boolean isTrailersEmpty) {
+    private Http2Headers convertHeaders(ResponseHeaders inputHeaders, boolean isTrailersEmpty) {
         final Http2Headers outHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(inputHeaders);
         if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
