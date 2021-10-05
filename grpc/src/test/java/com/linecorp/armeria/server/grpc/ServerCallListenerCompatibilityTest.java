@@ -162,21 +162,20 @@ class ServerCallListenerCompatibilityTest {
 
             if (hasResponse) {
                 final List<String> grpcJavaEvents = allEvents.get(0);
-                final ImmutableList<String> expectedEvents =
-                        ImmutableList.of("onReady", "onMessage", "onHalfClose", "onComplete");
-                assertThat(grpcJavaEvents).containsExactlyElementsOf(expectedEvents);
+                assertThat(grpcJavaEvents).containsExactly("onReady", "onMessage", "onHalfClose", "onComplete");
                 for (int j = 1; j < allEvents.size(); j++) {
                     final List<String> armeriaEvents = allEvents.get(i);
-                    assertThat(armeriaEvents).matches(events -> {
-                        // A server returned 2 messages. ArmeriaServerCall will invoke onReady() whenever a
-                        // message is correctly consumed with OK status. However, the exact number of
-                        // `onReady()` varies depending on when messages are emitted.
-                        return events.equals(expectedEvents) ||
-                               events.equals(ImmutableList.of("onReady", "onMessage", "onHalfClose",
-                                                              "onReady", "onComplete")) ||
-                               events.equals(ImmutableList.of("onReady", "onMessage", "onHalfClose",
-                                                              "onReady", "onReady", "onComplete"));
-                    }, "");
+
+                    assertThat(armeriaEvents).startsWith("onReady", "onMessage", "onHalfClose")
+                                             .endsWith("onComplete");
+
+                    // A server returned 2 messages. ArmeriaServerCall will invoke onReady() whenever a
+                    // message is correctly consumed with OK status. However, the exact number of
+                    // `onReady()` varies depending on when messages are emitted.
+                    if (armeriaEvents.size() > 4) {
+                        assertThat(armeriaEvents.subList(3, armeriaEvents.size() - 1))
+                                .allMatch("onReady"::equals);
+                    }
                 }
             }
         }
