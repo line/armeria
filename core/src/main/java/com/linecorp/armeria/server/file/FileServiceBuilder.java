@@ -51,6 +51,7 @@ public final class FileServiceBuilder {
     String entryCacheSpec = DEFAULT_ENTRY_CACHE_SPEC;
     int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
     boolean serveCompressedFiles;
+    private boolean autoDecompress;
     boolean autoIndex;
     boolean canSetMaxCacheEntries = true;
     boolean canSetEntryCacheSpec = true;
@@ -112,6 +113,22 @@ public final class FileServiceBuilder {
      */
     public FileServiceBuilder serveCompressedFiles(boolean serveCompressedFiles) {
         this.serveCompressedFiles = serveCompressedFiles;
+        return this;
+    }
+
+    /**
+     * Sets whether pre-compressed files could be served after being decompressed, when a client does not
+     * {@link HttpHeaderNames#ACCEPT_ENCODING accept} a compressed file. The compressed file will be
+     * automatically decompressed depending on the extension of the compressed file.
+     * For example, files compressed with gzip should have the extension {@code ".gz"} and
+     * compressed with brotli should have the extension {@code ".br"}.
+     *
+     * <p>Note that this option is valid only when {@link #serveCompressedFiles(boolean)} is enabled.
+     *
+     * @see #serveCompressedFiles(boolean)
+     */
+    public FileServiceBuilder autoDecompress(boolean autoDecompress) {
+        this.autoDecompress = autoDecompress;
         return this;
     }
 
@@ -213,9 +230,13 @@ public final class FileServiceBuilder {
      * Returns a newly-created {@link FileService} based on the properties of this builder.
      */
     public FileService build() {
+        if (autoDecompress && !serveCompressedFiles) {
+            throw new IllegalStateException("Should enable serveCompressedFiles when autoDecompress is set");
+        }
+
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                serveCompressedFiles, autoIndex, buildHeaders()));
+                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders()));
     }
 
     @Override

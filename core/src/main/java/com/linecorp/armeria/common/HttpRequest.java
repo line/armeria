@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
+import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
