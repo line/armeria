@@ -3,6 +3,7 @@ import path from 'path';
 import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
+import CompressionWebpackPlugin from 'compression-webpack-plugin';
 import { Configuration, DefinePlugin } from 'webpack';
 
 import { docServiceDebug } from './src/lib/header-provider';
@@ -97,6 +98,12 @@ const config: Configuration = {
     }) as any,
     new DefinePlugin({
       'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
+    }),
+    new CompressionWebpackPlugin({
+      test: /\.js(\?.*)?$/i,
+      deleteOriginalAssets: true,
+      algorithm: 'gzip',
+      filename: '[path].gz',
     }),
   ],
   devServer: {

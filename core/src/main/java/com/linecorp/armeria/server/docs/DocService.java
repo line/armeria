@@ -135,7 +135,10 @@ public final class DocService extends SimpleDecoratingHttpService {
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
                DocServiceFilter filter) {
 
-        super(FileService.of(new DocServiceVfs()));
+        super(FileService.builder(new DocServiceVfs())
+                         .serveCompressedFiles(true)
+                         .autoDecompress(true)
+                         .build());
 
         this.exampleHeaders = immutableCopyOf(exampleHeaders, "exampleHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
