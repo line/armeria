@@ -279,6 +279,21 @@ public final class CorsServiceBuilder {
     }
 
     /**
+     * Sets whether to allow all HTTP headers in the CORS {@code "Access-Control-Request-Headers"} request
+     * header.
+     *
+     * <p>The server will set the CORS {@code "Access-Control-Allow-Headers"} to be as same as the CORS
+     * {@code "Access-Control-Request-Headers"} header in the request if this property is {@code true}.
+     * The default value of this property is {@code false}.
+     *
+     * @return {@link CorsServiceBuilder} to support method chaining.
+     */
+    public CorsServiceBuilder allowAllRequestHeaders(boolean allowAllRequestHeaders) {
+        firstPolicyBuilder.allowAllRequestHeaders(allowAllRequestHeaders);
+        return this;
+    }
+
+    /**
      * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.
      *

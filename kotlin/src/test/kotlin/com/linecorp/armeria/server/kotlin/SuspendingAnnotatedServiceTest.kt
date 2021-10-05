@@ -195,7 +195,7 @@ class SuspendingAnnotatedServiceTest {
                     .annotatedService("/customContext", object {
                         @Get("/foo")
                         suspend fun foo(): String {
-                            assertThat(ServiceRequestContext.currentOrNull()).isNull()
+                            ServiceRequestContext.current()
                             assertThat(coroutineContext[CoroutineName]?.name).isEqualTo("test")
                             return "OK"
                         }

@@ -144,10 +144,12 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     }
 
     @After
-    public void stopServer() {
+    @Override
+    public void close() throws Exception {
         if (server != null) {
-            server.stop();
+            server.stop().get();
         }
+        super.close();
     }
 
     @Override

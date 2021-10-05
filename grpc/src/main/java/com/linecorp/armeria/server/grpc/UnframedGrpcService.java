@@ -28,6 +28,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -61,6 +62,7 @@ import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 
 /**
  * A {@link SimpleDecoratingHttpService} which allows {@link GrpcService} to serve requests without the framing
@@ -249,9 +251,13 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
-        final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
+        Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
+        final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
+        if (!Strings.isNullOrEmpty(grpcMessage)) {
+            grpcStatus = grpcStatus.withDescription(grpcMessage);
+        }
 
-        if (grpcStatus.getCode() != Status.OK.getCode()) {
+        if (grpcStatus.getCode() != Code.OK) {
             PooledObjects.close(grpcResponse.content());
             res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse));
             return;

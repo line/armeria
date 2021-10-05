@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
@@ -74,12 +75,25 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http2.DefaultHttp2Connection;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
+import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
+import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2FrameLogger;
+import io.netty.handler.codec.http2.Http2FrameReader;
+import io.netty.handler.codec.http2.Http2FrameWriter;
+import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
@@ -90,6 +104,9 @@ import io.netty.util.ReferenceCountUtil;
 final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClientPipelineConfigurator.class);
+
+    private static final Http2FrameLogger frameLogger =
+            new Http2FrameLogger(LogLevel.TRACE, "com.linecorp.armeria.logging.traffic.client.http2");
 
     /**
      * The maximum allowed content length of an HTTP/1 to 2 upgrade response.
@@ -630,11 +647,28 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     private Http2ClientConnectionHandler newHttp2ConnectionHandler(Channel ch, SessionProtocol protocol) {
+        final Http2Connection connection = new DefaultHttp2Connection(/* server */ false);
+        final Http2ConnectionEncoder encoder = encoder(connection);
+        final Http2ConnectionDecoder decoder = decoder(connection, encoder);
+
         return new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol)
-                .server(false)
-                .validateHeaders(false)
+                .codec(decoder, encoder)
                 .initialSettings(http2Settings())
                 .build();
+    }
+
+    private static Http2ConnectionEncoder encoder(Http2Connection connection) {
+        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
+        writer = new Http2OutboundFrameLogger(writer, frameLogger);
+        return new DefaultHttp2ConnectionEncoder(connection, writer);
+    }
+
+    private Http2ConnectionDecoder decoder(Http2Connection connection, Http2ConnectionEncoder encoder) {
+        final ArmeriaHttp2HeadersDecoder headersDecoder = new ArmeriaHttp2HeadersDecoder(
+                /* validateHeaders */ false, clientFactory.http2MaxHeaderListSize());
+        Http2FrameReader reader = new DefaultHttp2FrameReader(headersDecoder);
+        reader = new Http2InboundFrameLogger(reader, frameLogger);
+        return new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
     }
 
     private Http2Settings http2Settings() {

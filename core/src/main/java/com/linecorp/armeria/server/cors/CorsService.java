@@ -127,7 +127,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowMethods(headers);
-            policy.setCorsAllowHeaders(headers);
+            policy.setCorsAllowHeaders(req.headers(), headers);
             policy.setCorsAllowCredentials(headers);
             policy.setCorsMaxAge(headers);
             policy.setCorsPreflightResponseHeaders(headers);
@@ -147,7 +147,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowCredentials(headers);
-            policy.setCorsAllowHeaders(headers);
+            policy.setCorsAllowHeaders(req.headers(), headers);
             policy.setCorsExposeHeaders(headers);
         }
     }

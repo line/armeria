@@ -32,6 +32,7 @@ import org.reactivestreams.Publisher
 import java.lang.reflect.Method
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.jvm.kotlinFunction
@@ -79,6 +80,8 @@ internal fun <T : Any> Flow<T>.asPublisher(
     ctx: ServiceRequestContext
 ): Publisher<T> = FlowCollectingPublisher(this, executor, newCoroutineCtx(executor, ctx))
 
-private fun newCoroutineCtx(executorService: ExecutorService, ctx: ServiceRequestContext) =
-    // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
-    executorService.asCoroutineDispatcher() + (CoroutineContexts.get(ctx) ?: EmptyCoroutineContext)
+private fun newCoroutineCtx(executorService: ExecutorService, ctx: ServiceRequestContext): CoroutineContext {
+    val userContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
+    val requestContext = ArmeriaRequestCoroutineContext(ctx)
+    return executorService.asCoroutineDispatcher() + requestContext + userContext
+}

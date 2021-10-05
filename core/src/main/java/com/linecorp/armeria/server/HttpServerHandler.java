@@ -319,7 +319,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
         final String hostname = hostname(headers);
-        final VirtualHost virtualHost = config.findVirtualHost(hostname);
+        final int port = ((InetSocketAddress) channel.localAddress()).getPort();
+        final VirtualHost virtualHost = config.findVirtualHost(hostname, port);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 

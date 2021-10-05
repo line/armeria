@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.grpc.kotlin
 
+import com.linecorp.armeria.common.CommonPools
 import com.linecorp.armeria.grpc.kotlin.Hello.HelloReply
 import com.linecorp.armeria.grpc.kotlin.Hello.HelloRequest
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -40,6 +41,13 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
             Thread.sleep(10)
         } catch (ignored: Exception) { // Do nothing.
         }
+
+        withContext(blockingDispatcher()) {
+            // A request context is propagated by ArmeriaRequestCoroutineContext.
+            Thread.sleep(10)
+            // Make sure that current thread is request context aware
+            ServiceRequestContext.current()
+        }
         // Make sure that current thread is request context aware
         ServiceRequestContext.current().addAdditionalResponseHeader("foo", "bar")
         buildReply(toMessage(request.name))
@@ -60,7 +68,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
                 emit(buildReply("Hello, ${request.name}! (sequence: $i)")) // emit next value
                 ServiceRequestContext.current()
             }
-        }.flowOn(armeriaBlockingDispatcher())
+        }.flowOn(blockingDispatcher())
     }
 
     /**
@@ -94,6 +102,10 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
     companion object {
         fun armeriaBlockingDispatcher(): CoroutineDispatcher =
             ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher()
+
+        // A blocking dispatcher that does not propagate a request context
+        fun blockingDispatcher(): CoroutineDispatcher =
+            CommonPools.blockingTaskExecutor().asCoroutineDispatcher()
 
         suspend fun <T> withArmeriaBlockingContext(block: suspend CoroutineScope.() -> T): T =
             withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher(), block)

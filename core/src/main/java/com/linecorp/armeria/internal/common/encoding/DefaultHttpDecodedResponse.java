@@ -14,15 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.internal.common.encoding;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
-import org.reactivestreams.Subscriber;
-
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.client.encoding.StreamDecoder;
+import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -38,20 +38,20 @@ import io.netty.buffer.ByteBufAllocator;
 /**
  * A {@link FilteredHttpResponse} that applies HTTP decoding to {@link HttpObject}s as they are published.
  */
-final class HttpDecodedResponse extends FilteredHttpResponse {
+public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedResponse {
 
     private final Map<String, StreamDecoderFactory> availableDecoders;
     private final ByteBufAllocator alloc;
     private final boolean strictContentEncoding;
 
     @Nullable
-    private StreamDecoder responseDecoder;
+    private StreamDecoder decoder;
     private boolean headersReceived;
-    private boolean decoderClosed;
 
-    HttpDecodedResponse(HttpResponse delegate, Map<String, StreamDecoderFactory> availableDecoders,
-                        ByteBufAllocator alloc, boolean strictContentEncoding) {
-        super(delegate, true);
+    public DefaultHttpDecodedResponse(HttpResponse delegate,
+                                      Map<String, StreamDecoderFactory> availableDecoders,
+                                      ByteBufAllocator alloc, boolean strictContentEncoding) {
+        super(delegate);
         this.availableDecoders = availableDecoders;
         this.alloc = alloc;
         this.strictContentEncoding = strictContentEncoding;
@@ -85,9 +85,9 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
                 final StreamDecoderFactory decoderFactory =
                         availableDecoders.get(Ascii.toLowerCase(contentEncoding));
                 if (decoderFactory != null) {
-                    responseDecoder = decoderFactory.newDecoder(alloc);
+                    decoder = decoderFactory.newDecoder(alloc);
                 } else {
-                    // The server returned an encoding we don't support.
+                    // The server returned an encoding that this response doesn't support.
                     // This shouldn't happen normally since we set Accept-Encoding.
                     if (strictContentEncoding) {
                         Exceptions.throwUnsafely(
@@ -103,48 +103,11 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
 
         assert obj instanceof HttpData;
 
-        return responseDecoder != null ? responseDecoder.decode((HttpData) obj) : obj;
+        return decoder != null ? decoder.decode((HttpData) obj) : obj;
     }
 
     @Override
-    protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-        final HttpData lastData = closeResponseDecoder();
-        if (lastData == null) {
-            return;
-        }
-        if (!lastData.isEmpty()) {
-            subscriber.onNext(lastData);
-        } else {
-            lastData.close();
-        }
-    }
-
-    @Override
-    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        final HttpData lastData = closeResponseDecoder();
-        if (lastData != null) {
-            lastData.close();
-        }
-        return cause;
-    }
-
-    @Override
-    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
-        final HttpData lastData = closeResponseDecoder();
-        if (lastData != null) {
-            lastData.close();
-        }
-    }
-
-    @Nullable
-    private HttpData closeResponseDecoder() {
-        if (decoderClosed) {
-            return null;
-        }
-        decoderClosed = true;
-        if (responseDecoder == null) {
-            return null;
-        }
-        return responseDecoder.finish();
+    StreamDecoder decoder() {
+        return decoder;
     }
 }

@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
+import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
@@ -303,8 +304,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse of(HttpStatus status, MediaType mediaType,
                            @FormatString String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
-        return of(status, mediaType,
-                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
+        return of(status, mediaType, HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
     }
 
     /**

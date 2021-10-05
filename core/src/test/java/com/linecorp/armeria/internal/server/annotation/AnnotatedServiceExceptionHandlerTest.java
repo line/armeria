@@ -192,8 +192,8 @@ class AnnotatedServiceExceptionHandlerTest {
         // A decorator throws an exception.
         final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/5/handler3"))
                                                       .aggregate().join();
-
-        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("handler3");
     }
 
     @ResponseConverter(UnformattedStringConverterFunction.class)

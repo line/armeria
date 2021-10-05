@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 
 /**
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
@@ -151,11 +152,11 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
         return executeAndDecodeResponse(ctx, req, decoderFactories);
     }
 
-    private HttpDecodedResponse executeAndDecodeResponse(
+    private DefaultHttpDecodedResponse executeAndDecodeResponse(
             ClientRequestContext ctx, HttpRequest req,
             Map<String, StreamDecoderFactory> decoderFactories) throws Exception {
         final HttpResponse res = unwrap().execute(ctx, req);
-        return new HttpDecodedResponse(res, decoderFactories, ctx.alloc(), strictContentEncoding);
+        return new DefaultHttpDecodedResponse(res, decoderFactories, ctx.alloc(), strictContentEncoding);
     }
 
     private static HttpRequest updateAcceptEncoding(ClientRequestContext ctx, HttpRequest req,

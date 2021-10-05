@@ -22,7 +22,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
-import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_PATTERN;
+import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
@@ -59,6 +59,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -101,6 +102,7 @@ public final class VirtualHostBuilder {
     private String defaultHostname;
     @Nullable
     private String hostnamePattern;
+    private int port = -1;
     @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
@@ -145,6 +147,18 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Creates a new {@link VirtualHostBuilder}.
+     *
+     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}
+     * @param port the port that this virtual host binds to
+     */
+    VirtualHostBuilder(ServerBuilder serverBuilder, int port) {
+        this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
+        this.port = port;
+        defaultVirtualHost = true;
+    }
+
+    /**
      * Returns the parent {@link ServerBuilder}.
      *
      * @return serverBuilder the parent {@link ServerBuilder}.
@@ -163,6 +177,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the hostname pattern of this {@link VirtualHost}.
+     * If the hostname pattern contains a port number such {@code *.example.com:8080}, the returned virtual host
+     * will be bound to the {@code 8080} port. Otherwise, the virtual host will allow all active ports.
      *
      * @throws UnsupportedOperationException if this is the default {@link VirtualHostBuilder}
      */
@@ -174,14 +190,21 @@ public final class VirtualHostBuilder {
 
         checkArgument(!hostnamePattern.isEmpty(), "hostnamePattern is empty.");
 
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        if (hostAndPort.hasPort()) {
+            port = hostAndPort.getPort();
+            checkArgument(port >= 1 && port <= 65535, "port: %s (expected: 1-65535)", port);
+            hostnamePattern = hostAndPort.getHost();
+        }
+
         final boolean validHostnamePattern;
         if (hostnamePattern.charAt(0) == '*') {
             validHostnamePattern =
                     hostnamePattern.length() >= 3 &&
                     hostnamePattern.charAt(1) == '.' &&
-                    HOSTNAME_PATTERN.matcher(hostnamePattern.substring(2)).matches();
+                    HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern.substring(2)).matches();
         } else {
-            validHostnamePattern = HOSTNAME_PATTERN.matcher(hostnamePattern).matches();
+            validHostnamePattern = HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern).matches();
         }
 
         checkArgument(validHostnamePattern,
@@ -1090,7 +1113,7 @@ public final class VirtualHostBuilder {
             }
 
             final VirtualHost virtualHost =
-                    new VirtualHost(defaultHostname, hostnamePattern, sslContext,
+                    new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
@@ -1209,6 +1232,14 @@ public final class VirtualHostBuilder {
             }
             break;
         }
+    }
+
+    int port() {
+        return port;
+    }
+
+    boolean defaultVirtualHost() {
+        return defaultVirtualHost;
     }
 
     @Override

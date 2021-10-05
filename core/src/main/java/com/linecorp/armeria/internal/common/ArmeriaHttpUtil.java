@@ -49,7 +49,9 @@ import java.util.function.BiConsumer;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -134,17 +136,17 @@ public final class ArmeriaHttpUtil {
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/1 to HTTP/2.
      */
-    private static final CharSequenceMap HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST = new CharSequenceMap();
+    private static final CaseInsensitiveMap HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST = new CaseInsensitiveMap();
 
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/2 to HTTP/1.
      */
-    private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST = new CharSequenceMap();
+    private static final CaseInsensitiveMap HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST = new CaseInsensitiveMap();
 
     /**
      * The set of headers that must not be directly copied when converting trailers.
      */
-    private static final CharSequenceMap HTTP_TRAILER_DISALLOWED_LIST = new CharSequenceMap();
+    private static final CaseInsensitiveMap HTTP_TRAILER_DISALLOWED_LIST = new CaseInsensitiveMap();
 
     static {
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
@@ -209,8 +211,14 @@ public final class ArmeriaHttpUtil {
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY);
 
-    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
+    private static final Set<AsciiString> REQUEST_PSEUDO_HEADERS = ImmutableSet.of(
+            HttpHeaderNames.METHOD, HttpHeaderNames.SCHEME, HttpHeaderNames.AUTHORITY,
+            HttpHeaderNames.PATH, HttpHeaderNames.PROTOCOL);
+
+    private static final Set<AsciiString> PSEUDO_HEADERS = ImmutableSet.<AsciiString>builder()
+                                                                       .addAll(REQUEST_PSEUDO_HEADERS)
+                                                                       .add(HttpHeaderNames.STATUS)
+                                                                       .build();
 
     public static final String SERVER_HEADER =
             "Armeria/" + Version.get("armeria", ArmeriaHttpUtil.class.getClassLoader())
@@ -221,7 +229,7 @@ public final class ArmeriaHttpUtil {
      * only allow a single value in the request. If adding headers that can potentially have multiple values,
      * please check the usage in code accordingly.
      */
-    private static final CharSequenceMap REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap();
+    private static final CaseInsensitiveMap REQUEST_HEADER_TRANSLATIONS = new CaseInsensitiveMap();
 
     static {
         REQUEST_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
@@ -236,6 +244,7 @@ public final class ArmeriaHttpUtil {
 
     private static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
     private static final String COOKIE_SEPARATOR = "; ";
+    private static final Joiner COOKIE_JOINER = Joiner.on(COOKIE_SEPARATOR);
 
     @Nullable
     private static final LoadingCache<AsciiString, String> HEADER_VALUE_CACHE =
@@ -397,6 +406,16 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
+     * Returns the disallowed response headers.
+     */
+    @VisibleForTesting
+    static Set<AsciiString> disallowedResponseHeaderNames() {
+        // Request Pseudo-Headers are not allowed for response headers.
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
+        return REQUEST_PSEUDO_HEADERS;
+    }
+
+    /**
      * Parses the specified HTTP header directives and invokes the specified {@code callback}
      * with the directive names and values.
      */
@@ -505,61 +524,48 @@ public final class ArmeriaHttpUtil {
     public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
                                                          boolean endOfStream, String scheme,
                                                          ServerConfig cfg) {
-        final RequestHeadersBuilder builder = RequestHeaders.builder();
-        toArmeria(builder, headers, endOfStream);
+        assert headers instanceof ArmeriaHttp2Headers;
+        final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
+        builder.endOfStream(endOfStream);
         // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-        if (builder.authority() == null) {
+
+        if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
             builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
         }
-        return builder.build();
+        final List<String> cookies = builder.getAll(HttpHeaderNames.COOKIE);
+        if (cookies.size() > 1) {
+            // Cookies must be concatenated into a single octet string.
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
+            builder.set(HttpHeaderNames.COOKIE, COOKIE_JOINER.join(cookies));
+        }
+        return RequestHeaders.of(builder.build());
     }
 
     /**
      * Converts the specified Netty HTTP/2 into Armeria HTTP/2 headers.
      */
-    public static HttpHeaders toArmeria(Http2Headers headers, boolean request, boolean endOfStream) {
-        final HttpHeadersBuilder builder;
+    public static HttpHeaders toArmeria(Http2Headers http2Headers, boolean request, boolean endOfStream) {
+        assert http2Headers instanceof ArmeriaHttp2Headers;
+        final HttpHeadersBuilder delegate = ((ArmeriaHttp2Headers) http2Headers).delegate();
+        delegate.endOfStream(endOfStream);
+        HttpHeaders headers = delegate.build();
+
         if (request) {
-            builder = headers.contains(HttpHeaderNames.METHOD) ? RequestHeaders.builder()
-                                                               : HttpHeaders.builder();
+            if (headers.contains(HttpHeaderNames.METHOD)) {
+                headers = RequestHeaders.of(headers);
+            }
+            // http2Headers should be a trailers
         } else {
-            builder = headers.contains(HttpHeaderNames.STATUS) ? ResponseHeaders.builder()
-                                                               : HttpHeaders.builder();
-        }
-
-        toArmeria(builder, headers, endOfStream);
-        return builder.build();
-    }
-
-    private static void toArmeria(HttpHeadersBuilder builder, Http2Headers headers, boolean endOfStream) {
-        builder.sizeHint(headers.size());
-        builder.endOfStream(endOfStream);
-
-        StringJoiner cookieJoiner = null;
-        for (Entry<CharSequence, CharSequence> e : headers) {
-            final AsciiString name = HttpHeaderNames.of(e.getKey());
-            final CharSequence value = e.getValue();
-
-            // Cookies must be concatenated into a single octet string.
-            // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
-            if (name.equals(HttpHeaderNames.COOKIE)) {
-                if (cookieJoiner == null) {
-                    cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
-                }
-                COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
-            } else {
-                builder.add(name, convertHeaderValue(name, value));
+            if (headers.contains(HttpHeaderNames.STATUS)) {
+                headers = ResponseHeaders.of(headers);
             }
         }
-
-        if (cookieJoiner != null && cookieJoiner.length() != 0) {
-            builder.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
-        }
+        return headers;
     }
 
     /**
@@ -634,7 +640,7 @@ public final class ArmeriaHttpUtil {
         final Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
         // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values,
         // but still allowing for "enough" space in the map to reduce the chance of hash code collision.
-        final CharSequenceMap connectionDisallowedList =
+        final CaseInsensitiveMap connectionDisallowedList =
                 toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
         StringJoiner cookieJoiner = null;
         while (iter.hasNext()) {
@@ -669,9 +675,9 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    private static CharSequenceMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
-                                                  int arraySizeHint) {
-        final CharSequenceMap result = new CharSequenceMap(arraySizeHint);
+    private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
+                                                     int arraySizeHint) {
+        final CaseInsensitiveMap result = new CaseInsensitiveMap(arraySizeHint);
 
         while (valuesIter.hasNext()) {
             final AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
@@ -725,22 +731,20 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Converts the specified Armeria HTTP/2 response headers into Netty HTTP/2 headers.
+     * Converts the specified Armeria HTTP/2 {@link ResponseHeaders} into Netty HTTP/2 headers.
      *
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
-    public static Http2Headers toNettyHttp2ServerHeaders(HttpHeaders inputHeaders) {
-        final int headerSizeHint = inputHeaders.size() + 2; // server and data headers
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, headerSizeHint);
-        for (Entry<AsciiString, String> entry : inputHeaders) {
-            final AsciiString name = entry.getKey();
-            final String value = entry.getValue();
-            if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
-                continue;
-            }
-            outputHeaders.add(name, value);
+    public static Http2Headers toNettyHttp2ServerHeaders(HttpHeadersBuilder inputHeaders) {
+        for (Entry<AsciiString, AsciiString> disallowed : HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST) {
+            inputHeaders.remove(disallowed.getKey());
         }
-        return outputHeaders;
+        // TODO(ikhoon): Implement HttpHeadersBuilder.remove(Predicate<AsciiString>) to remove values
+        //               with a predicate.
+        for (AsciiString disallowed : disallowedResponseHeaderNames()) {
+            inputHeaders.remove(disallowed);
+        }
+        return new ArmeriaHttp2Headers(inputHeaders);
     }
 
     /**
@@ -749,22 +753,19 @@ public final class ArmeriaHttpUtil {
      * @param inputHeaders the HTTP/2 response headers to convert.
      */
     public static Http2Headers toNettyHttp2ServerTrailer(HttpHeaders inputHeaders) {
-        final Http2Headers outputHeaders = new DefaultHttp2Headers(false, inputHeaders.size());
-        for (Entry<AsciiString, String> entry : inputHeaders) {
-            final AsciiString name = entry.getKey();
-            final String value = entry.getValue();
-            if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(name)) {
-                continue;
-            }
-            if (ADDITIONAL_RESPONSE_HEADER_DISALLOWED_LIST.contains(name)) {
-                continue;
-            }
-            if (isTrailerDisallowed(name)) {
-                continue;
-            }
-            outputHeaders.add(name, value);
+        final HttpHeadersBuilder builder = inputHeaders.toBuilder();
+
+        for (Entry<AsciiString, AsciiString> disallowed : HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST) {
+            builder.remove(disallowed.getKey());
         }
-        return outputHeaders;
+        for (AsciiString disallowed : PSEUDO_HEADERS) {
+           builder.remove(disallowed);
+        }
+        for (Entry<AsciiString, AsciiString> disallowed : HTTP_TRAILER_DISALLOWED_LIST) {
+            builder.remove(disallowed.getKey());
+        }
+
+        return new ArmeriaHttp2Headers(builder);
     }
 
     /**
@@ -990,7 +991,7 @@ public final class ArmeriaHttpUtil {
         return headers;
     }
 
-    private static String convertHeaderValue(AsciiString name, CharSequence value) {
+    public static String convertHeaderValue(AsciiString name, CharSequence value) {
         if (!(value instanceof AsciiString)) {
             return value.toString();
         }
@@ -1009,15 +1010,15 @@ public final class ArmeriaHttpUtil {
         return HTTP_TRAILER_DISALLOWED_LIST.contains(name);
     }
 
-    private static final class CharSequenceMap
-            extends DefaultHeaders<AsciiString, AsciiString, CharSequenceMap> {
+    private static final class CaseInsensitiveMap
+            extends DefaultHeaders<AsciiString, AsciiString, CaseInsensitiveMap> {
 
-        CharSequenceMap() {
+        CaseInsensitiveMap() {
             super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance());
         }
 
         @SuppressWarnings("unchecked")
-        CharSequenceMap(int size) {
+        CaseInsensitiveMap(int size) {
             super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance(), NameValidator.NOT_NULL, size);
         }
     }
