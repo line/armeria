@@ -174,7 +174,7 @@ public final class GrpcStatus {
     }
 
     /**
-     * Maps gRPC {@link Status}to {@link HttpStatus}. If there is no matched rule for the specified
+     * Maps gRPC {@link Status} to {@link HttpStatus}. If there is no matched rule for the specified
      * {@link Status}, the mapping rules defined in upstream Google APIs
      * <a href="https://github.com/googleapis/googleapis/blob/b2a7d2709887e38bcd3b5142424e563b0b386b6f/google/rpc/code.proto">
      * code.proto</a> will be used to convert the {@linkplain Status#getCode() gRPC code} to
