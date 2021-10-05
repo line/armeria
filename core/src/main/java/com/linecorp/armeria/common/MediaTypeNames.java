@@ -305,6 +305,14 @@ public final class MediaTypeNames {
      */
     public static final String GZIP = "application/x-gzip";
     /**
+     * {@value #BROTLI}.
+     */
+    public static final String BROTLI = "application/brotli";
+    /**
+     * {@value #ZSTD}.
+     */
+    public static final String ZSTD = "application/zstd";
+    /**
      * {@value #HAL_JSON}.
      */
     public static final String HAL_JSON = "application/hal+json";
