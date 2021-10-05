@@ -1,27 +1,22 @@
-# Sending a streaming response with backpressure
+# Sending a streaming response with back pressure
 
-Let's say that we want to serve a static file whose size is larger than your available memory.
-If we load the file into the memory at once, we will definitely get an `OutOfMemoryError`.
-In order to avoid the error, we should:
-1. Divide the file into chunks
-2. Load the first chunk into memory
-3. Send the chunk to the client
-4. Wait until the chunk is written to the sending socket buffer
-   - So we don't load data into memory when the client is not ready to receive. This is called __backpressure__.
-5. Load the second chunk and repeat the steps until we send all chunks
+Suppose we want to serve a static file whose size is larger than your available memory. If we load the file into the memory at once, we will definitely get an `OutOfMemoryError`.
 
-Now, we can send the large file without spending much memory.
+To prevent such error and send large files without consuming too much memory:
 
-<Tip>
+1. Divide the file into chunks.
+2. Load the first chunk into memory.
+3. Send the chunk to the client.
+4. Wait until the chunk is written to the sending socket buffer. (See below for explanation.)
+5. Load the second chunk and repeat the steps 3 and 4 until we send all chunks.
 
-See [Let’s Play with Reactive Streams on Armeria - 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/)
-to understand backpressure and the situation when an `OutOfMemoryError` is raised.
+Waiting for the chunk to be written is to avoid loading data into memory when the client is not ready to receive. This is called __back pressure__. 
+See [Let’s Play with Reactive Streams on Armeria - 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/) to learn the conditions under which an `OutOfMemoryError` is raised and back pressure which can help you with the error.
 
-</Tip>
+## Sending a file with back pressure
 
-## Sending a file with backpressure
+To send a file with back pressure, use <type://HttpFile>, which loads and sends file chunks one by one to the client with back pressure.
 
-We can easily send the file with backpressure using <type://HttpFile>:
 ```java
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.file.HttpFile;
@@ -31,14 +26,13 @@ Server.builder()
       .service("/big_file.dat", bigFile.asService())
       .build();
 ```
-The <type://HttpFile> loads chunks one by one and send them to the client with backpressure.
 
-## Sending a streaming response using <type://HttpResponseWriter>
+## Sending a streaming response using HttpResponseWriter
 
-If we want to send large data from other than files (e.g. database) with backpressure, we need to implement
-the backpressure by ourselves. Let's start it by implementing the simplified version of <type://HttpFile>.
+To send large data other than files such as database, you need to implement back pressure yourself. Let's start off with implementing a minimal <type://HttpFile>.
 
-First, we use <type://HttpResponseWriter> from <type://HttpResponse#streaming()> to send a streaming response:
+Prepare to send a streaming response with <type://HttpResponseWriter> returned by <type://HttpResponse#streaming()>.
+
 ```java
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
@@ -69,10 +63,9 @@ private HttpData produceChunk(int index) {
     // If index is 1, 8193 to 16384 is read and so on.
 }
 ```
-Now we can send the streaming response to the client. However, this has a problem. Even though it divides
-the file, it loads all chunks into the memory before each chunk is sent to the client,
-so the server will get the `OutOfMemoryError`. To solve it, we have to implement backpressure using
-<type://StreamWriter#whenConsumed()>:
+
+With the code above, the server would encounter `OutOfMemoryError`. We still need to take care of preventing loading data chunks into memory before a chunk is sent to the client. To solve the problem, implement back pressure with <type://StreamWriter#whenConsumed()>:
+
 ```java
 sb.service("/big_file.dat", (ctx, req) -> {
     HttpResponseWriter response = HttpResponse.streaming();
@@ -92,19 +85,16 @@ sb.service("/big_file.dat", (ctx, req) -> {
 });
 ```
 
-<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the chunk,
-which is written to the <type://HttpResponseWriter>, is finally written to the socket. So, you can add
-the next task by adding a callback (`thenRun()` in the example). We produced the next chunk using callback
-in the example.
+<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the chunk written to the <type://HttpResponseWriter> is finally written to the socket. This enables you to add the next task by adding a callback (`thenRun()` in the code example). The next task in the example is set to produce the next chunk.
 
 <Tip>
 
-See [Let’s Play with Reactive Streams on Armeria - 2](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-2/)
-to understand how the network layer is involved in backpressure.
+See [Let’s Play with Reactive Streams on Armeria - 2](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-2/) to learn how network layer plays in with back pressure.
 
 </Tip>
 
-Of course, we need to use recursion not to implement the callback endlessly.
+Of course, we would need to use recursion to be free from infinite implementation of the callback.
+
 ```java
 sb.service("/big_file.dat", (ctx, req) -> {
     HttpResponseWriter response = HttpResponse.streaming();
@@ -128,13 +118,12 @@ private void streamingResponse(HttpResponseWriter response, int index) {
     });
 }
 ```
-So far we have implemented the simplified version of <type://HttpFile>. Now, we can implement the streaming
-response with backpressure from any other sources (e.g. database) by simply changing the `produceChunk()`
-method to fetch data from the sources.
 
-You can also implement backpressure with other libraries, such as [Reactor](https://projectreactor.io) and
-[RxJava](https://github.com/ReactiveX/RxJava). With the implementation, you can simply return it using
-<type://HttpResponse#of(ResponseHeaders,Publisher)>:
+So far, we have implemented a simple version of <type://HttpFile>. Now, we can implement a streaming response with back pressure for any type of source (e.g. database) by simply changing the `produceChunk()` method to fetch data from the source.
+
+You have other alternatives to implement back pressure with; there are libraries such as [Reactor](https://projectreactor.io) and [RxJava](https://github.com/ReactiveX/RxJava). If you opt to use such alternative, 
+return the response using <type://HttpResponse#of(ResponseHeaders,Publisher)>:
+
 ```java
 sb.service("/big_data.dat", (ctx, req) -> {
     Flux<HttpData> flux = ... // Fetch data from other source with backpressure.
@@ -144,7 +133,6 @@ sb.service("/big_data.dat", (ctx, req) -> {
 
 <Tip>
 
-You can find [a funny working example](https://github.com/line/armeria-examples/blob/master/proxy-server/src/main/java/example/armeria/proxy/AnimationService.java)
-that sends the streaming response with backpressure.
+Have a go at experimenting with a rather [fun working example](https://github.com/line/armeria-examples/blob/master/proxy-server/src/main/java/example/armeria/proxy/AnimationService.java) that sends a streaming response with back pressure.
 
 </Tip>
