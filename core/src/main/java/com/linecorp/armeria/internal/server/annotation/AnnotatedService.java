@@ -31,6 +31,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -365,9 +366,16 @@ public final class AnnotatedService implements HttpService {
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
+                final ScheduledExecutorService executor;
+                // The request context will be injected by ArmeriaRequestCoroutineContext
+                if (useBlockingTaskExecutor) {
+                    executor = ctx.blockingTaskExecutor().withoutContext();
+                } else {
+                    executor = ctx.eventLoop().withoutContext();
+                }
                 return callKotlinSuspendingMethod.invoke(
                         method, object, arguments,
-                        useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
+                        executor,
                         ctx);
             } else {
                 return methodHandle.invoke(arguments);
