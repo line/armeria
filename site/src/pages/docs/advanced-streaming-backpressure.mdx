@@ -10,7 +10,7 @@ To prevent such error and send large files without consuming too much memory:
 4. Wait until the chunk is written to the sending socket buffer. (See below for explanation.)
 5. Load the second chunk and repeat the steps 3 and 4 until we send all chunks.
 
-Waiting for the chunk to be written is to avoid loading into memory when the client is not ready to receive. This is called __back pressure__. 
+Waiting for the chunk to be written is to avoid loading data into memory when the client is not ready to receive. This is called __back pressure__. 
 See [Let’s Play with Reactive Streams on Armeria - 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/) to learn back pressure and what happens when an `OutOfMemoryError` is raised.
 
 ## Sending a file with back pressure
