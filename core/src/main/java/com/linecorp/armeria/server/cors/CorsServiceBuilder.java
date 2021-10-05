@@ -279,7 +279,7 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Enables to allow all HTTP headers.
+     * Allows all HTTP headers in the CORS {@code "Access-Control-Request-Headers"} request header.
      *
      * <p>The server will set the CORS {@code "Access-Control-Allow-Headers"} to be as same as the CORS
      * {@code "Access-Control-Request-Headers"} header in the request.
