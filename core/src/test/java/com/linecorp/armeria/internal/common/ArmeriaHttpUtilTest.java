@@ -574,10 +574,10 @@ class ArmeriaHttpUtilTest {
                                                        HttpHeaderNames.SCHEME,
                                                        HttpHeaderNames.PATH,
                                                        HttpHeaderNames.PROTOCOL)) {
-            assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader().contains(headerName)).isTrue();
+            assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames().contains(headerName)).isTrue();
         }
-        assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader()).contains(HttpHeaderNames.STATUS);
-        assertThat(ArmeriaHttpUtil.isDisallowedResponseHeader()).contains(HttpHeaderNames.LOCATION);
+        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).contains(HttpHeaderNames.STATUS);
+        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).contains(HttpHeaderNames.LOCATION);
     }
 
     private static ServerConfig serverConfig() {

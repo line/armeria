@@ -409,7 +409,7 @@ public final class ArmeriaHttpUtil {
      * Returns the disallowed response headers.
      */
     @VisibleForTesting
-    static Set<AsciiString> isDisallowedResponseHeader() {
+    static Set<AsciiString> disallowedResponseHeaderNames() {
         // Request Pseudo-Headers are not allowed for response headers.
         // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         return REQUEST_PSEUDO_HEADERS;
@@ -741,7 +741,7 @@ public final class ArmeriaHttpUtil {
         }
         // TODO(ikhoon): Implement HttpHeadersBuilder.remove(Predicate<AsciiString>) to remove values
         //               with a predicate.
-        for (AsciiString disallowed : isDisallowedResponseHeader()) {
+        for (AsciiString disallowed : disallowedResponseHeaderNames()) {
             inputHeaders.remove(disallowed);
         }
         return new ArmeriaHttp2Headers(inputHeaders);
