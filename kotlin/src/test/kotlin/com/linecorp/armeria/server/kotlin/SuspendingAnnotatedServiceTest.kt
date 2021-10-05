@@ -306,15 +306,12 @@ internal class BarResponseConverterFunctionProvider : ResponseConverterFunctionP
         returnType: Type,
         responseConverter: ResponseConverterFunction
     ): ResponseConverterFunction? =
-        returnType
-            .toClass()
-            ?.let {
-                if (Bar::class.java.isAssignableFrom(it)) {
-                    BarResponseConverterFunction(responseConverter)
-                } else {
-                    null
-                }
+        returnType.toClass()?.let {
+            when {
+                Bar::class.java.isAssignableFrom(it) -> BarResponseConverterFunction(responseConverter)
+                else -> null
             }
+        }
 
     private fun Type.toClass(): Class<*>? =
         when (this) {
