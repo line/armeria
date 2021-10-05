@@ -99,9 +99,7 @@ abstract class AbstractCorsPolicyBuilder {
         if (corsDecorator.allowedRequestHeaders().length > 0) {
             allowRequestHeaders(corsDecorator.allowedRequestHeaders());
         }
-        if (corsDecorator.allowAllRequestHeaders()) {
-            allowAllRequestHeaders();
-        }
+        allowAllRequestHeaders(corsDecorator.allowAllRequestHeaders());
         if (corsDecorator.allowedRequestMethods().length > 0) {
             allowRequestMethods(corsDecorator.allowedRequestMethods());
         }
@@ -277,15 +275,17 @@ abstract class AbstractCorsPolicyBuilder {
     }
 
     /**
-     * Allows all HTTP headers in the CORS {@code "Access-Control-Request-Headers"} request header.
+     * Sets whether to allow all HTTP headers in the CORS {@code "Access-Control-Request-Headers"} request
+     * header.
      *
      * <p>The server will set the CORS {@code "Access-Control-Allow-Headers"} to be as same as the CORS
-     * {@code "Access-Control-Request-Headers"} header in the request.
+     * {@code "Access-Control-Request-Headers"} header in the request if this property is {@code true}.
+     * The default value of this property is {@code false}.
      *
      * @return {@code this} to support method chaining.
      */
-    public AbstractCorsPolicyBuilder allowAllRequestHeaders() {
-        allowAllRequestHeaders = true;
+    public AbstractCorsPolicyBuilder allowAllRequestHeaders(boolean allowAllRequestHeaders) {
+        this.allowAllRequestHeaders = allowAllRequestHeaders;
         return this;
     }
 

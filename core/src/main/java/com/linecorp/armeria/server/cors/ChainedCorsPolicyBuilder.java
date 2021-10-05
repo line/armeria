@@ -116,8 +116,8 @@ public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
     }
 
     @Override
-    public ChainedCorsPolicyBuilder allowAllRequestHeaders() {
-        return (ChainedCorsPolicyBuilder) super.allowAllRequestHeaders();
+    public ChainedCorsPolicyBuilder allowAllRequestHeaders(boolean allowAllRequestHeaders) {
+        return (ChainedCorsPolicyBuilder) super.allowAllRequestHeaders(allowAllRequestHeaders);
     }
 
     @Override

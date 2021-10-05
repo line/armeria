@@ -280,7 +280,7 @@ public class HttpServerCorsTest {
 
             sb.service("/cors13", myService.decorate(CorsService.builder("http://example.com")
                                                                 .allowRequestMethods(HttpMethod.GET)
-                                                                .allowAllRequestHeaders()
+                                                                .allowAllRequestHeaders(true)
                                                                 .newDecorator()));
             sb.annotatedService("/cors14", new MyAnnotatedService3());
         }
