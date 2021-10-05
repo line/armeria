@@ -60,6 +60,7 @@ abstract class AbstractCorsPolicyBuilder {
     private long maxAge;
     private final Set<AsciiString> exposedHeaders = new HashSet<>();
     private final EnumSet<HttpMethod> allowedRequestMethods = EnumSet.noneOf(HttpMethod.class);
+    // FIXME(ghkim3221): Change the default value to true in Armeria 2.0.
     private boolean allowAllRequestHeaders;
     private final Set<AsciiString> allowedRequestHeaders = new HashSet<>();
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders = new HashMap<>();
