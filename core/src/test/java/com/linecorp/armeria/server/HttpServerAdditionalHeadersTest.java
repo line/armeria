@@ -114,7 +114,9 @@ class HttpServerAdditionalHeadersTest {
 
     @Test
     void disallowedHeadersAndTrailersMustBeFilteredWhenMerged() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .responseTimeoutMillis(0)
+                                          .build();
         final AggregatedHttpResponse res = client.get("/headers_merged").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(res.headers().names()).doesNotContain(HttpHeaderNames.SCHEME,

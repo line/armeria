@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -82,22 +83,22 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     }
 
     private Http2Headers convertHeaders(ResponseHeaders inputHeaders, boolean isTrailersEmpty) {
-        final Http2Headers outHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(inputHeaders);
-        if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+        final HttpHeadersBuilder builder = inputHeaders.toBuilder();
+        if (enableServerHeader && !inputHeaders.contains(HttpHeaderNames.SERVER)) {
+            builder.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
+        }
+
+        if (enableDateHeader && !inputHeaders.contains(HttpHeaderNames.DATE)) {
+            builder.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
+        }
+
+        if (!isTrailersEmpty && inputHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
             // prevent the trailers from being sent so we go ahead and remove content-length to force
             // chunked encoding.
-            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            builder.remove(HttpHeaderNames.CONTENT_LENGTH);
         }
-
-        if (enableServerHeader && !outHeaders.contains(HttpHeaderNames.SERVER)) {
-            outHeaders.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
-        }
-
-        if (enableDateHeader && !outHeaders.contains(HttpHeaderNames.DATE)) {
-            outHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
-        }
-        return outHeaders;
+        return ArmeriaHttpUtil.toNettyHttp2ServerHeaders(builder);
     }
 
     @Override
