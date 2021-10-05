@@ -54,7 +54,7 @@ import io.netty.util.Mapping;
  */
 public final class VirtualHost {
 
-    static final Pattern HOSTNAME_PATTERN = Pattern.compile(
+    static final Pattern HOSTNAME_WITH_NO_PORT_PATTERN = Pattern.compile(
             "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
     /**
@@ -63,8 +63,11 @@ public final class VirtualHost {
     @Nullable
     private ServerConfig serverConfig;
 
+    private final String originalDefaultHostname;
+    private final String originalHostnamePattern;
     private final String defaultHostname;
     private final String hostnamePattern;
+    private final int port;
     @Nullable
     private final SslContext sslContext;
     private final Router<ServiceConfig> router;
@@ -80,9 +83,9 @@ public final class VirtualHost {
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
     private final ScheduledExecutorService blockingTaskExecutor;
-    private boolean shutdownBlockingTaskExecutorOnStop;
+    private final boolean shutdownBlockingTaskExecutorOnStop;
 
-    VirtualHost(String defaultHostname, String hostnamePattern,
+    VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
@@ -94,12 +97,16 @@ public final class VirtualHost {
                 AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
                 ScheduledExecutorService blockingTaskExecutor,
                 boolean shutdownBlockingTaskExecutorOnStop) {
-        defaultHostname = normalizeDefaultHostname(defaultHostname);
-        hostnamePattern = normalizeHostnamePattern(hostnamePattern);
-        ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
-
-        this.defaultHostname = defaultHostname;
-        this.hostnamePattern = hostnamePattern;
+        originalDefaultHostname = defaultHostname;
+        originalHostnamePattern = hostnamePattern;
+        if (port > 0) {
+            this.defaultHostname = defaultHostname + ':' + port;
+            this.hostnamePattern = hostnamePattern + ':' + port;
+        } else {
+            this.defaultHostname = defaultHostname;
+            this.hostnamePattern = hostnamePattern;
+        }
+        this.port = port;
         this.sslContext = sslContext;
         this.defaultServiceNaming = defaultServiceNaming;
         this.requestTimeoutMillis = requestTimeoutMillis;
@@ -125,7 +132,7 @@ public final class VirtualHost {
     }
 
     VirtualHost withNewSslContext(SslContext sslContext) {
-        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
                                serviceConfigs(), fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
@@ -142,7 +149,7 @@ public final class VirtualHost {
             defaultHostname = IDN.toASCII(defaultHostname, IDN.ALLOW_UNASSIGNED);
         }
 
-        if (!HOSTNAME_PATTERN.matcher(defaultHostname).matches()) {
+        if (!HOSTNAME_WITH_NO_PORT_PATTERN.matcher(defaultHostname).matches()) {
             throw new IllegalArgumentException("defaultHostname: " + defaultHostname);
         }
 
@@ -158,9 +165,9 @@ public final class VirtualHost {
             hostnamePattern = IDN.toASCII(hostnamePattern, IDN.ALLOW_UNASSIGNED);
         }
 
-        if (!"*".equals(hostnamePattern) &&
-            !HOSTNAME_PATTERN.matcher(hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
-                                                                       : hostnamePattern).matches()) {
+        final String withoutWildCard = hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
+                                                                        : hostnamePattern;
+        if (!"*".equals(hostnamePattern) && !HOSTNAME_WITH_NO_PORT_PATTERN.matcher(withoutWildCard).matches()) {
             throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
         }
 
@@ -235,6 +242,14 @@ public final class VirtualHost {
      */
     public String hostnamePattern() {
         return hostnamePattern;
+    }
+
+    /**
+     * Returns the port of this virtual host.
+     * {@code -1} means that no port number is specified.
+     */
+    public int port() {
+        return port;
     }
 
     /**
@@ -406,7 +421,7 @@ public final class VirtualHost {
         final ServiceConfig fallbackServiceConfig =
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
-        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext(),
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),

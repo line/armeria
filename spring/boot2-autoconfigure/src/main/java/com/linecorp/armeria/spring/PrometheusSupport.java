@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,14 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import java.util.Optional;
 import java.util.Set;
 
-import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
-import com.linecorp.armeria.spring.ArmeriaSettings;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -29,18 +28,13 @@ import io.prometheus.client.CollectorRegistry;
 
 final class PrometheusSupport {
 
-    static boolean addExposition(ArmeriaSettings settings, ServerBuilder server,
-                                 MeterRegistry meterRegistry) {
-
-        final String metricsPath = settings.getMetricsPath();
-        assert metricsPath != null;
-
+    @Nullable
+    static PrometheusExpositionService newExpositionService(MeterRegistry meterRegistry) {
         for (;;) {
             if (meterRegistry instanceof PrometheusMeterRegistry) {
                 final CollectorRegistry prometheusRegistry =
                         ((PrometheusMeterRegistry) meterRegistry).getPrometheusRegistry();
-                server.service(metricsPath, PrometheusExpositionService.of(prometheusRegistry));
-                return true;
+                return PrometheusExpositionService.of(prometheusRegistry);
             }
 
             if (meterRegistry instanceof CompositeMeterRegistry) {
@@ -53,14 +47,14 @@ final class PrometheusSupport {
                                        .findAny();
 
                 if (!opt.isPresent()) {
-                    return false;
+                    return null;
                 }
 
                 meterRegistry = opt.get();
                 continue;
             }
 
-            return false;
+            return null;
         }
     }
 
