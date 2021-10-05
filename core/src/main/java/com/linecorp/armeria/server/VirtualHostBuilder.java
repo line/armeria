@@ -22,7 +22,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
-import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_PATTERN;
+import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
@@ -202,9 +202,9 @@ public final class VirtualHostBuilder {
             validHostnamePattern =
                     hostnamePattern.length() >= 3 &&
                     hostnamePattern.charAt(1) == '.' &&
-                    HOSTNAME_PATTERN.matcher(hostnamePattern.substring(2)).matches();
+                    HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern.substring(2)).matches();
         } else {
-            validHostnamePattern = HOSTNAME_PATTERN.matcher(hostnamePattern).matches();
+            validHostnamePattern = HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern).matches();
         }
 
         checkArgument(validHostnamePattern,

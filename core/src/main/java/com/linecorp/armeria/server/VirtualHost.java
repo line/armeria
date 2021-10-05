@@ -54,7 +54,7 @@ import io.netty.util.Mapping;
  */
 public final class VirtualHost {
 
-    static final Pattern HOSTNAME_PATTERN = Pattern.compile(
+    static final Pattern HOSTNAME_WITH_NO_PORT_PATTERN = Pattern.compile(
             "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
     /**
@@ -149,7 +149,7 @@ public final class VirtualHost {
             defaultHostname = IDN.toASCII(defaultHostname, IDN.ALLOW_UNASSIGNED);
         }
 
-        if (!HOSTNAME_PATTERN.matcher(defaultHostname).matches()) {
+        if (!HOSTNAME_WITH_NO_PORT_PATTERN.matcher(defaultHostname).matches()) {
             throw new IllegalArgumentException("defaultHostname: " + defaultHostname);
         }
 
@@ -165,9 +165,9 @@ public final class VirtualHost {
             hostnamePattern = IDN.toASCII(hostnamePattern, IDN.ALLOW_UNASSIGNED);
         }
 
-        if (!"*".equals(hostnamePattern) &&
-            !HOSTNAME_PATTERN.matcher(hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
-                                                                       : hostnamePattern).matches()) {
+        final String withoutWildCard = hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
+                                                                        : hostnamePattern;
+        if (!"*".equals(hostnamePattern) && !HOSTNAME_WITH_NO_PORT_PATTERN.matcher(withoutWildCard).matches()) {
             throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
         }
 
