@@ -31,7 +31,7 @@ Server.builder()
 
 To send large data other than files such as database, you need to implement back pressure yourself. Let's start off with implementing a minimal <type://HttpFile>.
 
-Prepare to send a streaming response with <type://HttpResponseWriter> and <type://HttpResponse#streaming()>.
+Prepare to send a streaming response with <type://HttpResponseWriter> returned by <type://HttpResponse#streaming()>.
 
 ```java
 import com.linecorp.armeria.common.HttpData;
