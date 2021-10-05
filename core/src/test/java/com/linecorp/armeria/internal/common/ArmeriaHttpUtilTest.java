@@ -576,8 +576,8 @@ class ArmeriaHttpUtilTest {
                                                        HttpHeaderNames.PROTOCOL)) {
             assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames().contains(headerName)).isTrue();
         }
-        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).contains(HttpHeaderNames.STATUS);
-        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).contains(HttpHeaderNames.LOCATION);
+        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).doesNotContain(HttpHeaderNames.STATUS);
+        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).doesNotContain(HttpHeaderNames.LOCATION);
     }
 
     private static ServerConfig serverConfig() {
