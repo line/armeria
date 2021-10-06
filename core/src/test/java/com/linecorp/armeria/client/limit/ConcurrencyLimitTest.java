@@ -24,7 +24,6 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -54,8 +53,6 @@ class ConcurrencyLimitTest {
         assertThat(limit.availablePermits()).isEqualTo(0);
 
         assertThatThrownBy(() -> limit.acquire(ctx).join())
-                .getCause()
-                .isExactlyInstanceOf(UnprocessedRequestException.class)
                 .hasCauseInstanceOf(TooManyPendingAcquisitionsException.class);
 
         acquired1.close();

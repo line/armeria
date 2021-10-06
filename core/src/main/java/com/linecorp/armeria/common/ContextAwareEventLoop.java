@@ -52,4 +52,10 @@ public interface ContextAwareEventLoop extends EventLoop, ContextAwareScheduledE
      */
     @Override
     RequestContext context();
+
+    /**
+     * Return {@code true} if the {@link Thread#currentThread()} is executed in this event loop and
+     * the thread has the same {@link #context()}, {@code false} otherwise.
+     */
+    boolean inContextAwareEventLoop();
 }

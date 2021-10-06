@@ -31,7 +31,7 @@ import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -74,6 +74,9 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
         }
 
         if (pendingAcquisitions.isEmpty()) {
+            // Because we don't do checking acquiredPermits and adding the queue at the same time,
+            // this doesn't strictly guarantee FIFO.
+            // However, the reversal happens within a reasonable window so it should be fine.
             if (acquiredPermits.incrementAndGet() <= maxConcurrency) {
                 return CompletableFuture.completedFuture(new Permit());
             }
@@ -82,8 +85,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
         if (numPendingAcquisitions.incrementAndGet() > maxPendingAcquisitions) {
             numPendingAcquisitions.decrementAndGet();
-            return CompletableFutures.exceptionallyCompletedFuture(
-                    UnprocessedRequestException.of(TooManyPendingAcquisitionsException.get()));
+            return CompletableFutures.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
         }
 
         final CompletableFuture<SafeCloseable> future = new CompletableFuture<>();
@@ -115,24 +117,26 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
                 }
 
                 task.run();
-                numPendingAcquisitions.decrementAndGet();
             }
         }
     }
 
     private final class PendingAcquisition implements Runnable {
 
+        private final ClientRequestContext ctx;
         private final CompletableFuture<SafeCloseable> future;
         @Nullable
         private final ScheduledFuture<?> timeoutFuture;
 
         PendingAcquisition(ClientRequestContext ctx, CompletableFuture<SafeCloseable> future) {
+            this.ctx = ctx;
             this.future = future;
             if (timeoutMillis != 0) {
                 timeoutFuture = ctx.eventLoop().withoutContext().schedule(
-                        () -> future.completeExceptionally(
-                                UnprocessedRequestException.of(ConcurrencyLimitTimeoutException.get())),
-                        timeoutMillis, TimeUnit.MILLISECONDS);
+                        () -> {
+                            future.completeExceptionally(ConcurrencyLimitTimeoutException.get());
+                            numPendingAcquisitions.decrementAndGet();
+                        }, timeoutMillis, TimeUnit.MILLISECONDS);
             } else {
                 timeoutFuture = null;
             }
@@ -147,7 +151,20 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
                     return;
                 }
             }
+            // numPendingAcquisitions is decreased in two places:
+            // - In the Runnable of a timeout scheduledFuture.
+            // - Here, which is when the PendingAcquisition is executed.
+            numPendingAcquisitions.decrementAndGet();
 
+            final ContextAwareEventLoop eventLoop = ctx.eventLoop();
+            if (eventLoop.inContextAwareEventLoop()) {
+                completePermit();
+            } else {
+                eventLoop.execute(this::completePermit);
+            }
+        }
+
+        private void completePermit() {
             final Permit permit = new Permit();
             if (!future.complete(permit)) {
                 permit.close();
@@ -157,7 +174,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     private class Permit implements SafeCloseable {
 
-        boolean closed;
+        private boolean closed;
 
         @Override
         public void close() {

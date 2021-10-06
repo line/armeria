@@ -36,7 +36,7 @@ public final class ConcurrencyLimitBuilder {
     static final CompletableFuture<SafeCloseable> noLimitFuture =
             CompletableFuture.completedFuture(() -> { /* no-op */ });
 
-    private static ConcurrencyLimit noLimit = ctx -> noLimitFuture;
+    private static final ConcurrencyLimit noLimit = ctx -> noLimitFuture;
 
     static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
     static final int DEFAULT_MAX_PENDING_ACQUIRES = Integer.MAX_VALUE;

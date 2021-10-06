@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -104,7 +105,8 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         concurrencyLimit.acquire(ctx)
                         .handleAsync((permit, throwable) -> {
                             if (throwable != null) {
-                                resFuture.completeExceptionally(throwable);
+                                // Wrap the exception with UnprocessedRequestException.
+                                resFuture.completeExceptionally(UnprocessedRequestException.of(throwable));
                                 return null;
                             }
                             numActiveRequests.incrementAndGet();
