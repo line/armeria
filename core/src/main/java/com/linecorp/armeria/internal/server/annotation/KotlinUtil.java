@@ -56,6 +56,9 @@ final class KotlinUtil {
     @Nullable
     private static final Method K_FUNCTION_RETURN_TYPE;
 
+    @Nullable
+    private static final Method K_FUNCTION_GENERIC_RETURN_TYPE;
+
     static {
         MethodHandle callKotlinSuspendingMethod = null;
         final String internalCommonPackageName = RequestContextUtil.class.getPackage().getName();
@@ -80,6 +83,7 @@ final class KotlinUtil {
         Method isSuspendingFunction = null;
         Method isReturnTypeUnit = null;
         Method kFunctionReturnType = null;
+        Method kFunctionGenericReturnType = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
@@ -87,12 +91,14 @@ final class KotlinUtil {
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
             kFunctionReturnType = kotlinUtilClass.getMethod("kFunctionReturnType", Method.class);
+            kFunctionGenericReturnType = kotlinUtilClass.getMethod("kFunctionGenericReturnType", Method.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
             IS_SUSPENDING_FUNCTION = isSuspendingFunction;
             IS_RETURN_TYPE_UNIT = isReturnTypeUnit;
             K_FUNCTION_RETURN_TYPE = kFunctionReturnType;
+            K_FUNCTION_GENERIC_RETURN_TYPE = kFunctionGenericReturnType;
         }
 
         boolean isKotlinReflectionPresent = false;
@@ -182,10 +188,19 @@ final class KotlinUtil {
         }
     }
 
-    static Type kFunctionReturnType(Method method) {
+    static Class<?> kFunctionReturnType(Method method) {
         assert K_FUNCTION_RETURN_TYPE != null;
         try {
-            return (Type) K_FUNCTION_RETURN_TYPE.invoke(null, method);
+            return (Class<?>) K_FUNCTION_RETURN_TYPE.invoke(null, method);
+        } catch (Exception e) {
+            return Exceptions.throwUnsafely(e);
+        }
+    }
+
+    static Type kFunctionGenericReturnType(Method method) {
+        assert K_FUNCTION_GENERIC_RETURN_TYPE != null;
+        try {
+            return (Type) K_FUNCTION_GENERIC_RETURN_TYPE.invoke(null, method);
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
         }

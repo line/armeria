@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.AggregatedHttpResponse
+import com.linecorp.armeria.common.HttpHeaders
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
@@ -35,6 +36,8 @@ import com.linecorp.armeria.server.annotation.HttpResult
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction
 import com.linecorp.armeria.server.annotation.Param
 import com.linecorp.armeria.server.annotation.ProducesJson
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction
+import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider
 import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.CancellationException
@@ -48,11 +51,14 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.slf4j.LoggerFactory
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 import java.util.concurrent.CompletionException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.coroutineContext
 
+@Suppress("RedundantSuspendModifier", "unused")
 class SuspendingAnnotatedServiceTest {
 
     @Test
@@ -125,6 +131,20 @@ class SuspendingAnnotatedServiceTest {
         assertThatThrownBy { serverResponse.whenComplete().join() }
             .isInstanceOf(CompletionException::class.java)
             .hasCauseInstanceOf(AbortedStreamException::class.java)
+    }
+
+    @Test
+    fun test_responseConverterFunctionSpi() {
+        get("/response-converter-spi/bar").run {
+            assertThat(status()).isEqualTo(HttpStatus.OK)
+            assertThat(contentUtf8()).isEqualTo("hello, bar!")
+        }
+
+        get("/response-converter-spi/bar-in-http-result").run {
+            assertThat(status()).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(headers().get("x-custom-header")).isEqualTo("value")
+            assertThat(contentUtf8()).isEqualTo("hello, bar!")
+        }
     }
 
     companion object {
@@ -200,7 +220,7 @@ class SuspendingAnnotatedServiceTest {
                             return "OK"
                         }
                     })
-                    .decoratorUnder("/customContext", CoroutineContextService.newDecorator { _ ->
+                    .decoratorUnder("/customContext", CoroutineContextService.newDecorator {
                         Dispatchers.Default + CoroutineName("test")
                     })
                     .annotatedService("/blocking", object {
@@ -235,6 +255,15 @@ class SuspendingAnnotatedServiceTest {
                             httpResponseRef.set(response)
                             return response
                         }
+                    })
+                    .annotatedService("/response-converter-spi", object {
+                        @Get("/bar")
+                        suspend fun bar() = Bar()
+
+                        @Get("/bar-in-http-result")
+                        suspend fun barInHttpResult() = HttpResult.of(
+                            ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"), Bar()
+                        )
                     })
                     .decorator(LoggingService.newDecorator())
                     .requestTimeoutMillis(500L) // to test cancellation
@@ -271,3 +300,40 @@ class SuspendingAnnotatedServiceTest {
         private data class MyResponse(val a: String, val b: Int)
     }
 }
+
+internal class BarResponseConverterFunctionProvider : ResponseConverterFunctionProvider {
+    override fun createResponseConverterFunction(
+        returnType: Type,
+        responseConverter: ResponseConverterFunction
+    ): ResponseConverterFunction? =
+        returnType.toClass()?.let {
+            when {
+                Bar::class.java.isAssignableFrom(it) -> BarResponseConverterFunction(responseConverter)
+                else -> null
+            }
+        }
+
+    private fun Type.toClass(): Class<*>? =
+        when (this) {
+            is ParameterizedType -> this.rawType as Class<*>
+            is Class<*> -> this
+            else -> null
+        }
+}
+
+private class BarResponseConverterFunction(
+    private val responseConverter: ResponseConverterFunction
+) : ResponseConverterFunction {
+    override fun convertResponse(
+        ctx: ServiceRequestContext,
+        headers: ResponseHeaders,
+        result: Any?,
+        trailers: HttpHeaders
+    ): HttpResponse =
+        when (result) {
+            is Bar -> responseConverter.convertResponse(ctx, headers, "hello, bar!", trailers)
+            else -> ResponseConverterFunction.fallthrough()
+        }
+}
+
+private class Bar

@@ -199,18 +199,7 @@ public final class AnnotatedService implements HttpService {
     private static ResponseConverterFunction responseConverter(
             Method method, List<ResponseConverterFunction> responseConverters) {
 
-        final Type actualType;
-        if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
-            final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
-            warnIfHttpResponseArgumentExists(type, type);
-            actualType = type.getActualTypeArguments()[0];
-        } else if (KotlinUtil.isSuspendingFunction(method)) {
-            // Use kotlin reflection since suspending function's java return type is always Object.
-            actualType = KotlinUtil.kFunctionReturnType(method);
-        } else {
-            actualType = method.getGenericReturnType();
-        }
-
+        final Type actualType = getActualReturnType(method);
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList
                         .<ResponseConverterFunction>builder()
@@ -236,6 +225,27 @@ public final class AnnotatedService implements HttpService {
         }
 
         return responseConverter;
+    }
+
+    private static Type getActualReturnType(Method method) {
+        final Class<?> returnType;
+        final Type genericReturnType;
+
+        if (KotlinUtil.isSuspendingFunction(method)) {
+            returnType = KotlinUtil.kFunctionReturnType(method);
+            genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
+        } else {
+            returnType = method.getReturnType();
+            genericReturnType = method.getGenericReturnType();
+        }
+
+        if (HttpResult.class.isAssignableFrom(returnType)) {
+            final ParameterizedType type = (ParameterizedType) genericReturnType;
+            warnIfHttpResponseArgumentExists(type, type);
+            return type.getActualTypeArguments()[0];
+        } else {
+            return genericReturnType;
+        }
     }
 
     private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
