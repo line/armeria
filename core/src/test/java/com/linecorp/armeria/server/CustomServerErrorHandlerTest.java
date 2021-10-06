@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class CustomServerErrorHandlerTest {
@@ -55,6 +57,7 @@ class CustomServerErrorHandlerTest {
                 return HttpResponse.of(200);
             });
             sb.service("/throw-exception", (ctx, req) -> {
+                ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT);
                 throw new IllegalArgumentException("Illegal Argument!");
             });
             sb.service("/responseSubscriber", (ctx, req) -> {
@@ -120,6 +123,15 @@ class CustomServerErrorHandlerTest {
         assertThat(response.headers().status()).isSameAs(HttpStatus.NOT_IMPLEMENTED);
         assertThat(response.contentUtf8()).isEqualTo("Unsupported!");
         assertThat(response.trailers().get("trailer-exists")).isEqualTo("true");
+    }
+
+    @Test
+    void logIsCompleteEvenIfResponseContentIsDeferred() throws InterruptedException {
+        final WebClient client = WebClient.of(server.httpUri());
+        client.get("/throw-exception").aggregate().join();
+        final ServiceRequestContext ctx = server.requestContextCaptor().poll();
+        assertThat(ctx).isNotNull();
+        await().until(() -> ctx.log().whenComplete().isDone());
     }
 
     @ParameterizedTest
