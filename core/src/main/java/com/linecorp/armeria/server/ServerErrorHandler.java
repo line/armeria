@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
  * Server.builder().errorHandler(errorHandler)...
  * }</pre>
  *
- * <h3>Recording a service exception (or not)</h3>
+ * <h2>Recording a service exception (or not)</h2>
  *
  * <p>By default, an exception raised by a service or a decorator is captured and recorded into
  * {@link RequestLog#responseCause()}. You can keep Armeria from recording it while sending the
