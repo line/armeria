@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package example.grpc.hello;
-option java_package = "example.armeria.grpc.http.messaging.v2";
+option java_package = "example.armeria.grpc.http.messaging";
 
 import "google/api/annotations.proto";
 

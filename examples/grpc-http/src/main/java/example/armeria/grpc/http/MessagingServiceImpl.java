@@ -1,12 +1,12 @@
 package example.armeria.grpc.http;
 
-import example.armeria.grpc.http.messaging.v2.MessagingGrpc.MessagingImplBase;
-import example.armeria.grpc.http.messaging.v2.MessagingOuterClass.GetMessageRequestV1;
-import example.armeria.grpc.http.messaging.v2.MessagingOuterClass.GetMessageRequestV2;
-import example.armeria.grpc.http.messaging.v2.MessagingOuterClass.GetMessageRequestV3;
-import example.armeria.grpc.http.messaging.v2.MessagingOuterClass.MessageV1;
-import example.armeria.grpc.http.messaging.v2.MessagingOuterClass.MessageV2;
-import example.armeria.grpc.http.messaging.v2.MessagingOuterClass.UpdateMessageRequestV1;
+import example.armeria.grpc.http.messaging.MessagingGrpc.MessagingImplBase;
+import example.armeria.grpc.http.messaging.MessagingOuterClass.GetMessageRequestV1;
+import example.armeria.grpc.http.messaging.MessagingOuterClass.GetMessageRequestV2;
+import example.armeria.grpc.http.messaging.MessagingOuterClass.GetMessageRequestV3;
+import example.armeria.grpc.http.messaging.MessagingOuterClass.MessageV1;
+import example.armeria.grpc.http.messaging.MessagingOuterClass.MessageV2;
+import example.armeria.grpc.http.messaging.MessagingOuterClass.UpdateMessageRequestV1;
 import io.grpc.stub.StreamObserver;
 
 /**
