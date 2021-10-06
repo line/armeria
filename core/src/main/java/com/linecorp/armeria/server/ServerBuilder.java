@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
@@ -183,8 +185,6 @@ public final class ServerBuilder {
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
-    private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
@@ -210,10 +210,13 @@ public final class ServerBuilder {
         virtualHostTemplate.tlsAllowUnsafeCiphers(false);
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
+        virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        hostnamePattern = hostAndPort.getHost();
         final String[] elements = hostnamePattern.split("\\.");
         final StringBuilder name = new StringBuilder(
                 DEFAULT_ACCESS_LOGGER_PREFIX.length() + hostnamePattern.length() + 1);
@@ -225,6 +228,10 @@ public final class ServerBuilder {
             }
             name.append('.');
             name.append(element);
+        }
+        if (hostAndPort.hasPort()) {
+            name.append(':');
+            name.append(hostAndPort.getPort());
         }
         return name.toString();
     }
@@ -780,8 +787,8 @@ public final class ServerBuilder {
      */
     public ServerBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                               boolean shutdownOnStop) {
-        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        virtualHostTemplate.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;
     }
 
@@ -1351,6 +1358,31 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Port-based">port-based virtual host</a>
+     * with the specified {@code port}. The returned virtual host will have a catch-all (wildcard host) name
+     * pattern that allows all host names.
+     *
+     * @param port the port number that this virtual host binds to
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    public VirtualHostBuilder virtualHost(int port) {
+        checkArgument(port >= 1 && port <= 65535, "port: %s (expected: 1-65535)", port);
+
+        // Look for a virtual host that has already been made and reuse it.
+        final Optional<VirtualHostBuilder> vhost =
+                virtualHostBuilders.stream()
+                                   .filter(v -> v.port() == port && v.defaultVirtualHost())
+                                   .findFirst();
+        if (vhost.isPresent()) {
+            return vhost.get();
+        }
+
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, port);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
@@ -1663,10 +1695,26 @@ public final class ServerBuilder {
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
         final Collection<ServerPort> ports;
 
-        this.ports.forEach(
-                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
-                                   "protocols: %s (expected: at least one %s or %s)",
-                                   port.protocols(), HTTP, HTTPS));
+        for (ServerPort port : this.ports) {
+            checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
+                       "protocols: %s (expected: at least one %s or %s)",
+                       port.protocols(), HTTP, HTTPS);
+        }
+
+        // The port numbers of port-based virtual hosts must exist in 'ServerPort's.
+        final List<VirtualHost> portBasedVirtualHosts = virtualHosts.stream()
+                                                                    .filter(v -> v.port() > 0)
+                                                                    .collect(toImmutableList());
+        final List<Integer> portNumbers = this.ports.stream()
+                                                    .map(port -> port.localAddress().getPort())
+                                                    .filter(port -> port > 0)
+                                                    .collect(toImmutableList());
+        for (VirtualHost virtualHost : portBasedVirtualHosts) {
+            final int virtualHostPort = virtualHost.port();
+            final boolean portMatched = portNumbers.stream().anyMatch(port -> port == virtualHostPort);
+            checkState(portMatched, "virtual host port: %s (expected: one of %s)",
+                       virtualHostPort, portNumbers);
+        }
 
         if (defaultSslContext == null) {
             sslContexts = null;
@@ -1730,6 +1778,9 @@ public final class ServerBuilder {
             exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
         }
 
+        final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
+        final boolean shutdownOnStop = defaultVirtualHost.shutdownBlockingTaskExecutorOnStop();
+
         return new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
@@ -1738,7 +1789,7 @@ public final class ServerBuilder {
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                blockingTaskExecutor, shutdownOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
@@ -1808,8 +1859,7 @@ public final class ServerBuilder {
                 maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
                 http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null, false,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader);

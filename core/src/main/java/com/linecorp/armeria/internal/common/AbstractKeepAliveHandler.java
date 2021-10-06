@@ -341,6 +341,9 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
         @Override
         protected void run(ChannelHandlerContext ctx) {
+            if (pingState == PingState.SHUTDOWN) {
+                return;
+            }
 
             final long lastConnectionIdleTime = AbstractKeepAliveHandler.this.lastConnectionIdleTime;
             final long nextDelay;

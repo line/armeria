@@ -6,7 +6,7 @@
 <suppressions>
   <!-- Suppress Javadoc-related checks in non-public code. -->
   <suppress checks="MissingJavadocPackage|MissingJavadocType|MissingJavadocMethod" files="[\\/](examples|internal|it|jmh|test)[\\/]" />
-  <suppress checks="JavadocPackage" files="[\\/](examples|it|jmh|test)[\\/]" />
+  <suppress checks="JavadocPackage" files="[\\/](examples|it|jmh|ghz|test)[\\/]" />
   <!-- Suppress JavadocPackage for tomcat8.0. -->
   <suppress checks="MissingJavadocPackage" files="tomcat[0-9]" />
   <!-- Suppress all checks in generated sources. -->
@@ -18,7 +18,7 @@
   <!-- Enable 'NonNullByDefaultAnnotation' for package-info.java only. -->
   <suppress id="NonNullByDefaultAnnotation" files="(?&lt;![\\/]package-info\.java)$" />
   <!-- Suppress checks related with main method in integration tests and examples. -->
-  <suppress checks="UncommentedMain|HideUtilityClassConstructor" files="[\\/](it|examples)[\\/]"/>
+  <suppress checks="UncommentedMain|HideUtilityClassConstructor" files="[\\/](it|ghz|examples)[\\/]"/>
   <!-- Enable 'NoCopyrightHeader' for examples only. -->
   <suppress id="NoCopyrightHeader" files="^((?![\\/]examples[\\/]).)*$" />
   <suppress id="CopyrightHeader" files="[\\/]examples[\\/]" />

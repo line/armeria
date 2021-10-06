@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -224,17 +225,17 @@ class AuthServiceTest {
     @Test
     void testBasicAuth() throws Exception {
         final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .auth(BasicToken.of("brown", "cony"))
+                                             .auth(AuthToken.ofBasic("brown", "cony"))
                                              .build();
         assertThat(webClient.get("/basic").aggregate().join().status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    basicGetRequest("/basic", BasicToken.of("pangyo", "choco"),
+                    basicGetRequest("/basic", AuthToken.ofBasic("pangyo", "choco"),
                                     AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             try (CloseableHttpResponse res = hc.execute(
-                    basicGetRequest("/basic-custom", BasicToken.of("brown", "cony"),
+                    basicGetRequest("/basic-custom", AuthToken.ofBasic("brown", "cony"),
                                     CUSTOM_TOKEN_HEADER))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
@@ -242,7 +243,7 @@ class AuthServiceTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
             try (CloseableHttpResponse res = hc.execute(
-                    basicGetRequest("/basic", BasicToken.of("choco", "pangyo"),
+                    basicGetRequest("/basic", AuthToken.ofBasic("choco", "pangyo"),
                                     AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
@@ -251,16 +252,16 @@ class AuthServiceTest {
 
     @Test
     void testOAuth1a() throws Exception {
-        final OAuth1aToken passToken = OAuth1aToken.builder()
-                                                   .realm("dummy_realm")
-                                                   .consumerKey("dummy_consumer_key@#$!")
-                                                   .token("dummy_oauth1a_token")
-                                                   .signatureMethod("dummy")
-                                                   .signature("dummy_signature")
-                                                   .timestamp("0")
-                                                   .nonce("dummy_nonce")
-                                                   .version("1.0")
-                                                   .build();
+        final OAuth1aToken passToken = AuthToken.builderForOAuth1a()
+                                                .realm("dummy_realm")
+                                                .consumerKey("dummy_consumer_key@#$!")
+                                                .token("dummy_oauth1a_token")
+                                                .signatureMethod("dummy")
+                                                .signature("dummy_signature")
+                                                .timestamp("0")
+                                                .nonce("dummy_nonce")
+                                                .version("1.0")
+                                                .build();
         final WebClient webClient = WebClient.builder(server.httpUri())
                                              .auth(passToken)
                                              .build();
@@ -270,16 +271,16 @@ class AuthServiceTest {
                     oauth1aGetRequest("/oauth1a-custom", passToken, CUSTOM_TOKEN_HEADER))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
-            final OAuth1aToken failToken = OAuth1aToken.builder()
-                                                       .realm("dummy_realm")
-                                                       .consumerKey("dummy_consumer_key@#$!")
-                                                       .token("dummy_oauth1a_token")
-                                                       .signatureMethod("dummy")
-                                                       .signature("DUMMY_signature") // This is different.
-                                                       .timestamp("0")
-                                                       .nonce("dummy_nonce")
-                                                       .version("1.0")
-                                                       .build();
+            final OAuth1aToken failToken = AuthToken.builderForOAuth1a()
+                                                    .realm("dummy_realm")
+                                                    .consumerKey("dummy_consumer_key@#$!")
+                                                    .token("dummy_oauth1a_token")
+                                                    .signatureMethod("dummy")
+                                                    .signature("DUMMY_signature") // This is different.
+                                                    .timestamp("0")
+                                                    .nonce("dummy_nonce")
+                                                    .version("1.0")
+                                                    .build();
             try (CloseableHttpResponse res = hc.execute(
                     oauth1aGetRequest("/oauth1a", failToken, AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
@@ -290,17 +291,18 @@ class AuthServiceTest {
     @Test
     void testOAuth2() throws Exception {
         final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .auth(OAuth2Token.of("dummy_oauth2_token"))
+                                             .auth(AuthToken.ofOAuth2("dummy_oauth2_token"))
                                              .build();
         assertThat(webClient.get("/oauth2").aggregate().join().status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    oauth2GetRequest("/oauth2-custom", OAuth2Token.of("dummy_oauth2_token"),
+                    oauth2GetRequest("/oauth2-custom", AuthToken.ofOAuth2("dummy_oauth2_token"),
                                      CUSTOM_TOKEN_HEADER))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             try (CloseableHttpResponse res = hc.execute(
-                    oauth2GetRequest("/oauth2", OAuth2Token.of("DUMMY_oauth2_token"), AUTHORIZATION))) {
+                    oauth2GetRequest("/oauth2", AuthToken.ofOAuth2("DUMMY_oauth2_token"),
+                                     AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
         }
@@ -311,7 +313,8 @@ class AuthServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
                     oauth2GetRequest("/insecuretoken",
-                                     OAuth2Token.of("all your tokens are belong to us"), AUTHORIZATION))) {
+                                     AuthToken.ofOAuth2("all your tokens are belong to us"),
+                                     AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
@@ -325,7 +328,7 @@ class AuthServiceTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             try (CloseableHttpResponse res = hc.execute(
-                    basicGetRequest("/composite", BasicToken.of("brown", "cony"),
+                    basicGetRequest("/composite", AuthToken.ofBasic("brown", "cony"),
                                     AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
@@ -339,13 +342,14 @@ class AuthServiceTest {
                     .put("oauth_nonce", "dummy_nonce")
                     .put("version", "1.0")
                     .build();
-            final OAuth1aToken oAuth1aToken = OAuth1aToken.builder().putAll(passToken).build();
+            final OAuth1aToken oAuth1aToken = AuthToken.builderForOAuth1a().putAll(passToken).build();
             try (CloseableHttpResponse res = hc.execute(
                     oauth1aGetRequest("/composite", oAuth1aToken, AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             try (CloseableHttpResponse res = hc.execute(
-                    oauth2GetRequest("/composite", OAuth2Token.of("dummy_oauth2_token"), AUTHORIZATION))) {
+                    oauth2GetRequest("/composite", AuthToken.ofOAuth2("dummy_oauth2_token"),
+                                     AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/composite"))) {
@@ -353,7 +357,7 @@ class AuthServiceTest {
             }
             try (CloseableHttpResponse res = hc.execute(
                     basicGetRequest("/composite",
-                                    BasicToken.of("choco", "pangyo"), AUTHORIZATION))) {
+                                    AuthToken.ofBasic("choco", "pangyo"), AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
         }

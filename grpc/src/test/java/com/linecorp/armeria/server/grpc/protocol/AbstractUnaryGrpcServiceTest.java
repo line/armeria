@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.UncheckedIOException;
 import java.util.concurrent.CompletableFuture;
@@ -41,8 +42,11 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
+import com.linecorp.armeria.grpc.testing.Messages;
+import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -57,14 +61,25 @@ import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 
 class AbstractUnaryGrpcServiceTest {
     private static final String METHOD_NAME = "/armeria.grpc.testing.TestService/UnaryCall";
     private static final String PAYLOAD_BODY = "hello";
+
     private static final SimpleRequest REQUEST_MESSAGE = SimpleRequest.newBuilder().setPayload(
             Payload.newBuilder().setBody(ByteString.copyFromUtf8(PAYLOAD_BODY)).build()).build();
     private static final SimpleResponse RESPONSE_MESSAGE = SimpleResponse.newBuilder().setPayload(
             Payload.newBuilder().setBody(ByteString.copyFromUtf8(PAYLOAD_BODY)).build()).build();
+
+    private static final SimpleRequest EXCEPTION_REQUEST_MESSAGE =
+            SimpleRequest.newBuilder()
+                         .setResponseStatus(EchoStatus.newBuilder()
+                                                      .setCode(StatusCodes.PERMISSION_DENIED)
+                                                      .setMessage("not for your eyes")
+                                                      .build())
+                         .build();
 
     // This service only depends on protobuf. Users can use a custom decoder / encoder to avoid even that.
     private static class TestService extends AbstractUnaryGrpcService {
@@ -79,8 +94,16 @@ class AbstractUnaryGrpcServiceTest {
             } catch (InvalidProtocolBufferException e) {
                 throw new UncheckedIOException(e);
             }
-            assertThat(request).isEqualTo(REQUEST_MESSAGE);
-            return CompletableFuture.completedFuture(RESPONSE_MESSAGE.toByteArray());
+            if (request.hasResponseStatus()) {
+                // For statusExceptionUpstream() and statusExceptionDownstream()
+                assertThat(request).isEqualTo(EXCEPTION_REQUEST_MESSAGE);
+                final Messages.EchoStatus resStatus = request.getResponseStatus();
+                throw new ArmeriaStatusException(resStatus.getCode(), resStatus.getMessage());
+            } else {
+                // For normalUpstream() and normalDownstream()
+                assertThat(request).isEqualTo(REQUEST_MESSAGE);
+                return CompletableFuture.completedFuture(RESPONSE_MESSAGE.toByteArray());
+            }
         }
     }
 
@@ -122,6 +145,43 @@ class AbstractUnaryGrpcServiceTest {
             final TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
             final SimpleResponse response = stub.unaryCall(REQUEST_MESSAGE);
             assertThat(response).isEqualTo(RESPONSE_MESSAGE);
+        } finally {
+            channel.shutdownNow();
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
+    void statusExceptionDownstream(SerializationFormat serializationFormat) throws Exception {
+        final TestServiceBlockingStub stub =
+                Clients.newClient(server.httpUri(serializationFormat),
+                                  TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> stub.unaryCall(EXCEPTION_REQUEST_MESSAGE))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    final Status status = cause.getStatus();
+                    assertThat(status.getCode().value()).isEqualTo(StatusCodes.PERMISSION_DENIED);
+                    assertThat(status.getDescription()).isEqualTo("not for your eyes");
+                });
+
+        final ServiceRequestContextCaptor captor = server.requestContextCaptor();
+        final HttpHeaders trailers = GrpcWebTrailers.get(captor.take());
+        assertThat(trailers).isNotNull();
+        assertThat(trailers.getInt(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(StatusCodes.PERMISSION_DENIED);
+    }
+
+    @Test
+    void statusExceptionUpstream() {
+        final ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
+                                                            .usePlaintext()
+                                                            .build();
+        try {
+            final TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
+            assertThatThrownBy(() -> stub.unaryCall(EXCEPTION_REQUEST_MESSAGE))
+                    .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                        final Status status = cause.getStatus();
+                        assertThat(status.getCode().value()).isEqualTo(StatusCodes.PERMISSION_DENIED);
+                        assertThat(status.getDescription()).isEqualTo("not for your eyes");
+                    });
         } finally {
             channel.shutdownNow();
         }

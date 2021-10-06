@@ -85,7 +85,7 @@ public final class ByteBufferBackedOutputStream extends OutputStream {
     }
 
     /**
-     * Resets the the underlying buffer and the flush indicator.
+     * Resets the underlying buffer and the flush indicator.
      */
     public void reset() {
         buffer.clear();

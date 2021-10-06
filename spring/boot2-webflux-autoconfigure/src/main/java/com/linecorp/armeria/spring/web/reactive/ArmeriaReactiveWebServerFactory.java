@@ -45,6 +45,7 @@ import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.core.ResolvableType;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.http.server.reactive.HttpHandler;
 
@@ -68,6 +69,7 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
+import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -155,14 +157,13 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         if (armeriaSettings != null) {
+            final MeterRegistry meterRegistry = firstNonNull(findBean(MeterRegistry.class),
+                                                             Metrics.globalRegistry);
             configureServerWithArmeriaSettings(sb, armeriaSettings,
+                                               newInternalServices(armeriaSettings, meterRegistry),
                                                findBeans(ArmeriaServerConfigurator.class),
                                                findBeans(Consumer.class, ServerBuilder.class),
-                                               findBeans(DocServiceConfigurator.class),
-                                               firstNonNull(findBean(MeterRegistry.class),
-                                                            Metrics.globalRegistry),
-                                               findBeans(HealthChecker.class),
-                                               findBeans(HealthCheckServiceConfigurator.class),
+                                               meterRegistry,
                                                meterIdPrefixFunctionOrDefault(),
                                                findBeans(MetricCollectingServiceConfigurator.class));
         }
@@ -255,6 +256,21 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         return armeriaWebServer;
+    }
+
+    private InternalServices newInternalServices(ArmeriaSettings settings, MeterRegistry meterRegistry) {
+        final ConfigurableEnvironment environment = findBean(ConfigurableEnvironment.class);
+        Integer port = null;
+        if (environment != null) {
+            final String property = environment.getProperty("management.server.port");
+            if (property != null) {
+                port = Integer.parseInt(property);
+            }
+        }
+        return InternalServices.of(settings, meterRegistry,
+                                   findBeans(HealthChecker.class),
+                                   findBeans(HealthCheckServiceConfigurator.class),
+                                   findBeans(DocServiceConfigurator.class), port);
     }
 
     private static List<ServerPort> armeriaPorts(ServerBuilder sb) {

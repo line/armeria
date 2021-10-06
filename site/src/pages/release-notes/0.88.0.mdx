@@ -7,7 +7,7 @@ date: 2019-07-03
 - `ClientRequestContext.current()` and `ServiceRequestContext.current()` have been added so you don't need to downcast `RequestContext` to `ClientRequestContext` or `ServiceRequestContext`. It also makes sure the current context is client-side (or server-side), preventing a `ClassCastException`. #1869 #1872
   ```java
   ClientRequestContext cctx = ClientRequestContext.current();
-  ServiceReqiestContext sctx = ServiceRequestContext.current();
+  ServiceRequestContext sctx = ServiceRequestContext.current();
   ```
 - `currentOrNull()` static method has been added to `(Client|Service)RequestContext`, which is similar to `current()` but returning `null` when there's no current context. #1872
   ```java

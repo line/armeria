@@ -120,11 +120,24 @@ class PathAndQueryTest {
     }
 
     @Test
-    void slash() {
+    void shouldNotDecodeSlash() {
         final PathAndQuery res = PathAndQuery.parse("%2F?%2F");
-        assertThat(res).isNotNull();
-        assertThat(res.path()).isEqualTo("/");
-        assertThat(res.query()).isEqualTo("%2F");
+        // Do not accept a relative path.
+        assertThat(res).isNull();
+        final PathAndQuery res1 = PathAndQuery.parse("/%2F?%2F");
+        assertThat(res1).isNotNull();
+        assertThat(res1.path()).isEqualTo("/%2F");
+        assertThat(res1.query()).isEqualTo("%2F");
+
+        final PathAndQuery pathOnly = PathAndQuery.parse("/foo%2F");
+        assertThat(pathOnly).isNotNull();
+        assertThat(pathOnly.path()).isEqualTo("/foo%2F");
+        assertThat(pathOnly.query()).isNull();
+
+        final PathAndQuery queryOnly = PathAndQuery.parse("/?%2f=%2F");
+        assertThat(queryOnly).isNotNull();
+        assertThat(queryOnly.path()).isEqualTo("/");
+        assertThat(queryOnly.query()).isEqualTo("%2F=%2F");
     }
 
     @Test
@@ -139,7 +152,7 @@ class PathAndQueryTest {
         final PathAndQuery res2 = PathAndQuery.parse(
                 "/path%2F/with/%2F/consecutive//%2F%2Fslashes?/query%2F/with/%2F/consecutive//%2F%2Fslashes");
         assertThat(res2).isNotNull();
-        assertThat(res2.path()).isEqualTo("/path/with/consecutive/slashes");
+        assertThat(res2.path()).isEqualTo("/path%2F/with/%2F/consecutive/%2F%2Fslashes");
         assertThat(res2.query()).isEqualTo("/query%2F/with/%2F/consecutive//%2F%2Fslashes");
     }
 
@@ -279,7 +292,7 @@ class PathAndQueryTest {
                 PathAndQuery.parse("/%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
                                    "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
         assertThat(res2).isNotNull();
-        assertThat(res2.path()).isEqualTo("/#/:[]@!$&'()*+,;=?");
+        assertThat(res2.path()).isEqualTo("/#%2F:[]@!$&'()*+,;=?");
         assertThat(res2.query()).isEqualTo("a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
     }
 
