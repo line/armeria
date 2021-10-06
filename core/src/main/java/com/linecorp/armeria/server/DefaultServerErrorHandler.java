@@ -60,13 +60,15 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
         //                when we reach v2.0. Currently, an IllegalArgumentException is handled only for
         //                annotated services.
-        final boolean isAnnotatedService = ctx.config().service().as(AnnotatedService.class) != null;
+        final ServiceConfig serviceConfig = ctx.config();
+        final boolean isAnnotatedService = serviceConfig.service().as(AnnotatedService.class) != null;
         if (isAnnotatedService) {
             if (cause instanceof IllegalArgumentException) {
                 if (needsToWarn()) {
                     logger.warn("{} Failed processing a request:", ctx, cause);
                 }
-                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+
+                return internalRenderStatus(serviceConfig, HttpStatus.BAD_REQUEST, cause);
             }
         }
 
@@ -83,19 +85,28 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         }
 
         if (cause instanceof RequestTimeoutException) {
-            return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+            return internalRenderStatus(serviceConfig, HttpStatus.SERVICE_UNAVAILABLE, cause);
         }
 
         if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
             logger.warn("{} Unhandled exception from a service:", ctx, cause);
         }
 
-        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+        return internalRenderStatus(serviceConfig, HttpStatus.INTERNAL_SERVER_ERROR, cause);
     }
 
     private static boolean needsToWarn() {
         return Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
                logger.isWarnEnabled();
+    }
+
+    private static HttpResponse internalRenderStatus(ServiceConfig serviceConfig,
+                                                     HttpStatus status,
+                                                     @Nullable Throwable cause) {
+        final AggregatedHttpResponse res = serviceConfig.server().config().errorHandler()
+                                                        .renderStatus(serviceConfig, status, null, cause);
+        assert res != null;
+        return res.toHttpResponse();
     }
 
     @Nonnull
