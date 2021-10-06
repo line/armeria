@@ -157,8 +157,12 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             numPendingAcquisitions.decrementAndGet();
 
             final ContextAwareEventLoop eventLoop = ctx.eventLoop();
-            if (eventLoop.inContextAwareEventLoop()) {
-                completePermit();
+            if (eventLoop.inEventLoop()) {
+                try (SafeCloseable ignored = ctx.replace()) {
+                    // Call ctx.replace() because the current EventLoop might
+                    // be a different ContextAwareEventLoop.
+                    completePermit();
+                }
             } else {
                 eventLoop.execute(this::completePermit);
             }

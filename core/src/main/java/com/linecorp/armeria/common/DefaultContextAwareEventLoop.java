@@ -48,11 +48,6 @@ final class DefaultContextAwareEventLoop
     }
 
     @Override
-    public boolean inContextAwareEventLoop() {
-        return inEventLoop() && context() == RequestContext.currentOrNull();
-    }
-
-    @Override
     public EventLoop next() {
         return this;
     }
