@@ -117,7 +117,7 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
             buf.append("Description: ").append(firstNonNull(description, status.reasonPhrase())).append('\n');
             if (cause != null && config.verboseResponses() && !status.isSuccess()) {
                 buf.append("Stack trace:\n");
-                buf.append(Throwables.getStackTraceAsString(cause));
+                buf.append(Exceptions.traceText(cause));
             }
             content = HttpData.ofUtf8(buf);
         }

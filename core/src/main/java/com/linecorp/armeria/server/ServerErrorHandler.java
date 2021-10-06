@@ -96,7 +96,7 @@ public interface ServerErrorHandler {
      * @param ctx the {@link ServiceRequestContext} of the current request.
      * @param cause the {@link Throwable} raised by the service that handled the current request.
      *
-     * @return ah {@link HttpResponse} to send to the client, or {@code null} to let the next handler
+     * @return an {@link HttpResponse} to send to the client, or {@code null} to let the next handler
      *         specified with {@link #orElse(ServerErrorHandler)} handle the event.
      */
     @Nullable
