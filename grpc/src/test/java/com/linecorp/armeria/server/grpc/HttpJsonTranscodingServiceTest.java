@@ -37,9 +37,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingService.PathVariable;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable;
 
-public class GrpcTranscodingServiceTest {
+public class HttpJsonTranscodingServiceTest {
 
     @ParameterizedTest
     @ArgumentsSource(PathArgumentsProvider.class)
@@ -48,7 +48,7 @@ public class GrpcTranscodingServiceTest {
                                          Set<String> pathVariableNamesAnswer) {
         final HttpRule httpRule = HttpRule.newBuilder().setGet(path).build();
         final Entry<Route, List<PathVariable>> routeAndPathVars =
-                GrpcTranscodingService.toRouteAndPathVariables(httpRule);
+                HttpJsonTranscodingService.toRouteAndPathVariables(httpRule);
         final Route route = routeAndPathVars.getKey();
 
         assertThat(route.patternString()).isEqualTo(patternStringAnswer);

@@ -35,9 +35,9 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingPathParser.PathSegment.PathMappingType;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
 
-public class GrpcTranscodingPathParserTest {
+public class HttpJsonTranscodingPathParserTest {
 
     @ParameterizedTest
     @ArgumentsSource(PathArgumentsProvider.class)
@@ -46,27 +46,28 @@ public class GrpcTranscodingPathParserTest {
                                            PathMappingType typeAnswer,
                                            Map<String, String> pathParams,
                                            Map<String, String> pathVariablesAnswer) {
-        final List<GrpcTranscodingPathParser.PathSegment> segments =
-                GrpcTranscodingPathParser.parse(originalPath);
+        final List<HttpJsonTranscodingPathParser.PathSegment> segments =
+                HttpJsonTranscodingPathParser.parse(originalPath);
 
         final String generatedPath;
         if (typeAnswer == PathMappingType.PARAMETERIZED) {
-            generatedPath = GrpcTranscodingPathParser.Stringifier.asParameterizedPath(segments);
+            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments);
         } else {
-            assertThatThrownBy(() -> GrpcTranscodingPathParser.Stringifier.asParameterizedPath(segments))
+            assertThatThrownBy(() -> HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments))
                     .isInstanceOf(UnsupportedOperationException.class);
-            generatedPath = GrpcTranscodingPathParser.Stringifier.asGlobPath(segments);
+            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asGlobPath(segments);
         }
         assertThat(generatedPath).isEqualTo(generatedPathAnswer);
 
         // Check path variables and their values.
-        final List<GrpcTranscodingService.PathVariable> pathVariables =
-                GrpcTranscodingService.PathVariable.from(segments, typeAnswer);
+        final List<HttpJsonTranscodingService.PathVariable> pathVariables =
+                HttpJsonTranscodingService.PathVariable.from(segments, typeAnswer);
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         pathParams.forEach((name, value) -> when(ctx.pathParam(name)).thenReturn(value));
 
-        final Map<String, String> populated = GrpcTranscodingService.populatePathVariables(ctx, pathVariables);
+        final Map<String, String> populated =
+                HttpJsonTranscodingService.populatePathVariables(ctx, pathVariables);
 
         assertThat(populated.size()).isEqualTo(pathVariablesAnswer.size());
         pathVariablesAnswer.forEach((key, value) -> assertThat(populated.get(key)).isEqualTo(value));
@@ -122,19 +123,19 @@ public class GrpcTranscodingPathParserTest {
 
     @Test
     void shouldThrowExceptionIfInvalidPathSpecified() {
-        assertThatThrownBy(() -> GrpcTranscodingPathParser.parse("/v1/{var"))
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GrpcTranscodingPathParser.parse("/v1/{var="))
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var="))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GrpcTranscodingPathParser.parse("/v1/{var=}"))
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var=}"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GrpcTranscodingPathParser.parse("/v1/***"))
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/***"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GrpcTranscodingPathParser.parse("/v1/{}"))
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{}"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GrpcTranscodingPathParser.parse(""))
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse(""))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> GrpcTranscodingPathParser.parse(null))
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse(null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

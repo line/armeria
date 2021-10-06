@@ -53,7 +53,7 @@ public final class Main {
                            .enableUnframedRequests(true)
                            // Enable HTTP/JSON to gRPC transcoding. You can see additional HTTP endpoints
                            // from your DocService.
-                           .enableGrpcTranscoding(true)
+                           .enableHttpJsonTranscoding(true)
                            // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
                            // methods in the blockingTaskExecutor thread pool.
                            // .useBlockingTaskExecutor(true)

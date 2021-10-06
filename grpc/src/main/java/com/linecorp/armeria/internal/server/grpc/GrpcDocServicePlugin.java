@@ -222,6 +222,10 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     static List<ServiceInfo> buildHttpServiceInfos(List<HttpEndpoint> httpEndpoints) {
+        if (httpEndpoints.isEmpty()) {
+            return ImmutableList.of();
+        }
+
         final Multimap<String, HttpEndpoint> byServiceName = HashMultimap.create();
         httpEndpoints.forEach(
                 httpEndpoint -> byServiceName.put(httpEndpoint.spec().serviceName(), httpEndpoint));
@@ -309,7 +313,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             methodInfos.add(new MethodInfo(
                     // Order 0 is primary.
                     firstSpec.order() == 0 ? firstSpec.methodName()
-                                           : firstSpec.methodName() + firstSpec.order(),
+                                           : firstSpec.methodName() + '-' + firstSpec.order(),
                     namedMessageSignature(firstSpec.methodDescriptor().getOutputType()),
                     fieldInfosBuilder.build(),
                     /* exceptionTypeSignatures */ ImmutableList.of(),

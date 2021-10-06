@@ -22,7 +22,7 @@ option java_package = "com.linecorp.armeria.grpc.testing";
 
 import "google/api/annotations.proto";
 
-service GrpcTranscodingTestService {
+service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
     option (google.api.http) = {
       get: "/v1/{name=messages/*}"

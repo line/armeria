@@ -17,19 +17,23 @@
 package com.linecorp.armeria.internal.server.grpc;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
 /**
- * Marks the {@link GrpcService} additionally support HTTP/JSON API.
+ * Marks a {@link GrpcService} as HTTP endpoints providable. Currently, we use this interface
+ * when specifying an HTTP endpoint for HTTP/JSON to gRPC transcoding feature.
  */
+@UnstableApi
 public interface HttpEndpointSupport {
     /**
-     * Returns a {@link HttpEndpointSpecification} of the specified {@link Route},
+     * Returns an {@link HttpEndpointSpecification} of the specified {@link Route},
      * which is used to generate {@link DocService} by {@link GrpcDocServicePlugin}.
      * Returns {@code null} if an HTTP API is not provided.
      */
     @Nullable
+    @UnstableApi
     HttpEndpointSpecification httpEndpointSpecification(Route route);
 }

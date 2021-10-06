@@ -36,8 +36,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.grpc.testing.GrpcTranscodingTestServiceGrpc.GrpcTranscodingTestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.GrpcTranscodingTestServiceGrpc.GrpcTranscodingTestServiceImplBase;
+import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2.SubMessage;
@@ -55,9 +55,9 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
-public class GrpcTranscodingTest {
+class HttpJsonTranscodingTest {
 
-    static class GrpcTranscodingTestService extends GrpcTranscodingTestServiceImplBase {
+    static class HttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceImplBase {
         @Override
         public void getMessageV1(GetMessageRequestV1 request, StreamObserver<Message> responseObserver) {
             responseObserver.onNext(Message.newBuilder().setText(request.getName()).build());
@@ -106,8 +106,8 @@ public class GrpcTranscodingTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final GrpcService grpcService = GrpcService.builder()
-                                                       .addService(new GrpcTranscodingTestService())
-                                                       .enableGrpcTranscoding(true)
+                                                       .addService(new HttpJsonTranscodingTestService())
+                                                       .enableHttpJsonTranscoding(true)
                                                        .build();
             // gRPC transcoding will not work under '/foo'.
             // You may get the following log messages when calling the following 'serviceUnder' method:
@@ -122,9 +122,9 @@ public class GrpcTranscodingTest {
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    final GrpcTranscodingTestServiceBlockingStub grpcClient =
+    final HttpJsonTranscodingTestServiceBlockingStub grpcClient =
             Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                   .build(GrpcTranscodingTestServiceBlockingStub.class);
+                   .build(HttpJsonTranscodingTestServiceBlockingStub.class);
     final WebClient webClient = WebClient.builder(server.httpUri()).build();
 
     @Test

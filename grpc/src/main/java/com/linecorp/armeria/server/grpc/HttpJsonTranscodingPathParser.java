@@ -26,18 +26,17 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.StringUtil;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingPathParser.PathSegment.PathMappingType;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
 
 /**
  * Parses HTTP API path defined in {@code google.api.http} option.
  */
-final class GrpcTranscodingPathParser {
+final class HttpJsonTranscodingPathParser {
 
     /**
      * Parses HTTP API path defined in {@code google.api.http} option.
@@ -46,17 +45,32 @@ final class GrpcTranscodingPathParser {
      * Template = "/" Segments [ Verb ]
      * Verb     = ":" LITERAL
      * </p>
+     *
+     * @see <a href="https://cloud.google.com/endpoints/docs/grpc-service-config/reference/rpc/google.api#path-template-syntax">Path template syntax</a>
      */
     static List<PathSegment> parse(String path) {
-        checkArgument(!Strings.isNullOrEmpty(path), "Invalid path: path=%s", path);
+        requireNonNull(path, "path");
+        checkArgument(!path.isEmpty(), "path is empty.");
+
         final Context context = new Context(path);
+        checkArgument(context.read() == '/', "path: %s (must start with '/')", context.path());
+
         final ImmutableList.Builder<PathSegment> segments = ImmutableList.builder();
+        // Parse 'Segments' until the start symbol of 'Verb' part.
+        // Basically, 'parse*' methods stop reading path characters if they see a delimiters. Also, they don't
+        // consume the delimiter so that a caller can check the delimiter.
         segments.addAll(parseSegments(context, new Delimiters(':')));
         if (context.hasNext()) {
-            checkArgument(context.read() == ':', "Invalid path: context=%s", context);
+            // Consume the start symbol ':'.
+            checkArgument(context.read() == ':',
+                          "path: %s (invalid verb part at index %s)", context.path(), context.index());
+            // We don't check 'Verb' part because we don't use it when generating a corresponding path pattern.
             segments.add(new VerbPathSegment(context.readAll()));
         }
-        return segments.build();
+
+        final List<PathSegment> pathSegments = segments.build();
+        checkArgument(!pathSegments.isEmpty(), "path: %s (must contain at least one segment)", context.path());
+        return pathSegments;
     }
 
     /**
@@ -67,21 +81,24 @@ final class GrpcTranscodingPathParser {
      * </p>
      */
     private static List<PathSegment> parseSegments(Context context, Delimiters delimiters) {
+        final Delimiters segmentDelimiters = delimiters.withMoreCharacter('/');
         final ImmutableList.Builder<PathSegment> segments = ImmutableList.builder();
         while (context.hasNext()) {
-            segments.add(parseSegment(context, delimiters.withMoreCharacter('/')));
+            segments.add(parseSegment(context, segmentDelimiters));
 
             if (!context.hasNext()) {
                 return segments.build();
             }
 
+            // Stop parsing if we meet one of the delimiters provided by the caller.
             final char c = context.peek();
             if (delimiters.contains(c)) {
                 return segments.build();
             }
 
-            // Consume '/' and parse next segment.
-            checkArgument(context.read() == '/', "Invalid path: context=%s", context);
+            // Consume the start symbol '/' of the next segment.
+            checkArgument(context.read() == '/',
+                          "path: %s (invalid segments part at index %s)", context.path(), context.index());
         }
         return segments.build();
     }
@@ -99,19 +116,23 @@ final class GrpcTranscodingPathParser {
             case '{': {
                 final Delimiters variableStopBefore = new Delimiters('}');
                 final PathSegment segment = parseVariable(context, variableStopBefore);
-                checkArgument(variableStopBefore.contains(context.read()), "Invalid path: context=%s", context);
+                // Consume the end symbol of a variable definition.
+                checkArgument(context.read() == '}',
+                              "path: %s (invalid variable part at index %s)", context.path(), context.index());
                 return segment;
             }
             case '*': {
                 final PathSegment segment;
                 if (context.peek() == '*') {
+                    // Consume the second '*'.
                     context.read();
                     segment = new DeepWildcardPathSegment(context.nextPathVarIndex());
                 } else {
                     segment = new WildcardPathSegment(context.nextPathVarIndex(), null);
                 }
+                // Should 1) no more input or 2) meet a delimiter such as '/', ':' or '}'.
                 checkArgument(!context.hasNext() || delimiters.contains(context.peek()),
-                              "Invalid path: context=%s", context);
+                              "path: %s (invalid wildcard part at index %s)", context.path(), context.index());
                 return segment;
             }
             default: {
@@ -136,6 +157,7 @@ final class GrpcTranscodingPathParser {
      * </p>
      */
     private static PathSegment parseVariable(Context context, Delimiters delimiters) {
+        // Collect characters for 'FieldPath'.
         final StringBuilder fieldPathBuilder = new StringBuilder();
         char c = 0;
         while (context.hasNext()) {
@@ -147,7 +169,8 @@ final class GrpcTranscodingPathParser {
         }
 
         final String fieldPath = fieldPathBuilder.toString();
-        checkArgument(!fieldPath.isEmpty(), "Invalid path: context=%s", context);
+        checkArgument(!fieldPath.isEmpty(),
+                      "path: %s (invalid variable part at index %s)", context.path(), context.index());
 
         if (c == '=') {
             // Consume '='.
@@ -172,7 +195,7 @@ final class GrpcTranscodingPathParser {
         }
     }
 
-    private GrpcTranscodingPathParser() {}
+    private HttpJsonTranscodingPathParser() {}
 
     static final class Context {
         private final String path;
@@ -183,7 +206,15 @@ final class GrpcTranscodingPathParser {
             this.path = path;
         }
 
-        public int nextPathVarIndex() {
+        String path() {
+            return path;
+        }
+
+        int index() {
+            return index;
+        }
+
+        int nextPathVarIndex() {
             return pathVarIndex++;
         }
 
@@ -192,7 +223,7 @@ final class GrpcTranscodingPathParser {
         }
 
         char read() {
-            return hasNext() ? path.charAt(index++) : (char) -1;
+            return path.charAt(index++);
         }
 
         String readAll() {
@@ -388,11 +419,11 @@ final class GrpcTranscodingPathParser {
             this.valueSegments = valueSegments;
         }
 
-        public String fieldPath() {
+        String fieldPath() {
             return fieldPath;
         }
 
-        public List<PathSegment> valueSegments() {
+        List<PathSegment> valueSegments() {
             return valueSegments;
         }
 
@@ -435,7 +466,6 @@ final class GrpcTranscodingPathParser {
                            .collect(Collectors.joining("/"));
         }
 
-        private Stringifier() {
-        }
+        private Stringifier() {}
     }
 }

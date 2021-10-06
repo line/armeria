@@ -58,7 +58,7 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 
 /**
- * Common part of the {@link UnframedGrpcService} and {@link GrpcTranscodingService}.
+ * Common part of the {@link UnframedGrpcService} and {@link HttpJsonTranscodingService}.
  */
 abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
 
@@ -97,10 +97,6 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     @Override
     public Set<SerializationFormat> supportedSerializationFormats() {
         return delegate.supportedSerializationFormats();
-    }
-
-    protected UnframedGrpcErrorHandler unframedGrpcErrorHandler() {
-        return unframedGrpcErrorHandler;
     }
 
     protected void frameAndServe(

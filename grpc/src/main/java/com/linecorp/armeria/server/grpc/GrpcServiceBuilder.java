@@ -127,7 +127,7 @@ public final class GrpcServiceBuilder {
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
     @Nullable
-    private UnframedGrpcErrorHandler grpcTranscodingErrorHandler;
+    private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -140,7 +140,7 @@ public final class GrpcServiceBuilder {
 
     private boolean enableUnframedRequests;
 
-    private boolean enableGrpcTranscoding;
+    private boolean enableHttpJsonTranscoding;
 
     private boolean useBlockingTaskExecutor;
 
@@ -455,15 +455,16 @@ public final class GrpcServiceBuilder {
      *         transport level encoding.
      *     </li>
      *     <li>
-     *         Transcoding will not work if the {@link GrpcService} is configured by
+     *         Transcoding will not work if the {@link GrpcService} is configured with
      *         {@link ServerBuilder#serviceUnder(String, HttpService)}.
      *     </li>
      * </ul>
      *
      * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
      */
-    public GrpcServiceBuilder enableGrpcTranscoding(boolean enableGrpcTranscoding) {
-        this.enableGrpcTranscoding = enableGrpcTranscoding;
+    @UnstableApi
+    public GrpcServiceBuilder enableHttpJsonTranscoding(boolean enableHttpJsonTranscoding) {
+        this.enableHttpJsonTranscoding = enableHttpJsonTranscoding;
         return this;
     }
 
@@ -472,10 +473,10 @@ public final class GrpcServiceBuilder {
      * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
      */
     @UnstableApi
-    public GrpcServiceBuilder grpcTranscodingErrorHandler(
-            UnframedGrpcErrorHandler grpcTranscodingErrorHandler) {
-        requireNonNull(grpcTranscodingErrorHandler, "grpcTranscodingErrorHandler");
-        this.grpcTranscodingErrorHandler = grpcTranscodingErrorHandler;
+    public GrpcServiceBuilder httpJsonTranscodingErrorHandler(
+            UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler) {
+        requireNonNull(httpJsonTranscodingErrorHandler, "httpJsonTranscodingErrorHandler");
+        this.httpJsonTranscodingErrorHandler = httpJsonTranscodingErrorHandler;
         return this;
     }
 
@@ -707,7 +708,7 @@ public final class GrpcServiceBuilder {
             throw new IllegalStateException(
                     "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
         }
-        if (!enableGrpcTranscoding && grpcTranscodingErrorHandler != null) {
+        if (!enableHttpJsonTranscoding && httpJsonTranscodingErrorHandler != null) {
             throw new IllegalStateException(
                     "'grpcTranscodingErrorHandler' can only be set if gRPC transcoding feature is enabled");
         }
@@ -757,11 +758,11 @@ public final class GrpcServiceBuilder {
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
         }
-        if (enableGrpcTranscoding) {
-            grpcService = GrpcTranscodingService.of(
+        if (enableHttpJsonTranscoding) {
+            grpcService = HttpJsonTranscodingService.of(
                     grpcService,
-                    grpcTranscodingErrorHandler != null ? grpcTranscodingErrorHandler
-                                                        : UnframedGrpcErrorHandler.ofJson());
+                    httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
+                                                            : UnframedGrpcErrorHandler.ofJson());
         }
         return grpcService;
     }

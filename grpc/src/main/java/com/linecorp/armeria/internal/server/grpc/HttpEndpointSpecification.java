@@ -29,13 +29,15 @@ import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
 /**
  * Specifies how to support HTTP APIs from a {@link GrpcService}.
  */
-public class HttpEndpointSpecification {
+@UnstableApi
+public final class HttpEndpointSpecification {
     private final int order;
     private final Route route;
     private final Set<String> pathVariables;
@@ -51,7 +53,7 @@ public class HttpEndpointSpecification {
                                      MethodDescriptor methodDescriptor,
                                      Map<String, Parameter> parameters,
                                      HttpRule httpRule) {
-        checkArgument(order >= 0, "Order must be 0 or positive: %s", order);
+        checkArgument(order >= 0, "order: %s (>= 0)", order);
         this.order = order;
         this.route = requireNonNull(route, "route");
         this.pathVariables = requireNonNull(pathVariables, "pathVariables");

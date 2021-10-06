@@ -37,8 +37,8 @@ import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.grpc.testing.GrpcTranscodingTestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.GrpcTranscodingTestServiceGrpc.GrpcTranscodingTestServiceImplBase;
+import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc;
+import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -376,8 +376,8 @@ class GrpcDocServicePluginTest {
     @Test
     void httpEndpoint() {
         final GrpcService grpcService =
-                GrpcService.builder().addService(mock(GrpcTranscodingTestServiceImplBase.class))
-                           .enableGrpcTranscoding(true).build();
+                GrpcService.builder().addService(mock(HttpJsonTranscodingTestServiceImplBase.class))
+                           .enableHttpJsonTranscoding(true).build();
         assertThat(grpcService).isInstanceOf(HttpEndpointSupport.class);
         final HttpEndpointSupport httpEndpointSupport = (HttpEndpointSupport) grpcService;
 
@@ -403,7 +403,7 @@ class GrpcDocServicePluginTest {
         // The endpoints are specified in the same service.
         assertThat(serviceInfos.size()).isOne();
         final ServiceInfo serviceInfo = serviceInfos.get(0);
-        assertThat(serviceInfo.name()).isEqualTo(GrpcTranscodingTestServiceGrpc.SERVICE_NAME +
+        assertThat(serviceInfo.name()).isEqualTo(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                                                  GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         final String virtualHostNamePattern = serviceConfig.virtualHost().hostnamePattern();

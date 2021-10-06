@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -80,11 +81,11 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingPathParser.PathSegment;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingPathParser.PathSegment.PathMappingType;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingPathParser.Stringifier;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingPathParser.VariablePathSegment;
-import com.linecorp.armeria.server.grpc.GrpcTranscodingService.PathVariable.ValueDefinition.Type;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.Stringifier;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable.ValueDefinition.Type;
 
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
@@ -95,13 +96,13 @@ import io.grpc.protobuf.ProtoServiceDescriptorSupplier;
 /**
  * Converts HTTP/JSON request to gRPC request and delegates it to the {@link FramedGrpcService}.
  */
-final class GrpcTranscodingService extends AbstractUnframedGrpcService
+final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         implements HttpEndpointSupport {
-    private static final Logger logger = LoggerFactory.getLogger(GrpcTranscodingService.class);
+    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingService.class);
 
     /**
-     * Create a new {@link GrpcService} instance from the given {@code delegate}. If it is possible
-     * to support HTTP/JSON to gRPC transcoding, a new {@link GrpcTranscodingService} instance
+     * Creates a new {@link GrpcService} instance from the given {@code delegate}. If it is possible
+     * to support HTTP/JSON to gRPC transcoding, a new {@link HttpJsonTranscodingService} instance
      * would be returned. Otherwise, the {@code delegate} would be returned.
      */
     static GrpcService of(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
@@ -128,6 +129,12 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
                 }
 
                 final HttpRule httpRule = methodOptions.getExtension(AnnotationsProto.http);
+
+                checkArgument(methodDefinition.getMethodDescriptor().getType() == MethodType.UNARY,
+                              "Only unary methods can be configured with an HTTP/JSON endpoint: " +
+                              "method=%s, httpRule=%s",
+                              methodDefinition.getMethodDescriptor().getFullMethodName(), httpRule);
+
                 @Nullable
                 final Entry<Route, List<PathVariable>> routeAndVariables = toRouteAndPathVariables(httpRule);
                 if (routeAndVariables == null) {
@@ -140,8 +147,7 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
                 final Map<String, Field> fields = buildFields(methodDesc.getInputType(), ImmutableList.of());
 
                 int order = 0;
-                builder.put(route, new TranscodingSpec(order++, httpRule,
-                                                       serviceDefinition, methodDefinition,
+                builder.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
                                                        serviceDesc, methodDesc, fields, pathVariables));
 
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
@@ -150,8 +156,7 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
                             = toRouteAndPathVariables(additionalHttpRule);
                     if (additionalRouteAndVariables != null) {
                         builder.put(additionalRouteAndVariables.getKey(),
-                                    new TranscodingSpec(order++, additionalHttpRule,
-                                                        serviceDefinition, methodDefinition,
+                                    new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
                                                         serviceDesc, methodDesc, fields,
                                                         additionalRouteAndVariables.getValue()));
                     }
@@ -161,10 +166,10 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
 
         final Map<Route, TranscodingSpec> routeAndSpecs = builder.build();
         if (routeAndSpecs.isEmpty()) {
-            // We don't need to create a new HttpToGrpcTranscodingService instance in this case.
+            // We don't need to create a new HttpJsonTranscodingService instance in this case.
             return delegate;
         }
-        return new GrpcTranscodingService(delegate, routeAndSpecs, unframedGrpcErrorHandler);
+        return new HttpJsonTranscodingService(delegate, routeAndSpecs, unframedGrpcErrorHandler);
     }
 
     @Nullable
@@ -237,7 +242,7 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
             return new SimpleImmutableEntry<>(route, vars);
         }
 
-        final List<PathSegment> segments = GrpcTranscodingPathParser.parse(path);
+        final List<PathSegment> segments = HttpJsonTranscodingPathParser.parse(path);
 
         final PathMappingType pathMappingType =
                 segments.stream().allMatch(segment -> segment.support(PathMappingType.PARAMETERIZED)) ?
@@ -298,9 +303,9 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;
 
-    private GrpcTranscodingService(GrpcService delegate,
-                                   Map<Route, TranscodingSpec> routeAndSpecs,
-                                   UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+    private HttpJsonTranscodingService(GrpcService delegate,
+                                       Map<Route, TranscodingSpec> routeAndSpecs,
+                                       UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         super(delegate, unframedGrpcErrorHandler);
         this.routeAndSpecs = routeAndSpecs;
         routes = ImmutableSet.<Route>builder()
@@ -353,24 +358,15 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
     private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
                                 TranscodingSpec spec) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
-
-        if (spec.method.getMethodDescriptor().getType() != MethodType.UNARY) {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                   MediaType.PLAIN_TEXT_UTF_8,
-                                   "Only unary methods can be used with non-framed requests.");
-        }
-
         final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
-
-        grpcHeaders.method(HttpMethod.POST)
-                   .contentType(GrpcSerializationFormats.JSON.mediaType());
-
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
                                    "gRPC encoding is not supported for non-framed requests.");
         }
 
+        grpcHeaders.method(HttpMethod.POST)
+                   .contentType(GrpcSerializationFormats.JSON.mediaType());
         // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
@@ -379,7 +375,7 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
+        req.aggregate(ctx.eventLoop()).handle((clientRequest, t) -> {
             try (SafeCloseable ignore = ctx.push()) {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
@@ -389,6 +385,9 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                       convertToJson(ctx, clientRequest, spec),
                                       responseFuture);
+                    } catch (IllegalArgumentException iae) {
+                        responseFuture.completeExceptionally(
+                                HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
                     } catch (Exception e) {
                         responseFuture.completeExceptionally(e);
                     }
@@ -493,7 +492,7 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
         if (ctx.query() != null) {
             setParametersToNode(root, QueryParams.fromQueryString(ctx.query()), spec);
         }
-        return HttpData.copyOf(mapper.writeValueAsBytes(root));
+        return HttpData.wrap(mapper.writeValueAsBytes(root));
     }
 
     private static void setParametersToNode(ObjectNode root,
@@ -509,12 +508,9 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
             for (String parentName : field.parentNames) {
                 final JsonNode node = currentNode.get(parentName);
                 if (node != null) {
-                    if (!node.isObject()) {
-                        // It should be an ObjectNode but it may not when a user sent a wrong JSON document
-                        // in the HTTP body with HTTP POST, PUT, PATCH or DELETE methods.
-                        throw new IllegalArgumentException(
-                                "Request body may not follow the protocol specification.");
-                    }
+                    // It should be an ObjectNode but it may not if a user sent a wrong JSON document
+                    // in the HTTP body with HTTP POST, PUT, PATCH or DELETE methods.
+                    checkArgument(node.isObject(), "Invalid request body (must be a JSON object)");
                     currentNode = (ObjectNode) node;
                 } else {
                     currentNode = currentNode.putObject(parentName);
@@ -526,12 +522,9 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
                 final ArrayNode arrayNode;
                 final JsonNode node = currentNode.get(field.name());
                 if (node != null) {
-                    if (!node.isArray()) {
-                        // It should be an ArrayNode but it may not when a user sent a wrong JSON document
-                        // in the HTTP body with HTTP POST, PUT, PATCH or DELETE methods.
-                        throw new IllegalArgumentException(
-                                "Request body may not follow the protocol specification.");
-                    }
+                    // It should be an ArrayNode but it may not if a user sent a wrong JSON document
+                    // in the HTTP body with HTTP POST, PUT, PATCH or DELETE methods.
+                    checkArgument(node.isArray(), "Invalid request body (must be a JSON array)");
                     arrayNode = (ArrayNode) node;
                 } else {
                     arrayNode = currentNode.putArray(field.name());
@@ -602,7 +595,6 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
     static final class TranscodingSpec {
         private final int order;
         private final HttpRule httpRule;
-        private final ServerServiceDefinition service;
         private final ServerMethodDefinition<?, ?> method;
         private final Descriptors.ServiceDescriptor serviceDescriptor;
         private final Descriptors.MethodDescriptor methodDescriptor;
@@ -611,7 +603,6 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
 
         private TranscodingSpec(int order,
                                 HttpRule httpRule,
-                                ServerServiceDefinition service,
                                 ServerMethodDefinition<?, ?> method,
                                 ServiceDescriptor serviceDescriptor,
                                 MethodDescriptor methodDescriptor,
@@ -619,7 +610,6 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
                                 List<PathVariable> pathVariables) {
             this.order = order;
             this.httpRule = httpRule;
-            this.service = service;
             this.method = method;
             this.serviceDescriptor = serviceDescriptor;
             this.methodDescriptor = methodDescriptor;
@@ -664,7 +654,7 @@ final class GrpcTranscodingService extends AbstractUnframedGrpcService
         static List<PathVariable> from(List<PathSegment> segments,
                                        PathSegment.PathMappingType type) {
             return segments.stream()
-                           .filter(segment -> segment instanceof VariablePathSegment)
+                           .filter(VariablePathSegment.class::isInstance)
                            .flatMap(segment -> resolvePathVariables(null, (VariablePathSegment) segment, type)
                                    .stream())
                            .collect(toImmutableList());
