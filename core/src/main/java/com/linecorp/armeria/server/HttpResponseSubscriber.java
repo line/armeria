@@ -527,8 +527,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             if (endOfStream) {
                 if (tryComplete()) {
-                    logBuilder().endRequest();
-                    logBuilder().endResponse();
+                    final Throwable capturedException = CapturedServiceException.get(reqCtx);
+                    if (capturedException != null) {
+                        logBuilder().endRequest(capturedException);
+                        logBuilder().endResponse(capturedException);
+                    } else {
+                        logBuilder().endRequest();
+                        logBuilder().endResponse();
+                    }
                     final ServiceConfig config = reqCtx.config();
                     if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);

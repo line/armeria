@@ -13,13 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.internal.common;
 
-package com.linecorp.armeria.common;
-
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 
-final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> implements HttpResponse {
-    AbortedHttpResponse(Throwable cause) {
+public final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> implements HttpResponse {
+    public AbortedHttpResponse(Throwable cause) {
         super(cause);
     }
 }
