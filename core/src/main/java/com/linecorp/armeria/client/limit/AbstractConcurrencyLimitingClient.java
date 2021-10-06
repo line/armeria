@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.limit;
 
-import static com.linecorp.armeria.client.limit.ConcurrencyLimitBuilder.DEFAULT_TIMEOUT_MILLIS;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -60,7 +58,8 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
      */
     protected AbstractConcurrencyLimitingClient(Client<I, O> delegate, int maxConcurrency) {
-        this(delegate, maxConcurrency, DEFAULT_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+        this(delegate, ConcurrencyLimit.builder(maxConcurrency)
+                                       .build());
     }
 
     /**
@@ -86,8 +85,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      * @param delegate the delegate {@link Client}
      * @param concurrencyLimit the concurrency limit config
      */
-    protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
-                                                ConcurrencyLimit concurrencyLimit) {
+    protected AbstractConcurrencyLimitingClient(Client<I, O> delegate, ConcurrencyLimit concurrencyLimit) {
         super(delegate);
         this.concurrencyLimit = concurrencyLimit;
     }

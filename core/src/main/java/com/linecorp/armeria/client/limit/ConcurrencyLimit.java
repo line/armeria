@@ -22,17 +22,31 @@ import static java.lang.Integer.MAX_VALUE;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * Limits the concurrency of client requests.
  */
+@UnstableApi
+@FunctionalInterface
 public interface ConcurrencyLimit {
+
+    /**
+     * Returns a newly-created {@link ConcurrencyLimit} with the specified {@code maxConcurrency}.
+     *
+     * @param maxConcurrency the maximum number of concurrent active requests.
+     *                       Specify {@code 0} to disable the limit.
+     */
+    static ConcurrencyLimit of(int maxConcurrency) {
+        return builder(maxConcurrency).build();
+    }
+
     /**
      * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
      *
-     * @param maxConcurrency the maximum number of concurrent active requests,
-     *                       specify {@code 0} to disable the limit.
+     * @param maxConcurrency the maximum number of concurrent active requests.
+     *                       Specify {@code 0} to disable the limit.
      */
     static ConcurrencyLimitBuilder builder(int maxConcurrency) {
         checkArgument(maxConcurrency >= 0,
@@ -41,32 +55,19 @@ public interface ConcurrencyLimit {
     }
 
     /**
-     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
-     *
-     * @param maxConcurrency the maximum number of concurrent active requests,
-     *                       specify {@code 0} to disable the limit.
-     */
-    static ConcurrencyLimitBuilder of(int maxConcurrency) {
-        return builder(maxConcurrency);
-    }
-
-    /**
-     * Acquire a {@link SafeCloseable}, asynchronously.
-     *
-     * <p>Make sure to call {@link SafeCloseable#close()} once the operation guarded by the permit
-     * completes successfully or with error
-     *
-     * @return the {@link SafeCloseable}
+     * Acquires a {@link SafeCloseable} that allows you to execute a job under the limit.
+     * The {@link SafeCloseable} must be closed after the job is done:
+     * <pre>{@code
+     * ConcurrencyLimit limit = ...
+     * limit.acquire(ctx).handle((permit, cause) -> {
+     *     if (cause != null) {
+     *         // Failed to acquire a permit.
+     *         ...
+     *     }
+     *     // Execute your job.
+     *     permit.close();
+     * });
+     * }</pre>
      */
     CompletableFuture<SafeCloseable> acquire(ClientRequestContext ctx);
-
-    /**
-     * Returns the total number of acquired permits or -1 in case its value is unknown.
-     */
-    int acquiredPermits();
-
-    /**
-     * Returns the total number of available permits -1 in case its value is unknown.
-     */
-    int availablePermits();
 }

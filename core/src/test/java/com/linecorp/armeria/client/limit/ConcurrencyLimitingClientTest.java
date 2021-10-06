@@ -96,11 +96,12 @@ class ConcurrencyLimitingClientTest {
 
         // The first request should be delegated immediately.
         final HttpResponse res1 = client.execute(ctx1, req1);
-        verify(delegate).execute(ctx1, req1);
+        await().untilAsserted(() -> verify(delegate).execute(ctx1, req1));
         assertThat(res1.isOpen()).isTrue();
 
-        // The second request should never be delegated until the first response is closed.
         final HttpResponse res2 = client.execute(ctx2, req2);
+        // The second request should never be delegated until the first response is closed.
+        Thread.sleep(200);
         verify(delegate, never()).execute(ctx2, req2);
         assertThat(res2.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1); // Only req1 is active.
@@ -127,7 +128,6 @@ class ConcurrencyLimitingClientTest {
         final HttpRequest req1 = newReq();
         final HttpRequest req2 = newReq();
         final HttpResponseWriter actualRes1 = HttpResponse.streaming();
-        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
@@ -230,10 +230,8 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
-        final ConcurrencyLimit concurrencyLimit = new ConditionalConcurrencyLimit(
-                requestContext -> false,
-                new AsyncConcurrencyLimit(500, 2, 100)
-        );
+        final ConcurrencyLimit concurrencyLimit =
+                new DefaultConcurrencyLimit(requestContext -> false, 2, 100, 500);
 
         final ConcurrencyLimitingClient client =
                 newDecorator(concurrencyLimit).apply(delegate);
@@ -263,12 +261,10 @@ class ConcurrencyLimitingClientTest {
         final HttpRequest req1 = newReq();
         final HttpRequest req2 = newReq();
         final HttpResponseWriter actualRes1 = HttpResponse.streaming();
-        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
-        final ConcurrencyLimit concurrencyLimit = new AsyncConcurrencyLimit(
-                500, 1, 100);
+        final ConcurrencyLimit concurrencyLimit = new DefaultConcurrencyLimit(ctx -> true, 1, 100, 500);
 
         final ConcurrencyLimitingClient clientOne =
                 newDecorator(concurrencyLimit).apply(delegate);
