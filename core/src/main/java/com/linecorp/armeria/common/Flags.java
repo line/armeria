@@ -61,6 +61,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientService;
@@ -1201,7 +1202,7 @@ public final class Flags {
      * @see ExceptionVerbosity
      *
      * @deprecated Use {@link LoggingService} or log exceptions using
-     *             {@link ServerBuilder#exceptionHandler(com.linecorp.armeria.server.ExceptionHandler)}.
+     *             {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
      */
     @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {

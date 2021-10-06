@@ -37,7 +37,6 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -112,7 +111,7 @@ public final class ServerConfig {
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final Supplier<RequestId> requestIdGenerator;
-    private final ExceptionHandler exceptionHandler;
+    private final ServerErrorHandler errorHandler;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -140,7 +139,7 @@ public final class ServerConfig {
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator,
-            ExceptionHandler exceptionHandler,
+            ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -252,7 +251,7 @@ public final class ServerConfig {
         final Supplier<RequestId> castRequestIdGenerator =
                 (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
-        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
     }
 
@@ -729,11 +728,11 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the {@link ExceptionHandler} that converts a {@link Throwable} to an
-     * {@link HttpResponse}.
+     * Returns the {@link ServerErrorHandler} that provides the error responses in case of unexpected
+     * exceptions or protocol errors.
      */
-    public ExceptionHandler exceptionHandler() {
-        return exceptionHandler;
+    public ServerErrorHandler errorHandler() {
+        return errorHandler;
     }
 
     /**

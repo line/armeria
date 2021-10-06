@@ -298,7 +298,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         } else if (cause instanceof HttpStatusException) {
             final HttpStatus status = ((HttpStatusException) cause).httpStatus();
             final Throwable cause0 = firstNonNull(cause.getCause(), cause);
-            failAndRespond(cause0, AggregatedHttpResponse.of(status), Http2Error.CANCEL, false);
+            final ServiceConfig serviceConfig = reqCtx.config();
+            final AggregatedHttpResponse res =
+                    serviceConfig.server().config().errorHandler()
+                                 .renderStatus(serviceConfig, status, null, cause0);
+            assert res != null;
+            failAndRespond(cause0, res, Http2Error.CANCEL, false);
         } else if (Exceptions.isStreamCancelling(cause)) {
             failAndReset(cause);
         } else {

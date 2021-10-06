@@ -59,7 +59,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -186,7 +185,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
-    private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
+    private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -1477,14 +1476,15 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+     * Sets the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
+     * or protocol errors.
      *
-     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ServerErrorHandler}
      * but the {@link HttpResponseException#httpResponse()} is sent as-is.
      */
     @UnstableApi
-    public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
-        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+    public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         return this;
     }
 
@@ -1773,9 +1773,10 @@ public final class ServerBuilder {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ExceptionHandler exceptionHandler = this.exceptionHandler;
-        if (exceptionHandler != ExceptionHandler.ofDefault()) {
-            exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
+        ServerErrorHandler errorHandler = this.errorHandler;
+        if (errorHandler != ServerErrorHandler.ofDefault()) {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
@@ -1792,7 +1793,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts);
     }
 
     /**

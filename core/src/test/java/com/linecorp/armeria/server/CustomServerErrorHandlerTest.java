@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -23,22 +25,28 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class ExceptionHandlerTest {
+class CustomServerErrorHandlerTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -58,23 +66,42 @@ class ExceptionHandlerTest {
                         new UnsupportedOperationException("Unsupported!")), 100, TimeUnit.MILLISECONDS);
                 return HttpResponse.from(future);
             });
-            sb.exceptionHandler((ctx, cause) -> {
-                if (cause instanceof RequestTimeoutException) {
-                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.GATEWAY_TIMEOUT),
-                                           HttpData.ofUtf8("timeout!"),
-                                           HttpHeaders.of("trailer-exists", true));
+            sb.errorHandler(new ServerErrorHandler() {
+                @Override
+                public @Nullable HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
+                    if (cause instanceof RequestTimeoutException) {
+                        return HttpResponse.of(ResponseHeaders.of(HttpStatus.GATEWAY_TIMEOUT),
+                                               HttpData.ofUtf8("timeout!"),
+                                               HttpHeaders.of("trailer-exists", true));
+                    }
+                    if (cause instanceof IllegalArgumentException) {
+                        return HttpResponse.of(ResponseHeaders.of(HttpStatus.BAD_REQUEST),
+                                               HttpData.ofUtf8(cause.getMessage()),
+                                               HttpHeaders.of("trailer-exists", true));
+                    }
+                    if (cause instanceof UnsupportedOperationException) {
+                        return HttpResponse.of(ResponseHeaders.of(HttpStatus.NOT_IMPLEMENTED),
+                                               HttpData.ofUtf8(cause.getMessage()),
+                                               HttpHeaders.of("trailer-exists", true));
+                    }
+                    return null;
                 }
-                if (cause instanceof IllegalArgumentException) {
-                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.BAD_REQUEST),
-                                           HttpData.ofUtf8(cause.getMessage()),
-                                           HttpHeaders.of("trailer-exists", true));
+
+                @Override
+                public AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                                           HttpStatus status,
+                                                           @Nullable String description,
+                                                           @Nullable Throwable cause) {
+                    assertThat(config).isNotNull();
+                    return AggregatedHttpResponse.of(
+                            ResponseHeaders.builder(HttpStatus.BAD_REQUEST) // Always emit 400.
+                                           .contentType(MediaType.JSON)
+                                           .set("alice", "bob")
+                                           .build(),
+                            HttpData.ofUtf8("{\n  \"code\": %d,\n  \"message\": \"%s\"\n}",
+                                            status.code(), firstNonNull(description, "<unknown>")),
+                            HttpHeaders.of("charlie", "daniel"));
                 }
-                if (cause instanceof UnsupportedOperationException) {
-                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.NOT_IMPLEMENTED),
-                                           HttpData.ofUtf8(cause.getMessage()),
-                                           HttpHeaders.of("trailer-exists", true));
-                }
-                return null;
             });
         }
     };
@@ -107,25 +134,18 @@ class ExceptionHandlerTest {
         await().until(() -> ctx.log().whenComplete().isDone());
     }
 
-    @Test
-    void exceptionHandlerOrElse() {
-        final ExceptionHandler handler = new ExceptionHandler() {
-            @Nullable
-            @Override
-            public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
-                if (cause instanceof AnticipatedException) {
-                    return HttpResponse.of(200);
-                }
-                return null;
-            }
-        };
-
-        final ExceptionHandler orElse = handler.orElse((ctx, cause) -> HttpResponse.of(400));
-
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        assertThat(orElse.convert(ctx, new AnticipatedException()).aggregate().join().status())
-                .isSameAs(HttpStatus.OK);
-        assertThat(orElse.convert(ctx, new IllegalStateException()).aggregate().join().status())
-                .isSameAs(HttpStatus.BAD_REQUEST);
+    @ParameterizedTest
+    @CsvSource({ "H1C", "H2C" })
+    void protocolErrors(SessionProtocol protocol) {
+        final WebClient client = WebClient.of(server.uri(protocol));
+        final AggregatedHttpResponse res1 = client
+                .execute(HttpRequest.of(HttpMethod.CONNECT, "/"))
+                .aggregate()
+                .join();
+        assertThat(res1.status()).isSameAs(HttpStatus.BAD_REQUEST);
+        assertThat(res1.headers()).contains(Maps.immutableEntry(HttpHeaderNames.of("alice"), "bob"));
+        assertThatJson(res1.content().toStringUtf8()).isEqualTo(
+                "{ \"code\": 405, \"message\": \"Unsupported method\" }");
+        assertThat(res1.trailers()).contains(Maps.immutableEntry(HttpHeaderNames.of("charlie"), "daniel"));
     }
 }
