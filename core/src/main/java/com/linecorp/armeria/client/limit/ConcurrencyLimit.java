@@ -20,10 +20,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Integer.MAX_VALUE;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
+
+import io.netty.channel.EventLoop;
 
 /**
  * Limits the concurrency of client requests.
@@ -57,6 +60,7 @@ public interface ConcurrencyLimit {
     /**
      * Acquires a {@link SafeCloseable} that allows you to execute a job under the limit.
      * The {@link SafeCloseable} must be closed after the job is done:
+     *
      * <pre>{@code
      * ConcurrencyLimit limit = ...
      * limit.acquire(ctx).handle((permit, cause) -> {
@@ -65,8 +69,23 @@ public interface ConcurrencyLimit {
      *         ...
      *     }
      *     // Execute your job.
+     *     ...
+     *     // Release the permit.
      *     permit.close();
      * });
+     * }</pre>
+     *
+     * <P>Note that the returned {@link CompletableFuture} might be complete by an {@link EventLoop}.
+     * You should use other {@link Executor} if you want to run a long-running task in the callback:
+     *
+     * <pre>{@code
+     * Executor longRunningTaskExecutor = ...
+     * limit.acquire(ctx).handleAsync((permit, cause) -> {
+     *     // Execute the long-running task with the longRunningTaskExecutor.
+     *     ...
+     *     // Release the permit.
+     *     permit.close();
+     * }, longRunningTaskExecutor);
      * }</pre>
      */
     CompletableFuture<SafeCloseable> acquire(ClientRequestContext ctx);

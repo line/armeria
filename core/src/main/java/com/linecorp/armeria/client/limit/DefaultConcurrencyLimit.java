@@ -24,7 +24,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -33,6 +32,7 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -46,6 +46,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final long timeoutMillis;
 
     private final Queue<PendingAcquisition> pendingAcquisitions = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger numPendingAcquisitions = new AtomicInteger();
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
@@ -72,25 +73,24 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             return noLimitFuture;
         }
 
-        if (availablePermits() == 0 && pendingAcquisitions.size() >= maxPendingAcquisitions) {
-            // Do not strictly calculate whether it exceeds the maxPendingAcquisitions using synchronized block.
-            return CompletableFutures.exceptionallyCompletedFuture(ExceedingMaxPendingException.get());
+        if (pendingAcquisitions.isEmpty()) {
+            if (acquiredPermits.incrementAndGet() <= maxConcurrency) {
+                return CompletableFuture.completedFuture(new Permit());
+            }
+            acquiredPermits.decrementAndGet();
+        }
+
+        if (numPendingAcquisitions.incrementAndGet() > maxPendingAcquisitions) {
+            numPendingAcquisitions.decrementAndGet();
+            return CompletableFutures.exceptionallyCompletedFuture(
+                    UnprocessedRequestException.of(TooManyPendingAcquisitionsException.get()));
         }
 
         final CompletableFuture<SafeCloseable> future = new CompletableFuture<>();
-        final PendingAcquisition currentAcquire = new PendingAcquisition(future);
-        pendingAcquisitions.add(currentAcquire);
+        final PendingAcquisition pendingAcquisition = new PendingAcquisition(ctx, future);
+        pendingAcquisitions.add(pendingAcquisition);
+        // Call drain to check if there's available permits in the meantime.
         drain();
-
-        if (!currentAcquire.isRun() && timeoutMillis != 0) {
-            // Current acquire was not run. Schedule a timeout.
-            final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
-                    () -> future.completeExceptionally(
-                            UnprocessedRequestException.of(ConcurrencyLimitTimeoutException.get())),
-                    timeoutMillis, TimeUnit.MILLISECONDS);
-            currentAcquire.set(timeoutFuture);
-        }
-
         return future;
     }
 
@@ -115,30 +115,31 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
                 }
 
                 task.run();
+                numPendingAcquisitions.decrementAndGet();
             }
         }
     }
 
-    private final class PendingAcquisition extends AtomicReference<ScheduledFuture<?>> implements Runnable {
-
-        private static final long serialVersionUID = -7092037489640350376L;
+    private final class PendingAcquisition implements Runnable {
 
         private final CompletableFuture<SafeCloseable> future;
-        private boolean isRun;
+        @Nullable
+        private final ScheduledFuture<?> timeoutFuture;
 
-        PendingAcquisition(CompletableFuture<SafeCloseable> future) {
+        PendingAcquisition(ClientRequestContext ctx, CompletableFuture<SafeCloseable> future) {
             this.future = future;
-        }
-
-        boolean isRun() {
-            return isRun;
+            if (timeoutMillis != 0) {
+                timeoutFuture = ctx.eventLoop().withoutContext().schedule(
+                        () -> future.completeExceptionally(
+                                UnprocessedRequestException.of(ConcurrencyLimitTimeoutException.get())),
+                        timeoutMillis, TimeUnit.MILLISECONDS);
+            } else {
+                timeoutFuture = null;
+            }
         }
 
         @Override
         public void run() {
-            isRun = true;
-
-            final ScheduledFuture<?> timeoutFuture = get();
             if (timeoutFuture != null) {
                 if (timeoutFuture.isDone() || !timeoutFuture.cancel(false)) {
                     // Timeout task ran already or is determined to run.

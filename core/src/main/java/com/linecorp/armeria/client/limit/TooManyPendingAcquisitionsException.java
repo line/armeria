@@ -19,28 +19,28 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
- * A {@link RuntimeException} raised when the number of pending acquisitions exceed the
+ * A {@link RuntimeException} raised when the number of pending acquisitions exceeds the
  * {@link ConcurrencyLimitBuilder#maxPendingAcquisitions(int)}.
  */
-public final class ExceedingMaxPendingException extends RuntimeException {
+public final class TooManyPendingAcquisitionsException extends RuntimeException {
 
     private static final long serialVersionUID = 4362262171142323323L;
 
-    private static final ExceedingMaxPendingException INSTANCE =
-            new ExceedingMaxPendingException(false);
+    private static final TooManyPendingAcquisitionsException INSTANCE =
+            new TooManyPendingAcquisitionsException(false);
 
     /**
-     * Returns a singleton {@link ExceedingMaxPendingException} or newly-created exception
+     * Returns a singleton {@link TooManyPendingAcquisitionsException} or newly-created exception
      * depending on the result of {@link Sampler#isSampled(Object)} of {@link Flags#verboseExceptionSampler()}.
      */
-    public static ExceedingMaxPendingException get() {
-        return Flags.verboseExceptionSampler().isSampled(ExceedingMaxPendingException.class) ?
-               new ExceedingMaxPendingException() : INSTANCE;
+    public static TooManyPendingAcquisitionsException get() {
+        return Flags.verboseExceptionSampler().isSampled(TooManyPendingAcquisitionsException.class) ?
+               new TooManyPendingAcquisitionsException() : INSTANCE;
     }
 
-    private ExceedingMaxPendingException() {}
+    private TooManyPendingAcquisitionsException() {}
 
-    private ExceedingMaxPendingException(@SuppressWarnings("unused") boolean dummy) {
+    private TooManyPendingAcquisitionsException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }

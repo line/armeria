@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -34,35 +35,37 @@ class ConcurrencyLimitTest {
 
     @Test
     void testConcurrencyLimit() throws InterruptedException {
-        final DefaultConcurrencyLimit semaphore = new DefaultConcurrencyLimit(ctx -> true, 2, 1, 100000);
-        assertThat(semaphore.availablePermits()).isEqualTo(2);
+        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 2, 1, 100000);
+        assertThat(limit.availablePermits()).isEqualTo(2);
 
-        final SafeCloseable acquired1 = semaphore.acquire(ctx).join();
-        assertThat(semaphore.acquiredPermits()).isEqualTo(1);
-        assertThat(semaphore.availablePermits()).isEqualTo(1);
+        final SafeCloseable acquired1 = limit.acquire(ctx).join();
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(1);
 
-        final SafeCloseable acquired2 = semaphore.acquire(ctx).join();
-        assertThat(semaphore.acquiredPermits()).isEqualTo(2);
-        assertThat(semaphore.availablePermits()).isEqualTo(0);
+        final SafeCloseable acquired2 = limit.acquire(ctx).join();
+        assertThat(limit.acquiredPermits()).isEqualTo(2);
+        assertThat(limit.availablePermits()).isEqualTo(0);
 
-        final CompletableFuture<SafeCloseable> acquired3Future = semaphore.acquire(ctx);
+        final CompletableFuture<SafeCloseable> acquired3Future = limit.acquire(ctx);
         Thread.sleep(200);
         // Parameters are still the same.
         assertThat(acquired3Future.isDone()).isFalse();
-        assertThat(semaphore.acquiredPermits()).isEqualTo(2);
-        assertThat(semaphore.availablePermits()).isEqualTo(0);
+        assertThat(limit.acquiredPermits()).isEqualTo(2);
+        assertThat(limit.availablePermits()).isEqualTo(0);
 
-        assertThatThrownBy(() -> semaphore.acquire(ctx).join())
-                .hasCauseInstanceOf(ExceedingMaxPendingException.class);
+        assertThatThrownBy(() -> limit.acquire(ctx).join())
+                .getCause()
+                .isExactlyInstanceOf(UnprocessedRequestException.class)
+                .hasCauseInstanceOf(TooManyPendingAcquisitionsException.class);
 
         acquired1.close();
         // acquired3Future is done now.
         acquired3Future.join();
-        assertThat(semaphore.acquiredPermits()).isEqualTo(2);
-        assertThat(semaphore.availablePermits()).isEqualTo(0);
+        assertThat(limit.acquiredPermits()).isEqualTo(2);
+        assertThat(limit.availablePermits()).isEqualTo(0);
 
         acquired2.close();
-        assertThat(semaphore.acquiredPermits()).isEqualTo(1);
-        assertThat(semaphore.availablePermits()).isEqualTo(1);
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(1);
     }
 }

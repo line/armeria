@@ -73,11 +73,11 @@ public final class ConcurrencyLimitBuilder {
     /**
      * Sets the maximum number of pending acquisition. The {@link CompletableFuture} returned by
      * {@link ConcurrencyLimit#acquire(ClientRequestContext)} will be exceptionally complete with an
-     * {@link ExceedingMaxPendingException} if the pending exceeds this value.
+     * {@link TooManyPendingAcquisitionsException} if the pending exceeds this value.
      */
     public ConcurrencyLimitBuilder maxPendingAcquisitions(int maxPendingAcquisitions) {
         checkArgument(maxPendingAcquisitions >= 0,
-                      "maxPendingAcquisitions: %s (expected: >=0 )", maxPendingAcquisitions);
+                      "maxPendingAcquisitions: %s (expected: >= 0)", maxPendingAcquisitions);
         this.maxPendingAcquisitions = maxPendingAcquisitions;
         return this;
     }
