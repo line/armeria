@@ -49,7 +49,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
             ServiceRequestContext.current()
         }
         // Make sure that current thread is request context aware
-        ServiceRequestContext.current()
+        ServiceRequestContext.current().addAdditionalResponseHeader("foo", "bar")
         buildReply(toMessage(request.name))
     }
 
