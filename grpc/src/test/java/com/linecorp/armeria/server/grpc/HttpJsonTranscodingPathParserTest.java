@@ -37,7 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
 
-public class HttpJsonTranscodingPathParserTest {
+class HttpJsonTranscodingPathParserTest {
 
     @ParameterizedTest
     @ArgumentsSource(PathArgumentsProvider.class)
@@ -51,11 +51,12 @@ public class HttpJsonTranscodingPathParserTest {
 
         final String generatedPath;
         if (typeAnswer == PathMappingType.PARAMETERIZED) {
-            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments);
+            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments, true);
         } else {
-            assertThatThrownBy(() -> HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments))
+            assertThatThrownBy(() -> HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments,
+                                                                                                   true))
                     .isInstanceOf(UnsupportedOperationException.class);
-            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asGlobPath(segments);
+            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asGlobPath(segments, true);
         }
         assertThat(generatedPath).isEqualTo(generatedPathAnswer);
 
@@ -136,6 +137,6 @@ public class HttpJsonTranscodingPathParserTest {
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse(""))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse(null))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(NullPointerException.class);
     }
 }

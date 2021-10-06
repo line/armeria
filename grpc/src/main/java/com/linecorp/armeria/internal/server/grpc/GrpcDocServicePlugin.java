@@ -120,7 +120,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     static final TypeSignature UNKNOWN = TypeSignature.ofBase("unknown");
 
     @VisibleForTesting
-    public static final String HTTP_SERVICE_SUFFIX = "+HTTP";
+    public static final String HTTP_SERVICE_SUFFIX = "_HTTP";
 
     private static final JsonFormat.Printer defaultExamplePrinter =
             JsonFormat.printer().includingDefaultValueFields();
@@ -249,7 +249,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
         final ImmutableList.Builder<MethodInfo> methodInfos = ImmutableList.builder();
         byMethodName.asMap().forEach((name, httpEndpoints) -> {
-            final HttpEndpoint firstEndpoint = httpEndpoints.stream().findFirst().get();
+            final List<HttpEndpoint> sortedEndpoints =
+                    httpEndpoints.stream().sorted(Comparator.comparingInt(ep -> ep.spec.order()))
+                                 .collect(toImmutableList());
+
+            final HttpEndpoint firstEndpoint = sortedEndpoints.get(0);
             final HttpEndpointSpecification firstSpec = firstEndpoint.spec();
 
             final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
@@ -287,7 +291,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             });
 
             final List<EndpointInfo> endpointInfos =
-                    httpEndpoints.stream().map(httpEndpoint -> EndpointInfo
+                    sortedEndpoints.stream().map(httpEndpoint -> EndpointInfo
                             .builder(httpEndpoint.config().virtualHost().hostnamePattern(),
                                      httpEndpoint.spec().route().patternString())
                             // DocService client works only if the media type equals to
@@ -296,11 +300,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                             .build()).collect(toImmutableList());
 
             final List<String> examplePaths =
-                    httpEndpoints.stream().map(httpEndpoint -> httpEndpoint.spec().route().patternString())
-                                 .collect(toImmutableList());
+                    sortedEndpoints.stream().map(httpEndpoint -> httpEndpoint.spec().route().patternString())
+                                   .collect(toImmutableList());
 
             final List<String> exampleQueries =
-                    httpEndpoints.stream().map(httpEndpoint -> {
+                    sortedEndpoints.stream().map(httpEndpoint -> {
                         final HttpEndpointSpecification spec = httpEndpoint.spec();
                         return spec.parameters().entrySet().stream()
                                    // Exclude path parameters.
@@ -308,7 +312,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                    // Join all remaining parameters as a single query string.
                                    .map(p -> p.getKey() + '=' + p.getValue().type().name())
                                    .collect(Collectors.joining("&"));
-                    }).collect(toImmutableList());
+                    }).filter(queries -> !queries.isEmpty()).collect(toImmutableList());
 
             methodInfos.add(new MethodInfo(
                     // Order 0 is primary.

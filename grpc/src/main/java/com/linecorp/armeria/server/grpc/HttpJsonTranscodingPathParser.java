@@ -223,6 +223,7 @@ final class HttpJsonTranscodingPathParser {
         }
 
         char read() {
+            checkArgument(hasNext(), "path: %s (out of range at index %s)", path(), index());
             return path.charAt(index++);
         }
 
@@ -429,8 +430,8 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String segmentString(PathMappingType type) {
-            return type == PathMappingType.PARAMETERIZED ? Stringifier.asParameterizedPath(valueSegments)
-                                                         : Stringifier.asGlobPath(valueSegments);
+            return type == PathMappingType.PARAMETERIZED ? Stringifier.asParameterizedPath(valueSegments, false)
+                                                         : Stringifier.asGlobPath(valueSegments, false);
         }
 
         @Override
@@ -451,19 +452,23 @@ final class HttpJsonTranscodingPathParser {
         /**
          * Returns a parameterized path string of the parsed {@link PathSegment}s.
          */
-        static String asParameterizedPath(List<PathSegment> segments) {
+        static String asParameterizedPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            return segments.stream().map(segment -> segment.segmentString(PathMappingType.PARAMETERIZED))
-                           .collect(Collectors.joining("/"));
+            final String path = segments.stream()
+                                        .map(segment -> segment.segmentString(PathMappingType.PARAMETERIZED))
+                                        .collect(Collectors.joining("/"));
+            return withLeadingSlash ? '/' + path : path;
         }
 
         /**
          * Returns a glob path string of the parsed {@link PathSegment}s.
          */
-        static String asGlobPath(List<PathSegment> segments) {
+        static String asGlobPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            return segments.stream().map(segment -> segment.segmentString(PathMappingType.GLOB))
-                           .collect(Collectors.joining("/"));
+            final String path = segments.stream()
+                                        .map(segment -> segment.segmentString(PathMappingType.GLOB))
+                                        .collect(Collectors.joining("/"));
+            return withLeadingSlash ? '/' + path : path;
         }
 
         private Stringifier() {}

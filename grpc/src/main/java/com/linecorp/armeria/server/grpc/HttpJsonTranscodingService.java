@@ -249,9 +249,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 PathMappingType.PARAMETERIZED : PathMappingType.GLOB;
 
         if (pathMappingType == PathMappingType.PARAMETERIZED) {
-            builder.path(Stringifier.asParameterizedPath(segments));
+            builder.path(Stringifier.asParameterizedPath(segments, true));
         } else {
-            builder.glob(Stringifier.asGlobPath(segments));
+            builder.glob(Stringifier.asGlobPath(segments, true));
         }
         return new SimpleImmutableEntry<>(builder.build(), PathVariable.from(segments, pathMappingType));
     }

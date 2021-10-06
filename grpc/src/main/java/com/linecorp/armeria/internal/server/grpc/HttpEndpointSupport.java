@@ -34,6 +34,5 @@ public interface HttpEndpointSupport {
      * Returns {@code null} if an HTTP API is not provided.
      */
     @Nullable
-    @UnstableApi
     HttpEndpointSpecification httpEndpointSpecification(Route route);
 }
