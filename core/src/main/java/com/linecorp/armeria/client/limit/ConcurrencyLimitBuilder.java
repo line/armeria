@@ -25,12 +25,19 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * Builds a {@link ConcurrencyLimit}.
  */
 @UnstableApi
 public final class ConcurrencyLimitBuilder {
+
+    static final CompletableFuture<SafeCloseable> noLimitFuture =
+            CompletableFuture.completedFuture(() -> { /* no-op */ });
+
+    private static ConcurrencyLimit noLimit = ctx -> noLimitFuture;
+
     static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
     static final int DEFAULT_MAX_PENDING_ACQUIRES = Integer.MAX_VALUE;
 
@@ -87,6 +94,9 @@ public final class ConcurrencyLimitBuilder {
      * Returns a newly-created {@link ConcurrencyLimit} based on the properties of this builder.
      */
     public ConcurrencyLimit build() {
+        if (maxConcurrency == 0) {
+            return noLimit;
+        }
         return new DefaultConcurrencyLimit(predicate, maxConcurrency, maxPendingAcquisitions, timeoutMillis);
     }
 }

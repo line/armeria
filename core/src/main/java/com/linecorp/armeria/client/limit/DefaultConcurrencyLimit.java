@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static com.linecorp.armeria.client.limit.ConcurrencyLimitBuilder.noLimitFuture;
+
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -37,9 +39,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * Concurrency settings that limits the concurrent number of active requests.
  */
 final class DefaultConcurrencyLimit implements ConcurrencyLimit {
-
-    private static final CompletableFuture<SafeCloseable> noLimit =
-            CompletableFuture.completedFuture(() -> { /* no-op */ });
 
     private final Predicate<? super ClientRequestContext> predicate;
     private final int maxConcurrency;
@@ -69,11 +68,8 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     @Override
     public CompletableFuture<SafeCloseable> acquire(ClientRequestContext ctx) {
-        if (maxConcurrency == 0) {
-            return noLimit;
-        }
         if (!predicate.test(ctx)) {
-            return noLimit;
+            return noLimitFuture;
         }
 
         if (availablePermits() == 0 && pendingAcquisitions.size() >= maxPendingAcquisitions) {
