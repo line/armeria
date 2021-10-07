@@ -18,14 +18,18 @@ package com.linecorp.armeria.client.limit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 class ConcurrencyLimitTest {
@@ -47,8 +51,8 @@ class ConcurrencyLimitTest {
 
         final CompletableFuture<SafeCloseable> acquired3Future = limit.acquire(ctx);
         Thread.sleep(200);
-        // Parameters are still the same.
         assertThat(acquired3Future.isDone()).isFalse();
+        // Parameters are still the same.
         assertThat(limit.acquiredPermits()).isEqualTo(2);
         assertThat(limit.availablePermits()).isEqualTo(0);
 
@@ -64,5 +68,82 @@ class ConcurrencyLimitTest {
         acquired2.close();
         assertThat(limit.acquiredPermits()).isEqualTo(1);
         assertThat(limit.availablePermits()).isEqualTo(1);
+    }
+
+    @Test
+    void concurrencyLimitTimeout() throws InterruptedException {
+        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 1, 1, 500);
+        assertThat(limit.availablePermits()).isEqualTo(1);
+
+        final SafeCloseable acquired1 = limit.acquire(ctx).join();
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+
+        final CompletableFuture<SafeCloseable> acquired2Future = limit.acquire(ctx);
+        Thread.sleep(100);
+        assertThat(acquired2Future.isDone()).isFalse();
+        // Parameters are still the same.
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+
+        await().atMost(1, TimeUnit.SECONDS)
+               .untilAsserted(() -> assertThatThrownBy(
+                       acquired2Future::join).hasCauseInstanceOf(ConcurrencyLimitTimeoutException.class));
+    }
+
+    @Test
+    void concurrencyLimitTimeoutCallback() throws InterruptedException {
+        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 1, 3, 10000);
+        assertThat(limit.availablePermits()).isEqualTo(1);
+
+        final SafeCloseable acquired1 = limit.acquire(ctx).join();
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ClientRequestContext ctx4 = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                              .eventLoop(ctx2.eventLoop().withoutContext())
+                                                              .build();
+
+        final CompletableFuture<SafeCloseable> acquired2Future = limit.acquire(ctx2);
+        final CompletableFuture<SafeCloseable> acquired3Future = limit.acquire(ctx3);
+        final CompletableFuture<SafeCloseable> acquired4Future = limit.acquire(ctx4);
+        Thread.sleep(100);
+        assertThat(acquired2Future.isDone()).isFalse();
+        assertThat(acquired3Future.isDone()).isFalse();
+        assertThat(acquired4Future.isDone()).isFalse();
+        // Parameters are still the same.
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+
+        final AtomicInteger counter = new AtomicInteger();
+        addCallbackToCheckCurrentCtx(ctx2, acquired2Future, counter);
+        addCallbackToCheckCurrentCtx(ctx3, acquired3Future, counter);
+        addCallbackToCheckCurrentCtx(ctx4, acquired4Future, counter);
+
+        acquired1.close(); // This triggers to call the callback of acquired2Future.
+        await().until(acquired2Future::isDone);
+        assertThat(acquired3Future.isDone()).isFalse();
+        assertThat(acquired4Future.isDone()).isFalse();
+
+        acquired2Future.join().close(); // This triggers to call the callback of acquired3Future
+        await().until(acquired3Future::isDone);
+        assertThat(acquired4Future.isDone()).isFalse();
+        // Use the eventLoop of ctx3 to check
+        // - the callback of acquired4Future is executed by the same eventLoop that has the different ctx(ctx4)
+        ctx3.eventLoop().execute(() -> acquired3Future.join().close());
+
+        await().until(() -> counter.get() == 3);
+    }
+
+    private static void addCallbackToCheckCurrentCtx(ClientRequestContext ctx2,
+                                                     CompletableFuture<SafeCloseable> acquiredFuture,
+                                                     AtomicInteger counter) {
+        acquiredFuture.thenRun(() -> {
+            if (RequestContext.currentOrNull() == ctx2) {
+                counter.incrementAndGet();
+            }
+        });
     }
 }
