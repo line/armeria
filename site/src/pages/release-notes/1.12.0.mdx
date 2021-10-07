@@ -46,7 +46,7 @@ date: 2021-10-05
                                                  HttpStatus status,
                                                  @Nullable String description,
                                                  @Nullable Throwable cause) {
-          // Convert the error raised using an HttpStatusException.
+          // Convert the given error status and cause.
           ...
       }
   })
@@ -55,16 +55,17 @@ date: 2021-10-05
   ```java
   ConcurrencyLimit limit = ConcurrencyLimit.of(64); // Can send 64 requests concurrently.
 
-  client1 = Clients
+  WebClient client1 = WebClient
     .builder(...)
     .decorator(ConcurrencyLimitingClient.newDecorator(limit))
-    .build(...)
+    .build(...);
 
-  client2 = Clients
+  WebClient client2 = WebClient
     .builder(...)
     .decorator(ConcurrencyLimitingClient.newDecorator(limit))
-    ... different options ...
-    .build(...)
+    // different options
+    ...
+    .build(...);
   ```
 - You can now allow all headers in `Access-Control-Request-Headers` from a
   [preflight request](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) using
@@ -260,7 +261,6 @@ date: 2021-10-05
 - Bucket4j 6.2.0 → 6.3.0
 - Dropwizard 2.0.24 → 2.0.25
 - Dropwizard metrics 4.2.3 → 4.2.4
-- fastutil 8.5.4 → 8.5.6
 - GraphQL-Java 17.1 → 17.3
 - gRPC-Java 1.40.1 → 1.41.0
 - Jackson 2.12.4 → 2.13.0
