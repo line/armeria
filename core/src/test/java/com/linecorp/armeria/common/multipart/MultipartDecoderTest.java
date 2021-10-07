@@ -52,8 +52,8 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -547,7 +547,7 @@ public class MultipartDecoderTest {
         await().untilAtomic(counter, is(0));
         // TODO the error type is weird?
         assertThatThrownBy(testSubscriber.completionFuture::join)
-                .hasRootCauseInstanceOf(AbortedStreamException.class);
+                .hasRootCauseInstanceOf(ClosedStreamException.class);
     }
 
     /**
@@ -590,13 +590,11 @@ public class MultipartDecoderTest {
 
         @Override
         public void onNext(BodyPart item) {
-            System.out.println(">>>>>>>>>>>>.onNext");
             if (consumer == null) {
                 return;
             }
             consumer.accept(subscription, item);
             if (subscriberType == SubscriberType.ONE_BY_ONE) {
-                System.out.println(">>>>>>>>>>>>>request next");
                 subscription.request(1);
             }
         }

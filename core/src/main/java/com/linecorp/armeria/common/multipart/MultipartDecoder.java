@@ -63,7 +63,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     @Nullable
     private EventExecutor executor;
     @Nullable
-    private BodyPartPublisher bodyPartPublisher;
+    private StreamMessage<? extends HttpData> currentExposedBodyPartPublisher;
     @Nullable
     private Subscription subscription;
     // To track how many body part we need. Always keep DecodedHttpStreamMessage's demand less or equal than 1
@@ -168,8 +168,8 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     private void abort0() {
         decoded.abort();
-        if (bodyPartPublisher != null) {
-            bodyPartPublisher.abort();
+        if (currentExposedBodyPartPublisher != null) {
+            currentExposedBodyPartPublisher.abort();
         }
     }
 
@@ -185,8 +185,8 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     private void abort0(Throwable cause) {
         decoded.abort();
-        if (bodyPartPublisher != null) {
-            bodyPartPublisher.abort();
+        if (currentExposedBodyPartPublisher != null) {
+            currentExposedBodyPartPublisher.abort();
         }
     }
 
@@ -215,7 +215,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
                 }
                 if (oldDemand == 0) {
                     // We want first body publisher
-                    if (bodyPartPublisher == null) {
+                    if (currentExposedBodyPartPublisher == null) {
                         //This will trigger DecodedHttpStreamMessage's upstream.
                         subscription.request(1);
                     } else {
@@ -239,8 +239,8 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
                 }
                 cancelled = true;
                 subscription.cancel();
-                if (bodyPartPublisher != null) {
-                    bodyPartPublisher.abort(CancelledSubscriptionException.get());
+                if (currentExposedBodyPartPublisher != null) {
+                    currentExposedBodyPartPublisher.abort(CancelledSubscriptionException.get());
                 }
             }
         });
@@ -250,29 +250,12 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     public void onNext(BodyPart bodyPart) {
         assert subscriber != null;
         demandOfMultipart--;
-        subscriber.onNext(bodyPart);
-    }
 
-    @Override
-    public void onError(Throwable t) {
-        assert subscriber != null;
-        subscriber.onError(t);
-        if (bodyPartPublisher != null) {
-            bodyPartPublisher.abort(t);
-        }
-    }
-
-    @Override
-    public void onComplete() {
-        assert subscriber != null;
-        subscriber.onComplete();
-    }
-
-    BodyPartPublisher onBodyPartBegin() {
-        bodyPartPublisher = new BodyPartPublisher();
+        currentExposedBodyPartPublisher = bodyPart.content();
+        // We only publish one bodyPart one time.
         // Next BodyPart must wait the current BodyPart close and fully consumed.
-        bodyPartPublisher.whenComplete().handleAsync((unused, throwable) -> {
-            bodyPartPublisher = null;
+        currentExposedBodyPartPublisher.whenComplete().handleAsync((unused, throwable) -> {
+            currentExposedBodyPartPublisher = null;
             if (throwable != null) {
                 // Propagate to Multipart Subscriber
                 // But now this comes after MultipartDecoder's onError due to MimeParser can't write any data
@@ -288,7 +271,26 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             }
             return null;
         }, executor);
-        return bodyPartPublisher;
+        subscriber.onNext(bodyPart);
+    }
+
+    @Override
+    public void onError(Throwable t) {
+        assert subscriber != null;
+        subscriber.onError(t);
+        if (currentExposedBodyPartPublisher != null) {
+            currentExposedBodyPartPublisher.abort(t);
+        }
+    }
+
+    @Override
+    public void onComplete() {
+        assert subscriber != null;
+        subscriber.onComplete();
+    }
+
+    BodyPartPublisher onBodyPartBegin() {
+        return new BodyPartPublisher();
     }
 
     /**
@@ -305,15 +307,12 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     private void requestBodyPartData0() {
         // No more upstream request and bodyPartPublisher still needs data
-        if (bodyPartPublisher != null && bodyPartPublisher.needMoreData() && upstream.demand() == 0) {
-            // TODO bodyPartPublisher.demand() is modified by bodypart subscriber's thread. Need to be changed.
+        if (currentExposedBodyPartPublisher != null && upstream.demand() == 0) {
             decoded.askUpstreamForElement();
         }
     }
 
     class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
-        private long remain = 0;
-
         @Override
         protected void onRequest(long n) {
             whenConsumed().thenRun(() -> {
@@ -321,29 +320,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
                     requestBodyPartData();
                 }
             });
-        }
-
-        @Override
-        protected void onRemoval(HttpData obj) {
-            remain--;
-            super.onRemoval(obj);
-        }
-
-        @Override
-        public boolean tryWrite(HttpData obj) {
-            final boolean written = super.tryWrite(obj);
-            if (written) {
-                remain++;
-            }
-            return written;
-        }
-
-        /**
-         * TODO
-         * notifySubscriber(onRemoval) and tryWrite may run in different thread, so this count is not accurate.
-         */
-        boolean needMoreData() {
-            return remain == 0 && demand() > 0;
         }
     }
 }
