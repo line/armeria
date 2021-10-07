@@ -140,6 +140,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * @see VirtualHostBuilder
  */
 public final class ServerBuilder {
+    private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
@@ -1060,6 +1061,9 @@ public final class ServerBuilder {
      * Binds the specified {@link HttpService} under the specified directory of the default {@link VirtualHost}.
      */
     public ServerBuilder serviceUnder(String pathPrefix, HttpService service) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        warnIfServiceHasMultipleRoutes(pathPrefix, service);
         return service(Route.builder().pathPrefix(pathPrefix).build(), service);
     }
 
@@ -1079,6 +1083,9 @@ public final class ServerBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public ServerBuilder service(String pathPattern, HttpService service) {
+        requireNonNull(pathPattern, "pathPattern");
+        requireNonNull(service, "service");
+        warnIfServiceHasMultipleRoutes(pathPattern, service);
         return route().path(pathPattern).build(service);
     }
 
@@ -1087,6 +1094,9 @@ public final class ServerBuilder {
      * {@link VirtualHost}.
      */
     public ServerBuilder service(Route route, HttpService service) {
+        requireNonNull(route, "route");
+        requireNonNull(service, "service");
+        warnIfServiceHasMultipleRoutes(route.patternString(), service);
         return route().addRoute(route).build(service);
     }
 
@@ -1851,6 +1861,16 @@ public final class ServerBuilder {
             }
         }
         return null;
+    }
+
+    private static void warnIfServiceHasMultipleRoutes(String pathPrefix, HttpService service) {
+        if (service instanceof HttpServiceWithRoutes) {
+            if (((HttpServiceWithRoutes) service).routes().size() > 1) {
+                logger.warn("The service that you are trying to add with 'serviceUnder' has multiple routes, " +
+                            "but its routes will be ignored and it will be served under '{}': service={}",
+                            pathPrefix, service);
+            }
+        }
     }
 
     @Override

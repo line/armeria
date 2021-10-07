@@ -72,6 +72,7 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
+import io.netty.util.AttributeKey;
 
 /**
  * The framed {@link GrpcService} implementation.
@@ -79,6 +80,9 @@ import io.grpc.Status;
 final class FramedGrpcService extends AbstractHttpService implements GrpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
+
+    static final AttributeKey<ServerMethodDefinition<?, ?>> RESOLVED_GRPC_METHOD =
+            AttributeKey.valueOf(FramedGrpcService.class, "RESOLVED_GRPC_METHOD");
 
     private final HandlerRegistry registry;
     private final Set<Route> routes;
@@ -99,6 +103,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
 
     private int maxInboundMessageSizeBytes;
+    private boolean lookupMethodFromAttribute;
 
     FramedGrpcService(HandlerRegistry registry,
                       Set<Route> routes,
@@ -112,7 +117,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
-                      int maxInboundMessageSizeBytes) {
+                      int maxInboundMessageSizeBytes,
+                      boolean lookupMethodFromAttribute) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
@@ -134,6 +140,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -165,21 +172,24 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
-        final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        if (methodName == null) {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                   MediaType.PLAIN_TEXT_UTF_8,
-                                   "Invalid path.");
-        }
-
-        final ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
+        ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
         if (method == null) {
-            return HttpResponse.of(
-                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
-                            ctx,
-                            defaultHeaders.get(serializationFormat).toBuilder(),
-                            Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
-                            new Metadata()));
+            final String methodName = GrpcRequestUtil.determineMethod(ctx);
+            if (methodName == null) {
+                return HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                       MediaType.PLAIN_TEXT_UTF_8,
+                                       "Invalid path.");
+            }
+
+            method = registry.lookupMethod(methodName);
+            if (method == null) {
+                return HttpResponse.of(
+                        (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                                ctx,
+                                defaultHeaders.get(serializationFormat).toBuilder(),
+                                Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
+                                new Metadata()));
+            }
         }
 
         if (useClientTimeoutHeader) {
