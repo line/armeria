@@ -103,6 +103,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
 
     private int maxInboundMessageSizeBytes;
+    private boolean lookupMethodFromAttribute;
 
     FramedGrpcService(HandlerRegistry registry,
                       Set<Route> routes,
@@ -116,7 +117,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
-                      int maxInboundMessageSizeBytes) {
+                      int maxInboundMessageSizeBytes,
+                      boolean lookupMethodFromAttribute) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
@@ -138,6 +140,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -169,7 +172,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
-        ServerMethodDefinition<?, ?> method = ctx.attr(RESOLVED_GRPC_METHOD);
+        ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
         if (method == null) {
             final String methodName = GrpcRequestUtil.determineMethod(ctx);
             if (methodName == null) {

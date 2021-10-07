@@ -751,7 +751,8 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                maxInboundMessageSizeBytes);
+                maxInboundMessageSizeBytes,
+                enableUnframedRequests || enableHttpJsonTranscoding);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,

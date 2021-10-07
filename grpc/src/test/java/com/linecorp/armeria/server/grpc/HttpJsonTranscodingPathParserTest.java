@@ -124,6 +124,12 @@ class HttpJsonTranscodingPathParserTest {
 
     @Test
     void shouldThrowExceptionIfInvalidPathSpecified() {
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var=**/x}"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var=**}/"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var=**}/{var2=*}"))
+                .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var="))

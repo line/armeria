@@ -57,7 +57,7 @@ final class HttpJsonTranscodingPathParser {
 
         final ImmutableList.Builder<PathSegment> segments = ImmutableList.builder();
         // Parse 'Segments' until the start symbol of 'Verb' part.
-        // Basically, 'parse*' methods stop reading path characters if they see a delimiters. Also, they don't
+        // Basically, 'parse*' methods stop reading path characters if they see a delimiter. Also, they don't
         // consume the delimiter so that a caller can check the delimiter.
         segments.addAll(parseSegments(context, new Delimiters(':')));
         if (context.hasNext()) {
@@ -84,7 +84,8 @@ final class HttpJsonTranscodingPathParser {
         final Delimiters segmentDelimiters = delimiters.withMoreCharacter('/');
         final ImmutableList.Builder<PathSegment> segments = ImmutableList.builder();
         while (context.hasNext()) {
-            segments.add(parseSegment(context, segmentDelimiters));
+            final PathSegment parsedSegment = parseSegment(context, segmentDelimiters);
+            segments.add(parsedSegment);
 
             if (!context.hasNext()) {
                 return segments.build();
@@ -96,11 +97,29 @@ final class HttpJsonTranscodingPathParser {
                 return segments.build();
             }
 
+            // Check whether the last parsed segment has '**' literal. If so, there must be
+            // no more segments.
+            checkArgument(!containsDeepWildcardLiteral(parsedSegment),
+                          "path: %s (must be no more segments after '**' literal at index %s)",
+                          context.path(), context.index());
+
             // Consume the start symbol '/' of the next segment.
             checkArgument(context.read() == '/',
                           "path: %s (invalid segments part at index %s)", context.path(), context.index());
         }
         return segments.build();
+    }
+
+    private static boolean containsDeepWildcardLiteral(PathSegment segment) {
+        if (segment instanceof DeepWildcardPathSegment) {
+            return true;
+        }
+        if (segment instanceof VariablePathSegment) {
+            return ((VariablePathSegment) segment)
+                    .valueSegments().stream()
+                    .anyMatch(HttpJsonTranscodingPathParser::containsDeepWildcardLiteral);
+        }
+        return false;
     }
 
     /**

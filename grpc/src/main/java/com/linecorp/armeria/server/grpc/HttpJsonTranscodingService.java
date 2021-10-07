@@ -107,6 +107,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
      */
     static GrpcService of(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         requireNonNull(delegate, "delegate");
+        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
 
         final ImmutableMap.Builder<Route, TranscodingSpec> builder = ImmutableMap.builder();
 
