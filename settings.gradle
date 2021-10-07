@@ -122,7 +122,6 @@ includeWithFlags ':examples:graphql-sangria-example',              'java', 'scal
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
 includeWithFlags ':examples:grpc-example',                         'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
-includeWithFlags ':examples:grpc-http',                            'java'
 includeWithFlags ':examples:grpc-kotlin',                          'java', 'kotlin-grpc', 'kotlin'
 includeWithFlags ':examples:grpc-scala',                           'java', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':examples:grpc-reactor',                         'java', 'reactor-grpc'
