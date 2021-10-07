@@ -55,7 +55,11 @@ public class MultipartDecoderTckTest extends StreamMessageVerification<BodyPart>
     @Override
     public StreamMessage<BodyPart> createPublisher(final long l) {
         return new MultipartDecoder(StreamMessage.of(upstream(l)), "boundary",
-                                    ByteBufAllocator.DEFAULT);
+                                    ByteBufAllocator.DEFAULT)
+                .map(bodyPart -> {
+                    bodyPart.content().collect();
+                    return bodyPart;
+                });
     }
 
     @Override
