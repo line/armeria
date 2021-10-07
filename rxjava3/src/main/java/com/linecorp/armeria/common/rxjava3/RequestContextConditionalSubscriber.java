@@ -19,9 +19,9 @@ package com.linecorp.armeria.common.rxjava3;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
-import io.reactivex.rxjava3.internal.fuseable.QueueSubscription;
 import io.reactivex.rxjava3.internal.subscribers.BasicFuseableConditionalSubscriber;
+import io.reactivex.rxjava3.operators.ConditionalSubscriber;
+import io.reactivex.rxjava3.operators.QueueSubscription;
 
 final class RequestContextConditionalSubscriber<T> extends BasicFuseableConditionalSubscriber<T, T> {
 
