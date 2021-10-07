@@ -92,7 +92,7 @@ class ConcurrencyLimitTest {
     }
 
     @Test
-    void concurrencyLimitTimeoutCallback() throws InterruptedException {
+    void acquireCallbackIsExecutedWithTheMatchingContext() throws InterruptedException {
         final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 1, 3, 10000);
         assertThat(limit.availablePermits()).isEqualTo(1);
 
