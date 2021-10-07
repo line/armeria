@@ -2,6 +2,22 @@
 date: 2021-10-05
 ---
 
+## 🌸 Highlight
+
+- You can now enable [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding)
+  in your <type://GrpcService>. #3786
+  ```java
+  GrpcService.builder()
+             .addService(helloService)
+             .enableHttpJsonTranscoding(true) // 👈👈👈
+             .build();
+  ```
+  <Tip>
+
+    HTTP/JSON transcoding is currently experimental. We're looking forward to your feedback.
+
+  </Tip>
+
 ## 🌟 New features
 
 - You can now bind a virtual host to a specific port. #3798 #3833
