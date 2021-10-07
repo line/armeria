@@ -244,12 +244,23 @@ final class MimeParser {
                         final ByteBuf bodyContent = readBody();
                         if (boundaryStart == -1 || bodyContent == NEED_MORE) {
                             if (bodyContent == NEED_MORE) {
+                                multipartDecoder.requestBodyPartData();
                                 return;
                             }
                         } else {
                             startOfLine = false;
                         }
                         bodyPartPublisher.write(HttpData.wrap(bodyContent));
+                        if (state == State.BODY) {
+                            bodyPartPublisher.whenConsumed().thenRun(() -> {
+                                // Needs additional conditions such as:
+                                // - bodyPartPublisher reference is not changed
+                                // - state is still BODY.
+                                if (bodyPartPublisher.demand() > 0) {
+                                    multipartDecoder.requestBodyPartData();
+                                }
+                            });
+                        }
                         break;
 
                     case END_PART:
@@ -259,7 +270,6 @@ final class MimeParser {
                         } else {
                             state = State.START_PART;
                         }
-
                         bodyPartPublisher.close();
                         bodyPartPublisher = null;
                         bodyPartHeadersBuilder = null;
@@ -275,8 +285,10 @@ final class MimeParser {
                 }
             }
         } catch (MimeParsingException ex) {
+            ex.printStackTrace();
             throw ex;
         } catch (Throwable ex) {
+            ex.printStackTrace();
             throw new MimeParsingException(ex);
         }
     }

@@ -250,14 +250,15 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void doRequest(long n) {
-        onRequest(n);
-
         final long oldDemand = demand;
         if (oldDemand >= Long.MAX_VALUE - n) {
             demand = Long.MAX_VALUE;
         } else {
             demand = oldDemand + n;
         }
+
+        // To make onNext know demand, we need to put this after demand updated.
+        onRequest(n);
 
         if (oldDemand == 0 && !queue.isEmpty()) {
             notifySubscriber0();
@@ -345,7 +346,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             return;
         }
 
-        for (;;) {
+        for (; ; ) {
             if (state == State.CLEANUP) {
                 cleanupObjects(null);
                 return;
@@ -455,7 +456,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void cleanupObjects(@Nullable Throwable cause) {
-        for (;;) {
+        for (; ; ) {
             final Object e = queue.poll();
             if (e == null) {
                 break;

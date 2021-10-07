@@ -37,7 +37,9 @@ import static org.hamcrest.Matchers.is;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,8 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -72,6 +76,7 @@ public class MultipartDecoderTest {
                                "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(2);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             counter.getAndDecrement();
             assertThat(part.headers().get("Content-Id")).contains("part1");
@@ -79,13 +84,14 @@ public class MultipartDecoderTest {
             part.content().subscribe(subscriber);
             subscriber.content().thenAccept(body -> {
                 counter.getAndDecrement();
-                assertThat(body).isEqualTo("body 1");
+                bodies.add(body);
             });
         };
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
         testSubscriber.completionFuture.join();
+        assertThat(bodies).containsExactly("body 1");
     }
 
     @Test
@@ -102,6 +108,7 @@ public class MultipartDecoderTest {
                                "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(4);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             if (counter.decrementAndGet() == 3) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
@@ -109,7 +116,7 @@ public class MultipartDecoderTest {
                 part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
-                    assertThat(body).isEqualTo("body 1");
+                    bodies.add(body);
                 });
             } else {
                 assertThat(part.headers().get("Content-Id")).contains("part2");
@@ -117,14 +124,61 @@ public class MultipartDecoderTest {
                 part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
-                    assertThat(body).isEqualTo("body 2");
+                    bodies.add(body);
                 });
             }
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(bodies).containsExactly("body 1", "body 2");
+    }
+
+    @Test
+    void testFourPartsInOneChunk() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id: part1\n" +
+                               '\n' +
+                               "body 1\n" +
+                               "--" + boundary + '\n' +
+                               "Content-Id: part2\n" +
+                               '\n' +
+                               "body 2\n" +
+                               "--" + boundary + '\n' +
+                               "Content-Id: part3\n" +
+                               '\n' +
+                               "body 3\n" +
+                               "--" + boundary + '\n' +
+                               "Content-Id: part4\n" +
+                               '\n' +
+                               "body 4\n").getBytes();
+        final byte[] chunk2 = ("--" + boundary + '\n' +
+                               "Content-Id: part5\n" +
+                               '\n' +
+                               "body 5\n" +
+                               "--" + boundary + "--").getBytes();
+
+        final AtomicInteger counter = new AtomicInteger(5);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
+        final List<String> contentIds = new CopyOnWriteArrayList<>();
+        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+            contentIds.add(part.headers().get("Content-Id"));
+            final HttpDataAggregator subscriber = new HttpDataAggregator();
+            part.content().subscribe(subscriber);
+            subscriber.content().thenAccept(body -> {
+                bodies.add(body);
+                counter.decrementAndGet();
+            });
+        };
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
+        partsPublisher(boundary, ImmutableList.of(chunk1, chunk2)).subscribe(testSubscriber);
+        await().untilAtomic(counter, is(0));
+        assertThat(testSubscriber.completionFuture).isDone();
+        // TODO contains without order, due to single chunk will be parsed by one shot.
+        assertThat(contentIds).contains("part1", "part2", "part3", "part4", "part5");
+        assertThat(bodies).contains("body 1", "body 2", "body 3", "body 4", "body 5");
     }
 
     @Test
@@ -138,6 +192,7 @@ public class MultipartDecoderTest {
                                "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(2);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             counter.decrementAndGet();
             assertThat(part.headers().get("Content-Id")).contains("part1");
@@ -145,15 +200,16 @@ public class MultipartDecoderTest {
             part.content().subscribe(subscriber);
             subscriber.content().thenAccept(body -> {
                 counter.decrementAndGet();
-                assertThat(body).isEqualTo(
-                        "this-is-the-1st-slice-of-the-body\n" +
-                        "this-is-the-2nd-slice-of-the-body");
+                bodies.add(body);
             });
         };
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2)).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(bodies).containsExactly(
+                "this-is-the-1st-slice-of-the-body\n" +
+                "this-is-the-2nd-slice-of-the-body");
     }
 
     @Test
@@ -176,6 +232,7 @@ public class MultipartDecoderTest {
                                 "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(4);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             if (counter.decrementAndGet() == 3) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
@@ -185,7 +242,7 @@ public class MultipartDecoderTest {
                 part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
-                    assertThat(body).isEqualTo("body 1");
+                    bodies.add(body);
                 });
             } else {
                 assertThat(part.headers().get("Content-Id")).contains("part2");
@@ -195,7 +252,7 @@ public class MultipartDecoderTest {
                 part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
-                    assertThat(body).isEqualTo("body 2");
+                    bodies.add(body);
                 });
             }
         };
@@ -205,6 +262,7 @@ public class MultipartDecoderTest {
                 .subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(bodies).containsExactly("body 1", "body 2");
     }
 
     @Test
@@ -220,6 +278,7 @@ public class MultipartDecoderTest {
                                boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(2);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             counter.decrementAndGet();
             assertThat(part.headers().get("Content-Id")).contains("part1");
@@ -228,8 +287,8 @@ public class MultipartDecoderTest {
             final HttpDataAggregator subscriber = new HttpDataAggregator();
             part.content().subscribe(subscriber);
             subscriber.content().thenAccept(body -> {
+                bodies.add(body);
                 counter.decrementAndGet();
-                assertThat(body).isEqualTo("body 1");
             });
         };
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
@@ -237,6 +296,7 @@ public class MultipartDecoderTest {
                 .subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(bodies).containsExactly("body 1");
     }
 
     @Test
@@ -253,6 +313,7 @@ public class MultipartDecoderTest {
                                "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(4);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             if (counter.decrementAndGet() == 3) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
@@ -260,7 +321,7 @@ public class MultipartDecoderTest {
                 part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
-                    assertThat(body).isEqualTo("body 1");
+                    bodies.add(body);
                 });
             } else {
                 assertThat(part.headers().get("Content-Id")).contains("part2");
@@ -268,7 +329,7 @@ public class MultipartDecoderTest {
                 part.content().subscribe(subscriber);
                 subscriber.content().thenAccept(body -> {
                     counter.decrementAndGet();
-                    assertThat(body).isEqualTo("body 2");
+                    bodies.add("body 2");
                 });
             }
         };
@@ -276,6 +337,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(bodies).containsExactly("body 1", "body 2");
     }
 
     @Test
@@ -292,6 +354,7 @@ public class MultipartDecoderTest {
                                "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(2);
+        final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             if (counter.decrementAndGet() == 1) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
@@ -300,7 +363,7 @@ public class MultipartDecoderTest {
                 subscriber1.content().thenAccept(body -> {
                     counter.decrementAndGet();
                     subscription.cancel();
-                    assertThat(body).isEqualTo("body 1");
+                    bodies.add(body);
                 });
             }
         };
@@ -310,6 +373,7 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
 
         await().untilAtomic(counter, is(0));
+        assertThat(bodies).containsExactly("body 1");
     }
 
     @Test
@@ -378,7 +442,6 @@ public class MultipartDecoderTest {
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4)).subscribe(testSubscriber);
         Thread.sleep(1000);
         await().untilAtomic(counter, is(1));
-
         assertThat(testSubscriber.completionFuture).isNotDone();
     }
 
@@ -411,16 +474,15 @@ public class MultipartDecoderTest {
                         ByteBufAllocator.DEFAULT);
 
         final AtomicInteger counter = new AtomicInteger(2);
+        final AtomicReference<Throwable> thrown = new AtomicReference<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             counter.decrementAndGet();
             assertThat(part.headers().get("Content-Id")).contains("part1");
             final HttpDataAggregator subscriber = new HttpDataAggregator();
             part.content().subscribe(subscriber);
             subscriber.content().exceptionally(throwable -> {
+                thrown.set(throwable);
                 counter.decrementAndGet();
-                assertThat(throwable)
-                        .hasCauseInstanceOf(IllegalStateException.class)
-                        .hasMessageContaining("oops");
                 return null;
             });
         };
@@ -430,6 +492,62 @@ public class MultipartDecoderTest {
         assertThatThrownBy(testSubscriber.completionFuture::join)
                 .hasCauseInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("oops");
+        assertThat(thrown.get())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("oops");
+    }
+
+    @Test
+    void testBodyPartSubscriberCancelled() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id: part1\n" +
+                               '\n' +
+                               "this-is-the-1st-slice-of-the-body\n").getBytes();
+        final byte[] chunk2 = "this-is-the-2nd-slice-of-the-body\n".getBytes();
+        final byte[] chunk3 = ("this-is-the-3rd-slice-of-the-body\n" +
+                               "--" + boundary + "--").getBytes();
+
+        final AtomicInteger counter = new AtomicInteger(2);
+        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+            counter.decrementAndGet();
+            assertThat(part.headers().get("Content-Id")).contains("part1");
+            final StreamMessage<HttpData> content = part.content();
+            content.subscribe(new Subscriber<HttpData>() {
+                @Nullable
+                private Subscription subscription;
+
+                @Override
+                public void onSubscribe(Subscription subscription) {
+                    this.subscription = subscription;
+                    subscription.request(1);
+                }
+
+                @Override
+                public void onNext(HttpData httpData) {
+                    subscription.cancel();
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                }
+
+                @Override
+                public void onComplete() {
+                }
+            });
+            content.whenComplete().exceptionally(throwable -> {
+                assertThat(throwable).isInstanceOf(CancelledSubscriptionException.class);
+                counter.decrementAndGet();
+                return null;
+            });
+        };
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3)).subscribe(testSubscriber);
+        await().untilAtomic(counter, is(0));
+        // TODO the error type is weird?
+        assertThatThrownBy(testSubscriber.completionFuture::join)
+                .hasRootCauseInstanceOf(AbortedStreamException.class);
     }
 
     /**
@@ -472,11 +590,13 @@ public class MultipartDecoderTest {
 
         @Override
         public void onNext(BodyPart item) {
+            System.out.println(">>>>>>>>>>>>.onNext");
             if (consumer == null) {
                 return;
             }
             consumer.accept(subscription, item);
             if (subscriberType == SubscriberType.ONE_BY_ONE) {
+                System.out.println(">>>>>>>>>>>>>request next");
                 subscription.request(1);
             }
         }

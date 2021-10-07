@@ -61,9 +61,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     private RequestHeaders requestHeaders;
     @Nullable
     private Subscription upstream;
-    // For checking if subscribed.
-    @Nullable
-    private EventExecutor executor;
 
     private boolean handlerProduced;
     private boolean sawLeadingHeaders;
@@ -118,7 +115,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
 
     @Override
     protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
-        this.executor = executor;
         publisher.subscribe(subscriber, executor, options);
     }
 
@@ -245,8 +241,10 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                     }
                 } else {
                     // Handler didn't produce anything, which means it needs more elements from the upstream
-                    // to produce something.
-                    askUpstreamForElement();
+                    // to produce something if there is a demand.
+                    if (demand() > 0) {
+                        askUpstreamForElement();
+                    }
                 }
             } catch (Throwable ex) {
                 decoder.processOnError(ex);

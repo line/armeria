@@ -52,9 +52,12 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     private final DecodedHttpStreamMessage<BodyPart> decoded;
     private final String boundary;
+    private final StreamMessage<? extends HttpData> upstream;
 
     @Nullable
     private MimeParser parser;
+
+    // Below fields are modified by subscriber specified thread
     @Nullable
     private volatile Subscriber<? super BodyPart> subscriber;
     @Nullable
@@ -63,12 +66,13 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     private BodyPartPublisher bodyPartPublisher;
     @Nullable
     private Subscription subscription;
-    // To track how many body part we need. Always keep DecodedHttpStreamMessage's demand less or equal than 1.
-    private long demand;
+    // To track how many body part we need. Always keep DecodedHttpStreamMessage's demand less or equal than 1
+    private long demandOfMultipart;
 
     MultipartDecoder(StreamMessage<? extends HttpData> upstream, String boundary, ByteBufAllocator alloc) {
-        decoded = new DecodedHttpStreamMessage<>(upstream, this, alloc);
+        this.upstream = upstream;
         this.boundary = boundary;
+        decoded = new DecodedHttpStreamMessage<>(this.upstream, this, alloc);
     }
 
     @Override
@@ -109,7 +113,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     @Override
     public long demand() {
-        return demand;
+        return demandOfMultipart;
     }
 
     @Override
@@ -132,6 +136,17 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             }
             return;
         }
+
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber, executor, options);
+        } else {
+            executor.execute(() -> subscribe0(subscriber, executor, options));
+        }
+
+    }
+
+    private void subscribe0(Subscriber<? super BodyPart> subscriber, EventExecutor executor,
+                            SubscriptionOption... options) {
         this.executor = executor;
         decoded.subscribe(this, executor, options);
     }
@@ -143,20 +158,35 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     @Override
     public void abort() {
-        final BodyPartPublisher bodyPartPublisher = this.bodyPartPublisher;
+        assert executor != null;
+        if (executor.inEventLoop()) {
+            abort0();
+        } else {
+            executor.execute(this::abort0);
+        }
+    }
+
+    private void abort0() {
         decoded.abort();
         if (bodyPartPublisher != null) {
             bodyPartPublisher.abort();
         }
-
     }
 
     @Override
     public void abort(Throwable cause) {
-        final BodyPartPublisher bodyPartPublisher = this.bodyPartPublisher;
-        decoded.abort(cause);
+        assert executor != null;
+        if (executor.inEventLoop()) {
+            abort0(cause);
+        } else {
+            executor.execute(() -> abort0(cause));
+        }
+    }
+
+    private void abort0(Throwable cause) {
+        decoded.abort();
         if (bodyPartPublisher != null) {
-            bodyPartPublisher.abort(cause);
+            bodyPartPublisher.abort();
         }
     }
 
@@ -169,8 +199,20 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
             @Override
             public void request(long n) {
-                final long oldDemand = demand;
-                demand += n;
+                if (executor.inEventLoop()) {
+                    request0(n);
+                } else {
+                    executor.execute(() -> request0(n));
+                }
+            }
+
+            private void request0(long n) {
+                final long oldDemand = demandOfMultipart;
+                if (oldDemand >= Long.MAX_VALUE - n) {
+                    demandOfMultipart = Long.MAX_VALUE;
+                } else {
+                    demandOfMultipart = oldDemand + n;
+                }
                 if (oldDemand == 0) {
                     // We want first body publisher
                     if (bodyPartPublisher == null) {
@@ -184,6 +226,14 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
             @Override
             public void cancel() {
+                if (executor.inEventLoop()) {
+                    cancel0();
+                } else {
+                    executor.execute(this::cancel0);
+                }
+            }
+
+            private void cancel0() {
                 if (cancelled) {
                     return;
                 }
@@ -199,7 +249,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     @Override
     public void onNext(BodyPart bodyPart) {
         assert subscriber != null;
-        demand--;
+        demandOfMultipart--;
         subscriber.onNext(bodyPart);
     }
 
@@ -221,42 +271,79 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     BodyPartPublisher onBodyPartBegin() {
         bodyPartPublisher = new BodyPartPublisher();
         // Next BodyPart must wait the current BodyPart close and fully consumed.
-        bodyPartPublisher.whenComplete().thenRunAsync(() -> {
+        bodyPartPublisher.whenComplete().handleAsync((unused, throwable) -> {
             bodyPartPublisher = null;
-            if (demand > 0) {
+            if (throwable != null) {
+                // Propagate to Multipart Subscriber
+                // But now this comes after MultipartDecoder's onError due to MimeParser can't write any data
+                // into BodyPartPublisher happens first
+                abort(new BodyPartProcessException(throwable));
+                return null;
+            }
+            if (demandOfMultipart > 0) {
                 // BodyPart must be triggered after onSubscribe.
                 assert subscription != null;
                 // Trigger next body part
                 subscription.request(1);
             }
+            return null;
         }, executor);
         return bodyPartPublisher;
     }
 
     /**
-     * Subscriber may request after parser handle HttpData completely.
-     * So we need to re-trigger the upstream if there is no upstream request anymore.
+     * MimeParser needs more data for body part.
      */
+    public void requestBodyPartData() {
+        assert executor != null;
+        if (executor.inEventLoop()) {
+            requestBodyPartData0();
+        } else {
+            executor.execute(this::requestBodyPartData0);
+        }
+    }
+
+    private void requestBodyPartData0() {
+        // No more upstream request and bodyPartPublisher still needs data
+        if (bodyPartPublisher != null && bodyPartPublisher.needMoreData() && upstream.demand() == 0) {
+            // TODO bodyPartPublisher.demand() is modified by bodypart subscriber's thread. Need to be changed.
+            decoded.askUpstreamForElement();
+        }
+    }
+
     class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
+        private long remain = 0;
+
         @Override
         protected void onRequest(long n) {
-            // old demand == 0, the first request of http data.
-            if (demand() == 0) {
-                pullMoreData();
-            }
+            whenConsumed().thenRun(() -> {
+                if (demand() > 0) {
+                    requestBodyPartData();
+                }
+            });
         }
 
-        private void pullMoreData() {
-            decoded.askUpstreamForElement();
-            whenConsumed()
-                    .thenRun(() -> {
-                        // Check if it's ended, we can't request more if body part is finished.
-                        if (bodyPartPublisher == this
-                            && !isComplete()
-                            && demand() > 0) {
-                            pullMoreData();
-                        }
-                    });
+        @Override
+        protected void onRemoval(HttpData obj) {
+            remain--;
+            super.onRemoval(obj);
+        }
+
+        @Override
+        public boolean tryWrite(HttpData obj) {
+            final boolean written = super.tryWrite(obj);
+            if (written) {
+                remain++;
+            }
+            return written;
+        }
+
+        /**
+         * TODO
+         * notifySubscriber(onRemoval) and tryWrite may run in different thread, so this count is not accurate.
+         */
+        boolean needMoreData() {
+            return remain == 0 && demand() > 0;
         }
     }
 }
