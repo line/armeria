@@ -94,7 +94,7 @@ public final class ConcurrencyLimitBuilder {
      * Returns a newly-created {@link ConcurrencyLimit} based on the properties of this builder.
      */
     public ConcurrencyLimit build() {
-        if (maxConcurrency == 0) {
+        if (maxConcurrency == 0 || maxConcurrency == Integer.MAX_VALUE) {
             return noLimit;
         }
         return new DefaultConcurrencyLimit(predicate, maxConcurrency, maxPendingAcquisitions, timeoutMillis);

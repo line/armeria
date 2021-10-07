@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -46,7 +47,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final long timeoutMillis;
 
     private final Queue<PendingAcquisition> pendingAcquisitions = new ConcurrentLinkedQueue<>();
-    private final AtomicInteger numPendingAcquisitions = new AtomicInteger();
+    private final AtomicLong numPendingAcquisitions = new AtomicLong();
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
@@ -83,6 +84,9 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             acquiredPermits.decrementAndGet();
         }
 
+        if (maxPendingAcquisitions == 0) {
+            return CompletableFutures.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
+        }
         if (numPendingAcquisitions.incrementAndGet() > maxPendingAcquisitions) {
             numPendingAcquisitions.decrementAndGet();
             return CompletableFutures.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
