@@ -3,19 +3,19 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.12.4
-  - io.dropwizard.metrics:metrics-bom:4.2.3
+  - com.fasterxml.jackson:jackson-bom:2.13.0
+  - io.dropwizard.metrics:metrics-bom:4.2.4
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.40.1
-  - io.micrometer:micrometer-bom:1.7.3
+  - io.grpc:grpc-bom:1.41.0
+  - io.micrometer:micrometer-bom:1.7.4
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   # TODO(ikhoon): Upgrade Netty version once https://github.com/netty/netty/issues/11591 is fixed.
-  - io.netty:netty-bom:4.1.66.Final
+  - io.netty:netty-bom:4.1.68.Final
   - io.zipkin.brave:brave-bom:5.13.3
   - org.eclipse.jetty:jetty-bom:9.4.43.v20210629
-  - org.junit:junit-bom:5.7.2
+  - org.junit:junit-bom:5.8.1
 
 cglib:
   cglib: { version: '3.3.0' }
@@ -26,9 +26,9 @@ ch.megard:
 
 ch.qos.logback:
   logback-classic:
-    version: '1.2.5'
+    version: '1.2.6'
     javadocs:
-    - https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.5/
+    - https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.6/
 
 com.aayushatharva.brotli4j:
   brotli4j: { version: &BROTLI4J_VERSION '1.6.0' }
@@ -38,13 +38,13 @@ com.aayushatharva.brotli4j:
 
 com.auth0:
   java-jwt:
-    version: '3.18.1'
+    version: '3.18.2'
     javadocs:
-    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.18.1/
+    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.18.2/
 
 # This is only used for examples/graphql-kotlin
 com.expediagroup:
-  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '5.0.0-alpha.3' }
+  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '5.0.0' }
   graphql-kotlin-client-jackson: { version: *GRAPHQL_KOTLIN_VERSION }
   graphql-kotlin-client-serialization: { version: *GRAPHQL_KOTLIN_VERSION }
   graphql-kotlin-schema-generator: { version: *GRAPHQL_KOTLIN_VERSION }
@@ -63,11 +63,11 @@ com.fasterxml.jackson.core:
 # Don't upgrade Caffeine to 3.x that requires Java 11.
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.9.1'
+    version: '2.9.2'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.9.1/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.9.2/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -76,10 +76,10 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '6.1.0' }
 
 com.github.node-gradle:
-  gradle-node-plugin: { version: '3.1.0' }
+  gradle-node-plugin: { version: '3.1.1' }
 
 com.google.api:
-  gax-grpc: { version: '1.65.1' }
+  gax-grpc: { version: '1.67.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -96,7 +96,7 @@ com.google.errorprone:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '30.1.1-jre'
+    version: &GUAVA_VERSION '31.0.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -139,7 +139,7 @@ com.google.protobuf:
   protoc: { version: *PROTOBUF_VERSION }
 
 com.graphql-java:
-  graphql-java: { version: '17.1' }
+  graphql-java: { version: '17.3' }
 
 com.guardsquare:
   proguard-gradle: { version: '7.1.1' }
@@ -153,9 +153,9 @@ com.netflix.eureka:
   eureka-client: { version: &EUREKA_VERSION '1.10.16' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
-# DGS is used only for testing in it:dgs moulde.
+# DGS is used only for testing in it:dgs module.
 com.netflix.graphql.dgs:
-  graphql-dgs-client: { version: '4.6.0' }
+  graphql-dgs-client: { version: '4.9.0' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
@@ -164,7 +164,7 @@ com.puppycrawl.tools:
   checkstyle: { version: '8.45.1' }
 
 com.salesforce.servicelibs:
-  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.2.0' }
+  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.2.2' }
   reactor-grpc-stub: { version: *REACTVIVE_GRPC_VERSION }
 
 com.spotify:
@@ -199,7 +199,7 @@ com.typesafe.akka:
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '21.8.0'
+    version: '21.9.0'
 
 cz.alenkacz:
   gradle-scalafmt: { version: '1.16.2' }
@@ -209,9 +209,9 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.24'
+    version: &DROPWIZARD_VERSION '2.0.25'
     javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.24/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.25/
   dropwizard-jackson: { version: *DROPWIZARD_VERSION }
   dropwizard-lifecycle: { version: *DROPWIZARD_VERSION }
   dropwizard-jersey: { version: *DROPWIZARD_VERSION }
@@ -273,14 +273,14 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.40.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.43.Final' }
 
 io.netty.incubator:
   netty-incubator-transport-native-io_uring: { version: '0.0.8.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.4.9'
+    version: &REACTOR_VERSION '3.4.10'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -290,7 +290,7 @@ io.projectreactor.kotlin:
 
 io.prometheus:
   simpleclient_common:
-    version: '0.11.0'
+    version: '0.12.0'
     javadocs:
     - https://prometheus.github.io/client_java/
 
@@ -302,7 +302,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.1.0'
+    version: '3.1.1'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -315,17 +315,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: &FAST_UTIL_VERSION '8.5.4'
-    relocations:
-      - from: it.unimi.dsi.fastutil
-        to: com.linecorp.armeria.internal.shaded.fastutil
-  fastutil-core:
-    version: *FAST_UTIL_VERSION
-    relocations:
-      - from: it.unimi.dsi.fastutil
-        to: com.linecorp.armeria.internal.shaded.fastutil
-  fastutil-extra:
-    version: *FAST_UTIL_VERSION
+    version: '8.5.6'
     relocations:
       - from: it.unimi.dsi.fastutil
         to: com.linecorp.armeria.internal.shaded.fastutil
@@ -401,15 +391,15 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '2.8.0'
+    version: '3.0.0'
     javadocs:
-    - https://kafka.apache.org/28/javadoc/
+    - https://kafka.apache.org/30/javadoc/
 
 org.apache.thrift:
   libthrift:
-    version: '0.14.2'
+    version: '0.15.0'
     javadocs:
-    - https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.14.2/
+    - https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.15.0/
     exclusions:
     - javax.annotation:javax.annotation-api
     - org.apache.httpcomponents:httpcore
@@ -417,7 +407,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.46'
+    version: &TOMCAT_VERSION '9.0.53'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -435,7 +425,7 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.17.1' }
+  assertj-core: { version: '3.21.0' }
 
 org.awaitility:
   awaitility: { version: '4.1.0' }
@@ -485,7 +475,7 @@ org.eclipse.jetty.alpn:
 
 # Groovy is only used for testing consul
 org.codehaus.groovy:
-  groovy-xml: { version: '3.0.8' }
+  groovy-xml: { version: '3.0.9' }
 
 org.hamcrest:
   hamcrest: { version: &HAMCREST_VERSION '2.2' }
@@ -504,24 +494,24 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.21' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.31' }
   kotlin-reflect: { version: *KOTLIN_VERSION }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.5.1' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.5.2' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   # kotlinx-coroutines-reactor is only used for testing :it:spring:boot2-kotlin
   kotlinx-coroutines-reactor: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
 org.jlleitschuh.gradle:
-  ktlint-gradle: { version: '10.1.0' }
+  ktlint-gradle: { version: '10.2.0' }
 
 org.jooq:
   joor: { version: '0.9.14' }
 
 org.jsoup:
-  jsoup: { version: '1.14.2' }
+  jsoup: { version: '1.14.3' }
 
 org.mockito:
   mockito-core: { version: &MOCKITO_VERSION '3.12.4' }
@@ -568,11 +558,11 @@ org.scala-lang:
 
 org.scala-lang.modules:
   scala-collection-compat_2.12: { version: '2.5.0' }
-  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '1.0.0' }
+  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '1.0.1' }
   scala-java8-compat_2.13: { version: *SCALA_JAVA8_COMPAT_VERSION }
 
 org.scalameta:
-  munit_2.12: { version: &MUNIT_VERSION '0.7.28' }
+  munit_2.12: { version: &MUNIT_VERSION '0.7.29' }
   munit_2.13: { version: *MUNIT_VERSION }
 
 org.sangria-graphql:
@@ -592,11 +582,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.9' }
+  spring-web: { version: '5.3.10' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.5.4'
+    version: &SPRING_BOOT_VERSION '2.5.5'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
@@ -627,13 +617,13 @@ xml-apis:
 
 com.github.vladimir-bukhtoyarov:
   bucket4j-core:
-    version: '6.2.0'
+    version: '6.3.0'
     javadocs:
-    - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/6.2.0/
+    - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/6.3.0/
 
 org.jboss.resteasy:
   resteasy-core-spi:
-    version: &RESTEASY_VERSION '4.7.1.Final'
+    version: &RESTEASY_VERSION '4.7.2.Final'
     javadocs:
     - https://docs.jboss.org/resteasy/docs/4.6.0.Final/javadocs/
   resteasy-core: { version: *RESTEASY_VERSION }

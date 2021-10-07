@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
@@ -44,9 +45,10 @@ public final class ConcurrencyLimitingClient
     /**
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      */
-    public static Function<? super HttpClient, ConcurrencyLimitingClient>
-    newDecorator(int maxConcurrency) {
-        return newDecorator(maxConcurrency, 100000L, TimeUnit.MILLISECONDS);
+    public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(int maxConcurrency) {
+        final ConcurrencyLimit limit = ConcurrencyLimit.builder(maxConcurrency)
+                                                       .build();
+        return newDecorator(limit);
     }
 
     /**
@@ -54,14 +56,16 @@ public final class ConcurrencyLimitingClient
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             int maxConcurrency, long timeout, TimeUnit unit) {
-        return delegate -> new ConcurrencyLimitingClient(
-                delegate,
-                new AsyncConcurrencyLimit(unit.toMillis(timeout), maxConcurrency, 100));
+        final ConcurrencyLimit limit = ConcurrencyLimit.builder(maxConcurrency)
+                                                       .timeoutMillis(unit.toMillis(timeout))
+                                                       .build();
+        return newDecorator(limit);
     }
 
     /**
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      */
+    @UnstableApi
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             ConcurrencyLimit concurrencyLimit) {
         requireNonNull(concurrencyLimit, "concurrencyLimit");

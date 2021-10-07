@@ -13,7 +13,7 @@ dependencies {
     implementation project(':grpc')
     implementation project(':grpc-protocol')
     implementation project(':retrofit2')
-    implementation project(':thrift0.14')
+    implementation project(':thrift0.15')
     implementation project(':kotlin')
 
     implementation 'com.squareup.retrofit2:converter-jackson'
