@@ -20,20 +20,30 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
- * Builds an instance of the default {@link ConcurrencyLimit} implementation using builder pattern.
+ * Builds a {@link ConcurrencyLimit}.
  */
+@UnstableApi
 public final class ConcurrencyLimitBuilder {
+
+    static final CompletableFuture<SafeCloseable> noLimitFuture =
+            CompletableFuture.completedFuture(() -> { /* no-op */ });
+
+    private static final ConcurrencyLimit noLimit = ctx -> noLimitFuture;
+
     static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
-    static final int DEFAULT_MAX_PENDING_ACQUIRES = 0;
+    static final int DEFAULT_MAX_PENDING_ACQUIRES = Integer.MAX_VALUE;
 
     private final int maxConcurrency;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
-    private int maxPendingAcquires = DEFAULT_MAX_PENDING_ACQUIRES;
+    private int maxPendingAcquisitions = DEFAULT_MAX_PENDING_ACQUIRES;
     private Predicate<? super ClientRequestContext> predicate = requestContext -> true;
 
     ConcurrencyLimitBuilder(int maxConcurrency) {
@@ -61,17 +71,19 @@ public final class ConcurrencyLimitBuilder {
     }
 
     /**
-     * Sets the the maximum number of pending acquires.
+     * Sets the maximum number of pending acquisition. The {@link CompletableFuture} returned by
+     * {@link ConcurrencyLimit#acquire(ClientRequestContext)} will be exceptionally complete with an
+     * {@link TooManyPendingAcquisitionsException} if the pending exceeds this value.
      */
-    public ConcurrencyLimitBuilder maxPendingAcquires(int maxPendingAcquires) {
-        checkArgument(maxPendingAcquires >= 0 && maxPendingAcquires <= 256,
-                      "maxPendingAcquires: %s (0 <= expected <= 256)", maxPendingAcquires);
-        this.maxPendingAcquires = maxPendingAcquires;
+    public ConcurrencyLimitBuilder maxPendingAcquisitions(int maxPendingAcquisitions) {
+        checkArgument(maxPendingAcquisitions >= 0,
+                      "maxPendingAcquisitions: %s (expected: >= 0)", maxPendingAcquisitions);
+        this.maxPendingAcquisitions = maxPendingAcquisitions;
         return this;
     }
 
     /**
-     * Sets the predicate for which to apply the concurrency limit.
+     * Sets the {@link Predicate} for which to apply the concurrency limit.
      */
     public ConcurrencyLimitBuilder predicate(Predicate<? super ClientRequestContext> predicate) {
         this.predicate = requireNonNull(predicate, "predicate");
@@ -79,11 +91,12 @@ public final class ConcurrencyLimitBuilder {
     }
 
     /**
-     * Returns a newly-created the {@link ConcurrencyLimit} based on the properties of this builder.
+     * Returns a newly-created {@link ConcurrencyLimit} based on the properties of this builder.
      */
     public ConcurrencyLimit build() {
-        return new ConditionalConcurrencyLimit(
-                predicate,
-                new AsyncConcurrencyLimit(timeoutMillis, maxConcurrency, maxPendingAcquires));
+        if (maxConcurrency == 0 || maxConcurrency == Integer.MAX_VALUE) {
+            return noLimit;
+        }
+        return new DefaultConcurrencyLimit(predicate, maxConcurrency, maxPendingAcquisitions, timeoutMillis);
     }
 }
