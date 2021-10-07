@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.file.HttpFileBuilder.ClassPathHttpFileBuilder;
@@ -182,6 +183,7 @@ public interface HttpFile {
         }
 
         // Retrieve the resource URL.
+        @Nullable
         final URL url = classLoader.getResource(path);
         if (url == null || url.getPath().endsWith("/")) {
             // Non-existent resource.
@@ -211,7 +213,7 @@ public interface HttpFile {
      * @return the {@link CompletableFuture} that will be completed with the attributes of this file.
      *         It will be completed with {@code null} if the file does not exist.
      */
-    CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor);
+    CompletableFuture<@Nullable HttpFileAttributes> readAttributes(Executor fileReadExecutor);
 
     /**
      * Reads the attributes of this file as {@link ResponseHeaders}, which could be useful for building
@@ -222,7 +224,7 @@ public interface HttpFile {
      * @return the {@link CompletableFuture} that will be completed with the headers.
      *         It will be completed with {@code null} if the file does not exist.
      */
-    CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor);
+    CompletableFuture<@Nullable ResponseHeaders> readHeaders(Executor fileReadExecutor);
 
     /**
      * Starts to stream this file into the returned {@link HttpResponse}.
@@ -233,7 +235,7 @@ public interface HttpFile {
      * @return the {@link CompletableFuture} that will be completed with the response.
      *         It will be completed with {@code null} if the file does not exist.
      */
-    CompletableFuture<HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc);
+    CompletableFuture<@Nullable HttpResponse> read(Executor fileReadExecutor, ByteBufAllocator alloc);
 
     /**
      * Converts this file into an {@link AggregatedHttpFile}.

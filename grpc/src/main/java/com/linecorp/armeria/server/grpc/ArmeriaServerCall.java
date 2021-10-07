@@ -69,6 +69,7 @@ import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
+import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -127,6 +128,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Nullable
     private ServerCall.Listener<I> listener;
     @Nullable
+    private ResponseHeaders responseHeaders;
+    @Nullable
     private O firstResponse;
     @Nullable
     private final String clientAcceptEncoding;
@@ -145,7 +148,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private volatile boolean cancelled;
     private volatile boolean clientStreamClosed;
     private volatile boolean listenerClosed;
-    private boolean sendHeadersCalled;
     private boolean closeCalled;
 
     private int pendingRequests;
@@ -244,10 +246,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void doSendHeaders(Metadata metadata) {
         if (cancelled) {
-            // call was already closed by client or with non-OK status.
+            // call was already closed by a client or a timeout scheduler.
             return;
         }
-        checkState(!sendHeadersCalled, "sendHeaders already called");
+        checkState(responseHeaders == null, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
         if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
@@ -273,10 +275,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             });
         }
 
-        sendHeadersCalled = true;
-        if (!res.tryWrite(headers)) {
-            maybeCancel();
-        }
+        // https://github.com/grpc/proposal/blob/4c4a06d95eb1e7d3d7d84c4c9505a99f2a721db9/A6-client-retries.md#L263
+        // gRPC servers should delay the Response-Headers until the first response message or
+        // until the application code chooses to send headers.
+        responseHeaders = headers;
     }
 
     @Override
@@ -291,27 +293,35 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void doSendMessage(O message) {
         if (cancelled) {
-            // call was already closed by client or with non-OK status
+            // call was already closed by a client or a timeout scheduler
             return;
         }
-        checkState(sendHeadersCalled, "sendHeaders has not been called");
+        checkState(responseHeaders != null, "sendHeaders has not been called");
         checkState(!closeCalled, "call is closed");
 
         if (firstResponse == null) {
+            // Write the response headers when the first response is received.
+            if (!res.tryWrite(responseHeaders)) {
+                maybeCancel();
+                return;
+            }
             firstResponse = message;
         }
 
         try {
             if (res.tryWrite(responseFramer.writePayload(marshaller.serializeResponse(message)))) {
-                res.whenConsumed().thenRun(() -> {
-                    if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                        if (blockingExecutor != null) {
-                            blockingExecutor.execute(this::invokeOnReady);
-                        } else {
-                            invokeOnReady();
+                if (!method.getType().serverSendsOneMessage()) {
+                    // Invoke onReady() only when server can send multiple messages.
+                    res.whenConsumed().thenRun(() -> {
+                        if (!closeCalled && pendingMessagesUpdater.decrementAndGet(this) == 0) {
+                            if (blockingExecutor != null) {
+                                blockingExecutor.execute(this::invokeOnReady);
+                            } else {
+                                invokeOnReady();
+                            }
                         }
-                    }
-                });
+                    });
+                }
             } else {
                 maybeCancel();
             }
@@ -337,21 +347,19 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void close(Status status, Metadata metadata) {
-        if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
-        } else {
-            ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
-            });
-        }
+        close0(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
     }
 
     private void close(Throwable exception, Metadata metadata) {
+        close0(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
+    }
+
+    private void close0(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
+            doClose(status, metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
+                doClose(status, metadata);
             });
         }
     }
@@ -359,26 +367,61 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private void doClose(Status status, Metadata metadata) {
         if (cancelled) {
             // No need to write anything to client if cancelled already.
-            closeListener(status);
+            closeListener(status, false);
             return;
         }
 
-        if (status.getCode() == Code.CANCELLED) {
-            final Throwable cause = status.getCause();
-            if (cause instanceof ClosedStreamException) {
-                closeListener(status);
-                return;
-            }
+        if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
+            closeListener(status, false);
+            return;
         }
 
         checkState(!closeCalled, "call already closed");
         closeCalled = true;
 
-        final HttpHeaders trailers = statusToTrailers(
-                ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
-                status, metadata);
+        boolean completed = true;
+        if (status.getCode() == Code.CANCELLED && status.getCause() instanceof RequestTimeoutException) {
+            // A call was finished by a timeout scheduler, not a user.
+            completed = false;
+        } else if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse == null) {
+            // A call that should send a message incompletely finished.
+            final String description = "Completed without a response";
+            logger.warn("{} {} status: {}, metadata: {}", ctx, description, status, metadata);
+            status = Status.CANCELLED.withDescription(description);
+            completed = false;
+        }
+
+        final boolean trailersOnly;
+        if (firstResponse != null) {
+            // ResponseHeaders was written successfully.
+            trailersOnly = false;
+        } else {
+            if (!status.isOk() || responseHeaders == null) {
+                // Trailers-Only is permitted for calls that produce an immediate error.
+                // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#responses
+                trailersOnly = true;
+            } else {
+                // A unary response should not reach hear.
+                // The status should be non-OK if serverSendsOneMessage's firstResponse is null.
+                assert !method.getType().serverSendsOneMessage();
+
+                // SERVER_STREAMING or BIDI_STREAMING may not produce a response.
+                // Try to write the pending response headers.
+                if (res.tryWrite(responseHeaders)) {
+                    trailersOnly = false;
+                } else {
+                    // A stream was closed already.
+                    closeListener(status, false);
+                    return;
+                }
+            }
+        }
+
+        final HttpHeadersBuilder defaultTrailers =
+                trailersOnly ? defaultHeaders.toBuilder() : HttpHeaders.builder();
+        final HttpHeaders trailers = statusToTrailers(ctx, defaultTrailers, status, metadata);
         try {
-            if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
+            if (!trailersOnly && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 GrpcWebTrailers.set(ctx, trailers);
                 // Normal trailers are not supported in grpc-web and must be encoded as a message.
                 final ByteBuf serialized = serializeTrailersAsMessage(ctx.alloc(), trailers);
@@ -391,7 +434,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             }
         } finally {
-            closeListener(status);
+            closeListener(status, completed);
         }
     }
 
@@ -413,7 +456,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public synchronized void setCompression(String compressorName) {
-        checkState(!sendHeadersCalled, "sendHeaders has been called");
+        checkState(responseHeaders == null, "sendHeaders has been called");
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
@@ -446,12 +489,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // Special case for unary calls.
                 if (messageReceived && method.getType() == MethodType.UNARY) {
                     closeListener(Status.INTERNAL.withDescription(
-                            "More than one request messages for unary call or server streaming call"));
+                            "More than one request messages for unary call or server streaming call"), false);
                     return;
                 }
                 messageReceived = true;
 
-                if (isCancelled()) {
+                if (closeCalled) {
                     return;
                 }
                 success = true;
@@ -522,14 +565,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onHalfClose();
-
-            // Based on the implementation of ServerCalls of gRPC-Java, onReady() is called only by
-            // onHalfClose() of UnaryServerCallListener, which is used for UNARY and SERVER_STREAMING.
-            // https://github.com/grpc/grpc-java/blob/9b73e2365da502a466b01544f102cd487e374428/stub/src/main/java/io/grpc/stub/ServerCalls.java#L188
-            final MethodType methodType = method.getType();
-            if (methodType == MethodType.UNARY || methodType == MethodType.SERVER_STREAMING) {
-                listener.onReady();
-            }
         } catch (Throwable t) {
             close(t, new Metadata());
         }
@@ -546,22 +581,21 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status);
+        closeListener(status, false);
     }
 
-    private void closeListener(Status newStatus) {
+    private void closeListener(Status newStatus, boolean completed) {
         if (!listenerClosed) {
             listenerClosed = true;
 
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
 
-            final boolean ok = newStatus.isOk();
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
                 deframedRequest.abort();
             }
 
-            if (ok) {
+            if (completed) {
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnComplete);
                 } else {

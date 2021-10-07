@@ -61,6 +61,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -124,7 +125,7 @@ public abstract class TomcatService implements HttpService {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(
                     "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
-                            "; using a wrong armeria-tomcat JAR?", e);
+                    "; using a wrong armeria-tomcat JAR?", e);
         }
 
         if (TomcatVersion.major() >= 9) {
@@ -388,6 +389,8 @@ public abstract class TomcatService implements HttpService {
                 final Response coyoteRes = coyoteReq.getResponse();
                 coyoteReq.setResponse(coyoteRes);
                 coyoteRes.setRequest(coyoteReq);
+
+                ServletTlsAttributes.fill(ctx.sslSession(), coyoteReq::setAttribute);
 
                 final Queue<HttpData> data = new ArrayDeque<>();
                 coyoteRes.setOutputBuffer((OutputBuffer) OUTPUT_BUFFER_CONSTRUCTOR.invoke(data));

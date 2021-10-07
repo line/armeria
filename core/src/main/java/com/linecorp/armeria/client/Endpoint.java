@@ -477,7 +477,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Returns a new host endpoint with the {@linkplain InetAddress#getHostAddress()} IP address} of
+     * Returns a new host endpoint with the {@linkplain InetAddress#getHostAddress() IP address} of
      * the specified {@link InetAddress}.
      *
      * @return the new endpoint with the specified {@link InetAddress}.

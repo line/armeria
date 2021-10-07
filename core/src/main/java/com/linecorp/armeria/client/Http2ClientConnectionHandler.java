@@ -38,39 +38,21 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     private final HttpClientFactory clientFactory;
     private final Http2ResponseDecoder responseDecoder;
-    private final KeepAliveHandler keepAliveHandler;
 
     Http2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel,
                                  HttpClientFactory clientFactory, SessionProtocol protocol) {
 
-        super(decoder, encoder, initialSettings);
+        super(decoder, encoder, initialSettings,
+              newKeepAliveHandler(encoder, channel, clientFactory, protocol));
         this.clientFactory = clientFactory;
 
-        final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
-        final long pingIntervalMillis = clientFactory.pingIntervalMillis();
-        final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
-        final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
-        final boolean needsKeepAliveHandler = needsKeepAliveHandler(
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
-        if (needsKeepAliveHandler) {
-            final Timer keepAliveTimer =
-                    MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
-                                        ImmutableList.of(Tag.of("protocol", protocol.uriText())));
-            keepAliveHandler = new Http2ClientKeepAliveHandler(
-                    channel, encoder.frameWriter(), keepAliveTimer,
-                    idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
-        } else {
-            keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
-        }
-
-        responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler);
+        responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler());
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
 
         // Setup post build options
-        final long timeout = idleTimeoutMillis;
+        final long timeout = clientFactory.idleTimeoutMillis();
         if (timeout > 0) {
             gracefulShutdownTimeoutMillis(timeout);
         } else {
@@ -79,12 +61,31 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         }
     }
 
-    Http2ResponseDecoder responseDecoder() {
-        return responseDecoder;
+    private static KeepAliveHandler newKeepAliveHandler(
+            Http2ConnectionEncoder encoder, Channel channel,
+            HttpClientFactory clientFactory, SessionProtocol protocol) {
+
+        final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
+        final long pingIntervalMillis = clientFactory.pingIntervalMillis();
+        final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
+        final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
+        final boolean needsKeepAliveHandler = needsKeepAliveHandler(
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+
+        if (!needsKeepAliveHandler) {
+            return NoopKeepAliveHandler.INSTANCE;
+        }
+
+        final Timer keepAliveTimer =
+                MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
+                                    ImmutableList.of(Tag.of("protocol", protocol.uriText())));
+        return new Http2ClientKeepAliveHandler(
+                channel, encoder.frameWriter(), keepAliveTimer,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
     }
 
-    KeepAliveHandler keepAliveHandler() {
-        return keepAliveHandler;
+    Http2ResponseDecoder responseDecoder() {
+        return responseDecoder;
     }
 
     @Override
@@ -118,7 +119,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     protected boolean needsImmediateDisconnection() {
         return clientFactory.isClosing() ||
                responseDecoder.goAwayHandler().receivedErrorGoAway() ||
-               (keepAliveHandler != null && keepAliveHandler.isClosing());
+               keepAliveHandler().isClosing();
     }
 
     @Override
@@ -128,14 +129,12 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
-        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            keepAliveHandler.initialize(ctx);
+        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
+            keepAliveHandler().initialize(ctx);
         }
     }
 
     private void destroyKeepAliveHandler() {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.destroy();
-        }
+        keepAliveHandler().destroy();
     }
 }

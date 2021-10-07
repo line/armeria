@@ -53,7 +53,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.proxy.ProxyConnectException;
@@ -336,12 +335,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 this.requestEncoder = requestEncoder;
                 this.responseDecoder = responseDecoder;
             } else if (protocol == H2 || protocol == H2C) {
-                final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-                final Http2ClientConnectionHandler clientHandler =
-                        ctx.pipeline().get(Http2ClientConnectionHandler.class);
-                requestEncoder = new ClientHttp2ObjectEncoder(ctx, handler.encoder(),
-                                                              protocol, clientHandler.keepAliveHandler());
-                responseDecoder = clientHandler.responseDecoder();
+                final ChannelHandlerContext connectionHandlerCtx =
+                        ctx.pipeline().context(Http2ClientConnectionHandler.class);
+                final Http2ClientConnectionHandler connectionHandler =
+                        (Http2ClientConnectionHandler) connectionHandlerCtx.handler();
+                requestEncoder = new ClientHttp2ObjectEncoder(connectionHandlerCtx,
+                                                              connectionHandler, protocol);
+                responseDecoder = connectionHandler.responseDecoder();
             } else {
                 throw new Error(); // Should never reach here.
             }

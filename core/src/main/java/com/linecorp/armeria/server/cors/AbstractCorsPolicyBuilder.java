@@ -60,6 +60,8 @@ abstract class AbstractCorsPolicyBuilder {
     private long maxAge;
     private final Set<AsciiString> exposedHeaders = new HashSet<>();
     private final EnumSet<HttpMethod> allowedRequestMethods = EnumSet.noneOf(HttpMethod.class);
+    // FIXME(ghkim3221): Change the default value to true in Armeria 2.0.
+    private boolean allowAllRequestHeaders;
     private final Set<AsciiString> allowedRequestHeaders = new HashSet<>();
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders = new HashMap<>();
     private boolean preflightResponseHeadersDisabled;
@@ -97,6 +99,7 @@ abstract class AbstractCorsPolicyBuilder {
         if (corsDecorator.allowedRequestHeaders().length > 0) {
             allowRequestHeaders(corsDecorator.allowedRequestHeaders());
         }
+        allowAllRequestHeaders(corsDecorator.allowAllRequestHeaders());
         if (corsDecorator.allowedRequestMethods().length > 0) {
             allowRequestMethods(corsDecorator.allowedRequestMethods());
         }
@@ -272,6 +275,21 @@ abstract class AbstractCorsPolicyBuilder {
     }
 
     /**
+     * Sets whether to allow all HTTP headers in the CORS {@code "Access-Control-Request-Headers"} request
+     * header.
+     *
+     * <p>The server will set the CORS {@code "Access-Control-Allow-Headers"} to be as same as the CORS
+     * {@code "Access-Control-Request-Headers"} header in the request if this property is {@code true}.
+     * The default value of this property is {@code false}.
+     *
+     * @return {@code this} to support method chaining.
+     */
+    public AbstractCorsPolicyBuilder allowAllRequestHeaders(boolean allowAllRequestHeaders) {
+        this.allowAllRequestHeaders = allowAllRequestHeaders;
+        return this;
+    }
+
+    /**
      * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
      * response header.
      *
@@ -411,14 +429,16 @@ abstract class AbstractCorsPolicyBuilder {
      */
     CorsPolicy build() {
         return new CorsPolicy(origins, routes, credentialsAllowed, maxAge, nullOriginAllowed,
-                              exposedHeaders, allowedRequestHeaders, allowedRequestMethods,
-                              preflightResponseHeadersDisabled, preflightResponseHeaders);
+                              exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
+                              allowedRequestMethods, preflightResponseHeadersDisabled,
+                              preflightResponseHeaders);
     }
 
     @Override
     public String toString() {
         return CorsPolicy.toString(this, origins, routes,
                                    nullOriginAllowed, credentialsAllowed, maxAge, exposedHeaders,
-                                   allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
+                                   allowedRequestMethods, allowAllRequestHeaders, allowedRequestHeaders,
+                                   preflightResponseHeaders);
     }
 }

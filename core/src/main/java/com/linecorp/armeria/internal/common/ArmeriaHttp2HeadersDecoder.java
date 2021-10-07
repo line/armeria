@@ -14,12 +14,19 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
-import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
+import io.netty.handler.codec.http2.DefaultHttp2HeadersDecoder;
+import io.netty.handler.codec.http2.Http2Headers;
 
-final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> implements HttpResponse {
-    AbortedHttpResponse(Throwable cause) {
-        super(cause);
+public final class ArmeriaHttp2HeadersDecoder extends DefaultHttp2HeadersDecoder {
+
+    public ArmeriaHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize) {
+        super(validateHeaders, maxHeaderListSize);
+    }
+
+    @Override
+    protected Http2Headers newHeaders() {
+        return new ArmeriaHttp2Headers().sizeHint(numberOfHeadersGuess());
     }
 }

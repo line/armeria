@@ -154,7 +154,7 @@ public class MethodInvokerBenchmark {
         return builder.toString();
     }
 
-    // This is a replica of AnnotatedService#asMethodHandle(Method, Object)} with additional support for varargs
+    // This is a replica of AnnotatedService#asMethodHandle(Method, Object) with additional support for varargs
     private static MethodHandle asMethodHandle(Method method, @Nullable Object object) {
         MethodHandle methodHandle;
         try {

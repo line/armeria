@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import java.util.concurrent.TimeUnit;
 
@@ -22,36 +22,27 @@ import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 
 final class DropwizardSupport {
 
-    static boolean addExposition(ArmeriaSettings settings, ServerBuilder server,
-                                 MeterRegistry meterRegistry) {
-        final String metricsPath = settings.getMetricsPath();
-        assert metricsPath != null;
+    @Nullable
+    static DropwizardExpositionService newExpositionService(MeterRegistry meterRegistry) {
 
         if (!(meterRegistry instanceof DropwizardMeterRegistry)) {
-            return false;
+            return null;
         }
+
         final MetricRegistry dropwizardRegistry =
                 ((DropwizardMeterRegistry) meterRegistry).getDropwizardRegistry();
         final ObjectMapper objectMapper = new ObjectMapper()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .registerModule(new MetricsModule(TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true));
 
-        server.route()
-              .get(settings.getMetricsPath())
-              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                   objectMapper.writeValueAsBytes(dropwizardRegistry)));
-        return true;
+        return new DropwizardExpositionService(dropwizardRegistry, objectMapper);
     }
 
     private DropwizardSupport() {}

@@ -15,11 +15,12 @@
  */
 package com.linecorp.armeria.server.grpc;
 
+import java.util.Map;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -58,22 +59,22 @@ public interface UnframedGrpcErrorHandler {
      */
     static UnframedGrpcErrorHandler ofJson() {
         return (ctx, status, response) -> {
-            final HttpHeaders headers = !response.trailers().isEmpty() ?
-                                        response.trailers() : response.headers();
             final Code grpcCode = status.getCode();
-            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcCode);
-            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-            builder.put("grpc-code", grpcCode.name());
-            final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+            final Map<String, Object> message;
+            final String grpcMessage = status.getDescription();
             if (grpcMessage != null) {
-                builder.put("message", grpcMessage);
+                message = ImmutableMap.of("grpc-code", grpcCode.name(),
+                                          "message", grpcMessage);
+            } else {
+                message = ImmutableMap.of("grpc-code", grpcCode.name());
             }
+            final HttpStatus httpStatus = GrpcStatus.grpcStatusToHttpStatus(status);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.JSON_UTF_8)
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
                                                                            grpcCode.value())
                                                                    .build();
-            return HttpResponse.ofJson(responseHeaders, builder.build());
+            return HttpResponse.ofJson(responseHeaders, message);
         };
     }
 
@@ -82,15 +83,13 @@ public interface UnframedGrpcErrorHandler {
      */
     static UnframedGrpcErrorHandler ofPlainText() {
         return (ctx, status, response) -> {
-            final HttpHeaders headers = !response.trailers().isEmpty() ?
-                                        response.trailers() : response.headers();
             final Code grpcCode = status.getCode();
-            final HttpStatus httpStatus = GrpcStatus.grpcCodeToHttpStatus(grpcCode);
             final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());
-            final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+            final String grpcMessage = status.getDescription();
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
             }
+            final HttpStatus httpStatus = GrpcStatus.grpcStatusToHttpStatus(status);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.PLAIN_TEXT_UTF_8)
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,

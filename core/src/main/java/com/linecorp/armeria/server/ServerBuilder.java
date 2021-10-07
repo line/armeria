@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -56,8 +57,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import com.google.common.net.HostAndPort;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -184,7 +185,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
-    private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
+    private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -213,6 +214,8 @@ public final class ServerBuilder {
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        hostnamePattern = hostAndPort.getHost();
         final String[] elements = hostnamePattern.split("\\.");
         final StringBuilder name = new StringBuilder(
                 DEFAULT_ACCESS_LOGGER_PREFIX.length() + hostnamePattern.length() + 1);
@@ -224,6 +227,10 @@ public final class ServerBuilder {
             }
             name.append('.');
             name.append(element);
+        }
+        if (hostAndPort.hasPort()) {
+            name.append(':');
+            name.append(hostAndPort.getPort());
         }
         return name.toString();
     }
@@ -1350,6 +1357,31 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Port-based">port-based virtual host</a>
+     * with the specified {@code port}. The returned virtual host will have a catch-all (wildcard host) name
+     * pattern that allows all host names.
+     *
+     * @param port the port number that this virtual host binds to
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    public VirtualHostBuilder virtualHost(int port) {
+        checkArgument(port >= 1 && port <= 65535, "port: %s (expected: 1-65535)", port);
+
+        // Look for a virtual host that has already been made and reuse it.
+        final Optional<VirtualHostBuilder> vhost =
+                virtualHostBuilders.stream()
+                                   .filter(v -> v.port() == port && v.defaultVirtualHost())
+                                   .findFirst();
+        if (vhost.isPresent()) {
+            return vhost.get();
+        }
+
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, port);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
@@ -1444,14 +1476,15 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+     * Sets the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
+     * or protocol errors.
      *
-     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ServerErrorHandler}
      * but the {@link HttpResponseException#httpResponse()} is sent as-is.
      */
     @UnstableApi
-    public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
-        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+    public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         return this;
     }
 
@@ -1662,10 +1695,26 @@ public final class ServerBuilder {
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
         final Collection<ServerPort> ports;
 
-        this.ports.forEach(
-                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
-                                   "protocols: %s (expected: at least one %s or %s)",
-                                   port.protocols(), HTTP, HTTPS));
+        for (ServerPort port : this.ports) {
+            checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
+                       "protocols: %s (expected: at least one %s or %s)",
+                       port.protocols(), HTTP, HTTPS);
+        }
+
+        // The port numbers of port-based virtual hosts must exist in 'ServerPort's.
+        final List<VirtualHost> portBasedVirtualHosts = virtualHosts.stream()
+                                                                    .filter(v -> v.port() > 0)
+                                                                    .collect(toImmutableList());
+        final List<Integer> portNumbers = this.ports.stream()
+                                                    .map(port -> port.localAddress().getPort())
+                                                    .filter(port -> port > 0)
+                                                    .collect(toImmutableList());
+        for (VirtualHost virtualHost : portBasedVirtualHosts) {
+            final int virtualHostPort = virtualHost.port();
+            final boolean portMatched = portNumbers.stream().anyMatch(port -> port == virtualHostPort);
+            checkState(portMatched, "virtual host port: %s (expected: one of %s)",
+                       virtualHostPort, portNumbers);
+        }
 
         if (defaultSslContext == null) {
             sslContexts = null;
@@ -1724,9 +1773,10 @@ public final class ServerBuilder {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ExceptionHandler exceptionHandler = this.exceptionHandler;
-        if (exceptionHandler != ExceptionHandler.ofDefault()) {
-            exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
+        ServerErrorHandler errorHandler = this.errorHandler;
+        if (errorHandler != ServerErrorHandler.ofDefault()) {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
@@ -1743,7 +1793,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts);
     }
 
     /**

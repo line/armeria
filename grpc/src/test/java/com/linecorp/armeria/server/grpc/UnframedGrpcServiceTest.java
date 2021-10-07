@@ -111,8 +111,9 @@ class UnframedGrpcServiceTest {
         });
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpResponse res = response.aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().isEmpty()).isTrue();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.contentUtf8())
+                .isEqualTo("grpc-code: CANCELLED, Completed without a response");
     }
 
     @Test

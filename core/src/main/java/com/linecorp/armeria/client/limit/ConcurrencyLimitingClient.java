@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -44,8 +46,7 @@ public final class ConcurrencyLimitingClient
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient>
     newDecorator(int maxConcurrency) {
-        validateMaxConcurrency(maxConcurrency);
-        return delegate -> new ConcurrencyLimitingClient(delegate, maxConcurrency);
+        return newDecorator(maxConcurrency, 100000L, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -53,17 +54,22 @@ public final class ConcurrencyLimitingClient
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             int maxConcurrency, long timeout, TimeUnit unit) {
-        validateAll(maxConcurrency, timeout, unit);
-        return delegate -> new ConcurrencyLimitingClient(delegate, maxConcurrency, timeout, unit);
+        return delegate -> new ConcurrencyLimitingClient(
+                delegate,
+                new AsyncConcurrencyLimit(unit.toMillis(timeout), maxConcurrency, 100));
     }
 
-    ConcurrencyLimitingClient(HttpClient delegate, int maxConcurrency) {
-        super(delegate, maxConcurrency);
+    /**
+     * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
+     */
+    public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
+            ConcurrencyLimit concurrencyLimit) {
+        requireNonNull(concurrencyLimit, "concurrencyLimit");
+        return delegate -> new ConcurrencyLimitingClient(delegate, concurrencyLimit);
     }
 
-    private ConcurrencyLimitingClient(HttpClient delegate,
-                                      int maxConcurrency, long timeout, TimeUnit unit) {
-        super(delegate, maxConcurrency, timeout, unit);
+    private ConcurrencyLimitingClient(HttpClient delegate, ConcurrencyLimit concurrencyLimit) {
+        super(delegate, concurrencyLimit);
     }
 
     @Override
