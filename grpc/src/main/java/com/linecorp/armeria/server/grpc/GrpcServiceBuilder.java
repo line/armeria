@@ -710,7 +710,7 @@ public final class GrpcServiceBuilder {
         }
         if (!enableHttpJsonTranscoding && httpJsonTranscodingErrorHandler != null) {
             throw new IllegalStateException(
-                    "'grpcTranscodingErrorHandler' can only be set if gRPC transcoding feature is enabled");
+                    "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature is enabled");
         }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
