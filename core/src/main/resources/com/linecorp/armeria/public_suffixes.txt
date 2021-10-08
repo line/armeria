@@ -3689,6 +3689,7 @@ io
 io.kg
 iobb.net
 iopsys.se
+ip.linodeusercontent.com
 ip6.arpa
 ipifony.net
 ipiranga
@@ -7574,7 +7575,6 @@ sweetpepper.org
 swidnica.pl
 swidnik.pl
 swiebodzin.pl
-swiftcover
 swinoujscie.pl
 swiss
 sx
@@ -7770,6 +7770,7 @@ thingdustdata.com
 thruhere.net
 tiaa
 tickets
+tickets.io
 tienda
 tiffany
 time.museum
@@ -8147,6 +8148,7 @@ uol
 uonuma.niigata.jp
 uozu.toyama.jp
 upaas.kazteleport.kz
+upli.io
 upow.gov.pl
 uppo.gov.pl
 ups
