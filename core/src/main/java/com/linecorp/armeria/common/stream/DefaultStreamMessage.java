@@ -346,7 +346,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             return;
         }
 
-        for (; ; ) {
+        for (;;) {
             if (state == State.CLEANUP) {
                 cleanupObjects(null);
                 return;
@@ -456,7 +456,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void cleanupObjects(@Nullable Throwable cause) {
-        for (; ; ) {
+        for (;;) {
             final Object e = queue.poll();
             if (e == null) {
                 break;

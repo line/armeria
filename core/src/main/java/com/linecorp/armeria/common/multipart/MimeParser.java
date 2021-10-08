@@ -186,6 +186,7 @@ final class MimeParser {
         }
 
         try {
+            boolean contentCreated = false;
             while (true) {
                 switch (state) {
                     case START_MESSAGE:
@@ -197,7 +198,7 @@ final class MimeParser {
                         logger.trace("state={}", State.SKIP_PREAMBLE);
                         skipPreamble();
                         if (boundaryStart == -1) {
-                            // Need more data
+                            // Need more data, handle by DecodedHttpStreamMessage
                             return;
                         }
                         logger.trace("Skipped the preamble.");
@@ -215,7 +216,7 @@ final class MimeParser {
                         logger.trace("state={}", State.HEADERS);
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
-                            // Need more data
+                            // Need more data, handle by DecodedHttpStreamMessage
                             return;
                         }
                         if (!headerLine.isEmpty()) {
@@ -244,23 +245,19 @@ final class MimeParser {
                         final ByteBuf bodyContent = readBody();
                         if (boundaryStart == -1 || bodyContent == NEED_MORE) {
                             if (bodyContent == NEED_MORE) {
-                                multipartDecoder.requestBodyPartData();
+                                // Get HttpData but didn't publish any content
+                                if (!contentCreated) {
+                                    multipartDecoder.requestUpstreamForBodyPartData(bodyPartPublisher);
+                                }
                                 return;
                             }
                         } else {
                             startOfLine = false;
                         }
-                        bodyPartPublisher.write(HttpData.wrap(bodyContent));
-                        if (state == State.BODY) {
-                            bodyPartPublisher.whenConsumed().thenRun(() -> {
-                                // Needs additional conditions such as:
-                                // - bodyPartPublisher reference is not changed
-                                // - state is still BODY.
-                                if (bodyPartPublisher.demand() > 0) {
-                                    multipartDecoder.requestBodyPartData();
-                                }
-                            });
-                        }
+
+                        // Avoid throwing exception.
+                        bodyPartPublisher.tryWrite(HttpData.wrap(bodyContent));
+                        contentCreated = true;
                         break;
 
                     case END_PART:
