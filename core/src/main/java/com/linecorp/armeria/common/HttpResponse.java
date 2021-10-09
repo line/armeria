@@ -26,6 +26,7 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -113,6 +114,23 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Invokes the specified {@link Supplier} and creates a new HTTP response that
+     * delegates to the provided {@link HttpResponse} by {@link Supplier},
+     * beginning publishing has passes from the provided {@link Executor}.
+     *
+     * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
+     * @param executor the {@link Executor} executes the {@link DeferredHttpResponse} which delegates
+     *                 the {@link HttpResponse} supplied by the {@link Supplier}.
+     */
+    static HttpResponse from(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(executor, "executor");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.execute(() -> res.delegate(responseSupplier.get()));
+        return res;
+    }
+
+    /**
      * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
      * publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
      */
@@ -158,7 +176,8 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
      * delegates to the provided {@link HttpResponse} by {@link Supplier},
-     * beginning publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
+     * beginning publishing after {@code delay} has passed from the {@link ScheduledExecutorService} which
+     * respects the current thread-local {@link RequestContext}'s event loop if possible.
      */
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");

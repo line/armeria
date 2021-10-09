@@ -159,6 +159,15 @@ class HttpResponseTest {
     }
 
     @Test
+    void httpResponseUsingDeliveredExecutor() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.from(responseSupplier,
+                                                   Executors.newSingleThreadScheduledExecutor());
+
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void delayedHttpResponseWithAggregatedHttpResponseUsingCurrentEventLoopOrCommonPools() {
         final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
         final Stopwatch stopwatch = Stopwatch.createStarted();
