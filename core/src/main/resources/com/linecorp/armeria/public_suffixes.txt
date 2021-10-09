@@ -6607,7 +6607,6 @@ quebec
 quebec.museum
 quest
 quicksytes.com
-qvc
 r.bg
 r.cdn77.net
 r.se
