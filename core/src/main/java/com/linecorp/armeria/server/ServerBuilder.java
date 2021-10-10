@@ -61,6 +61,7 @@ import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -85,6 +86,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.util.AsciiString;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -195,6 +197,7 @@ public final class ServerBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
+    private Http1HeaderNaming http1HeaderNaming = AsciiString::toString;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1676,6 +1679,17 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
+        requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        this.http1HeaderNaming = http1HeaderNaming;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1803,7 +1817,8 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
+                http1HeaderNaming);
     }
 
     /**

@@ -827,8 +827,9 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ServerHeaders(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        toNettyHttp1Server(inputHeaders, outputHeaders, false);
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            Http1HeaderNaming http1HeaderNaming) {
+        toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, false);
         HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
@@ -839,13 +840,14 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders The object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ServerTrailers(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        toNettyHttp1Server(inputHeaders, outputHeaders, true);
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            Http1HeaderNaming http1HeaderNaming) {
+        toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, true);
     }
 
     private static void toNettyHttp1Server(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            boolean isTrailer) {
+            Http1HeaderNaming http1HeaderNaming, boolean isTrailer) {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
@@ -856,7 +858,7 @@ public final class ArmeriaHttpUtil {
             if (isTrailer && isTrailerDisallowed(name)) {
                 continue;
             }
-            outputHeaders.add(name, value);
+            outputHeaders.add(http1HeaderNaming.convert(name), value);
         }
     }
 

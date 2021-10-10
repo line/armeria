@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -112,6 +113,7 @@ public final class ServerConfig {
     private final boolean enableDateHeader;
     private final Supplier<RequestId> requestIdGenerator;
     private final ServerErrorHandler errorHandler;
+    private final Http1HeaderNaming http1HeaderNaming;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -140,7 +142,8 @@ public final class ServerConfig {
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator,
             ServerErrorHandler errorHandler,
-            @Nullable Mapping<String, SslContext> sslContexts) {
+            @Nullable Mapping<String, SslContext> sslContexts,
+            Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -253,6 +256,7 @@ public final class ServerConfig {
         this.requestIdGenerator = castRequestIdGenerator;
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
+        this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -741,6 +745,15 @@ public final class ServerConfig {
     @Nullable
     Mapping<String, SslContext> sslContextMapping() {
         return sslContexts;
+    }
+
+    /**
+     * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public Http1HeaderNaming http1HeaderNaming() {
+        return http1HeaderNaming;
     }
 
     @Override
