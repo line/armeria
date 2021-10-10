@@ -143,7 +143,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     }
 
     @Override
-    protected void onRequest(long n) {
+    protected void onRequest(long n, long oldDemand) {
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
         if (initialized && n > 0) {
             if (requestHeaders != null) {
@@ -158,8 +158,8 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
             // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
             // at subscribe)
             whenConsumed().thenRun(() -> {
-                // After using all data, we still have demand()
-                if (demand() > 0) {
+                // There isn't any buffered data, and it's the first request after exhausted.
+                if (demand() > 0 && oldDemand == 0) {
                     askUpstreamForElement();
                 }
             });

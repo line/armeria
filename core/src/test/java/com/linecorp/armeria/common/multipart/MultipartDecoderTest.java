@@ -203,10 +203,11 @@ public class MultipartDecoderTest {
                                "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(2);
+        final List<String> contentIds = new CopyOnWriteArrayList<>();
         final List<String> bodies = new CopyOnWriteArrayList<>();
         final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
             counter.decrementAndGet();
-            assertThat(part.headers().get("Content-Id")).contains("part1");
+            contentIds.add(part.headers().get("Content-Id"));
             final HttpDataAggregator subscriber = new HttpDataAggregator();
             part.content().subscribe(subscriber);
             subscriber.content().thenAccept(body -> {
@@ -220,12 +221,81 @@ public class MultipartDecoderTest {
                        upstreamRequestCount).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(contentIds).containsExactly("part1");
         assertThat(bodies).containsExactly(
                 "this-is-the-1st-slice-of-the-body\n" +
                 "this-is-the-2nd-slice-of-the-body\n" +
                 "this-is-the-3rd-slice-of-the-body\n" +
                 "this-is-the-4th-slice-of-the-body");
         assertThat(upstreamRequestCount.get()).isEqualTo(4);
+    }
+
+    @Test
+    void testBodyPartContentRequestMultipleTimes() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id: part1\n" +
+                               '\n' +
+                               "this-is-the-1st-slice-of-the-body\n").getBytes();
+        final byte[] chunk2 = "this-is-the-2nd-slice-of-the-body\n".getBytes();
+        final byte[] chunk3 = "this-is-the-3rd-slice-of-the-body\n".getBytes();
+        final byte[] chunk4 = ("this-is-the-4th-slice-of-the-body\n" +
+                               "--" + boundary + "--").getBytes();
+
+        final AtomicInteger counter = new AtomicInteger(4);
+        final List<String> contentIds = new CopyOnWriteArrayList<>();
+        final List<String> bodies = new CopyOnWriteArrayList<>();
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartsSubscription, part) -> {
+            contentIds.add(part.headers().get("Content-Id"));
+            part.content().subscribe(new Subscriber<HttpData>() {
+                @Override
+                public void onSubscribe(Subscription subscription) {
+                    CompletableFuture.supplyAsync(() -> {
+                        try {
+                            Thread.sleep(100);
+                            subscription.request(1);
+                            Thread.sleep(100);
+                            subscription.request(1);
+                            Thread.sleep(200);
+                            subscription.request(2);
+                            Thread.sleep(100);
+                            subscription.request(2);
+                        } catch (InterruptedException ignored) {
+                        }
+                        return null;
+                    });
+                }
+
+                @Override
+                public void onNext(HttpData item) {
+                    bodies.add(item.toStringUtf8());
+                    counter.decrementAndGet();
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                }
+
+                @Override
+                public void onComplete() {
+                }
+            });
+        };
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final AtomicLong upstreamRequestCount = new AtomicLong();
+        partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4),
+                       upstreamRequestCount).subscribe(testSubscriber);
+        await().untilAtomic(counter, is(0));
+        assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(contentIds).containsExactly("part1");
+        assertThat(bodies).containsExactly(
+                "this-is-the-1st-slice-o",
+                "f-the-body\nthis-is-the-2nd-slice-o",
+                "f-the-body\nthis-is-the-3rd-slice-o",
+                "f-the-body\nthis-is-the-4th-slice-of-the-body");
+        // If we have delayed flux(complete comes late), then we will have 5th request.
+        System.out.println(upstreamRequestCount.get());
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(5);
     }
 
     @Test
