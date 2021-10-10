@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.multipart;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
@@ -256,7 +255,10 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     @Override
     public void onNext(BodyPart bodyPart) {
         assert subscriber != null;
-        demandOfMultipart--;
+
+        if (demandOfMultipart != Long.MAX_VALUE) {
+            demandOfMultipart--;
+        }
 
         currentExposedBodyPartPublisher = bodyPart.content();
         // We only publish one bodyPart one time.
@@ -311,53 +313,37 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         return new BodyPartPublisher();
     }
 
-    public void requestUpstreamForBodyPartData(BodyPartPublisher requester) {
+    public void requestUpstreamForBodyPartData() {
         assert executor != null;
         if (executor.inEventLoop()) {
-            requestUpstreamForBodyPartData0(requester);
+            requestUpstreamForBodyPartData0();
         } else {
-            executor.execute(() -> requestUpstreamForBodyPartData0(requester));
+            executor.execute(this::requestUpstreamForBodyPartData0);
         }
     }
 
-    private void requestUpstreamForBodyPartData0(BodyPartPublisher requester) {
+    private void requestUpstreamForBodyPartData0() {
         // No more upstream request and bodyPartPublisher still needs data
         // If it's closed(cancelled), let next body part request handle it.
         if (currentExposedBodyPartPublisher != null && currentExposedBodyPartPublisher.isOpen()) {
-            // TODO
             decoded.askUpstreamForElement();
         }
     }
 
-    /**
-     * TODO
-     * This is wrong, we can't guarantee the number of buffer is correct.
-     */
     class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
-        // onRequest & onRemoval is running in BodyPartSubscriber thread
-        // tryWrite is running MultipartSubscriber thread
-        private final AtomicLong bufferedHttpData = new AtomicLong();
-
         @Override
         protected void onRequest(long n) {
-            if (demand() > 0 && bufferedHttpData.get() <= 0 && isOpen()) {
-                requestUpstreamForBodyPartData(this);
-            }
-        }
-
-        @Override
-        public boolean tryWrite(HttpData obj) {
-            final boolean write = super.tryWrite(obj);
-            if (write) {
-                bufferedHttpData.incrementAndGet();
-            }
-            return write;
-        }
-
-        @Override
-        protected void onRemoval(HttpData obj) {
-            super.onRemoval(obj);
-            bufferedHttpData.decrementAndGet();
+            // TODO: Should be safe?
+            // Because whenConsumed will run in the same thread(called by onRequest) after looping the existing
+            // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
+            // at subscribe)
+            // So if there is no change, it means there is no buffered data processed.
+            whenConsumed().thenRun(() -> {
+                // There isn't any buffered data
+                if (demand() > 0) {
+                    requestUpstreamForBodyPartData();
+                }
+            });
         }
     }
 }

@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.MultipartDecoder.BodyPartPublisher;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 
@@ -186,7 +187,6 @@ final class MimeParser {
         }
 
         try {
-            boolean contentCreated = false;
             while (true) {
                 switch (state) {
                     case START_MESSAGE:
@@ -245,10 +245,14 @@ final class MimeParser {
                         final ByteBuf bodyContent = readBody();
                         if (boundaryStart == -1 || bodyContent == NEED_MORE) {
                             if (bodyContent == NEED_MORE) {
-                                // Get HttpData but didn't publish any content
-                                if (!contentCreated) {
-                                    multipartDecoder.requestUpstreamForBodyPartData(bodyPartPublisher);
-                                }
+                                final BodyPartPublisher currentPublisher = bodyPartPublisher;
+                                currentPublisher.whenConsumed().thenRun(() -> {
+                                    // TODO: Is checking open enough?
+                                    //  Due to we always open next after previous one closed
+                                    if (currentPublisher.demand() > 0 && currentPublisher.isOpen()) {
+                                        multipartDecoder.requestUpstreamForBodyPartData();
+                                    }
+                                });
                                 return;
                             }
                         } else {
@@ -257,7 +261,6 @@ final class MimeParser {
 
                         // Avoid throwing exception.
                         bodyPartPublisher.tryWrite(HttpData.wrap(bodyContent));
-                        contentCreated = true;
                         break;
 
                     case END_PART:

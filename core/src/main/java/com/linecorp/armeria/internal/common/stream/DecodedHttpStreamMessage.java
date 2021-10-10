@@ -67,9 +67,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     private boolean initialized;
     private boolean askedUpstreamForElement;
     private boolean cancelled;
-    // TODO we need to handle that queue has more data
-    // If not, even queue have data, we still ask upstream for new item even n < buffer.
-    private long bufferedItemCount;
 
     /**
      * Returns a new {@link DecodedHttpStreamMessage} with the specified {@link HttpDecoder} and
@@ -109,11 +106,9 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
 
     @Override
     public void add(T e) {
-        bufferedItemCount++;
         if (tryWrite(e)) {
             handlerProduced = true;
         } else {
-            bufferedItemCount--;
             cancelAndCleanup();
         }
     }
@@ -148,12 +143,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     }
 
     @Override
-    protected void onRemoval(T obj) {
-        super.onRemoval(obj);
-        bufferedItemCount--;
-    }
-
-    @Override
     protected void onRequest(long n) {
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
         if (initialized && n > 0) {
@@ -162,9 +151,18 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 final HttpHeaders requestHeaders = this.requestHeaders;
                 this.requestHeaders = null;
                 subscriber.onNext(requestHeaders);
-            } else if (bufferedItemCount <= 0) {
-                askUpstreamForElement();
             }
+            // TODO: Should be safe?
+            // Use buffered data first.
+            // Because whenConsumed will run in the same thread(called by onRequest) after looping the existing
+            // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
+            // at subscribe)
+            whenConsumed().thenRun(() -> {
+                // After using all data, we still have demand()
+                if (demand() > 0) {
+                    askUpstreamForElement();
+                }
+            });
         }
     }
 
