@@ -13,18 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.server.graphql.protocol;
-
-import com.linecorp.armeria.common.annotation.UnstableApi;
-
 /**
- * A <a href="https://spec.graphql.org/June2018/">GraphQL</a> request.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.graphql.protocol.GraphqlRequest} instead.
+ * Common classes for handling the GraphQL protocol.
  */
 @UnstableApi
-@Deprecated
-public interface GraphqlRequest extends com.linecorp.armeria.common.graphql.protocol.GraphqlRequest {
+@NonNullByDefault
+package com.linecorp.armeria.common.graphql.protocol;
 
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

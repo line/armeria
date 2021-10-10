@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.graphql.protocol;
+package com.linecorp.armeria.common.graphql.protocol;
 
 import java.util.Map;
 import java.util.Objects;

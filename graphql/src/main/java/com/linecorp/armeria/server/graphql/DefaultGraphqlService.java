@@ -30,9 +30,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
-import com.linecorp.armeria.server.graphql.protocol.GraphqlRequest;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;

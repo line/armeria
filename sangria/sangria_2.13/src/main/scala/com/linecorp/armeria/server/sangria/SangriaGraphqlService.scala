@@ -19,11 +19,12 @@ package com.linecorp.armeria.server.sangria
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.linecorp.armeria.common.HttpStatus.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import com.linecorp.armeria.common.annotation.UnstableApi
+import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest
 import com.linecorp.armeria.common.{HttpHeaderNames, HttpHeaders, HttpResponse, HttpStatus, MediaType}
 import com.linecorp.armeria.internal.common.JacksonUtil
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.ServiceRequestContext
-import com.linecorp.armeria.server.graphql.protocol.{AbstractGraphqlService, GraphqlRequest}
+import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService
 import com.linecorp.armeria.server.sangria.SangriaGraphqlService.{ApolloTracing, mapper}
 import com.linecorp.armeria.server.sangria.SangriaJackson._
 import io.netty.util.AsciiString
