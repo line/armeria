@@ -26,5 +26,4 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 @Deprecated
 public interface GraphqlRequest extends com.linecorp.armeria.common.graphql.protocol.GraphqlRequest {
-
 }
