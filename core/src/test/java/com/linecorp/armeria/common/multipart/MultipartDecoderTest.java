@@ -95,7 +95,7 @@ public class MultipartDecoderTest {
         await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(headers).containsExactly("part1");
         assertThat(bodies).containsExactly("body 1");
-        assertThat(upstreamRequestCount.get()).isEqualTo(1);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
     @Test
@@ -139,7 +139,7 @@ public class MultipartDecoderTest {
         assertThat(testSubscriber.completionFuture).isDone();
         assertThat(headers).containsExactly("part1", "part2");
         assertThat(bodies).containsExactly("body 1", "body 2");
-        assertThat(upstreamRequestCount.get()).isEqualTo(1);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(1);
     }
 
     @Test
@@ -187,7 +187,7 @@ public class MultipartDecoderTest {
         assertThat(testSubscriber.completionFuture).isDone();
         assertThat(contentIds).containsExactly("part1", "part2", "part3", "part4", "part5");
         assertThat(bodies).containsExactly("body 1", "body 2", "body 3", "body 4", "body 5");
-        assertThat(upstreamRequestCount.get()).isEqualTo(2);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(3);
     }
 
     @Test
@@ -227,7 +227,7 @@ public class MultipartDecoderTest {
                 "this-is-the-2nd-slice-of-the-body\n" +
                 "this-is-the-3rd-slice-of-the-body\n" +
                 "this-is-the-4th-slice-of-the-body");
-        assertThat(upstreamRequestCount.get()).isEqualTo(4);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(5);
     }
 
     @Test
@@ -351,7 +351,7 @@ public class MultipartDecoderTest {
         await().forever().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
         assertThat(bodies).containsExactly("body 1", "body 2");
-        assertThat(upstreamRequestCount.get()).isEqualTo(10);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(11);
     }
 
     @Test
@@ -389,7 +389,7 @@ public class MultipartDecoderTest {
         assertThat(testSubscriber.completionFuture).isDone();
         assertThat(headers).containsExactly("part1", "text/plain", "bob=alice", "foo=bar");
         assertThat(bodies).containsExactly("body 1");
-        assertThat(upstreamRequestCount.get()).isEqualTo(5);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(6);
     }
 
     @Test
@@ -449,7 +449,7 @@ public class MultipartDecoderTest {
         assertThat(testSubscriber.completionFuture).isDone();
         assertThat(headers).containsExactly("part1", "text/plain", "bob=alice", "foo=bar");
         assertThat(bodies).containsExactly("body 1");
-        assertThat(upstreamRequestCount.get()).isEqualTo(5);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(6);
     }
 
     @Test
@@ -492,7 +492,7 @@ public class MultipartDecoderTest {
         await().forever().untilAtomic(counter, is(0));
         assertThat(testSubscriber.completionFuture).isDone();
         assertThat(bodies).containsExactly("body 1", "body 2");
-        assertThat(upstreamRequestCount.get()).isEqualTo(1);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
     @Test
@@ -530,7 +530,7 @@ public class MultipartDecoderTest {
 
         await().untilAtomic(counter, is(0));
         assertThat(bodies).containsExactly("body 1");
-        assertThat(upstreamRequestCount.get()).isEqualTo(1);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
     @Test
@@ -551,7 +551,7 @@ public class MultipartDecoderTest {
                     .hasCauseInstanceOf(MimeParsingException.class)
                     .hasMessageContaining("No closing MIME boundary");
         });
-        assertThat(upstreamRequestCount.get()).isEqualTo(1);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
     @Test
@@ -606,7 +606,7 @@ public class MultipartDecoderTest {
         await().untilAtomic(counter, is(1));
         assertThat(testSubscriber.completionFuture).isNotDone();
         assertThat(headers).containsExactly("part1");
-        assertThat(upstreamRequestCount.get()).isEqualTo(1);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
     @Test
@@ -664,7 +664,7 @@ public class MultipartDecoderTest {
         assertThat(thrown.get())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("oops");
-        assertThat(upstreamRequestCount.get()).isEqualTo(2);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(3);
     }
 
     @Test
@@ -719,7 +719,7 @@ public class MultipartDecoderTest {
         await().untilAtomic(counter, is(0));
         // Cancel will cause subscriber try to read as much as possible until next body
         // So it tries to read 4th chunk.
-        assertThat(upstreamRequestCount.get()).isEqualTo(4);
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(5);
     }
 
     @Test
@@ -797,7 +797,6 @@ public class MultipartDecoderTest {
         assertThat(headers).containsExactly("part1", "part2", "part3", "part4");
         assertThat(bodies).containsExactly("this-is-the-1st-slice-o", "body 2",
                                            "this-is-the-1st-slice-of", "body 4");
-        // TODO is 8 possible?
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(8);
     }
 

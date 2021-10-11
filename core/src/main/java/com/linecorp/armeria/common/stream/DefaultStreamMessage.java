@@ -169,7 +169,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     /**
      * Invoked whenever a new demand is requested.
      */
-    protected void onRequest(long n, long oldDemand) {}
+    protected void onRequest(long n) {}
 
     @Override
     public final void abort() {
@@ -258,7 +258,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
 
         // To make onNext know demand, we need to put this after demand updated.
-        onRequest(n, oldDemand);
+        onRequest(n);
 
         if (oldDemand == 0 && !queue.isEmpty()) {
             notifySubscriber0();

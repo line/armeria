@@ -264,15 +264,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         // Next BodyPart must wait the current BodyPart close and fully consumed.
         currentExposedBodyPartPublisher.whenComplete().handleAsync((unused, throwable) -> {
             currentExposedBodyPartPublisher = null;
-            if (throwable != null) {
-                if (!(throwable instanceof CancelledSubscriptionException)) {
-                    // Propagate to Multipart Subscriber
-                    // But now this comes after MultipartDecoder's onError due to MimeParser can't write any
-                    // data into BodyPartPublisher happens first
-                    abort(new BodyPartProcessException(throwable));
-                    return null;
-                }
-            }
             if (demandOfMultipart > 0 && !isComplete()) {
                 // BodyPart must be triggered after onSubscribe.
                 assert subscription != null;
@@ -331,15 +322,15 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
         @Override
-        protected void onRequest(long n, long oldDemand) {
+        protected void onRequest(long n) {
             // TODO: Should be safe?
             // Because whenConsumed will run in the same thread(called by onRequest) after looping the existing
             // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
             // at subscribe)
             // So if there is no change, it means there is no buffered data processed.
             whenConsumed().thenRun(() -> {
-                // There isn't any buffered data, and it's the first request or just after exhausted.
-                if (demand() > 0 && oldDemand == 0) {
+                // There isn't any buffered data, or it's not enough
+                if (demand() > 0) {
                     requestUpstreamForBodyPartData();
                 }
             });
