@@ -285,10 +285,8 @@ final class MimeParser {
                 }
             }
         } catch (MimeParsingException ex) {
-            ex.printStackTrace();
             throw ex;
         } catch (Throwable ex) {
-            ex.printStackTrace();
             throw new MimeParsingException(ex);
         }
     }
