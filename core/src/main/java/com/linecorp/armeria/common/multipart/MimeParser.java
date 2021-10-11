@@ -587,7 +587,7 @@ final class MimeParser {
         final int size = chars.length;
         final byte[] bytes = new byte[size];
 
-        for (int i = 0; i < size; ) {
+        for (int i = 0; i < size;) {
             bytes[i] = (byte) chars[i++];
         }
         return bytes;
