@@ -92,7 +92,7 @@ public class MultipartDecoderTest {
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
-        testSubscriber.completionFuture.join();
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         assertThat(headers).containsExactly("part1");
         assertThat(bodies).containsExactly("body 1");
         assertThat(upstreamRequestCount.get()).isEqualTo(1);
@@ -546,9 +546,11 @@ public class MultipartDecoderTest {
                 new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, null);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
-        assertThatThrownBy(testSubscriber.completionFuture::join)
-                .hasCauseInstanceOf(MimeParsingException.class)
-                .hasMessageContaining("No closing MIME boundary");
+        await().untilAsserted(() -> {
+            assertThatThrownBy(testSubscriber.completionFuture::join)
+                    .hasCauseInstanceOf(MimeParsingException.class)
+                    .hasMessageContaining("No closing MIME boundary");
+        });
         assertThat(upstreamRequestCount.get()).isEqualTo(1);
     }
 
@@ -615,9 +617,11 @@ public class MultipartDecoderTest {
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, null);
         decoder.subscribe(testSubscriber);
 
-        assertThatThrownBy(testSubscriber.completionFuture::join)
-                .hasCauseInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("oops");
+        await().untilAsserted(() -> {
+            assertThatThrownBy(testSubscriber.completionFuture::join)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("oops");
+        });
     }
 
     @Test
@@ -652,9 +656,11 @@ public class MultipartDecoderTest {
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
         decoder.subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
-        assertThatThrownBy(testSubscriber.completionFuture::join)
-                .hasCauseInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("oops");
+        await().untilAsserted(() -> {
+            assertThatThrownBy(testSubscriber.completionFuture::join)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("oops");
+        });
         assertThat(thrown.get())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("oops");
@@ -709,8 +715,8 @@ public class MultipartDecoderTest {
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3), upstreamRequestCount).subscribe(
                 testSubscriber);
+        await().untilAsserted(() -> assertThat(testSubscriber.completionFuture).isDone());
         await().untilAtomic(counter, is(0));
-        assertThat(testSubscriber.completionFuture).isDone();
         // Cancel will cause subscriber try to read as much as possible until next body
         // So it tries to read 4th chunk.
         assertThat(upstreamRequestCount.get()).isEqualTo(4);
