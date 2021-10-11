@@ -44,6 +44,7 @@ import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.stream.ByteBufDecoderInput;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -655,7 +656,10 @@ class MimeParserTest {
     private static List<AggregatedBodyPart> parse(String boundary, List<byte[]> data) {
         final ByteBufDecoderInput input = new ByteBufDecoderInput(ByteBufAllocator.DEFAULT);
         final List<BodyPart> output = new ArrayList<>();
-        final MimeParser parser = new MimeParser(input, output::add, boundary, null);
+        final MimeParser parser = new MimeParser(input, output::add, boundary,
+                                                 // Use onBodyPartBegin and requestUpstreamForBodyPartData
+                                                 new MultipartDecoder(StreamMessage.of(), "boundary",
+                                                                      ByteBufAllocator.DEFAULT));
         for (byte[] bytes : data) {
             input.add(Unpooled.wrappedBuffer(bytes));
             parser.parse();
