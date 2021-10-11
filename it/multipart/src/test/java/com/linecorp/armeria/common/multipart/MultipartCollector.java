@@ -85,36 +85,37 @@ public class MultipartCollector implements Subscriber<BodyPart> {
                 assert fileChannel != null;
                 assert bodyPartSubscription != null;
                 final ByteBuf byteBuf = data.byteBuf();
-                fileChannel.write(byteBuf.nioBuffer(), position, null,
-                                  new CompletionHandler<Integer, Void>() {
-                                      @Override
-                                      public void completed(Integer result, Void attachment) {
-                                          eventLoop.submit(() -> {
-                                              position += result;
-                                              writing = false;
-                                              if (closing) {
-                                                  try {
-                                                      maybeCloseFileChannel();
-                                                      future.complete(path);
-                                                  } catch (IOException e) {
-                                                      bodyPartSubscription.cancel();
-                                                      future.completeExceptionally(e);
-                                                  }
-                                              } else {
-                                                  bodyPartSubscription.request(1);
-                                              }
-                                          });
-                                      }
+                fileChannel.write(
+                        byteBuf.nioBuffer(), position, null,
+                        new CompletionHandler<Integer, Void>() {
+                            @Override
+                            public void completed(Integer result, Void attachment) {
+                                eventLoop.submit(() -> {
+                                    position += result;
+                                    writing = false;
+                                    if (closing) {
+                                        try {
+                                            maybeCloseFileChannel();
+                                            future.complete(path);
+                                        } catch (IOException e) {
+                                            bodyPartSubscription.cancel();
+                                            future.completeExceptionally(e);
+                                        }
+                                    } else {
+                                        bodyPartSubscription.request(1);
+                                    }
+                                });
+                            }
 
-                                      @Override
-                                      public void failed(Throwable e, Void attachment) {
-                                          eventLoop.submit(() -> {
-                                              writing = false;
-                                              bodyPartSubscription.cancel();
-                                              future.completeExceptionally(e);
-                                          });
-                                      }
-                                  });
+                            @Override
+                            public void failed(Throwable e, Void attachment) {
+                                eventLoop.submit(() -> {
+                                    writing = false;
+                                    bodyPartSubscription.cancel();
+                                    future.completeExceptionally(e);
+                                });
+                            }
+                        });
             }
 
             @Override

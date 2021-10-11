@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.common.multipart;
 
+/**
+ * For propagating exception to Multipart subscriber.
+ */
 public final class BodyPartProcessException extends RuntimeException {
     public BodyPartProcessException(Throwable cause) {
         super(cause);

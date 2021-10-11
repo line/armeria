@@ -144,7 +144,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         } else {
             executor.execute(() -> subscribe0(subscriber, executor, options));
         }
-
     }
 
     private void subscribe0(Subscriber<? super BodyPart> subscriber, EventExecutor executor,
@@ -268,8 +267,8 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             if (throwable != null) {
                 if (!(throwable instanceof CancelledSubscriptionException)) {
                     // Propagate to Multipart Subscriber
-                    // But now this comes after MultipartDecoder's onError due to MimeParser can't write any data
-                    // into BodyPartPublisher happens first
+                    // But now this comes after MultipartDecoder's onError due to MimeParser can't write any
+                    // data into BodyPartPublisher happens first
                     abort(new BodyPartProcessException(throwable));
                     return null;
                 }
