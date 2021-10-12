@@ -86,7 +86,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.util.AsciiString;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -197,7 +196,7 @@ public final class ServerBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
-    private Http1HeaderNaming http1HeaderNaming = AsciiString::toString;
+    private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
 
     ServerBuilder() {
         // Set the default host-level properties.
