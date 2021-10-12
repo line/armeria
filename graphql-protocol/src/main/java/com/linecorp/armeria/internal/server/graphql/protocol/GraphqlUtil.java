@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.internal.server.graphql.protocol;
 
+import java.util.List;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
-
-import java.util.List;
 
 /**
  * Utility for handling the GraphQL protocol.
@@ -43,8 +43,8 @@ public final class GraphqlUtil {
      */
     @Nullable
     public static MediaType produceType(RequestHeaders headers) {
-        MediaType contentType = headers.contentType();
-        if (HttpMethod.POST.equals(headers.method()) &&
+        final MediaType contentType = headers.contentType();
+        if (HttpMethod.POST == headers.method() &&
                 contentType != null && contentType.is(MediaType.GRAPHQL)) {
             return MediaType.GRAPHQL_JSON;
         }
