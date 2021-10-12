@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -61,7 +62,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     @Override
     protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
-        final MediaType produceType = req.produceType();
+        final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
                                    "Only application/graphql+json and application/json compatible " +

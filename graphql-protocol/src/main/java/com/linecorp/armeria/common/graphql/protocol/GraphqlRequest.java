@@ -39,7 +39,7 @@ public interface GraphqlRequest {
      * Returns a newly-created {@link GraphqlRequest} with the specified {@code query}.
      */
     static GraphqlRequest of(String query) {
-        return of(query, null, ImmutableMap.of(), ImmutableMap.of(), MediaType.GRAPHQL_JSON);
+        return of(query, null, ImmutableMap.of(), ImmutableMap.of());
     }
 
     /**
@@ -47,14 +47,13 @@ public interface GraphqlRequest {
      * and {@code variables}.
      */
     static GraphqlRequest of(String query, @Nullable String operationName,
-                             Map<String, Object> variables, Map<String, Object> extensions,
-                             @Nullable MediaType produceType) {
+                             Map<String, Object> variables, Map<String, Object> extensions) {
         requireNonNull(query, "query");
         checkArgument(!query.isEmpty(), "query is empty");
         requireNonNull(variables, "variables");
         requireNonNull(extensions, "extensions");
 
-        return new DefaultGraphqlRequest(query, operationName, variables, extensions, produceType);
+        return new DefaultGraphqlRequest(query, operationName, variables, extensions);
     }
 
     /**
@@ -83,17 +82,4 @@ public interface GraphqlRequest {
      * If not specified, an empty {@link Map} is returned.
      */
     Map<String, Object> extensions();
-
-    /**
-     * Returns the {@link MediaType} obtained through content negotiation.
-     * {@code null} if {@link HttpHeaderNames#ACCEPT} does not contain a {@link MediaType#GRAPHQL_JSON}
-     * or a {@link MediaType#JSON}. The returned {@link MediaType} can be used as the default content type
-     * for a GraphQL {@link HttpResponse}.
-     *
-     * <p>See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a> and
-     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#body">GraphQL over HTTP</a>
-     * for more information.
-     */
-    @Nullable
-    MediaType produceType();
 }

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
-import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,13 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
@@ -80,8 +77,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                    "Failed to parse a GraphQL query: " + ctx.query());
         }
 
-        return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions,
-                                                     produceType(req.headers())));
+        return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions));
     }
 
     @Override
@@ -118,8 +114,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
                     try {
                         return executeGraphql(ctx,
-                                              GraphqlRequest.of(query, operationName, variables, extensions,
-                                                                produceType(req.headers())));
+                                              GraphqlRequest.of(query, operationName, variables, extensions));
                     } catch (Exception ex) {
                         return HttpResponse.ofFailure(ex);
                     }
@@ -189,35 +184,5 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                MediaType.PLAIN_TEXT,
                                "Unsupported media type. Only JSON compatible types and " +
                                "application/graphql are supported.");
-    }
-
-    /**
-     * Returns the negotiated {@link MediaType}. {@link MediaType#JSON} and {@link MediaType#GRAPHQL_JSON}
-     * are commonly used for the Content-Type of a GraphQL response.
-     * If {@link HttpHeaderNames#ACCEPT} is not specified, {@link MediaType#GRAPHQL_JSON} is used by default.
-     *
-     * <p>Note that the negotiated {@link MediaType} could not be used by the implementation of
-     * {@link AbstractGraphqlService} which may choose to respond in one of several ways
-     * specified the
-     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#body">
-     * specification</a>.
-     */
-    @Nullable
-    private static MediaType produceType(RequestHeaders headers) {
-        final List<MediaType>  acceptTypes = headers.accept();
-        if (acceptTypes.isEmpty()) {
-            // If there is no Accept header in the request, the response MUST include
-            // a Content-Type: application/graphql+json header
-            return MediaType.GRAPHQL_JSON;
-        }
-
-        for (MediaType accept : acceptTypes) {
-            if (accept.is(MediaType.GRAPHQL_JSON) || accept.is(MediaType.JSON)) {
-                return accept;
-            }
-        }
-
-        // Not acceptable
-        return null;
     }
 }
