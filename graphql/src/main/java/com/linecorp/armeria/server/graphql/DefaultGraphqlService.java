@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -32,6 +31,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 
