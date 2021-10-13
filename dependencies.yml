@@ -485,6 +485,10 @@ org.hamcrest:
 org.hibernate.validator:
   hibernate-validator: { version: '6.2.0.Final' }
 
+# java-websocket is used only for testing in it:websocket module.
+org.java-websocket:
+  Java-WebSocket: { version: '1.5.2' }
+
 org.jctools:
   jctools-core:
     version: '3.3.0'

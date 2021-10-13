@@ -150,6 +150,20 @@ public enum SessionProtocol {
     }
 
     /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #H1} and {@link #H1C}.
+     */
+    public boolean isHttp1() {
+        return this == H1 || this == H1C;
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is one of {@link #H2} and {@link #H2C}.
+     */
+    public boolean isHttp2() {
+        return this == H2 || this == H2C;
+    }
+
+    /**
      * Returns {@code true} if and only if this protocol uses TLS as its transport-level security layer.
      */
     public boolean isTls() {

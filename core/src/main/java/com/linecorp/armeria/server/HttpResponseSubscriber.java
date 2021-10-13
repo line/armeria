@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeResponse;
 
 import java.nio.channels.ClosedChannelException;
 
@@ -78,6 +79,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private boolean isSubscriptionCompleted;
 
     private boolean loggedResponseHeadersFirstBytesTransferred;
+
+    private boolean http1WebSocketEstablished;
 
     @Nullable
     private WriteHeadersFutureListener cachedWriteHeadersListener;
@@ -149,7 +152,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
                 final ResponseHeaders headers = (ResponseHeaders) o;
                 final HttpStatus status = headers.status();
-                final ResponseHeaders merged;
                 if (status.isInformational()) {
                     if (endOfStream) {
                         req.abortResponse(new IllegalStateException(
@@ -157,28 +159,34 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                                 " (service: " + service() + ')'), true);
                         return;
                     }
-                    merged = headers;
-                } else {
-                    if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
-                        // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
-                        isComplete = true;
-                        setDone(true);
-                        return;
+                    if (!isHttp1() || !isHttp1WebSocketUpgradeResponse(headers)) {
+                        responseEncoder.writeHeaders(req.id(), req.streamId(), headers, false, false)
+                                       .addListener(writeHeadersFutureListener(false));
+                        break;
                     }
-
-                    if (req.method() == HttpMethod.HEAD) {
-                        endOfStream = true;
-                    } else if (status.isContentAlwaysEmpty()) {
-                        state = State.NEEDS_TRAILERS;
-                    } else {
-                        state = State.NEEDS_DATA_OR_TRAILERS;
-                    }
-                    if (endOfStream) {
-                        setDone(true);
-                    }
-                    merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
-                    logBuilder().responseHeaders(merged);
+                    http1WebSocketEstablished = true;
                 }
+
+                if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
+                    // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
+                    isComplete = true;
+                    setDone(true);
+                    return;
+                }
+
+                if (req.method() == HttpMethod.HEAD) {
+                    endOfStream = true;
+                } else if (status.isContentAlwaysEmpty()) {
+                    state = State.NEEDS_TRAILERS;
+                } else {
+                    state = State.NEEDS_DATA_OR_TRAILERS;
+                }
+                if (endOfStream) {
+                    setDone(true);
+                }
+                final ResponseHeaders merged =
+                        mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
+                logBuilder().responseHeaders(merged);
 
                 responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream,
                                              reqCtx.additionalResponseTrailers().isEmpty())
@@ -248,6 +256,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         ctx.flush();
     }
 
+    private boolean isHttp1() {
+        return responseEncoder instanceof Http1ObjectEncoder;
+    }
+
     private boolean failIfStreamOrSessionClosed() {
         // Make sure that a stream exists before writing data.
         // The following situation may cause the data to be written to a closed stream.
@@ -255,7 +267,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
         // 3. After successfully flushing, the listener requests next data and
         //    the subscriber attempts to write the next data to the stream closed at 2).
-        if (!responseEncoder.isWritable(req.id(), req.streamId())) {
+        if (!isWritable()) {
             if (reqCtx.sessionProtocol().isMultiplex()) {
                 fail(ClosedStreamException.get());
             } else {
@@ -264,6 +276,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             return true;
         }
         return false;
+    }
+
+    private boolean isWritable() {
+        return responseEncoder.isWritable(req.id(), req.streamId());
     }
 
     private State setDone(boolean cancel) {
@@ -332,18 +348,30 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         }
 
         if (oldState != State.DONE) {
+            if (http1WebSocketEstablished) {
+                if (isWritable()) {
+                    final ChannelFuture channelFuture = writeEmptyData();
+                    channelFuture.addListener(writeDataFutureListener(true, true));
+                    channelFuture.addListener(HttpServerHandler.CLOSE);
+                    ctx.flush();
+                }
+                return;
+            }
             final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
             if (!additionalTrailers.isEmpty()) {
                 logBuilder().responseTrailers(additionalTrailers);
                 responseEncoder.writeTrailers(req.id(), req.streamId(), additionalTrailers)
                                .addListener(writeHeadersFutureListener(true));
                 ctx.flush();
-            } else if (responseEncoder.isWritable(req.id(), req.streamId())) {
-                responseEncoder.writeData(req.id(), req.streamId(), HttpData.empty(), true)
-                               .addListener(writeDataFutureListener(true, true));
+            } else if (isWritable()) {
+                writeEmptyData().addListener(writeDataFutureListener(true, true));
                 ctx.flush();
             }
         }
+    }
+
+    private ChannelFuture writeEmptyData() {
+        return responseEncoder.writeData(req.id(), req.streamId(), HttpData.empty(), true);
     }
 
     private void fail(Throwable cause) {
@@ -515,8 +543,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     // it is very likely that a client closed the connection after receiving the
                     // complete content, which is not really a problem.
                     isSuccess = endOfStream && wroteEmptyData &&
-                                future.cause() instanceof ClosedChannelException &&
-                                responseEncoder instanceof Http1ObjectEncoder;
+                                future.cause() instanceof ClosedChannelException && isHttp1();
                 }
                 handleWriteComplete(future, endOfStream, isSuccess);
             }
@@ -534,8 +561,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 if (tryComplete()) {
                     final Throwable capturedException = CapturedServiceException.get(reqCtx);
                     if (capturedException != null) {
-                        logBuilder().endRequest(capturedException);
-                        logBuilder().endResponse(capturedException);
+                        endLogRequestAndResponse(capturedException);
                     } else {
                         logBuilder().endRequest();
                         logBuilder().endResponse();

@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
+import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
+
 import java.net.URISyntaxException;
 
 import org.slf4j.Logger;
@@ -38,6 +41,9 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
+import com.linecorp.armeria.server.HttpServerPipelineConfigurator.WebSocketUpgradeContext;
+import com.linecorp.armeria.server.HttpServerPipelineConfigurator.WebSocketUpgradeListener;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -62,7 +68,7 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-final class Http1RequestDecoder extends ChannelDuplexHandler {
+final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocketUpgradeListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Http1RequestDecoder.class);
 
@@ -86,6 +92,17 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.encoder = encoder;
+        encoder.webSocketUpgradeContext().setWebSocketUpgradeListener(this);
+    }
+
+    @Override
+    public void upgraded(boolean success) {
+        if (!success) {
+            if (req != null && req instanceof DefaultDecodedHttpRequest) {
+                req.close();
+                req = null;
+            }
+        }
     }
 
     @Override
@@ -111,7 +128,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         super.channelUnregistered(ctx);
         if (req instanceof HttpRequestWriter) {
             // Ignored if the stream has already been closed.
-            ((HttpRequestWriter) req).close(ClosedSessionException.get());
+            req.close(ClosedSessionException.get());
         }
         destroyKeepAliveHandler();
     }
@@ -129,6 +146,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             return;
         }
 
+        final WebSocketUpgradeContext webSocketContext = encoder.webSocketUpgradeContext();
+        if (msg == EMPTY_LAST_CONTENT) {
+            if (req == null || webSocketContext.lastWebSocketUpgradeRequestId() > 0) {
+                // EMPTY_LAST_CONTENT can be read after web socket upgrade failed or
+                // can be read before upgrade response is sent. In that case let
+                // WebSocketUpgradeListener.upgraded() handle the req.
+                return;
+            }
+        }
+
         final KeepAliveHandler keepAliveHandler = encoder.keepAliveHandler();
         keepAliveHandler.onReadOrWrite();
         // this.req can be set to null by fail(), so we keep it in a local variable.
@@ -136,6 +163,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {
+                return;
+            }
+
+            if (!webSocketContext.webSocketEstablished() &&
+                webSocketContext.lastWebSocketUpgradeRequestId() > 0) {
+                fail(id, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
                 return;
             }
 
@@ -190,6 +223,17 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final EventLoop eventLoop = ctx.channel().eventLoop();
                     final RequestHeaders armeriaRequestHeaders =
                             ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
+                    if (isHttp1WebSocketUpgradeRequest(armeriaRequestHeaders)) {
+                        final DefaultDecodedHttpRequest defaultReq = new DefaultDecodedHttpRequest(
+                                eventLoop, id, 1, armeriaRequestHeaders, true, inboundTrafficController,
+                                cfg.defaultVirtualHost().maxRequestLength());
+                        this.req = defaultReq;
+                        webSocketContext.setLastWebSocketUpgradeRequestId(id);
+                        WebSocketUtil.setWebSocketInboundStream(ctx.channel(), defaultReq);
+                        ctx.fireChannelRead(defaultReq);
+                        return;
+                    }
+
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
                         this.req = req = new EmptyContentDecodedHttpRequest(
@@ -246,14 +290,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
                 }
 
-                if (msg instanceof LastHttpContent) {
-                    final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
-                    if (!trailingHeaders.isEmpty()) {
-                        decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
-                    }
+                if (!webSocketContext.webSocketEstablished()) {
+                    if (msg instanceof LastHttpContent) {
+                        final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
+                        if (!trailingHeaders.isEmpty()) {
+                            decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
+                        }
 
-                    decodedReq.close();
-                    this.req = null;
+                        decodedReq.close();
+                        this.req = null;
+                    }
                 }
             }
         } catch (URISyntaxException e) {

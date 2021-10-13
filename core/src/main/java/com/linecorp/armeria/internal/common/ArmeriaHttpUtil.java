@@ -80,8 +80,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil;
@@ -643,7 +641,10 @@ public final class ArmeriaHttpUtil {
             final AsciiString aName = HttpHeaderNames.of(entry.getKey()).toLowerCase();
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(aName) ||
                 connectionDisallowedList.contains(aName)) {
-                continue;
+                final CharSequence value = entry.getValue();
+                if (!isWebSocketUpgrade(aName, value)) {
+                    continue;
+                }
             }
 
             // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2 makes a special exception for TE
@@ -668,6 +669,15 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
+    }
+
+    private static boolean isWebSocketUpgrade(AsciiString header, CharSequence value) {
+        if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(header) &&
+            HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
+            return true;
+        }
+        return HttpHeaderNames.UPGRADE.contentEqualsIgnoreCase(header) &&
+               HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(value);
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
@@ -825,7 +835,6 @@ public final class ArmeriaHttpUtil {
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming) {
         toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
     /**
@@ -850,6 +859,11 @@ public final class ArmeriaHttpUtil {
                 continue;
             }
 
+            if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(name) &&
+                !HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
+                continue;
+            }
+
             if (isTrailer && isTrailerDisallowed(name)) {
                 continue;
             }
@@ -867,7 +881,6 @@ public final class ArmeriaHttpUtil {
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming) {
         toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
     /**
@@ -897,6 +910,11 @@ public final class ArmeriaHttpUtil {
             }
 
             if (HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.contains(name)) {
+                continue;
+            }
+
+            if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(name) &&
+                !HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
                 continue;
             }
 

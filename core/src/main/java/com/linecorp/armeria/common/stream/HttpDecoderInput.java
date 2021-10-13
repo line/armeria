@@ -46,9 +46,27 @@ public interface HttpDecoderInput extends SafeCloseable {
     }
 
     /**
+     * Reads an unsigned short from the readable bytes.
+     *
+     * @throws IllegalStateException if the {@link #readableBytes()} is less than {@code 2} bytes.
+     */
+    default int readUnsignedShort() {
+        return (readByte() & 0xFF) << 8 | readByte();
+    }
+
+    /**
      * Reads a 32-bit integer from the readable bytes.
+     *
+     * @throws IllegalStateException if the {@link #readableBytes()} is less than {@code 4} bytes.
      */
     int readInt();
+
+    /**
+     * Reads a 64-bit long from the readable bytes.
+     *
+     * @throws IllegalStateException if the {@link #readableBytes()} is less than {@code 8} bytes.
+     */
+    long readLong();
 
     /**
      * Reads a newly retained slice of this {@link ByteBuf} from the readable bytes.
@@ -56,6 +74,13 @@ public interface HttpDecoderInput extends SafeCloseable {
      * @throws IllegalStateException if the specified {@code length} is greater than {@link #readableBytes()}
      */
     ByteBuf readBytes(int length);
+
+    /**
+     * Reads data to the specified {@code dst}.
+     *
+     * @throws IllegalStateException if the length of the {@code dst} is greater than {@link #readableBytes()}
+     */
+    void readBytes(byte[] dst);
 
     /**
      * Returns a byte at the specified absolute {@code index} in this {@link HttpDecoderInput}.

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.ByteArrayUtil.appendPreviews;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
@@ -22,9 +23,9 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
@@ -37,16 +38,6 @@ final class ByteArrayHttpData implements HttpData {
 
     static final ByteArrayHttpData EMPTY = new ByteArrayHttpData(EmptyArrays.EMPTY_BYTES, false);
     static final ByteArrayHttpData EMPTY_EOS = new ByteArrayHttpData(EmptyArrays.EMPTY_BYTES, true);
-
-    private static final byte[] SAFE_OCTETS = new byte[256];
-
-    static {
-        final String safeOctetStr = "`~!@#$%^&*()-_=+\t[{]}\\|;:'\",<.>/?" +
-                                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        for (int i = 0; i < safeOctetStr.length(); i++) {
-            SAFE_OCTETS[safeOctetStr.charAt(i)] = -1;
-        }
-    }
 
     private final byte[] array;
     private final boolean endOfStream;
@@ -92,22 +83,9 @@ final class ByteArrayHttpData implements HttpData {
                 buf.append("B, ");
             }
 
-            return appendPreviews(buf, array, 0, Math.min(16, array.length))
-                    .append('}').toString();
+            return appendPreviews(buf, array, 0, Math.min(16, array.length)).append('}')
+                                                                            .toString();
         }
-    }
-
-    static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int offset, int previewLength) {
-        // Append the hex preview if contains non-ASCII chars.
-        final int endOffset = offset + previewLength;
-        for (int i = offset; i < endOffset; i++) {
-            if (SAFE_OCTETS[array[i] & 0xFF] == 0) {
-                return buf.append("hex=").append(ByteBufUtil.hexDump(array, offset, previewLength));
-            }
-        }
-
-        // Append the text preview otherwise.
-        return buf.append("text=").append(new String(array, 0, offset, previewLength));
     }
 
     @Override
@@ -140,18 +118,7 @@ final class ByteArrayHttpData implements HttpData {
 
     @Override
     public ByteBuf byteBuf(ByteBufAccessMode mode) {
-        requireNonNull(mode, "mode");
-        if (isEmpty()) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        if (mode != ByteBufAccessMode.FOR_IO) {
-            return Unpooled.wrappedBuffer(array);
-        } else {
-            final ByteBuf copy = newDirectByteBuf();
-            copy.writeBytes(array);
-            return copy;
-        }
+        return PooledObjects.byteBuf(array, mode);
     }
 
     @Override
@@ -168,10 +135,6 @@ final class ByteArrayHttpData implements HttpData {
             copy.writeBytes(array, offset, length);
             return copy;
         }
-    }
-
-    private ByteBuf newDirectByteBuf() {
-        return newDirectByteBuf(length());
     }
 
     private static ByteBuf newDirectByteBuf(int length) {

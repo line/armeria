@@ -16,21 +16,27 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.websocket.WebSocket;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 
 /**
- * Specifies the way a {@link ByteBuf} is retrieved from an {@link HttpData}.
+ * Specifies the way a {@link ByteBuf} is retrieved from an {@link HttpData} or {@link WebSocket}.
  */
 @UnstableApi
 public enum ByteBufAccessMode {
     /**
      * Gets the duplicate (or slice) of the underlying {@link ByteBuf}. This mode is useful when you access
-     * the {@link ByteBuf} within the life cycle of the {@link HttpData}:
+     * the {@link ByteBuf} within the life cycle of the {@link HttpData} or {@link WebSocket}:
      * <pre>{@code
      * try (HttpData content = ...) {
      *     ByteBuf buf = content.byteBuf(ByteBufAccessMode.DUPLICATE);
+     *     // Read something from 'buf' here.
+     * }
+     * // WebSocket frame.
+     * try (WebSocketFrame frame = ...) {
+     *     ByteBuf buf = frame.byteBuf(ByteBufAccessMode.DUPLICATE);
      *     // Read something from 'buf' here.
      * }
      * }</pre>
@@ -41,11 +47,16 @@ public enum ByteBufAccessMode {
     DUPLICATE,
     /**
      * Gets the retained duplicate (or slice) of the underlying {@link ByteBuf}. This mode is useful when
-     * you access the {@link ByteBuf} beyond the life cycle of the {@link HttpData}, such as creating
-     * another {@link HttpData} that shares the {@link ByteBuf}'s memory region:
+     * you access the {@link ByteBuf} beyond the life cycle of the {@link HttpData} or {@link WebSocket},
+     * such as creating another {@link HttpData} or {@link WebSocket} that shares the {@link ByteBuf}'s
+     * memory region:
      * <pre>{@code
      * HttpData data1 = HttpData.wrap(byteBuf);
      * HttpData data2 = HttpData.wrap(data1.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
+     *
+     * WebSocketFrame binaryFrame1 = WebSocketFrame.ofPooledBinary(byteBuf);
+     * WebSocketFrame binaryFrame2 = WebSocketFrame.ofPooledBinary(
+     *     binaryFrame1.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
      * }</pre>
      *
      * @see ByteBuf#retainedDuplicate()

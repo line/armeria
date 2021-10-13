@@ -67,7 +67,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
@@ -505,11 +504,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
                     ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
                     config.http1HeaderNaming());
-            p.addLast(new HttpServerCodec(
+            // TODO(minwoox): Consider combining HttpServerRequestDecoder in Netty with Http1RequestDecoder
+            final HttpServerCodec httpServerCodec = new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
-                    config.http1MaxChunkSize()));
-            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder));
+                    config.http1MaxChunkSize(), encoder.webSocketUpgradeContext());
+            p.addLast(httpServerCodec);
+            final Http1RequestDecoder decoder = new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder);
+            p.addLast(decoder);
             p.addLast(new HttpServerHandler(configHolder,
                                             gracefulShutdownSupport,
                                             encoder, H1, proxiedAddresses));
@@ -591,10 +593,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            final HttpServerCodec http1codec = new HttpServerCodec(
-                    config.http1MaxInitialLineLength(),
-                    config.http1MaxHeaderSize(),
-                    config.http1MaxChunkSize());
+            final HttpServerCodec http1codec = new HttpServerCodec(config.http1MaxInitialLineLength(),
+                                                                   config.http1MaxHeaderSize(),
+                                                                   config.http1MaxChunkSize(),
+                                                                   responseEncoder.webSocketUpgradeContext());
 
             String baseName = name;
             assert baseName != null;
@@ -611,7 +613,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     },
                     UPGRADE_REQUEST_MAX_LENGTH));
 
-            addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder));
+            final Http1RequestDecoder handler =
+                    new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder);
+            addAfter(p, baseName, handler);
         }
 
         private void configureHttp2(ChannelHandlerContext ctx) {
@@ -624,5 +628,43 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             p.addAfter(baseName, null, handler);
             return p.context(handler).name();
         }
+    }
+
+    static final class WebSocketUpgradeContext {
+
+        private int lastWebSocketUpgradeRequestId = -1;
+
+        private boolean webSocketEstablished;
+        private WebSocketUpgradeListener listener;
+
+        void setLastWebSocketUpgradeRequestId(int id) {
+            lastWebSocketUpgradeRequestId = id;
+        }
+
+        int lastWebSocketUpgradeRequestId() {
+            return lastWebSocketUpgradeRequestId;
+        }
+
+        void setWebSocketEstablished(boolean success) {
+            webSocketEstablished = success;
+            if (!success) {
+                lastWebSocketUpgradeRequestId = -1; // reset
+            }
+            listener.upgraded(success);
+        }
+
+        boolean webSocketEstablished() {
+            return webSocketEstablished;
+        }
+
+        void setWebSocketUpgradeListener(WebSocketUpgradeListener listener) {
+            this.listener = listener;
+        }
+    }
+
+    @FunctionalInterface
+    interface WebSocketUpgradeListener {
+
+        void upgraded(boolean success);
     }
 }

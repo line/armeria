@@ -100,11 +100,36 @@ class ByteBufDecoderInputTest {
     }
 
     @Test
+    void readableBytes_readUnsignedShort() {
+        assertThat(input.readableBytes()).isEqualTo(9);
+        assertThat(input.readUnsignedShort()).isEqualTo(1 * 256 + 2);
+        assertThat(input.readableBytes()).isEqualTo(7);
+        assertThat(input.readUnsignedShort()).isEqualTo(3 * 256 + 4);
+        assertThat(input.readableBytes()).isEqualTo(5);
+        input.readUnsignedShort();
+        input.readUnsignedShort();
+        assertThat(input.readableBytes()).isEqualTo(1);
+        assertThatThrownBy(() -> input.readUnsignedShort())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
+    }
+
+    @Test
     void readableBytes_readInt() {
         assertThat(input.readableBytes()).isEqualTo(9);
         input.readInt();
         assertThat(input.readableBytes()).isEqualTo(5);
         input.readInt();
+        assertThat(input.readableBytes()).isEqualTo(1);
+    }
+
+    @Test
+    void readableBytes_readLong() {
+        assertThat(input.readableBytes()).isEqualTo(9);
+        assertThat(input.readLong()).isEqualTo(
+                1 * (long) Math.pow(256, 7) + 2 * (long) Math.pow(256, 6) + 3 * (long) Math.pow(256, 5) +
+                4 * (long) Math.pow(256, 4) + 5 * (long) Math.pow(256, 3) + 6 * (long) Math.pow(256, 2) +
+                7 * 256 + 8);
         assertThat(input.readableBytes()).isEqualTo(1);
     }
 
@@ -198,6 +223,51 @@ class ByteBufDecoderInputTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("end of deframer input");
         input.close();
+        assertThat(byteBuf1.refCnt()).isZero();
+        assertThat(byteBuf2.refCnt()).isZero();
+        assertThat(byteBuf3.refCnt()).isZero();
+        assertThat(byteBuf4.refCnt()).isZero();
+    }
+
+    @Test
+    void readBytesToArray() {
+        final ByteBufDecoderInput input = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT);
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[]{ 1, 2, 3, 4 });
+        final ByteBuf byteBuf2 = Unpooled.buffer(4);
+        byteBuf2.writeByte(5);
+        byteBuf2.writeByte(6);
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{ 7, 8 });
+        final ByteBuf byteBuf4 = Unpooled.wrappedBuffer(new byte[]{ -1, 9 });
+        byteBuf4.readByte();
+
+        input.add(byteBuf1);
+        input.add(byteBuf2);
+        input.add(byteBuf3);
+        input.add(Unpooled.EMPTY_BUFFER);
+        input.add(byteBuf4);
+
+        byte[] bytes = new byte[4];
+        input.readBytes(bytes);
+        assertThat(bytes).containsExactly(1, 2, 3, 4);
+
+        bytes = new byte[1];
+        input.readBytes(bytes);
+        assertThat(bytes).containsExactly(5);
+
+        bytes = new byte[3];
+        input.readBytes(bytes);
+        assertThat(bytes).containsExactly(6, 7, 8);
+
+        bytes = new byte[1];
+        input.readBytes(bytes);
+        assertThat(bytes).containsExactly(9);
+
+        final byte[] bytes0 = new byte[1];
+        assertThatThrownBy(() -> input.readBytes(bytes0))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
+        input.close();
+
         assertThat(byteBuf1.refCnt()).isZero();
         assertThat(byteBuf2.refCnt()).isZero();
         assertThat(byteBuf3.refCnt()).isZero();

@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.stream.HttpDecoderInput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 public final class ByteBufDecoderInput implements HttpDecoderInput {
 
@@ -74,6 +75,26 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
 
         this.readableBytes--;
         return value;
+    }
+
+    @Override
+    public int readUnsignedShort() {
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes >= 2) {
+            final int value = firstBuf.readUnsignedShort();
+            if (readableBytes == 2) {
+                queue.remove();
+                firstBuf.release();
+            }
+            this.readableBytes -= 2;
+            return value;
+        }
+        return HttpDecoderInput.super.readUnsignedShort();
     }
 
     @Override
@@ -135,7 +156,32 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
     }
 
     @Override
+    public long readLong() {
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes >= 8) {
+            final long value = firstBuf.readLong();
+            if (readableBytes == 8) {
+                queue.remove();
+                firstBuf.release();
+            }
+            this.readableBytes -= 8;
+            return value;
+        }
+
+        // readableBytes is decreased in readInt.
+        return (long) readInt() << 32 | readInt();
+    }
+
+    @Override
     public ByteBuf readBytes(int length) {
+        if (length == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        }
         checkArgument(length > 0, "length %s (expected: length > 0)", length);
         final ByteBuf firstBuf = queue.peek();
         if (firstBuf == null) {
@@ -154,6 +200,29 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
 
         this.readableBytes -= length;
         return byteBuf;
+    }
+
+    @Override
+    public void readBytes(byte[] dst) {
+        final int length = dst.length;
+        if (length == 0) {
+            return;
+        }
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes == length) {
+            queue.remove().readBytes(dst).release();
+        } else if (readableBytes > length) {
+            firstBuf.readBytes(dst, 0, length);
+        } else {
+            readBytesSlow(dst);
+        }
+
+        this.readableBytes -= length;
     }
 
     private ByteBuf readBytesSlow(int length) {
@@ -178,6 +247,29 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
         }
 
         value.release();
+        throw newEndOfInputException();
+    }
+
+    private void readBytesSlow(byte[] dst) {
+        int remaining = dst.length;
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
+            final ByteBuf buf = it.next();
+            final int readableBytes = buf.readableBytes();
+            assert readableBytes > 0 : buf;
+
+            final int readSize = Math.min(remaining, readableBytes);
+            buf.readBytes(dst, dst.length - remaining, readSize);
+            if (readableBytes == readSize) {
+                it.remove();
+                buf.release();
+            }
+
+            remaining -= readSize;
+            if (remaining == 0) {
+                return;
+            }
+        }
+
         throw newEndOfInputException();
     }
 
@@ -216,6 +308,9 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
 
     @Override
     public void skipBytes(int length) {
+        if (length == 0) {
+            return;
+        }
         final ByteBuf firstBuf = queue.peek();
         if (firstBuf == null) {
             throw newEndOfInputException();

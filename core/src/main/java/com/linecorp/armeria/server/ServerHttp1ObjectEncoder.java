@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeResponse;
+
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -28,6 +30,7 @@ import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
+import com.linecorp.armeria.server.HttpServerPipelineConfigurator.WebSocketUpgradeContext;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -47,6 +50,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final Http1HeaderNaming http1HeaderNaming;
+    private final WebSocketUpgradeContext webSocketUpgradeContext = new WebSocketUpgradeContext();
 
     private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
@@ -70,7 +74,11 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return keepAliveHandler;
     }
 
-    public void initiateConnectionShutdown() {
+    WebSocketUpgradeContext webSocketUpgradeContext() {
+        return webSocketUpgradeContext;
+    }
+
+    void initiateConnectionShutdown() {
         shouldSendConnectionCloseHeader = true;
     }
 
@@ -79,6 +87,14 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
                                         boolean isTrailersEmpty) {
         if (!isWritable(id)) {
             return newClosedSessionFuture();
+        }
+
+        if (webSocketUpgradeContext.lastWebSocketUpgradeRequestId() == id) {
+            if (isHttp1WebSocketUpgradeResponse(headers)) {
+                webSocketUpgradeContext.setWebSocketEstablished(true);
+                return handleWebSocketUpgradeResponse(id, headers);
+            }
+            webSocketUpgradeContext.setWebSocketEstablished(false);
         }
 
         final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty);
@@ -94,40 +110,52 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return writeNonInformationalHeaders(id, converted, endStream);
     }
 
+    private ChannelFuture handleWebSocketUpgradeResponse(int id, ResponseHeaders headers) {
+        final HttpResponse res = new DefaultHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(headers.status().code()), false);
+        convertHeaders(headers, res.headers(), false /* To remove Content-Length header */);
+        lastResponseHeadersId = id;
+        return write(id, res, false);
+    }
+
     private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
         final int statusCode = headers.status().code();
         final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
 
-        final HttpResponse res;
         if (headers.status().isInformational()) {
-            res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
+            final HttpResponse res = new DefaultFullHttpResponse(
+                    HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
             ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers(), http1HeaderNaming);
-        } else if (endStream) {
-            res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
-            final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
-            convertHeaders(headers, outHeaders, isTrailersEmpty);
-
-            if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
-                if (statusCode == 304) {
-                    // 304 response can have the "content-length" header when it is a response to a conditional
-                    // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
-                } else {
-                    outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-                }
-            } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                // NB: Set the 'content-length' only when not set rather than always setting to 0.
-                //     It's because a response to a HEAD request can have empty content while having
-                //     non-zero 'content-length' header.
-                //     However, this also opens the possibility of sending a non-zero 'content-length'
-                //     header even when it really has to be zero. e.g. a response to a non-HEAD request
-                outHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-            }
-        } else {
-            res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
-            convertHeaders(headers, res.headers(), isTrailersEmpty);
-            maybeSetTransferEncoding(res);
+            return res;
         }
 
+        if (!endStream) {
+            final HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
+            convertHeaders(headers, res.headers(), isTrailersEmpty);
+            maybeSetTransferEncoding(res);
+            return res;
+        }
+
+        final HttpResponse res =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
+        final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
+        convertHeaders(headers, outHeaders, isTrailersEmpty);
+
+        if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
+            if (statusCode == 304) {
+                // 304 response can have the "content-length" header when it is a response to a conditional
+                // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
+            } else {
+                outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            }
+        } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+            // NB: Set the 'content-length' only when not set rather than always setting to 0.
+            //     It's because a response to a HEAD request can have empty content while having
+            //     non-zero 'content-length' header.
+            //     However, this also opens the possibility of sending a non-zero 'content-length'
+            //     header even when it really has to be zero. e.g. a response to a non-HEAD request
+            outHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+        }
         return res;
     }
 

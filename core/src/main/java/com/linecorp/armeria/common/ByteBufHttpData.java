@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.ByteArrayUtil.generatePreview;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
@@ -23,12 +24,12 @@ import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakHint;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
@@ -118,37 +119,12 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
                 }
             }
 
-            // Generate the preview array.
-            final int previewLength = Math.min(16, length);
-            byte[] array = this.array;
-            final int offset;
-            if (array == null) {
-                try {
-                    if (buf.hasArray()) {
-                        array = buf.array();
-                        offset = buf.arrayOffset() + buf.readerIndex();
-                    } else if (!hint) {
-                        array = ByteBufUtil.getBytes(buf, buf.readerIndex(), previewLength);
-                        offset = 0;
-                        if (previewLength == length) {
-                            this.array = array;
-                        }
-                    } else {
-                        // Can't call getBytes() when generating the hint string
-                        // because it will also create a leak record.
-                        return strBuf.append("<unknown>}").toString();
-                    }
-                } catch (IllegalReferenceCountException e) {
-                    // Shouldn't really happen when used ByteBuf correctly,
-                    // but we just don't make toString() fail because of this.
-                    return strBuf.append("badRefCnt}").toString();
-                }
-            } else {
-                offset = 0;
-            }
+            final byte[] array = this.array;
+            final ByteBuf buf = this.buf;
 
-            return ByteArrayHttpData.appendPreviews(strBuf, array, offset, previewLength)
-                                    .append('}').toString();
+            this.array = generatePreview(strBuf, array, buf, length, hint);
+            strBuf.append('}');
+            return strBuf.toString();
         }
     }
 
@@ -192,22 +168,7 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
 
     @Override
     public ByteBuf byteBuf(ByteBufAccessMode mode) {
-        switch (requireNonNull(mode, "mode")) {
-            case DUPLICATE:
-                return buf.duplicate();
-            case RETAINED_DUPLICATE:
-                return buf.retainedDuplicate();
-            case FOR_IO:
-                if (buf.isDirect()) {
-                    return buf.retainedDuplicate();
-                }
-
-                final ByteBuf copy = newDirectByteBuf();
-                copy.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
-                return copy;
-        }
-
-        throw new Error(); // Never reaches here.
+        return PooledObjects.byteBuf(buf, mode);
     }
 
     @Override
@@ -229,10 +190,6 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
         }
 
         throw new Error(); // Never reaches here.
-    }
-
-    private ByteBuf newDirectByteBuf() {
-        return newDirectByteBuf(buf.readableBytes());
     }
 
     private static ByteBuf newDirectByteBuf(int length) {

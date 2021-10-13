@@ -15,10 +15,13 @@
  */
 package com.linecorp.armeria.unsafe;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.Executor;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -26,10 +29,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.server.file.HttpFile;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 /**
  * Utility class that provides ways to create a pooled {@link HttpData} and manage its life cycle.
@@ -143,7 +149,96 @@ public final class PooledObjects {
                 }
             }
         }
+        if (obj instanceof WebSocketFrame) {
+            final WebSocketFrame frame = (WebSocketFrame) obj;
+            if (frame.isPooled()) {
+                try {
+                    switch (frame.type()) {
+                        case CONTINUATION:
+                            //noinspection unchecked
+                            return (T) WebSocketFrame.ofContinuation(frame.array(), frame.isFinalFragment());
+                        case TEXT:
+                            //noinspection unchecked
+                            return (T) WebSocketFrame.ofText(frame.array(), frame.isFinalFragment());
+                        case BINARY:
+                            //noinspection unchecked
+                            return (T) WebSocketFrame.ofBinary(frame.array(), frame.isFinalFragment());
+                        case CLOSE:
+                            //noinspection unchecked
+                            return (T) WebSocketFrame.ofClose(frame.array());
+                        case PING:
+                            //noinspection unchecked
+                            return (T) WebSocketFrame.ofPing(frame.array());
+                        case PONG:
+                            //noinspection unchecked
+                            return (T) WebSocketFrame.ofPong(frame.array());
+                    }
+                } finally {
+                    frame.close();
+                }
+            }
+        }
+
         return obj;
+    }
+
+    /**
+     * (Advanced users only) Returns a new duplicate, retained duplicate or direct copy of the underlying
+     * {@link ByteBuf} of this data based on the specified {@link ByteBufAccessMode}.
+     * This method does not transfer the ownership of the specified {@link ByteBuf}, i.e. the reference
+     * count of the {@link ByteBuf} does not change. If this data is not pooled, the returned {@link ByteBuf}
+     * is not pooled, either. Any changes made in the content of the returned {@link ByteBuf} affects
+     * the content of this data.
+     *
+     * @see PooledObjects
+     */
+    public static ByteBuf byteBuf(ByteBuf buf, ByteBufAccessMode mode) {
+        requireNonNull(buf, "buf");
+        switch (requireNonNull(mode, "mode")) {
+            case DUPLICATE:
+                return buf.duplicate();
+            case RETAINED_DUPLICATE:
+                return buf.retainedDuplicate();
+            case FOR_IO:
+                if (buf.isDirect()) {
+                    return buf.retainedDuplicate();
+                }
+                final ByteBuf copy = newDirectByteBuf(buf.readableBytes());
+                copy.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+                return copy;
+        }
+
+        throw new Error(); // Never reaches here.
+    }
+
+    /**
+     * (Advanced users only) Returns a new {@link ByteBuf} that wraps the specified {@code array} when
+     * the specified {@link ByteBufAccessMode} is not a {@link ByteBufAccessMode#FOR_IO} which means
+     * any changes made in the content of the returned {@link ByteBuf} affects the content of the specified
+     * {@code array}.
+     * If the specified {@link ByteBufAccessMode} is {@link ByteBufAccessMode#FOR_IO}, this creates the
+     * {@link ByteBuf} by direct coping of the specified {@code array}.
+     *
+     * @see PooledObjects
+     */
+    public static ByteBuf byteBuf(byte[] array, ByteBufAccessMode mode) {
+        requireNonNull(array, "array");
+        requireNonNull(mode, "mode");
+        if (array.length == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        if (mode != ByteBufAccessMode.FOR_IO) {
+            return Unpooled.wrappedBuffer(array);
+        } else {
+            final ByteBuf copy = newDirectByteBuf(array.length);
+            copy.writeBytes(array);
+            return copy;
+        }
+    }
+
+    private static ByteBuf newDirectByteBuf(int length) {
+        return PooledByteBufAllocator.DEFAULT.directBuffer(length);
     }
 
     private PooledObjects() {}

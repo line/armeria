@@ -93,7 +93,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final HttpData DATA_INVALID_REQUEST_PATH = HttpData.ofUtf8(MSG_INVALID_REQUEST_PATH);
 
-    private static final ChannelFutureListener CLOSE = future -> {
+    static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
         final Channel ch = future.channel();
         if (cause != null) {
