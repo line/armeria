@@ -124,11 +124,6 @@ public final class ArmeriaHttpUtil {
     public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.UTF_8;
 
     /**
-     * The old {@code "keep-alive"} header which has been superceded by {@code "connection"}.
-     */
-    public static final AsciiString HEADER_NAME_KEEP_ALIVE = AsciiString.cached("keep-alive");
-
-    /**
      * The old {@code "proxy-connection"} header which has been superceded by {@code "connection"}.
      */
     public static final AsciiString HEADER_NAME_PROXY_CONNECTION = AsciiString.cached("proxy-connection");
@@ -150,7 +145,7 @@ public final class ArmeriaHttpUtil {
 
     static {
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HEADER_NAME_KEEP_ALIVE, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.KEEP_ALIVE, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HEADER_NAME_PROXY_CONNECTION, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.UPGRADE, EMPTY_STRING);
