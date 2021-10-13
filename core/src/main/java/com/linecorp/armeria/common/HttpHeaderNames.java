@@ -200,6 +200,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString COOKIE = create("Cookie");
     /**
+     * The HTTP <a href="https://fetch.spec.whatwg.org/#cross-origin-resource-policy-header">{@code
+     * Cross-Origin-Resource-Policy}</a> header field name.
+     */
+    public static final AsciiString CROSS_ORIGIN_RESOURCE_POLICY = create("Cross-Origin-Resource-Policy");
+    /**
      * The HTTP <a href="https://datatracker.ietf.org/doc/rfc8470/">{@code "Early-Data"}</a> header field
      * name.
      */
