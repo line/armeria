@@ -237,7 +237,7 @@ public class MultipartCollector implements Subscriber<BodyPart> {
                         multipartSubscription.request(1);
                     }
                     return null;
-                });
+                }, eventLoop);
             });
         } catch (IOException e) {
             multipartSubscription.cancel();

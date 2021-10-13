@@ -50,21 +50,30 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     private static final Logger logger = LoggerFactory.getLogger(MultipartDecoder.class);
 
     private static final AtomicIntegerFieldUpdater<MultipartDecoder>
-            subscriberUpdater = AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "subscribed");
+            subscribedUpdater = AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "subscribed");
 
     private final DecodedHttpStreamMessage<BodyPart> decoded;
     private final String boundary;
+    private final CompletableFuture<Void> subscribedCompleteFuture = new CompletableFuture<>();
 
     @Nullable
     private MimeParser parser;
 
+    // 1 is subscribed, -1 is aborted
     private volatile int subscribed;
+    // executor is assigned in any thread
+    @Nullable
+    private volatile EventExecutor executor;
+
+    @Nullable
+    private volatile Subscriber<? super BodyPart> subscriber;
+
+    // Preserve the cause of abort.
+    // Visible to subscribe and abort, because it's wrote before and read after updater
+    @Nullable
+    private Throwable abortCause;
 
     // Below fields are modified by subscriber specified thread
-    @Nullable
-    private Subscriber<? super BodyPart> subscriber;
-    @Nullable
-    private EventExecutor executor;
     @Nullable
     private StreamMessage<? extends HttpData> currentExposedBodyPartPublisher;
     @Nullable
@@ -132,51 +141,56 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        if (!subscriberUpdater.compareAndSet(this, 0, 1)) {
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
             if (executor.inEventLoop()) {
-                abortLateSubscriber(subscriber);
+                abortLateSubscriber(subscriber, abortCause);
             } else {
-                executor.execute(() -> abortLateSubscriber(subscriber));
+                executor.execute(() -> abortLateSubscriber(subscriber, abortCause));
             }
             return;
         }
-
-        this.executor = executor;
         this.subscriber = subscriber;
+        this.executor = executor;
         decoded.subscribe(new MultipartSubscriber(), executor, options);
+        subscribedCompleteFuture.complete(null);
     }
 
-    private void abortLateSubscriber(Subscriber<? super BodyPart> subscriber) {
+    private static void abortLateSubscriber(Subscriber<? super BodyPart> subscriber,
+                                            @Nullable Throwable throwable) {
         subscriber.onSubscribe(NoopSubscription.get());
-        subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        if (throwable != null) {
+            subscriber.onError(throwable);
+        } else {
+            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        }
     }
 
     @Override
     public void abort() {
-        if (subscriberUpdater.compareAndSet(this, 0, 1)) {
-            cleanup();
-            return;
-        }
-        assert executor != null;
-        if (executor.inEventLoop()) {
-            abort0(AbortedStreamException.get());
-        } else {
-            executor.execute(() -> abort0(AbortedStreamException.get()));
-        }
+        abort(AbortedStreamException.get());
     }
 
     @Override
     public void abort(Throwable cause) {
-        if (subscriberUpdater.compareAndSet(this, 0, 1)) {
+        requireNonNull(cause, "cause");
+        if (subscribed == -1) {
+            // Already aborted before
+            return;
+        }
+        abortCause = cause;
+        if (subscribedUpdater.compareAndSet(this, 0, -1)) {
+            // There is no subscriber
             cleanup();
             return;
         }
-        assert executor != null;
-        if (executor.inEventLoop()) {
-            abort0(cause);
-        } else {
-            executor.execute(() -> abort0(cause));
-        }
+        subscribedCompleteFuture.handle((unused, throwable) -> {
+            if (executor.inEventLoop()) {
+                abort0(cause);
+            } else {
+                executor.execute(() -> abort0(cause));
+            }
+            return null;
+        });
     }
 
     private void abort0(Throwable cause) {
@@ -201,7 +215,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         return new BodyPartPublisher();
     }
 
-    public void requestUpstreamForBodyPartData() {
+    void requestUpstreamForBodyPartData() {
         assert executor != null;
         if (executor.inEventLoop()) {
             requestUpstreamForBodyPartData0();
@@ -221,7 +235,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
         @Override
         protected void onRequest(long n) {
-            // TODO: Should be safe?
             // Because whenConsumed will run in the same thread(called by onRequest) after looping the existing
             // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
             // at subscribe)
@@ -237,66 +250,17 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     /**
      * For hiding Subscriber interface from MultipartDecoder.
-     * Subscribing {@code DecodedHttpStreamMessage<BodyPart>}
+     * Subscribing {@code DecodedHttpStreamMessage<BodyPart>} and delegating to external subscriber.
      */
-    private class MultipartSubscriber implements Subscriber<BodyPart> {
+    private class MultipartSubscriber implements Subscriber<BodyPart>, Subscription {
+
+        private boolean cancelled;
+
         @Override
         public void onSubscribe(Subscription subscription) {
             MultipartDecoder.this.subscription = subscription;
             assert subscriber != null;
-            subscriber.onSubscribe(new Subscription() {
-                private boolean cancelled;
-
-                @Override
-                public void request(long n) {
-                    if (n <= 0) {
-                        final IllegalArgumentException exception = new IllegalArgumentException(
-                                "Expecting only positive requests for parts");
-                        abort(exception);
-                        return;
-                    }
-                    if (executor.inEventLoop()) {
-                        request0(n);
-                    } else {
-                        executor.execute(() -> request0(n));
-                    }
-                }
-
-                private void request0(long n) {
-                    final long oldDemand = demandOfMultipart;
-                    demandOfMultipart = LongMath.saturatedAdd(oldDemand, n);
-                    if (oldDemand == 0) {
-                        // We want first body publisher
-                        if (currentExposedBodyPartPublisher == null) {
-                            //This will trigger DecodedHttpStreamMessage's upstream.
-                            subscription.request(1);
-                        } else {
-                            // Just wait bodyPart finish.
-                        }
-                    }
-                }
-
-                @Override
-                public void cancel() {
-                    if (executor.inEventLoop()) {
-                        cancel0();
-                    } else {
-                        executor.execute(this::cancel0);
-                    }
-                }
-
-                private void cancel0() {
-                    if (cancelled) {
-                        return;
-                    }
-                    cancelled = true;
-                    subscription.cancel();
-                    if (currentExposedBodyPartPublisher != null) {
-                        currentExposedBodyPartPublisher.abort(CancelledSubscriptionException.get());
-                    }
-                    cleanup();
-                }
-            });
+            subscriber.onSubscribe(this);
         }
 
         @Override
@@ -345,6 +309,56 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         public void onComplete() {
             assert subscriber != null;
             subscriber.onComplete();
+            cleanup();
+        }
+
+        @Override
+        public void request(long n) {
+            if (n <= 0) {
+                final IllegalArgumentException exception = new IllegalArgumentException(
+                        "Expecting only positive requests for parts");
+                abort(exception);
+                return;
+            }
+            if (executor.inEventLoop()) {
+                request0(n);
+            } else {
+                executor.execute(() -> request0(n));
+            }
+        }
+
+        private void request0(long n) {
+            final long oldDemand = demandOfMultipart;
+            demandOfMultipart = LongMath.saturatedAdd(oldDemand, n);
+            if (oldDemand == 0) {
+                // We want first body publisher
+                if (currentExposedBodyPartPublisher == null) {
+                    //This will trigger DecodedHttpStreamMessage's upstream.
+                    subscription.request(1);
+                } else {
+                    // Just wait bodyPart finish.
+                }
+            }
+        }
+
+        @Override
+        public void cancel() {
+            if (executor.inEventLoop()) {
+                cancel0();
+            } else {
+                executor.execute(this::cancel0);
+            }
+        }
+
+        private void cancel0() {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            subscription.cancel();
+            if (currentExposedBodyPartPublisher != null) {
+                currentExposedBodyPartPublisher.abort(CancelledSubscriptionException.get());
+            }
             cleanup();
         }
     }

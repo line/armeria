@@ -53,6 +53,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -81,10 +82,8 @@ public class MultipartDecoderTest {
                                                                            upstreamRequestCount);
         decoder.abort();
         decoder.subscribe(testSubscriber);
-        // Should we use save and reuse AbortedStreamException?
         await().untilAsserted(() -> assertThatThrownBy(testSubscriber.completionFuture::join)
-                .hasRootCauseInstanceOf(IllegalStateException.class)
-                .hasRootCauseMessage("subscribed by other subscriber already"));
+                .hasRootCauseInstanceOf(AbortedStreamException.class));
     }
 
     @Test

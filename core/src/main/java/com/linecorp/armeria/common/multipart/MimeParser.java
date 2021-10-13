@@ -198,7 +198,7 @@ final class MimeParser {
                         logger.trace("state={}", State.SKIP_PREAMBLE);
                         skipPreamble();
                         if (boundaryStart == -1) {
-                            // Need more data, handle by DecodedHttpStreamMessage
+                            // Need more data; DecodedHttpStreamMessage will handle.
                             return;
                         }
                         logger.trace("Skipped the preamble.");
@@ -216,7 +216,7 @@ final class MimeParser {
                         logger.trace("state={}", State.HEADERS);
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
-                            // Need more data, handle by DecodedHttpStreamMessage
+                            // Need more data; DecodedHttpStreamMessage will handle.
                             return;
                         }
                         if (!headerLine.isEmpty()) {
@@ -247,9 +247,7 @@ final class MimeParser {
                             if (bodyContent == NEED_MORE) {
                                 final BodyPartPublisher currentPublisher = bodyPartPublisher;
                                 currentPublisher.whenConsumed().thenRun(() -> {
-                                    // TODO: Is checking open enough?
-                                    //  Due to we always open next after previous one closed
-                                    if (currentPublisher.demand() > 0 && currentPublisher.isOpen()) {
+                                    if (currentPublisher.demand() > 0 && !currentPublisher.isComplete()) {
                                         multipartDecoder.requestUpstreamForBodyPartData();
                                     }
                                 });
@@ -259,7 +257,9 @@ final class MimeParser {
                             startOfLine = false;
                         }
 
-                        // Avoid throwing exception.
+                        // Use tryWrite() to avoid throwing exception.
+                        // For example, when body part is cancelled, MimeParser need to ignore it without
+                        // throwing exception.
                         bodyPartPublisher.tryWrite(HttpData.wrap(bodyContent));
                         break;
 
