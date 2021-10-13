@@ -40,6 +40,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class AbstractGraphqlServiceTest {
@@ -66,7 +68,7 @@ class AbstractGraphqlServiceTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/graphql?" + query.toQueryString());
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request);
-        assertThat(testGraphqlService.graphqlRequest.produceType()).isEqualTo(MediaType.GRAPHQL_JSON);
+        assertThat(testGraphqlService.produceType).isEqualTo(MediaType.GRAPHQL_JSON);
     }
 
     @ArgumentsSource(MediaTypeProvider.class)
@@ -83,9 +85,9 @@ class AbstractGraphqlServiceTest {
         testGraphqlService.serve(ctx, request);
         if (mediaType == MediaType.PLAIN_TEXT) {
             // May be rejected by implementation
-            assertThat(testGraphqlService.graphqlRequest.produceType()).isNull();
+            assertThat(testGraphqlService.produceType).isNull();
         } else {
-            assertThat(testGraphqlService.graphqlRequest.produceType()).isEqualTo(mediaType);
+            assertThat(testGraphqlService.produceType).isEqualTo(mediaType);
         }
     }
 
@@ -120,10 +122,13 @@ class AbstractGraphqlServiceTest {
 
         @Nullable
         private GraphqlRequest graphqlRequest;
+        @Nullable
+        private MediaType produceType;
 
         @Override
         protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
             graphqlRequest = req;
+            produceType = GraphqlUtil.produceType(ctx.request().headers());
             return null;
         }
     }
