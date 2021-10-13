@@ -60,6 +60,8 @@ public class ArmeriaAutoConfigurationInternalServiceTest {
 
         final Port managementServerPort = internalServices.managementServerPort();
         assertThat(managementServerPort).isNotNull();
+        // As ArmeriaSpringActuatorAutoConfiguration is not configured,
+        // "management.server.port" should not be activated.
         assertThat(server.activePorts().values())
                 .noneMatch(port -> managementServerPort.getPort() == port.localAddress().getPort());
 
