@@ -49,7 +49,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     private static final Logger logger = LoggerFactory.getLogger(MultipartDecoder.class);
 
-    @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<MultipartDecoder>
             subscriberUpdater = AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "subscribed");
 
