@@ -165,7 +165,8 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                findBeans(Consumer.class, ServerBuilder.class),
                                                meterRegistry,
                                                meterIdPrefixFunctionOrDefault(),
-                                               findBeans(MetricCollectingServiceConfigurator.class));
+                                               findBeans(MetricCollectingServiceConfigurator.class),
+                                               beanFactory);
         }
 
         // In the property file, both Spring and Armeria port configuration can coexist.
