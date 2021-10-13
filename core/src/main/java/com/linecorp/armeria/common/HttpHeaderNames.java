@@ -715,7 +715,7 @@ public final class HttpHeaderNames {
     public static final AsciiString PERMISSIONS_POLICY = create("Permissions-Policy");
     /**
      * The HTTP <a
-     * href="https://www.rfc-editor.org/rfc/rfc8942#name-the-accept-ch-response-head">{@code
+     * href="https://datatracker.ietf.org/doc/html/rfc8942">{@code
      * Accept-CH}</a> header field name.
      */
     public static final AsciiString ACCEPT_CH = create("Accept-CH");
