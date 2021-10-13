@@ -66,7 +66,7 @@ final class MimeParser {
      */
     private final byte[] boundaryBytes;
 
-    private MultipartDecoder multipartDecoder;
+    private final MultipartDecoder multipartDecoder;
 
     /**
      * Boundary length.

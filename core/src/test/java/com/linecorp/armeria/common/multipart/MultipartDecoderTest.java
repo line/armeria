@@ -67,6 +67,27 @@ public class MultipartDecoderTest {
     // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartDecoderTest.java
 
     @Test
+    void testAbortBeforeSubscribe() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id: part1\n" +
+                               '\n' +
+                               "body 1\n" +
+                               "--" + boundary + "--").getBytes();
+
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, null);
+        final AtomicLong upstreamRequestCount = new AtomicLong();
+        final MultipartDecoder decoder = (MultipartDecoder) partsPublisher(boundary, chunk1,
+                                                                           upstreamRequestCount);
+        decoder.abort();
+        decoder.subscribe(testSubscriber);
+        // Should we use save and reuse AbortedStreamException?
+        await().untilAsserted(() -> assertThatThrownBy(testSubscriber.completionFuture::join)
+                .hasRootCauseInstanceOf(IllegalStateException.class)
+                .hasRootCauseMessage("subscribed by other subscriber already"));
+    }
+
+    @Test
     void testOnePartInOneChunk() {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
