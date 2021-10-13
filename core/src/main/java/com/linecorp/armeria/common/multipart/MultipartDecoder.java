@@ -234,7 +234,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
         @Override
-        protected void onRequest(long n) {
+        protected void onRequest(long n, long oldDemand) {
             // Because whenConsumed will run in the same thread(called by onRequest) after looping the existing
             // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
             // at subscribe)

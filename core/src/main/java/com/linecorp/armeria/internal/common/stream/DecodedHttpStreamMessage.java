@@ -143,7 +143,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     }
 
     @Override
-    protected void onRequest(long n) {
+    protected void onRequest(long n, long oldDemand) {
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
         if (initialized && n > 0) {
             if (requestHeaders != null) {
@@ -152,7 +152,6 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 this.requestHeaders = null;
                 subscriber.onNext(requestHeaders);
             } else {
-                // TODO: Should be safe?
                 // Use buffered data first.
                 // Because whenConsumed will run in the same thread(called by onRequest) after looping the
                 // existing queue.(onRequest & event notification in whenConsumed will run in the same executor
