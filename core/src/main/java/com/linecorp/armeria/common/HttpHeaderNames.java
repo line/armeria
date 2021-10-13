@@ -655,19 +655,19 @@ public final class HttpHeaderNames {
     public static final AsciiString PING_TO = create("Ping-To");
     /**
      * The HTTP <a
-     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#As_a_server_admin.2C_can_I_distinguish_prefetch_requests_from_normal_requests.3F">{@code
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#as_a_server_admin_can_i_distinguish_prefetch_requests_from_normal_requests">{@code
      * Purpose}</a> header field name.
      */
     public static final AsciiString PURPOSE = create("Purpose");
     /**
      * The HTTP <a
-     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#As_a_server_admin.2C_can_I_distinguish_prefetch_requests_from_normal_requests.3F">{@code
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#as_a_server_admin_can_i_distinguish_prefetch_requests_from_normal_requests">{@code
      * X-Purpose}</a> header field name.
      */
     public static final AsciiString X_PURPOSE = create("X-Purpose");
     /**
      * The HTTP <a
-     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#As_a_server_admin.2C_can_I_distinguish_prefetch_requests_from_normal_requests.3F">{@code
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#as_a_server_admin_can_i_distinguish_prefetch_requests_from_normal_requests">{@code
      * X-Moz}</a> header field name.
      */
     public static final AsciiString X_MOZ = create("X-Moz");
