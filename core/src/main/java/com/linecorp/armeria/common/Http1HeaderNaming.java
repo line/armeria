@@ -27,6 +27,13 @@ import io.netty.util.AsciiString;
 public interface Http1HeaderNaming {
 
     /**
+     * Returns the default {@link Http1HeaderNaming}.
+     */
+    static Http1HeaderNaming ofDefault() {
+        return AsciiString::toString;
+    }
+
+    /**
      * Converts lower-cased HTTP/2 header names to the traditional HTTP/1 header names which are defined at
      * {@link HttpHeaderNames}. For example, {@code "user-agent"} is converted to {@code "User-Agent"}.
      * Note that a header name which is not defined at {@link HttpHeaderNames} will be sent in lower-case.
