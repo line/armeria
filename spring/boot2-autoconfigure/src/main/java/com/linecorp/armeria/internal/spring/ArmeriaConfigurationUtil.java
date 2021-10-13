@@ -40,6 +40,9 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.util.ResourceUtils;
 
 import com.google.common.base.Ascii;
@@ -98,7 +101,8 @@ public final class ArmeriaConfigurationUtil {
             List<Consumer<ServerBuilder>> armeriaServerBuilderConsumers,
             MeterRegistry meterRegistry,
             MeterIdPrefixFunction meterIdPrefixFunction,
-            List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators) {
+            List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
+            BeanFactory beanFactory) {
 
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
@@ -113,7 +117,11 @@ public final class ArmeriaConfigurationUtil {
         if (internalServicePort != null) {
             internalPortsBuilder.add(internalServicePort);
         }
-        if (managementServerPort != null) {
+
+        final boolean needsManagementPort =
+                findBean(beanFactory, "actuatorServerConfigurator", ArmeriaServerConfigurator.class) != null;
+
+        if (needsManagementPort && managementServerPort != null) {
             internalPortsBuilder.add(managementServerPort);
         }
         final List<Port> internalPorts = internalPortsBuilder.build();
@@ -237,6 +245,17 @@ public final class ArmeriaConfigurationUtil {
             } else {
                 server.service(servicePath, service);
             }
+        }
+    }
+
+    @Nullable
+    private static <T> T findBean(BeanFactory beanFactory, String name, Class<T> clazz) {
+        try {
+            return beanFactory.getBean(name, clazz);
+        } catch (NoUniqueBeanDefinitionException e) {
+            throw new IllegalStateException("Too many " + clazz.getSimpleName() + " beans: (expected: 1)", e);
+        } catch (NoSuchBeanDefinitionException e) {
+            return null;
         }
     }
 

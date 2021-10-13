@@ -3,6 +3,10 @@ spring:
   config:
     use-legacy-processing: true
 
+# Should not bind internal services to the management.server.port
+# if ArmeriaSpringActuatorAutoConfiguration was not configured.
+management.server.port: 0
+
 armeria:
   ports:
     - port: 0

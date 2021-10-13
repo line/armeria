@@ -58,6 +58,11 @@ public class ArmeriaAutoConfigurationInternalServiceTest {
         assertThat(internalServicePort).isNotNull();
         assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
 
+        final Port managementServerPort = internalServices.managementServerPort();
+        assertThat(managementServerPort).isNotNull();
+        assertThat(server.activePorts().values())
+                .noneMatch(port -> managementServerPort.getPort() == port.localAddress().getPort());
+
         assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
                                                                                 InternalServiceId.HEALTH);
         server.activePorts().values().stream()
