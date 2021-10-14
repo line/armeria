@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,6 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
@@ -63,6 +66,39 @@ class LazyDynamicEndpointGroupTest {
     @Test
     void emptyEndpoint() {
         final EndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final TestServiceStub client =
+                Clients.builder(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.HTTP), endpointGroup)
+                       .build(TestServiceStub.class);
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+
+        client.unaryCall(SimpleRequest.getDefaultInstance(),
+                         new StreamObserver<SimpleResponse>() {
+                             @Override
+                             public void onNext(SimpleResponse value) {}
+
+                             @Override
+                             public void onError(Throwable t) {
+                                 causeRef.set(t);
+                                 completed.set(true);
+                             }
+
+                             @Override
+                             public void onCompleted() {}
+                         });
+
+        // A call does not immediately fail.
+        await().untilTrue(completed);
+        assertThat(causeRef.get()).isInstanceOf(StatusRuntimeException.class)
+                                  .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                  .hasRootCauseInstanceOf(EmptyEndpointGroupException.class);
+    }
+
+    @Test
+    void initializeWithEmptyEndpoint() {
+        final LazyEndpointGroup endpointGroup = new LazyEndpointGroup();
+        endpointGroup.setAll(ImmutableList.of());
         final TestServiceStub client =
                 Clients.builder(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.HTTP), endpointGroup)
                        .build(TestServiceStub.class);
@@ -131,6 +167,11 @@ class LazyDynamicEndpointGroupTest {
     }
 
     private static final class LazyEndpointGroup extends DynamicEndpointGroup {
+
+        void setAll(List<Endpoint> endpoints) {
+            super.setEndpoints(endpoints);
+        }
+
         void add(Endpoint endpoint) {
             addEndpoint(endpoint);
         }
