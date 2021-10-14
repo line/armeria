@@ -128,11 +128,10 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
     public void completed(Integer result, Entry<ByteBuffer, ByteBuf> attachment) {
         assert subscription != null;
         eventExecutor.execute(() -> {
+            final ByteBuf byteBuf = attachment.getValue();
             if (result > -1) {
                 position += result;
                 final ByteBuffer byteBuffer = attachment.getKey();
-                final ByteBuf byteBuf = attachment.getValue();
-
                 if (byteBuffer.hasRemaining()) {
                     fileChannel.write(byteBuffer, position, attachment, this);
                 } else {
@@ -146,6 +145,7 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
                     }
                 }
             } else {
+                byteBuf.release();
                 subscription.cancel();
                 maybeCloseFileChannel(new IOException(
                         "Unexpected exception while writing data to '" + path + "' + : result " + result));
@@ -163,21 +163,21 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
 
     private void maybeCloseFileChannel(@Nullable Throwable cause) {
         if (completionFuture.isDone()) {
-            // no-op
-        } else {
-            if (cause == null) {
-                completionFuture.complete(path);
-            } else {
-                publisher.abort(cause);
-                completionFuture.completeExceptionally(cause);
-            }
+            return;
+        }
 
-            if (fileChannel != null && fileChannel.isOpen()) {
-                try {
-                    fileChannel.close();
-                } catch (IOException e) {
-                    logger.warn("Failed to close '" + path + '\'', e);
-                }
+        if (cause == null) {
+            completionFuture.complete(path);
+        } else {
+            publisher.abort(cause);
+            completionFuture.completeExceptionally(cause);
+        }
+
+        if (fileChannel != null && fileChannel.isOpen()) {
+            try {
+                fileChannel.close();
+            } catch (IOException e) {
+                logger.warn("Failed to close '" + path + '\'', e);
             }
         }
     }
