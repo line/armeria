@@ -10,9 +10,7 @@ boms:
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
   - io.grpc:grpc-bom:1.41.0
   - io.micrometer:micrometer-bom:1.7.4
-  # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  # TODO(ikhoon): Upgrade Netty version once https://github.com/netty/netty/issues/11591 is fixed.
-  - io.netty:netty-bom:4.1.68.Final
+  - io.netty:netty-bom:4.1.69.Final
   - io.zipkin.brave:brave-bom:5.13.3
   - org.eclipse.jetty:jetty-bom:9.4.43.v20210629
   - org.junit:junit-bom:5.8.1
@@ -44,7 +42,7 @@ com.auth0:
 
 # This is only used for examples/graphql-kotlin
 com.expediagroup:
-  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '5.0.0' }
+  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '5.1.1' }
   graphql-kotlin-client-jackson: { version: *GRAPHQL_KOTLIN_VERSION }
   graphql-kotlin-client-serialization: { version: *GRAPHQL_KOTLIN_VERSION }
   graphql-kotlin-schema-generator: { version: *GRAPHQL_KOTLIN_VERSION }
@@ -155,7 +153,7 @@ com.netflix.eureka:
 
 # DGS is used only for testing in it:dgs module.
 com.netflix.graphql.dgs:
-  graphql-dgs-client: { version: '4.9.0' }
+  graphql-dgs-client: { version: '4.9.1' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
@@ -164,7 +162,7 @@ com.puppycrawl.tools:
   checkstyle: { version: '8.45.1' }
 
 com.salesforce.servicelibs:
-  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.2.2' }
+  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.2.3' }
   reactor-grpc-stub: { version: *REACTVIVE_GRPC_VERSION }
 
 com.spotify:
@@ -183,7 +181,7 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 com.thesamet.scalapb:
-  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.11.5' }
+  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.11.6' }
   scalapb-runtime_2.13: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.12: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
@@ -272,21 +270,19 @@ io.netty:
   netty-common:
     javadocs:
     - https://netty.io/4.1/api/
-  # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.43.Final' }
 
 io.netty.incubator:
-  netty-incubator-transport-native-io_uring: { version: '0.0.8.Final' }
+  netty-incubator-transport-native-io_uring: { version: '0.0.9.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.4.10'
+    version: &REACTOR_VERSION '3.4.11'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
 
 io.projectreactor.kotlin:
-  reactor-kotlin-extensions: { version: '1.1.4' }
+  reactor-kotlin-extensions: { version: '1.1.5' }
 
 io.prometheus:
   simpleclient_common:
@@ -302,7 +298,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.1.1'
+    version: '3.1.2'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -514,7 +510,7 @@ org.jsoup:
   jsoup: { version: '1.14.3' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.12.4' }
+  mockito-core: { version: &MOCKITO_VERSION '4.0.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
