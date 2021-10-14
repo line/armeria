@@ -115,8 +115,7 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
-     * delegates to the provided {@link HttpResponse} by {@link Supplier}, beginning
-     * publishing is executed by using the provided {@link Executor}.
+     * delegates to the provided {@link HttpResponse} by {@link Supplier} using the provided {@link Executor}.
      *
      * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
      * @param executor the {@link Executor} that executes the {@link Supplier}.
