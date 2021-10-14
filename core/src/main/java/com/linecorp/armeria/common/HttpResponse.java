@@ -115,12 +115,11 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
-     * delegates to the provided {@link HttpResponse} by {@link Supplier},
-     * beginning publishing has passes from the provided {@link Executor}.
+     * delegates to the provided {@link HttpResponse} by {@link Supplier}, beginning
+     * publishing is executed by using the provided {@link Executor}.
      *
      * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
-     * @param executor the {@link Executor} executes the {@link DeferredHttpResponse} which delegates
-     *                 the {@link HttpResponse} supplied by the {@link Supplier}.
+     * @param executor the {@link Executor} that executes the {@link Supplier}.
      */
     static HttpResponse from(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
         requireNonNull(responseSupplier, "responseSupplier");
@@ -175,9 +174,11 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
-     * delegates to the provided {@link HttpResponse} by {@link Supplier},
-     * beginning publishing after {@code delay} has passed from the {@link ScheduledExecutorService} which
-     * respects the current thread-local {@link RequestContext}'s event loop if possible.
+     * delegates to the provided {@link HttpResponse} by {@link Supplier}.
+     *
+     * The {@link Supplier} is invoked from the current thread-local {@link RequestContext}'s event loop.
+     * If there's no thread local {@link RequestContext} is set, one of the threads
+     * from {@link CommonPools#workerGroup().next()} will be used.
      */
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");
