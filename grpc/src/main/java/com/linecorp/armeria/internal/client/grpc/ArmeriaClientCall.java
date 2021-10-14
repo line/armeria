@@ -170,7 +170,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        endpointInitialized = endpointGroup.whenReady().isDone();
+        endpointInitialized = endpointGroup.whenReady().isDone() && !endpointGroup.endpoints().isEmpty();
         if (!endpointInitialized) {
             ctx.whenInitialized().handle((unused1, unused2) -> {
                 runPendingTask();
