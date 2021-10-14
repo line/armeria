@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
-import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
@@ -61,23 +60,15 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     // 1 is subscribed, -1 is aborted
     private volatile int subscribed;
-    // executor is assigned in any thread
-    @Nullable
-    private volatile EventExecutor executor;
 
     @Nullable
-    private volatile Subscriber<? super BodyPart> subscriber;
+    private volatile MultipartSubscriber delegatedSubscriber;
 
     // Preserve the cause of abort.
     // Visible to subscribe and abort, because it's wrote before and read after updater
     @Nullable
     private Throwable abortCause;
 
-    // Below fields are modified by subscriber specified thread
-    @Nullable
-    private StreamMessage<? extends HttpData> currentExposedBodyPartPublisher;
-    @Nullable
-    private Subscription subscription;
     // To track how many body part we need. Always keep DecodedHttpStreamMessage's demand less or equal than 1
     // This parameter is protected by the same executor of subscriber of this
     // and subscriber(this) of DecodedHttpStreamMessage.
@@ -150,9 +141,9 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             }
             return;
         }
-        this.subscriber = subscriber;
-        this.executor = executor;
-        decoded.subscribe(new MultipartSubscriber(), executor, options);
+        final MultipartSubscriber delegatedSubscriber = new MultipartSubscriber(subscriber, executor);
+        this.delegatedSubscriber = delegatedSubscriber;
+        decoded.subscribe(delegatedSubscriber, executor, options);
         subscribedCompleteFuture.complete(null);
     }
 
@@ -181,35 +172,12 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         abortCause = cause;
         if (subscribedUpdater.compareAndSet(this, 0, -1)) {
             // There is no subscriber
-            cleanup();
             return;
         }
         subscribedCompleteFuture.handle((unused, throwable) -> {
-            if (executor.inEventLoop()) {
-                abort0(cause);
-            } else {
-                executor.execute(() -> abort0(cause));
-            }
+            decoded.abort(cause);
             return null;
         });
-    }
-
-    private void abort0(Throwable cause) {
-        decoded.abort(cause);
-        if (currentExposedBodyPartPublisher != null) {
-            currentExposedBodyPartPublisher.abort(cause);
-        }
-        if (subscriber != null) {
-            subscriber.onError(cause);
-        }
-        cleanup();
-    }
-
-    private void cleanup() {
-        if (currentExposedBodyPartPublisher != null) {
-            currentExposedBodyPartPublisher = null;
-        }
-        subscriber = NoopSubscriber.get();
     }
 
     BodyPartPublisher onBodyPartBegin() {
@@ -217,19 +185,23 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     }
 
     void requestUpstreamForBodyPartData() {
-        assert executor != null;
-        if (executor.inEventLoop()) {
-            requestUpstreamForBodyPartData0();
-        } else {
-            executor.execute(this::requestUpstreamForBodyPartData0);
+        @Nullable
+        final MultipartSubscriber delegatedSubscriber = this.delegatedSubscriber;
+        if (delegatedSubscriber != null) {
+            delegatedSubscriber.requestUpstreamForBodyPartData();
         }
     }
 
-    private void requestUpstreamForBodyPartData0() {
-        // No more upstream request and bodyPartPublisher still needs data
-        // If it's closed(cancelled), let next body part request handle it.
-        if (currentExposedBodyPartPublisher != null && currentExposedBodyPartPublisher.isOpen()) {
-            decoded.askUpstreamForElement();
+    /**
+     * Called by delegated MultipartSubscriber.
+     * e.g.
+     * 1. MultipartDecoder#abort -> MultipartSubscriber#onError -> MultipartSubscriber#cleanup ->
+     *    MultipartDecoder#cleanup
+     * 2. MultipartSubscriber#onComplete -> MultipartSubscriber#cleanup -> MultipartDecoder#cleanup
+     */
+    private void cleanup() {
+        if (delegatedSubscriber != null) {
+            delegatedSubscriber = null;
         }
     }
 
@@ -253,21 +225,30 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
      * For hiding Subscriber interface from MultipartDecoder.
      * Subscribing {@code DecodedHttpStreamMessage<BodyPart>} and delegating to external subscriber.
      */
-    private class MultipartSubscriber implements Subscriber<BodyPart>, Subscription {
-
+    private final class MultipartSubscriber implements Subscriber<BodyPart>, Subscription {
+        private final Subscriber<? super BodyPart> subscriber;
+        private final EventExecutor executor;
+        @Nullable
+        private Subscription subscription;
+        @Nullable
+        private StreamMessage<? extends HttpData> currentExposedBodyPartPublisher;
         private boolean cancelled;
+
+        private MultipartSubscriber(
+                Subscriber<? super BodyPart> subscriber,
+                EventExecutor executor) {
+            this.subscriber = subscriber;
+            this.executor = executor;
+        }
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            MultipartDecoder.this.subscription = subscription;
-            assert subscriber != null;
+            this.subscription = subscription;
             subscriber.onSubscribe(this);
         }
 
         @Override
         public void onNext(BodyPart bodyPart) {
-            assert subscriber != null;
-
             if (demandOfMultipart != Long.MAX_VALUE) {
                 demandOfMultipart--;
             }
@@ -298,7 +279,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
         @Override
         public void onError(Throwable t) {
-            assert subscriber != null;
             subscriber.onError(t);
             if (currentExposedBodyPartPublisher != null) {
                 currentExposedBodyPartPublisher.abort(t);
@@ -308,7 +288,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
         @Override
         public void onComplete() {
-            assert subscriber != null;
             subscriber.onComplete();
             cleanup();
         }
@@ -351,16 +330,43 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             }
         }
 
+        void requestUpstreamForBodyPartData() {
+            if (executor.inEventLoop()) {
+                requestUpstreamForBodyPartData0();
+            } else {
+                executor.execute(this::requestUpstreamForBodyPartData0);
+            }
+        }
+
+        private void requestUpstreamForBodyPartData0() {
+            // No more upstream request and bodyPartPublisher still needs data
+            // If it's closed(cancelled), let next body part request handle it.
+            if (currentExposedBodyPartPublisher != null && currentExposedBodyPartPublisher.isOpen()) {
+                decoded.askUpstreamForElement();
+            }
+        }
+
         private void cancel0() {
             if (cancelled) {
                 return;
             }
             cancelled = true;
+
+            // `this` is published after subscription assigned. So cancel on `this` always has subscription.
+            assert subscription != null;
             subscription.cancel();
+
             if (currentExposedBodyPartPublisher != null) {
                 currentExposedBodyPartPublisher.abort(CancelledSubscriptionException.get());
             }
             cleanup();
+        }
+
+        private void cleanup() {
+            if (currentExposedBodyPartPublisher != null) {
+                currentExposedBodyPartPublisher = null;
+            }
+            MultipartDecoder.this.cleanup();
         }
     }
 }
