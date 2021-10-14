@@ -1124,7 +1124,7 @@ public final class ServerBuilder {
         }
 
         final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
+        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(finalDecorated));
         return this;
     }
 
@@ -1877,12 +1877,12 @@ public final class ServerBuilder {
         return null;
     }
 
-    private static void warnIfServiceHasMultipleRoutes(String pathPrefix, HttpService service) {
-        if (service instanceof HttpServiceWithRoutes) {
-            if (((HttpServiceWithRoutes) service).routes().size() > 1) {
-                logger.warn("The service that you are trying to add with 'serviceUnder' has multiple routes, " +
-                            "but its routes will be ignored and it will be served under '{}': service={}",
-                            pathPrefix, service);
+    private static void warnIfServiceHasMultipleRoutes(String path, HttpService service) {
+        if (service instanceof ServiceWithRoutes) {
+            if (((ServiceWithRoutes) service).routes().size() > 0) {
+                logger.warn("The service has self-defined routes but the routes will be ignored. " +
+                            "It will be served at the route you specified: path={}, service={}",
+                            path, service);
             }
         }
     }
