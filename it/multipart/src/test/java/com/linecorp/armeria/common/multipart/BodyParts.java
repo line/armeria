@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A utility class for saving upload files and getting query parameters from {@link Multipart}
+ * A utility class for saving upload files and getting query parameters from {@link Multipart}.
  */
 @UnstableApi
 public class BodyParts {
@@ -84,9 +84,10 @@ public class BodyParts {
      *
      * @see StreamMessages
      */
-    public static CompletableFuture<CollectedBodyParts> collect(Multipart multipart,
-                                                                Function<@Nullable String, Path> mappingFileName,
-                                                                OpenOption... options) {
+    public static CompletableFuture<CollectedBodyParts> collect(
+            Multipart multipart,
+            Function<@Nullable String, Path> mappingFileName,
+            OpenOption... options) {
         requireNonNull(multipart, "multipart");
         requireNonNull(options, "options");
 
