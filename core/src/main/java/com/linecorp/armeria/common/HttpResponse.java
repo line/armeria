@@ -115,7 +115,7 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
-     * delegates to the provided {@link HttpResponse} by {@link Supplier} using the provided {@link Executor}.
+     * delegates to the {@link HttpResponse} provided by the {@link Supplier}.
      *
      * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
      * @param executor the {@link Executor} that executes the {@link Supplier}.
@@ -124,7 +124,13 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(responseSupplier, "responseSupplier");
         requireNonNull(executor, "executor");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.execute(() -> res.delegate(responseSupplier.get()));
+        executor.execute(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        });
         return res;
     }
 
@@ -199,7 +205,13 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.schedule(() -> res.delegate(responseSupplier.get()), delay.toNanos(), TimeUnit.NANOSECONDS);
+        executor.schedule(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        }, delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }
 
