@@ -180,7 +180,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
      * delegates to the provided {@link HttpResponse} by {@link Supplier}.
      *
-     * The {@link Supplier} is invoked from the current thread-local {@link RequestContext}'s event loop.
+     * <p>The {@link Supplier} is invoked from the current thread-local {@link RequestContext}'s event loop.
      * If there's no thread local {@link RequestContext} is set, one of the threads
      * from {@link CommonPools#workerGroup().next()} will be used.
      */
