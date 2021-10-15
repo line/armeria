@@ -1542,6 +1542,7 @@ com.cm
 com.cn
 com.co
 com.cu
+com.cv
 com.cw
 com.cy
 com.de
@@ -2100,6 +2101,7 @@ edu.ci
 edu.cn
 edu.co
 edu.cu
+edu.cv
 edu.cw
 edu.dm
 edu.do
@@ -3663,6 +3665,7 @@ int.az
 int.bo
 int.ci
 int.co
+int.cv
 int.eu.org
 int.is
 int.la
@@ -5772,6 +5775,7 @@ nom.tm
 nom.ve
 nom.za
 nombre.bo
+nome.cv
 nome.pt
 nomi.ishikawa.jp
 nonoichi.ishikawa.jp
@@ -6071,6 +6075,7 @@ org.ci
 org.cn
 org.co
 org.cu
+org.cv
 org.cw
 org.cy
 org.dm
