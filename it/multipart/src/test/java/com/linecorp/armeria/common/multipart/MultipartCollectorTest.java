@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -28,6 +27,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -43,44 +43,46 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class MultipartCollectorTest {
+
+    @TempDir
+    static Path tempDir;
+
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/multipart/file", (ctx, req) -> {
-                final MultipartCollector multipartCollector = new MultipartCollector();
-                Multipart.from(req).bodyParts().subscribe(multipartCollector);
-                return HttpResponse.from(
-                        multipartCollector.future().thenApply(aggregated -> {
-                            final StringBuilder stringBuilder = new StringBuilder();
-                            final QueryParams queryParams = aggregated.getQueryParams();
-                            stringBuilder.append("param1/")
-                                         .append(queryParams.get("param1")).append('\n');
-                            stringBuilder.append("param2/")
-                                         .append(queryParams.get("param2")).append('\n');
-                            stringBuilder.append("param3/")
-                                         .append(queryParams.get("param3")).append('\n');
-                            final Map<String, List<Path>> files = aggregated.getFiles();
-                            try {
-                                stringBuilder.append("file1/")
-                                             .append(Files.readAllLines(files.get("file1").get(0)))
-                                             .append('\n');
-                                stringBuilder.append("file2/")
-                                             .append(Files.readAllLines(files.get("file2").get(0)))
-                                             .append('\n');
-                                stringBuilder.append("file3/")
-                                             .append(Files.readAllLines(files.get("file3").get(0)));
-                                return HttpResponse.of(stringBuilder.toString());
-                            } catch (IOException e) {
-                                throw new UncheckedIOException(e);
-                            }
-                        }));
-            });
+            sb.service("/multipart/file", (ctx, req) -> HttpResponse.from(
+                    BodyParts.collect(Multipart.from(req), tempDir::resolve)
+                             .thenApply(aggregated -> {
+                                 final StringBuilder stringBuilder = new StringBuilder();
+                                 final QueryParams queryParams = aggregated.getQueryParams();
+                                 stringBuilder.append("param1/")
+                                              .append(queryParams.get("param1")).append('\n');
+                                 stringBuilder.append("param2/")
+                                              .append(queryParams.get("param2")).append('\n');
+                                 stringBuilder.append("param3/")
+                                              .append(queryParams.get("param3")).append('\n');
+                                 final Map<String, List<Path>> files = aggregated.getFiles();
+                                 System.out.println(files);
+                                 try {
+                                     stringBuilder.append("file1/")
+                                                  .append(Files.readAllLines(files.get("file1").get(0)))
+                                                  .append('\n');
+                                     stringBuilder.append("file2/")
+                                                  .append(Files.readAllLines(files.get("file2").get(0)))
+                                                  .append('\n');
+                                     stringBuilder.append("file3/")
+                                                  .append(Files.readAllLines(files.get("file3").get(0)));
+                                     return HttpResponse.of(stringBuilder.toString());
+                                 } catch (IOException e) {
+                                     throw new UncheckedIOException(e);
+                                 }
+                             })));
         }
     };
 
     @Test
-    void multipartFile() throws MalformedURLException {
+    void multipartFile() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
@@ -89,8 +91,8 @@ class MultipartCollectorTest {
         body.add("file1", file);
         body.add("file2", file);
         body.add("file3", file);
-        body.add("param1", "foo");
-        body.add("param2", "你好，世界");
+        body.add("param1", "Hello World");
+        body.add("param2", "你好 世界\n안녕 세상\nこんにちは世界");
         body.add("param3", "bar");
 
         final HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
@@ -99,9 +101,8 @@ class MultipartCollectorTest {
         final ResponseEntity<String> response =
                 restTemplate.postForEntity(server.httpUri().resolve("/multipart/file"), requestEntity,
                                            String.class);
-
         assertThat(response.getBody())
-                .isEqualTo("param1/foo\nparam2/你好，世界\nparam3/bar\n" +
+                .isEqualTo("param1/Hello World\nparam2/你好 世界\n안녕 세상\nこんにちは世界\nparam3/bar\n" +
                            "file1/[Hello!]\nfile2/[Hello!]\nfile3/[Hello!]");
     }
 }

@@ -269,7 +269,7 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     /**
      * Aggregates a {@link BodyPart#content()}.
      */
-    private static final class ContentAggregator extends HttpObjectAggregator<AggregatedBodyPart> {
+    static final class ContentAggregator extends HttpObjectAggregator<AggregatedBodyPart> {
 
         private final BodyPart bodyPart;
 
