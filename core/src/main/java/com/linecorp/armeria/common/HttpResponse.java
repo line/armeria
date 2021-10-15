@@ -182,7 +182,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * <p>The {@link Supplier} is invoked from the current thread-local {@link RequestContext}'s event loop.
      * If there's no thread local {@link RequestContext} is set, one of the threads
-     * from {@link CommonPools#workerGroup().next()} will be used.
+     * from {@code CommonPools.workerGroup().next()} will be used.
      */
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");
