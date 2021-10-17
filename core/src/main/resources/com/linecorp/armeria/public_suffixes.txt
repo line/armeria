@@ -788,6 +788,7 @@ bestbuy
 bet
 bet.ar
 beta.bounty-full.com
+beta.tailscale.net
 betainabox.com
 better-than.tv
 bf
@@ -7304,6 +7305,7 @@ sicily.it
 siellak.no
 siena.it
 sigdal.no
+siiites.com
 siljan.no
 silk
 silk.museum
@@ -8006,6 +8008,7 @@ try-snowplow.com
 trycloudflare.com
 trysil.no
 ts.it
+ts.net
 tselinograd.su
 tsk.tr
 tsu.mie.jp
