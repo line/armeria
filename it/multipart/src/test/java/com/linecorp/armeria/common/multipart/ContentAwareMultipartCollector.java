@@ -38,15 +38,17 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.BodyParts.CollectedBodyParts;
-import com.linecorp.armeria.common.multipart.DefaultMultipart.ContentAggregator;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.StreamMessages;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-final class MultipartCollector implements Subscriber<BodyPart> {
+/**
+ * Handling multipart/form-data by saving the uploaded file to the specified path and
+ * others in the {@link QueryParams}.
+ */
+final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
     private final CompletableFuture<CollectedBodyParts> future = new CompletableFuture<>();
     private final QueryParamsBuilder queryParamsBuilder = QueryParams.builder();
     private final ImmutableListMultimap.Builder<String, Path> files = new ImmutableListMultimap.Builder<>();
@@ -60,10 +62,10 @@ final class MultipartCollector implements Subscriber<BodyPart> {
     private final EventExecutor eventExecutor;
     private final ExecutorService blockingTaskExecutor;
 
-    MultipartCollector(StreamMessage<? extends BodyPart> publisher,
-                       Function<@Nullable String, Path> mappingFileName,
-                       OpenOption[] options,
-                       EventExecutor eventExecutor, ExecutorService blockingTaskExecutor) {
+    ContentAwareMultipartCollector(StreamMessage<? extends BodyPart> publisher,
+                                   Function<@Nullable String, Path> mappingFileName,
+                                   OpenOption[] options,
+                                   EventExecutor eventExecutor, ExecutorService blockingTaskExecutor) {
         this.mappingFileName = mappingFileName;
         this.options = options;
         this.eventExecutor = eventExecutor;
@@ -96,36 +98,33 @@ final class MultipartCollector implements Subscriber<BodyPart> {
 
         inProgressCount++;
         if (bodyPart.filename() == null) {
-            final CompletableFuture<AggregatedBodyPart> future = new CompletableFuture<>();
-            bodyPart.content().subscribe(new ContentAggregator(bodyPart, future, ByteBufAllocator.DEFAULT),
-                                         eventExecutor);
-            future.whenCompleteAsync((aggregatedBodyPart, throwable) -> {
-                inProgressCount--;
-                try (HttpData content = aggregatedBodyPart.content()) {
-                    if (throwable != null) {
-                        subscription.cancel();
-                        future.completeExceptionally(throwable);
-                        return;
-                    }
-                    @Nullable
-                    final MediaType mediaType = aggregatedBodyPart.contentType();
-                    final Charset charset = mediaType == null ? StandardCharsets.US_ASCII
-                                                              : mediaType.charset(
-                            StandardCharsets.US_ASCII);
-                    queryParamsBuilder.add(name, content.toString(charset));
-                    subscription.request(1);
-                    if (canComplete) {
-                        doComplete();
-                    }
-                }
-            }, eventExecutor);
+            bodyPart.aggregateWithPooledObjects(eventExecutor, ByteBufAllocator.DEFAULT)
+                    .whenCompleteAsync((aggregatedBodyPart, throwable) -> {
+                        inProgressCount--;
+                        try (HttpData content = aggregatedBodyPart.content()) {
+                            if (throwable != null) {
+                                subscription.cancel();
+                                future.completeExceptionally(throwable);
+                                return;
+                            }
+                            @Nullable
+                            final MediaType mediaType = aggregatedBodyPart.contentType();
+                            final Charset charset = mediaType == null ? StandardCharsets.UTF_8
+                                                                      : mediaType.charset(
+                                    StandardCharsets.UTF_8);
+                            queryParamsBuilder.add(name, content.toString(charset));
+                            subscription.request(1);
+                            if (canComplete) {
+                                doComplete();
+                            }
+                        }
+                    }, eventExecutor);
             return;
         }
 
         final Path path = mappingFileName.apply(name);
         files.put(name, path);
-        StreamMessages
-                .writeTo(bodyPart.content(), path, eventExecutor, blockingTaskExecutor, options)
+        bodyPart.writeFile(path, eventExecutor, blockingTaskExecutor, options)
                 .handleAsync((unused, throwable) -> {
                     inProgressCount--;
                     if (throwable != null) {

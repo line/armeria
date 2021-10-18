@@ -168,10 +168,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     /**
      * Invoked whenever a new demand is requested.
-     * @param n Newly requested demand
-     * @param oldDemand Existing demand before adding this times demand
+     * @param newDemand Newly requested demand
+     * @param oldDemand Existing demand before adding newDemand
      */
-    protected void onRequest(long n, long oldDemand) {}
+    protected void onRequest(long newDemand, long oldDemand) {}
 
     @Override
     public final void abort() {

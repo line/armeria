@@ -33,24 +33,39 @@ package com.linecorp.armeria.common.multipart;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import com.google.common.primitives.Bytes;
+
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;
 
 /**
  * Tests {@link BodyPart}.
  */
 class BodyPartTest {
+
+    @TempDir
+    static Path tempDir;
 
     // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/test/java/io/helidon/media/multipart/BodyPartTest.java
 
@@ -141,5 +156,81 @@ class BodyPartTest {
 
         assertThat(bodyPart.filename()).isEqualTo("foo.txt");
         assertThat(bodyPart.name()).isNull();
+    }
+
+    @Test
+    void testWriteFile() throws IOException {
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final byte[] expected = Arrays.stream(httpData)
+                                      .map(HttpData::array)
+                                      .reduce(Bytes::concat).get();
+
+        final StreamMessage<HttpData> publisher = StreamMessage.of(httpData);
+        final Path destination = tempDir.resolve("foo.bin");
+        final Path result = BodyPart.of(HttpHeaders.of(), publisher)
+                                    .writeFile(destination,
+                                               CommonPools.workerGroup().next(),
+                                               CommonPools.blockingTaskExecutor())
+                                    .join();
+        assertThat(result).isSameAs(destination);
+        final byte[] bytes = Files.readAllBytes(result);
+        assertThat(bytes).contains(expected);
+
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
+    }
+
+    @Test
+    void testAggregate() {
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final byte[] expected = Arrays.stream(httpData)
+                                      .map(HttpData::array)
+                                      .reduce(Bytes::concat).get();
+
+        final StreamMessage<HttpData> publisher = StreamMessage.of(httpData);
+        final AggregatedBodyPart result = BodyPart.of(HttpHeaders.of(), publisher)
+                                                  .aggregate()
+                                                  .join();
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
+
+        try (HttpData content = result.content()) {
+            assertThat(content.array()).contains(expected);
+            assertThat(content.isPooled()).isFalse();
+        }
+    }
+
+    @Test
+    void testAggregateWithPooledObjects() {
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final byte[] expected = Arrays.stream(httpData)
+                                      .map(HttpData::array)
+                                      .reduce(Bytes::concat).get();
+
+        final StreamMessage<HttpData> publisher = StreamMessage.of(httpData);
+        final AggregatedBodyPart result = BodyPart.of(HttpHeaders.of(), publisher)
+                                                  .aggregateWithPooledObjects(ByteBufAllocator.DEFAULT)
+                                                  .join();
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
+        try (HttpData content = result.content()) {
+            assertThat(content.array()).contains(expected);
+            assertThat(content.isPooled()).isTrue();
+        }
     }
 }

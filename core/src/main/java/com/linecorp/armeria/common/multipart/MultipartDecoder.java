@@ -99,9 +99,9 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         if (parser != null) {
             try {
                 parser.close();
-            } catch (MimeParsingException ex) {
-                // Do we log warn level here ?
-                logger.warn(ex.getMessage(), ex);
+            } catch (MimeParsingException ignore) {
+                // There is a cause already happened and passed to subscriber already
+                // So the parsing exception is not important for user and miss leading if we log here.
             }
         }
     }
@@ -205,9 +205,9 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         }
     }
 
-    class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
+    final class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
         @Override
-        protected void onRequest(long n, long oldDemand) {
+        protected void onRequest(long newDemand, long oldDemand) {
             // Because whenConsumed will run in the same thread(called by onRequest) after looping the existing
             // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
             // at subscribe)
@@ -234,9 +234,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         private StreamMessage<? extends HttpData> currentExposedBodyPartPublisher;
         private boolean cancelled;
 
-        private MultipartSubscriber(
-                Subscriber<? super BodyPart> subscriber,
-                EventExecutor executor) {
+        private MultipartSubscriber(Subscriber<? super BodyPart> subscriber, EventExecutor executor) {
             this.subscriber = subscriber;
             this.executor = executor;
         }

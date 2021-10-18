@@ -15,11 +15,24 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessages;
+import com.linecorp.armeria.internal.common.HttpObjectAggregator;
+
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultBodyPart implements BodyPart {
 
@@ -43,10 +56,78 @@ final class DefaultBodyPart implements BodyPart {
     }
 
     @Override
+    public CompletableFuture<Path> writeFile(Path path, EventExecutor eventExecutor,
+                                             ExecutorService blockingTaskExecutor,
+                                             OpenOption... options) {
+        return StreamMessages.writeTo(content, path, eventExecutor, blockingTaskExecutor, options);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedBodyPart> aggregate() {
+        return aggregate0(null, null);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedBodyPart> aggregate(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        return aggregate0(executor, null);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedBodyPart> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+        requireNonNull(alloc, "alloc");
+        return aggregate0(null, alloc);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedBodyPart> aggregateWithPooledObjects(EventExecutor executor,
+                                                                            ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
+        return aggregate0(executor, alloc);
+    }
+
+    private CompletableFuture<AggregatedBodyPart> aggregate0(@Nullable EventExecutor executor,
+                                                             @Nullable ByteBufAllocator alloc) {
+        final CompletableFuture<AggregatedBodyPart> future = new CompletableFuture<>();
+        if (executor == null) {
+            content().subscribe(new ContentAggregator(this, future, alloc));
+        } else {
+            content().subscribe(new ContentAggregator(this, future, alloc), executor);
+        }
+        return future;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("headers", headers)
                           .add("content", content)
                           .toString();
+    }
+
+    /**
+     * Aggregates a {@link BodyPart#content()}.
+     */
+    private static final class ContentAggregator extends HttpObjectAggregator<AggregatedBodyPart> {
+
+        private final BodyPart bodyPart;
+
+        ContentAggregator(BodyPart bodyPart, CompletableFuture<AggregatedBodyPart> future,
+                          @Nullable ByteBufAllocator alloc) {
+            super(future, alloc);
+            this.bodyPart = bodyPart;
+        }
+
+        @Override
+        protected void onHeaders(HttpHeaders headers) {}
+
+        @Override
+        protected AggregatedBodyPart onSuccess(HttpData content) {
+            return AggregatedBodyPart.of(bodyPart.headers(), content);
+        }
+
+        @Override
+        protected void onFailure() {}
     }
 }

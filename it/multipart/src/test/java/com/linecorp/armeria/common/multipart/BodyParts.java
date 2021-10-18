@@ -57,7 +57,7 @@ public class BodyParts {
         /**
          * Return whole {@link QueryParams} from the Multipart.
          */
-        public QueryParams getQueryParams() {
+        public QueryParams queryParams() {
             return queryParams;
         }
 
@@ -65,7 +65,7 @@ public class BodyParts {
          * Returns a {@link Map} whose key is the name from {@link BodyPart} and value is {@link List} of
          * {@link Path} where to find uploaded files.
          */
-        public Map<String, List<Path>> getFiles() {
+        public Map<String, List<Path>> files() {
             return files;
         }
     }
@@ -106,7 +106,7 @@ public class BodyParts {
         if (blockingTaskExecutor == null) {
             blockingTaskExecutor = CommonPools.blockingTaskExecutor();
         }
-        return new MultipartCollector(multipart.bodyParts(), mappingFileName, options, eventExecutor,
-                                      blockingTaskExecutor).future();
+        return new ContentAwareMultipartCollector(multipart.bodyParts(), mappingFileName, options, eventExecutor,
+                                                  blockingTaskExecutor).future();
     }
 }

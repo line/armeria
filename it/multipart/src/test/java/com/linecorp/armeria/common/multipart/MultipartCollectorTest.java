@@ -55,14 +55,14 @@ class MultipartCollectorTest {
                     BodyParts.collect(Multipart.from(req), tempDir::resolve)
                              .thenApply(aggregated -> {
                                  final StringBuilder stringBuilder = new StringBuilder();
-                                 final QueryParams queryParams = aggregated.getQueryParams();
+                                 final QueryParams queryParams = aggregated.queryParams();
                                  stringBuilder.append("param1/")
                                               .append(queryParams.get("param1")).append('\n');
                                  stringBuilder.append("param2/")
                                               .append(queryParams.get("param2")).append('\n');
                                  stringBuilder.append("param3/")
                                               .append(queryParams.get("param3")).append('\n');
-                                 final Map<String, List<Path>> files = aggregated.getFiles();
+                                 final Map<String, List<Path>> files = aggregated.files();
                                  System.out.println(files);
                                  try {
                                      stringBuilder.append("file1/")
