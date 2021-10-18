@@ -189,4 +189,16 @@ class PortBasedVirtualHostTest {
         final VirtualHostBuilder virtualHost3 = serverBuilder.virtualHost(18082);
         assertThat(virtualHost2).isNotSameAs(virtualHost3);
     }
+
+    @Test
+    void portBasedVirtualHostWithTls() {
+        // Make sure that the server builds successfully.
+        Server.builder()
+              .https(8080)
+              .tlsSelfSigned()
+              .virtualHost(8080)
+              .service("/secure", (ctx, req) -> HttpResponse.of("OK"))
+              .and()
+              .build();
+    }
 }
