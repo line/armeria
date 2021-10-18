@@ -106,7 +106,7 @@ public class BodyParts {
         if (blockingTaskExecutor == null) {
             blockingTaskExecutor = CommonPools.blockingTaskExecutor();
         }
-        return new ContentAwareMultipartCollector(multipart.bodyParts(), mappingFileName, options, eventExecutor,
-                                                  blockingTaskExecutor).future();
+        return new ContentAwareMultipartCollector(multipart.bodyParts(), mappingFileName, options,
+                                                  eventExecutor, blockingTaskExecutor).future();
     }
 }
