@@ -206,6 +206,16 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the {@code originalHostnamePattern} that does not include the {@link #port()} in the pattern.
+     * For example, if a port number is 8080 and a hostname is {@code foo.com},
+     * the {@link #hostnamePattern()} will be {@code "foo.com:8080"} and
+     * the {@link #originalHostnamePattern()} will be {@code "foo.com"}.
+     */
+    String originalHostnamePattern() {
+        return originalHostnamePattern;
+    }
+
+    /**
      * Returns the {@link Server} where this {@link VirtualHost} belongs to.
      */
     public Server server() {

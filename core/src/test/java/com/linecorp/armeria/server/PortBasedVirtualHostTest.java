@@ -189,4 +189,26 @@ class PortBasedVirtualHostTest {
         final VirtualHostBuilder virtualHost3 = serverBuilder.virtualHost(18082);
         assertThat(virtualHost2).isNotSameAs(virtualHost3);
     }
+
+    @Test
+    void portBasedVirtualHostWithTls() {
+        // Make sure that the server builds successfully.
+        final Server server =
+                Server.builder()
+                      .https(8080)
+                      .https(8081)
+                      .tlsSelfSigned()
+                      .virtualHost(8080)
+                      .service("/secure", (ctx, req) -> HttpResponse.of("OK"))
+                      .and()
+                      .virtualHost("foo.com:8081")
+                      .service("/foo", (ctx, req) -> HttpResponse.of("OK"))
+                      .and()
+                      .build();
+
+        assertThat(server.config().virtualHosts().stream().map(VirtualHost::hostnamePattern))
+                .containsExactly("*:8080", "foo.com:8081", "*");
+        assertThat(server.config().virtualHosts().stream().map(VirtualHost::originalHostnamePattern))
+                .containsExactly("*", "foo.com", "*");
+    }
 }
