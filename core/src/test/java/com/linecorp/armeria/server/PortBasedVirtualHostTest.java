@@ -193,12 +193,22 @@ class PortBasedVirtualHostTest {
     @Test
     void portBasedVirtualHostWithTls() {
         // Make sure that the server builds successfully.
-        Server.builder()
-              .https(8080)
-              .tlsSelfSigned()
-              .virtualHost(8080)
-              .service("/secure", (ctx, req) -> HttpResponse.of("OK"))
-              .and()
-              .build();
+        final Server server =
+                Server.builder()
+                      .https(8080)
+                      .https(8081)
+                      .tlsSelfSigned()
+                      .virtualHost(8080)
+                      .service("/secure", (ctx, req) -> HttpResponse.of("OK"))
+                      .and()
+                      .virtualHost("foo.com:8081")
+                      .service("/foo", (ctx, req) -> HttpResponse.of("OK"))
+                      .and()
+                      .build();
+
+        assertThat(server.config().virtualHosts().stream().map(VirtualHost::hostnamePattern))
+                .containsExactly("*:8080", "foo.com:8081", "*");
+        assertThat(server.config().virtualHosts().stream().map(VirtualHost::originalHostnamePattern))
+                .containsExactly("*", "foo.com", "*");
     }
 }
