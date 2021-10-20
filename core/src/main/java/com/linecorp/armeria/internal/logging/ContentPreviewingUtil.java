@@ -60,12 +60,6 @@ public final class ContentPreviewingUtil {
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
-        req.whenComplete().handle((unused, unused1) -> {
-            // The HttpRequest cannot be subscribed so call requestContentPreview(null) to make sure that the
-            // log is complete.
-            logBuilder.requestContentPreview(null);
-            return null;
-        });
         final FilteredHttpRequest filteredHttpRequest = new FilteredHttpRequest(req) {
             @Override
             protected HttpObject filter(HttpObject obj) {
