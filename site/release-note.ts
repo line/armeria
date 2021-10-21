@@ -1,23 +1,23 @@
-import { Octokit } from "octokit";
-import { chain } from "lodash";
-import { JSDOM } from "jsdom";
-import fetch from "node-fetch";
-import fs from "fs";
+import { Octokit } from 'octokit';
+import { chain } from 'lodash';
+import { JSDOM } from 'jsdom';
+import fetch from 'node-fetch';
+import fs from 'fs';
 
 // An access token has more quotas than anonymous access.
 // If not specified, defaults to anonymous.
 const octokit = new Octokit({ auth: process.env.GITHUB_ACCESS_TOKEN });
 
 enum Category {
-  NewFeature = "🌟 New features",
-  Improvement = "📈 Improvements",
-  Bug = "🛠️ Bug fixes",
-  Documentation = "📃 Documentation",
-  Deprecation = "🏚️ Deprecations",
-  BreakingChange = "☢️ Breaking changes",
-  Dependency = "⛓ Dependencies",
-  // Maintainers should manually decide whether to check PRs in this category.
-  MaybeIgnore = "🗑 Maybe ignore",
+  NewFeature = '🌟 New features',
+  Improvement = '📈 Improvements',
+  Bug = '🛠️ Bug fixes',
+  Documentation = '📃 Documentation',
+  Deprecation = '🏚️ Deprecations',
+  BreakingChange = '☢️ Breaking changes',
+  Dependency = '⛓ Dependencies',
+  // Maintainers should manually decide whether to check in the PRs in this category.
+  MaybeIgnore = '🗑 Maybe ignore',
 }
 
 interface PullRequest {
@@ -32,27 +32,27 @@ interface PullRequest {
  * Converts a version into a milestone number in GitHub.
  */
 async function getMilestoneId(version: string): Promise<number> {
-  const response = await octokit.request("GET /repos/{owner}/{repo}/milestones", {
-    owner: "line",
-    repo: "armeria",
-    direction: "desc",
+  const response = await octokit.request('GET /repos/{owner}/{repo}/milestones', {
+    owner: 'line',
+    repo: 'armeria',
+    direction: 'desc',
     per_page: 100,
-    state: "all"
+    state: 'all'
   });
   const milestone = response.data.find(milestone => milestone.title == version);
   return milestone.number;
 }
 
 async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
-  const response = await octokit.request("GET /repos/{owner}/{repo}/issues", {
-    owner: "line",
-    repo: "armeria",
+  const response = await octokit.request('GET /repos/{owner}/{repo}/issues', {
+    owner: 'line',
+    repo: 'armeria',
     milestone: milestone.toString(),
-    state: "all"
+    state: 'all'
   });
 
   const pullRequestIds: number[] = response.data
-    .filter(it => it.html_url.includes("/pull/"))
+    .filter(it => it.html_url.includes('/pull/'))
     .map(it => {
       return it.number;
     });
@@ -61,17 +61,17 @@ async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
   for (const id of pullRequestIds) {
     console.log(`💻 Collecting information for https://github.com/line/armeria/pull/${id} ...`);
 
-    const pr = await octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
-      owner: "line",
-      repo: "armeria",
+    const pr = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+      owner: 'line',
+      repo: 'armeria',
       pull_number: id
     });
 
     const title: string = pr.data.title;
     let results: string[];
-    if (title == "Update dependencies") {
+    if (title == 'Update dependencies') {
       // Use body as it is for the dependency PR.
-      results = [pr.data.body.replace(/->/gi, "→")];
+      results = [pr.data.body.replace(/->/gi, '→')];
     } else {
       results = parseResult(pr.data.body);
     }
@@ -99,9 +99,9 @@ function parseResult(body: string | null): string[] {
   if (!body) {
     return [];
   }
-  const lines = body.split("\r\n");
+  const lines = body.split('\r\n');
   const value = chain(lines)
-    .dropWhile(line => !line.includes("Result:"))
+    .dropWhile(line => !line.includes('Result:'))
     .drop()
     .filter(line => !line.match(/([Cc]loses?|[Ff]ix(es)?) /))
     .value();
@@ -114,11 +114,11 @@ function parseResult(body: string | null): string[] {
       continue;
     }
 
-    if (line.startsWith("<!--")) {
+    if (line.startsWith('<!--')) {
       inComment = true;
       continue;
     }
-    if (line.includes("-->")) {
+    if (line.includes('-->')) {
       inComment = false;
       continue;
     }
@@ -126,20 +126,20 @@ function parseResult(body: string | null): string[] {
       continue;
     }
 
-    if (line.startsWith("- ")) {
-      result.push(line.replace(/^- /, ""));
+    if (line.startsWith('- ')) {
+      result.push(line.replace(/^- /, ''));
       wasDash = true;
     } else {
       if (wasDash) {
         const last = result.pop();
-        result.push(last + "\n" + line);
+        result.push(last + '\n' + line);
       } else {
         // A single result will be expected.
         if (result.length == 0) {
           result.push(line);
         } else {
           const last = result.pop();
-          result.push(last + " " + line);
+          result.push(last + ' ' + line);
         }
       }
     }
@@ -155,15 +155,15 @@ async function getLinkedIssues(html_url: string): Promise<number[]> {
   const html = await fetch(html_url);
   const dom = new JSDOM(await html.text());
 
-  return Array.from(dom.window.document.querySelectorAll(".css-truncate.my-1"))
+  return Array.from(dom.window.document.querySelectorAll('.css-truncate.my-1'))
     .map((el: any) => el.children[0].href)
-    .map((href: string) => href.replace(/^.*\/issues\//, ""))
+    .map((href: string) => href.replace(/^.*\/issues\//, ''))
     .map((number: string) => parseInt(number));
 }
 
 function renderReleaseNotes(pullRequests: PullRequest[]): string {
   const builder: string[] = [];
-  builder.push("---", `date: ${today()}`, "---");
+  builder.push('---', `date: ${today()}`, '---', '');
 
   for (const category of Object.values(Category)) {
     const changes: PullRequest[] = pullRequests.filter(pr => {
@@ -173,60 +173,60 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
       continue;
     }
 
-    builder.push(`## ${category}`, "");
+    builder.push(`## ${category}`, '');
 
     if (changes.length == 0) {
-      builder.push("- N/A");
+      builder.push('- N/A');
     } else {
       for (const change of changes) {
         if (change.category == Category.Dependency) {
           builder.push(change.results.shift());
         } else {
-          const links = change.references.map(id => `#${id}`).join(" ");
+          const links = change.references.map(id => `#${id}`).join(' ');
           if (change.results.length == 0) {
-            builder.push(`-  ${change.title} ${links}`);
+            builder.push(`- ${change.title} ${links}`);
           } else {
             for (const result of change.results) {
-              builder.push(`-  ${result} ${links}`);
+              builder.push(`- ${result} ${links}`);
             }
           }
         }
       }
     }
-    builder.push("");
+    builder.push('');
   }
 
-  builder.push("## 🙇 Thank you", "", "<ThankYou usernames={[");
+  builder.push('## 🙇 Thank you', '', '<ThankYou usernames={[');
 
   const users = chain(pullRequests)
     .map(pr => pr.user)
     .sortedUniq()
     .map(user => `  '${user}'`)
-    .join(",\n")
+    .join(',\n')
     .value();
-  builder.push(users, "]} />");
-  return builder.join("\n");
+  builder.push(users, ']} />');
+  return builder.join('\n');
 }
 
 function labelToCategory(label: any): Category {
   switch (label.name) {
-    case "defect": {
+    case 'defect': {
       return Category.Bug;
     }
-    case "dependencies": {
+    case 'dependencies': {
       return Category.Dependency;
     }
-    case "performance":
-    case "deprecation": {
+    case 'performance':
+    case 'deprecation': {
       return Category.Deprecation;
     }
-    case "improvement": {
+    case 'improvement': {
       return Category.Improvement;
     }
-    case "new feature": {
+    case 'new feature': {
       return Category.NewFeature;
     }
-    case "documentation": {
+    case 'documentation': {
       return Category.Documentation;
     }
     default:
@@ -236,13 +236,13 @@ function labelToCategory(label: any): Category {
 
 function today(): string {
   const d = new Date();
-  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 }
 
 async function main() {
   const version = process.argv.slice(2).shift();
   if (!version) {
-    console.log("The release version is not specified.");
+    console.log('The release version is not specified.');
     console.log(`Usage: npm run release-note <version>`);
     process.exitCode = 1;
     return;
