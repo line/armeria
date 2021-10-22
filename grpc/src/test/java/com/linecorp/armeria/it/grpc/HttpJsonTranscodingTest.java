@@ -15,8 +15,15 @@
  */
 package com.linecorp.armeria.it.grpc;
 
+import static com.linecorp.armeria.it.grpc.HttpJsonTranscodingTest.HttpJsonTranscodingTestService.testBytesValue;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.withPrecision;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -34,10 +41,16 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoWrappersRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoWrappersResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2.SubMessage;
@@ -58,6 +71,9 @@ import io.grpc.stub.StreamObserver;
 class HttpJsonTranscodingTest {
 
     static class HttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceImplBase {
+
+        static final String testBytesValue = "abc123!?$*&()'-=@~";
+
         @Override
         public void getMessageV1(GetMessageRequestV1 request, StreamObserver<Message> responseObserver) {
             responseObserver.onNext(Message.newBuilder().setText(request.getName()).build());
@@ -99,6 +115,53 @@ class HttpJsonTranscodingTest {
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void echoTimestampAndDuration(
+                EchoTimestampAndDurationRequest request,
+                StreamObserver<EchoTimestampAndDurationResponse> responseObserver) {
+            responseObserver.onNext(EchoTimestampAndDurationResponse.newBuilder()
+                                                                    .setTimestamp(request.getTimestamp())
+                                                                    .setDuration(request.getDuration())
+                                                                    .build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoWrappers(EchoWrappersRequest request,
+                                 StreamObserver<EchoWrappersResponse> responseObserver) {
+            final EchoWrappersResponse.Builder builder = EchoWrappersResponse.newBuilder();
+            if (request.hasDoubleVal()) {
+                builder.setDoubleVal(request.getDoubleVal());
+            }
+            if (request.hasFloatVal()) {
+                builder.setFloatVal(request.getFloatVal());
+            }
+            if (request.hasInt64Val()) {
+                builder.setInt64Val(request.getInt64Val());
+            }
+            if (request.hasUint64Val()) {
+                builder.setUint64Val(request.getUint64Val());
+            }
+            if (request.hasInt32Val()) {
+                builder.setInt32Val(request.getInt32Val());
+            }
+            if (request.hasUint32Val()) {
+                builder.setUint32Val(request.getUint32Val());
+            }
+            if (request.hasBoolVal()) {
+                builder.setBoolVal(request.getBoolVal());
+            }
+            if (request.hasStringVal()) {
+                builder.setStringVal(request.getStringVal());
+            }
+            if (request.hasBytesVal()) {
+                builder.setBytesVal(request.getBytesVal());
+                assertThat(request.getBytesVal().getValue().toStringUtf8()).isEqualTo(testBytesValue);
+            }
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+        }
     }
 
     @RegisterExtension
@@ -111,10 +174,11 @@ class HttpJsonTranscodingTest {
                                                        .build();
             // gRPC transcoding will not work under '/foo'.
             // You may get the following log messages when calling the following 'serviceUnder' method:
-            //   [main] WARN  c.l.armeria.server.ServerBuilder - The service that you are trying to add
-            //   by 'serviceUnder' has multiple routes, but its routes will be ignored and it will be served
-            //   under '/foo'.
+            //   [main] WARN  c.l.armeria.server.ServerBuilder - The service has self-defined routes
+            //   but the routes will be ignored. It will be served at the route you specified: path=/foo,
+            //   service=...
             sb.service(grpcService)
+              .requestTimeout(Duration.ZERO)
               .serviceUnder("/foo", grpcService)
               .serviceUnder("/docs", DocService.builder().build());
         }
@@ -243,6 +307,83 @@ class HttpJsonTranscodingTest {
                          .aggregate().get();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("1:v2");
+    }
+
+    @Test
+    void shouldAcceptRfc3339TimeFormatAndDuration() throws Exception {
+        final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
+        final String duration = "1.000340012s";
+
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().get();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
+        assertThat(root.get("duration").asText()).isEqualTo(duration);
+    }
+
+    @Test
+    void shouldAcceptWrappers1() throws Exception {
+        final String bytesValue = new String(
+                Base64.getEncoder().encode(testBytesValue.getBytes(StandardCharsets.UTF_8)));
+
+        final QueryParamsBuilder query = QueryParams.builder();
+        query.add("doubleVal", String.valueOf(123.456d))
+             .add("floatVal", String.valueOf(123.456f))
+             .add("int64Val", String.valueOf(Long.MAX_VALUE))
+             .add("uint64Val", String.valueOf(Long.MAX_VALUE))
+             .add("int32Val", String.valueOf(Integer.MAX_VALUE))
+             .add("uint32Val", String.valueOf(Integer.MAX_VALUE))
+             .add("boolVal", "true")
+             .add("stringVal", "string")
+             .add("bytesVal", bytesValue);
+
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().get();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
+        assertThat(root.get("floatVal").asDouble()).isEqualTo(123.456f, withPrecision(0.001d));
+        assertThat(root.get("int64Val").asLong()).isEqualTo(Long.MAX_VALUE);
+        assertThat(root.get("uint64Val").asLong()).isEqualTo(Long.MAX_VALUE);
+        assertThat(root.get("int32Val").asInt()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(root.get("uint32Val").asInt()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(root.get("boolVal").asBoolean()).isTrue();
+        assertThat(root.get("stringVal").asText()).isEqualTo("string");
+        assertThat(root.get("bytesVal").asText()).isEqualTo(bytesValue);
+    }
+
+    @Test
+    void shouldAcceptWrappers2() throws Exception {
+        final QueryParamsBuilder query = QueryParams.builder();
+        query.add("doubleVal", String.valueOf(123.456d))
+             .add("int64Val", String.valueOf(Long.MAX_VALUE))
+             .add("int32Val", String.valueOf(Integer.MAX_VALUE))
+             .add("stringVal", "string");
+
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().get();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
+        assertThat(root.get("floatVal")).isNull();
+        assertThat(root.get("int64Val").asLong()).isEqualTo(Long.MAX_VALUE);
+        assertThat(root.get("uint64Val")).isNull();
+        assertThat(root.get("int32Val").asInt()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(root.get("uint32Val")).isNull();
+        assertThat(root.get("boolVal")).isNull();
+        assertThat(root.get("stringVal").asText()).isEqualTo("string");
+        assertThat(root.get("bytesVal")).isNull();
+    }
+
+    @Test
+    void shouldAcceptNaNAndInfinity() throws Exception {
+        final QueryParamsBuilder query = QueryParams.builder();
+        query.add("doubleVal", "NaN")
+             .add("floatVal", "Infinity");
+
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().get();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("doubleVal").asDouble()).isNaN();
+        assertThat(root.get("floatVal").asDouble()).isInfinite();
     }
 
     @Test
