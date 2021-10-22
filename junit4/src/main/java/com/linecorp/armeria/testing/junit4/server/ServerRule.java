@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.testing.junit4.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
@@ -24,6 +26,8 @@ import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.ServerRuleDelegate;
@@ -54,6 +58,11 @@ public abstract class ServerRule extends ExternalResource {
             @Override
             public void configure(ServerBuilder sb) throws Exception {
                 ServerRule.this.configure(sb);
+            }
+
+            @Override
+            public void configureWebClient(WebClientBuilder wcb) throws Exception {
+                ServerRule.this.configureHttpClient(wcb);
             }
         };
     }
@@ -89,6 +98,11 @@ public abstract class ServerRule extends ExternalResource {
      * Configures the {@link Server} with the given {@link ServerBuilder}.
      */
     protected abstract void configure(ServerBuilder sb) throws Exception;
+
+    /**
+     * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     */
+    protected void configureHttpClient(WebClientBuilder wcb) throws Exception {}
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -272,5 +286,20 @@ public abstract class ServerRule extends ExternalResource {
      */
     public InetSocketAddress httpsSocketAddress() {
         return delegate.httpsSocketAddress();
+    }
+
+    /**
+     * Returns the {@link WebClient}.
+     */
+    public WebClient webClient() {
+        return delegate.webClient();
+    }
+
+    /**
+     * Create a {@link WebClient} each time with {@link WebClientBuilder}.
+     */
+    public WebClient webClient(WebClientBuilder webClientBuilder) {
+        requireNonNull(webClientBuilder, "webClientBuilder");
+        return delegate.webClient(webClientBuilder);
     }
 }

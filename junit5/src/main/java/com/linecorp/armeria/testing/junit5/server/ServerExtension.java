@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.testing.junit5.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
@@ -24,6 +26,8 @@ import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -62,6 +66,11 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
             public void configure(ServerBuilder sb) throws Exception {
                 ServerExtension.this.configure(sb);
                 sb.decorator(contextCaptor.newDecorator(ServerExtension.this::shouldCapture));
+            }
+
+            @Override
+            public void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {
+                ServerExtension.this.configureWebClient(webClientBuilder);
             }
         };
     }
@@ -107,6 +116,11 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      * Configures the {@link Server} with the given {@link ServerBuilder}.
      */
     protected abstract void configure(ServerBuilder sb) throws Exception;
+
+    /**
+     * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     */
+    protected void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {}
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -298,6 +312,21 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      */
     public final ServiceRequestContextCaptor requestContextCaptor() {
         return contextCaptor;
+    }
+
+    /**
+     * Returns the {@link WebClient}.
+     */
+    public WebClient webClient() {
+        return delegate.webClient();
+    }
+
+    /**
+     * Create a {@link WebClient} each time with {@link WebClientBuilder}.
+     */
+    public WebClient webClient(WebClientBuilder webClientBuilder) {
+        requireNonNull(webClientBuilder, "webClientBuilder");
+        return delegate.webClient(webClientBuilder);
     }
 
     /**

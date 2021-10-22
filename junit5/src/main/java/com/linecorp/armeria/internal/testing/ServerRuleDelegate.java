@@ -25,7 +25,10 @@ import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -39,6 +42,8 @@ public abstract class ServerRuleDelegate {
 
     private final AtomicReference<Server> server = new AtomicReference<>();
     private final boolean autoStart;
+
+    private final AtomicReference<WebClient> webClient = new AtomicReference<>();
 
     /**
      * Creates a new instance.
@@ -90,6 +95,21 @@ public abstract class ServerRuleDelegate {
         server.start().join();
 
         this.server.set(server);
+
+        final boolean hasHttps = hasHttps();
+        final WebClientBuilder webClientBuilder = WebClient.builder(hasHttps ? httpsUri() : httpUri());
+        if (hasHttps) {
+            webClientBuilder.factory(ClientFactory.insecure());
+        }
+
+        try {
+            configureWebClient(webClientBuilder);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to configure a WebClient", e);
+        }
+
+        final WebClient webClient = webClientBuilder.build();
+        this.webClient.set(webClient);
         return server;
     }
 
@@ -97,6 +117,11 @@ public abstract class ServerRuleDelegate {
      * Configures the {@link Server} with the given {@link ServerBuilder}.
      */
     public abstract void configure(ServerBuilder sb) throws Exception;
+
+    /**
+     * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     */
+    public abstract void configureWebClient(WebClientBuilder webClientBuilder) throws Exception;
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -322,6 +347,20 @@ public abstract class ServerRuleDelegate {
      */
     public InetSocketAddress httpsSocketAddress() {
         return socketAddress(HTTPS);
+    }
+
+    /**
+     * Returns the {@link WebClient}.
+     */
+    public WebClient webClient() {
+        return webClient.get();
+    }
+
+    /**
+     * Create a {@link WebClient} each time with {@link WebClientBuilder}.
+     */
+    public WebClient webClient(WebClientBuilder webClientBuilder) {
+        return requireNonNull(webClientBuilder, "webClientBuilder").build();
     }
 
     private void ensureStarted() {
