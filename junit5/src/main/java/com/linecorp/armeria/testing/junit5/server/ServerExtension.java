@@ -69,8 +69,8 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
             }
 
             @Override
-            public void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {
-                ServerExtension.this.configureWebClient(webClientBuilder);
+            public void configureWebClient(WebClientBuilder wcb) throws Exception {
+                ServerExtension.this.configureWebClient(wcb);
             }
         };
     }
@@ -322,7 +322,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Create a {@link WebClient} each time with {@link WebClientBuilder}.
+     * Creates a {@link WebClient} each time with {@link WebClientBuilder}.
      */
     public WebClient webClient(WebClientBuilder webClientBuilder) {
         requireNonNull(webClientBuilder, "webClientBuilder");

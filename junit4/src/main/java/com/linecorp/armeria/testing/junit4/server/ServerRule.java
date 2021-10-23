@@ -62,7 +62,7 @@ public abstract class ServerRule extends ExternalResource {
 
             @Override
             public void configureWebClient(WebClientBuilder wcb) throws Exception {
-                ServerRule.this.configureHttpClient(wcb);
+                ServerRule.this.configureWebClient(wcb);
             }
         };
     }
@@ -102,7 +102,7 @@ public abstract class ServerRule extends ExternalResource {
     /**
      * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
      */
-    protected void configureHttpClient(WebClientBuilder wcb) throws Exception {}
+    protected void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {}
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -296,7 +296,7 @@ public abstract class ServerRule extends ExternalResource {
     }
 
     /**
-     * Create a {@link WebClient} each time with {@link WebClientBuilder}.
+     * Creates a {@link WebClient} each time with {@link WebClientBuilder}.
      */
     public WebClient webClient(WebClientBuilder webClientBuilder) {
         requireNonNull(webClientBuilder, "webClientBuilder");
