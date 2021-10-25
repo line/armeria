@@ -36,6 +36,8 @@ import java.util.concurrent.LinkedTransferQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
+private val eventLoopGroup = EventLoopGroups.newEventLoopGroup(1)
+
 internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnvironment(5000L, 2000L)) {
     override fun createPublisher(elements: Long): FlowCollectingPublisher<Long> =
         FlowCollectingPublisher(
@@ -44,7 +46,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                     emit(it)
                 }
             },
-            EventLoopGroups.directEventLoop()
+            eventLoopGroup.next()
         )
 
     override fun createFailedPublisher(): FlowCollectingPublisher<Long> =
@@ -52,7 +54,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
             flow {
                 throw Throwable()
             },
-            EventLoopGroups.directEventLoop()
+            eventLoopGroup.next()
         )
 
     @Test
@@ -146,7 +148,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                 coroutineNameCaptor.set(currentCoroutineContext()[CoroutineName])
                 emit(1)
             },
-            EventLoopGroups.directEventLoop(),
+            eventLoopGroup.next(),
             context
         ).subscribe(object : Subscriber<Int> {
             override fun onSubscribe(s: Subscription) {}
