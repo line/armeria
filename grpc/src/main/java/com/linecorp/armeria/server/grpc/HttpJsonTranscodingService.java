@@ -312,6 +312,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     if (typeDesc == null) {
                         // According to the Language guide, the public import functionality is not available
                         // in Java. We will try to find dependencies only with "import" keyword.
+                        // https://developers.google.com/protocol-buffers/docs/proto3#importing_definitions
                         typeDesc = desc.getFile().getDependencies().stream()
                                        .map(fd -> findTypeDescriptor(fd, field))
                                        .filter(Objects::nonNull).findFirst().orElse(null);
