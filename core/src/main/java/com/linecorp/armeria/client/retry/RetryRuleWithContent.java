@@ -30,7 +30,10 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -52,7 +55,167 @@ public interface RetryRuleWithContent<T extends Response> {
     static <T extends Response> RetryRuleWithContent<T> onResponse(
             BiFunction<? super ClientRequestContext, ? super T,
                     ? extends CompletionStage<Boolean>> retryFunction) {
-        return RetryRuleWithContent.<T>builder().onResponse(retryFunction).thenBackoff();
+        return onResponse(retryFunction, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the specified {@link Backoff}
+     * if the specified {@code retryFunction} completes with {@code true}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onResponse(
+            BiFunction<? super ClientRequestContext, ? super T,
+                    ? extends CompletionStage<Boolean>> retryFunction,
+            Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onResponse(retryFunction).thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is the specified
+     * {@link HttpStatusClass}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatusClass(HttpStatusClass statusClass) {
+        return onStatusClass(statusClass, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the specified {@link Backoff}
+     * if the class of the response status is the specified {@link HttpStatusClass}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatusClass(HttpStatusClass statusClass,
+                                                                      Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onStatusClass(statusClass).thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is the specified
+     * {@link HttpStatusClass}es.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatusClass(Iterable<HttpStatusClass> statusClasses) {
+        return onStatusClass(statusClasses, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the specified {@link Backoff}
+     * if the class of the response status is the specified {@link HttpStatusClass}es.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatusClass(Iterable<HttpStatusClass> statusClasses,
+                                                                      Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onStatusClass(statusClasses).thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is
+     * {@link HttpStatusClass#SERVER_ERROR}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onServerErrorStatus() {
+        return onServerErrorStatus(Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the specified {@link Backoff}
+     * if the class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onServerErrorStatus(Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onServerErrorStatus().thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created a {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the response status matches the specified
+     * {@code statusFilter}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
+        return onStatus(statusFilter, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created a {@link RetryRuleWithContent} that will retry with the specified
+     * {@link Backoff} if the response status matches the specified {@code statusFilter}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatus(
+            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter, Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onStatus(statusFilter).thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created a {@link RetryRuleWithContent} that will retry with
+     * the {@linkplain Backoff#ofDefault() default backoff} if an {@link Exception} is raised and that is an
+     * instance of the specified {@code exception}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onException(Class<? extends Throwable> exception) {
+        return onException(exception, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created a {@link RetryRuleWithContent} that will retry with the specified
+     * {@link Backoff} if an {@link Exception} is raised and that is an instance of the specified
+     * {@code exception}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onException(Class<? extends Throwable> exception,
+                                                                    Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onException(exception).thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if an {@link Exception} is raised and the specified
+     * {@code exceptionFilter} returns {@code true}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
+        return onException(exceptionFilter, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the specified {@link Backoff}
+     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onException(
+            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter, Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onException(exceptionFilter).thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that retries with
+     * {@linkplain Backoff#ofDefault() default backoff} on any {@link Exception}.
+     * Note that this rule should be used carefully because it reties regardless of
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onException() {
+        return onException(Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that retries with the specified {@link Backoff} on
+     * any {@link Exception}.
+     * Note that this rule should be used carefully because it reties regardless of
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onException(Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onException().thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a {@link RetryRuleWithContent} that retries with the
+     * {@linkplain Backoff#ofDefault() default backoff} on an {@link UnprocessedRequestException} which means
+     * that the request has not been processed by the server. Therefore, you can safely retry the request
+     * without worrying about the idempotency of the request.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onUnprocessed() {
+        return onUnprocessed(Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a {@link RetryRuleWithContent} that retries with the specified {@link Backoff} on an
+     * {@link UnprocessedRequestException} which means that the request has not been processed by the server.
+     * Therefore, you can safely retry the request without worrying about the idempotency of the request.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onUnprocessed(Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onUnprocessed().thenBackoff(backoff);
     }
 
     /**
