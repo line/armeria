@@ -102,7 +102,11 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
             final ByteBuf byteBuf = httpData.byteBuf();
             final ByteBuffer byteBuffer = byteBuf.nioBuffer();
             writing = true;
-            fileChannel.write(byteBuffer, position, Maps.immutableEntry(byteBuffer, byteBuf), this);
+            try {
+                fileChannel.write(byteBuffer, position, Maps.immutableEntry(byteBuffer, byteBuf), this);
+            } catch (Throwable ex) {
+                maybeCloseFileChannel(ex);
+            }
         }
     }
 
@@ -120,7 +124,7 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
         }
     }
 
-    public CompletableFuture<Path> whenComplete() {
+    CompletableFuture<Path> whenComplete() {
         return completionFuture;
     }
 
@@ -133,7 +137,11 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
                 position += result;
                 final ByteBuffer byteBuffer = attachment.getKey();
                 if (byteBuffer.hasRemaining()) {
-                    fileChannel.write(byteBuffer, position, attachment, this);
+                    try {
+                        fileChannel.write(byteBuffer, position, attachment, this);
+                    } catch (Throwable ex) {
+                        maybeCloseFileChannel(ex);
+                    }
                 } else {
                     byteBuf.release();
                     writing = false;

@@ -42,7 +42,7 @@ import io.netty.util.concurrent.EventExecutor;
 public final class StreamMessages {
 
     /**
-     * Write the specified {@link  StreamMessage} to the given {@link Path} with {@link OpenOption}.
+     * Write the specified {@link StreamMessage} to the given {@link Path} with {@link OpenOption}.
      * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
