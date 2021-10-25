@@ -6,7 +6,7 @@ Visit [armeria-examples](https://github.com/line/armeria-examples) to find a ful
 
 </Tip>
 
-Let's assume we have the following [GraphQL][GraphQL] service definition:
+Let's assume we have the following [GraphQL](https://graphql.org/) service definition:
 
 ```graphql
 type Query {
@@ -44,7 +44,7 @@ class UserDataFetcher implements DataFetcher<User> {
 ```
 <Tip>
 
-Please note that this is entirely based on [graphql-java][graphql-java].
+Please note that this is entirely based on [graphql-java](https://www.graphql-java.com/).
 
 </Tip>
 
@@ -77,59 +77,12 @@ When writing <type://GraphqlService>, register the [DataFetcher](https://javadoc
 
 </Tip>
 
-
-## Decorating a `GraphqlService`
-
-Every <type://HttpService> can be wrapped by another <type://HttpService> in Armeria (Refer to
-[Decorating a service](/docs/server-decorator) for more information).
-It's the same because <type://GraphqlService> also inherits from <type://HttpService>.
-
-You can simply wrap <type://LoggingService> like this:
-
-```java
-import com.linecorp.armeria.server.logging.LoggingService;
-
-ServerBuilder sb = Server.builder();
-...
-sb.service("/graphql",
-           GraphqlService.builder()
-                         .runtimeWiring(c -> {
-                            c.type("Query",
-                                   typeWiring -> typeWiring.dataFetcher("user", new UserDataFetcher()));
-                         })
-                         .build()
-                         .decorate(LoggingService.newDecorator()));
-...
-Server server = sb.build();
-server.start();
-```
-
 ## Blocking service implementation
 
 Armeria does not run service logic in a separate thread pool by default. If your service implementation
-requires blocking, either run the individual blocking logic in a thread pool, wrap the
-entire service implementation in `RequestContext.current().blockingTaskExecutor().submit`, or set
+requires blocking, either run the individual blocking logic in a thread pool, set
 <type://GraphqlServiceBuilder#useBlockingTaskExecutor(boolean)> so the above happens automatically for
 all service methods and lifecycle callbacks.
-
-```java
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.ServiceRequestContext;
-
-class UserDataFetcher implements DataFetcher<User> {
-
-    private final Map<String, User> data = Map.of("1", new User("1", "hero"),
-                                                  "2", new User("2", "human"),
-                                                  "3", new User("3", "droid"));
-
-    @Override
-    public User get(DataFetchingEnvironment environment) throws Exception {
-        final ServiceRequestContext ctx = environment.getContext();
-        ctx.blockingTaskExecutor().submit(() -> ...);
-        ...
-    }
-}
-```
 
 ```java
 ServerBuilder sb = Server.builder();
@@ -150,6 +103,3 @@ sb.service("/graphql",
 Another way is to wrap the [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) in an [AsyncDataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/AsyncDataFetcher.html).
 
 </Tip>
-
-[GraphQL]: https://graphql.org/
-[graphql-java]: https://www.graphql-java.com/
