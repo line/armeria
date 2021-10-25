@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server.kotlin
 
-import com.linecorp.armeria.common.HttpMethod
-import com.linecorp.armeria.common.HttpRequest
+import com.google.common.util.concurrent.MoreExecutors
+import com.linecorp.armeria.common.util.EventLoopGroups
 import com.linecorp.armeria.internal.common.kotlin.FlowCollectingPublisher
-import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.flow
@@ -32,12 +32,9 @@ import org.reactivestreams.tck.PublisherVerification
 import org.reactivestreams.tck.TestEnvironment
 import org.testng.annotations.Test
 import java.util.concurrent.BlockingQueue
-import java.util.concurrent.Executors
 import java.util.concurrent.LinkedTransferQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-
-private val ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"))
 
 internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnvironment(5000L, 2000L)) {
     override fun createPublisher(elements: Long): FlowCollectingPublisher<Long> =
@@ -47,7 +44,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                     emit(it)
                 }
             },
-            ctx.eventLoop()
+            EventLoopGroups.directEventLoop()
         )
 
     override fun createFailedPublisher(): FlowCollectingPublisher<Long> =
@@ -55,13 +52,13 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
             flow {
                 throw Throwable()
             },
-            ctx.eventLoop()
+            EventLoopGroups.directEventLoop()
         )
 
     @Test
     fun test_backPressureOnFlow() {
         val queue: BlockingQueue<Any> = LinkedTransferQueue()
-        val executor = Executors.newSingleThreadScheduledExecutor()
+        lateinit var subscription: Subscription
 
         FlowCollectingPublisher(
             flow {
@@ -70,68 +67,73 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                     queue.add(it)
                 }
             },
-            ctx.eventLoop()
+            executor = EventLoopGroups.directEventLoop(),
+            context = MoreExecutors.directExecutor().asCoroutineDispatcher()
         ).subscribe(object : Subscriber<Int> {
-            private lateinit var subscription: Subscription
-
             override fun onSubscribe(s: Subscription) {
                 subscription = s
                 subscription.request(1L)
             }
 
-            override fun onNext(t: Int) {
-                executor.schedule({ subscription.request(1L) }, 2, TimeUnit.SECONDS)
-            }
+            override fun onNext(t: Int) {}
 
             override fun onError(t: Throwable) {}
 
-            override fun onComplete() {}
+            override fun onComplete() {
+                queue.add(-1)
+            }
         })
 
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(0)
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(1)
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(2)
+        assertThat(queue.poll()).isEqualTo(0)
+        assertThat(queue.poll(100L, TimeUnit.MILLISECONDS)).isNull()
+        subscription.request(1L)
+        assertThat(queue.poll()).isEqualTo(1)
+        assertThat(queue.poll(100L, TimeUnit.MILLISECONDS)).isNull()
+        subscription.request(1L)
+        assertThat(queue.poll()).isEqualTo(2)
+        assertThat(queue.poll()).isEqualTo(-1)
     }
 
     @Test
     fun test_backPressuresWithBuffer() {
         val queue: BlockingQueue<Any> = LinkedTransferQueue()
-        val executor = Executors.newSingleThreadScheduledExecutor()
+        lateinit var subscription: Subscription
 
         FlowCollectingPublisher(
             flow {
-                (0 until 7).forEach {
+                (0 until 5).forEach {
                     emit(it)
                     queue.add(it)
                 }
             }.buffer(capacity = 1),
-            ctx.eventLoop()
+            executor = EventLoopGroups.directEventLoop(),
+            context = MoreExecutors.directExecutor().asCoroutineDispatcher()
         ).subscribe(object : Subscriber<Int> {
-            private lateinit var subscription: Subscription
-
             override fun onSubscribe(s: Subscription) {
                 subscription = s
                 subscription.request(1L)
             }
 
-            override fun onNext(t: Int) {
-                executor.schedule({ subscription.request(1L) }, 2, TimeUnit.SECONDS)
-            }
+            override fun onNext(t: Int) {}
 
             override fun onError(t: Throwable) {}
 
-            override fun onComplete() {}
+            override fun onComplete() {
+                queue.add(-1)
+            }
         })
 
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(0)
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(1)
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(2)
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(3)
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isNull()
-        assertThat(queue.poll(1500L, TimeUnit.MILLISECONDS)).isEqualTo(4)
+        assertThat(queue.poll()).isEqualTo(0)
+        assertThat(queue.poll()).isEqualTo(1)
+        assertThat(queue.poll()).isEqualTo(2)
+        assertThat(queue.poll(100L, TimeUnit.MILLISECONDS)).isNull()
+        subscription.request(1L)
+        assertThat(queue.poll()).isEqualTo(3)
+        assertThat(queue.poll(100L, TimeUnit.MILLISECONDS)).isNull()
+        subscription.request(1L)
+        assertThat(queue.poll()).isEqualTo(4)
+        subscription.request(3L)
+        assertThat(queue.poll()).isEqualTo(-1)
     }
 
     @Test
@@ -144,7 +146,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                 coroutineNameCaptor.set(currentCoroutineContext()[CoroutineName])
                 emit(1)
             },
-            ctx.eventLoop(),
+            EventLoopGroups.directEventLoop(),
             context
         ).subscribe(object : Subscriber<Int> {
             override fun onSubscribe(s: Subscription) {}
