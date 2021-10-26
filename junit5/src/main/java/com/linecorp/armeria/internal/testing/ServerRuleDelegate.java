@@ -20,28 +20,20 @@ import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
-
-import io.netty.handler.ssl.SslContextBuilder;
 
 /**
  * A delegate that has common testing methods of {@link Server}.
@@ -107,7 +99,7 @@ public abstract class ServerRuleDelegate {
         final boolean hasHttps = hasHttps();
         final WebClientBuilder webClientBuilder = WebClient.builder(hasHttps ? httpsUri() : httpUri());
         if (hasHttps) {
-            webClientBuilder.factory(buildClientFactory(sb));
+            webClientBuilder.factory(ClientFactory.insecure());
         }
 
         try {
@@ -116,54 +108,9 @@ public abstract class ServerRuleDelegate {
             throw new IllegalStateException("failed to configure a WebClient", e);
         }
 
-        webClient.set(webClientBuilder.build());
+        final WebClient webClient = webClientBuilder.build();
+        this.webClient.set(webClient);
         return server;
-    }
-
-    private static ClientFactory buildClientFactory(ServerBuilder serverBuilder) {
-        try {
-            final VirtualHostBuilder defaultVirtualHost = serverBuilder.defaultVirtualHost();
-            final ClientFactoryBuilder factoryBuilder = ClientFactory.builder();
-            final SelfSignedCertificate ssc = selfSignedCertificate(defaultVirtualHost);
-            if (ssc != null) {
-                factoryBuilder.tlsCustomizer(b -> b.keyManager(ssc.certificate(), ssc.privateKey()))
-                              .tlsNoVerify();
-            }
-            factoryBuilder.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers(defaultVirtualHost));
-            final List<Consumer<? super SslContextBuilder>> tlsCustomizers = tlsCustomizers(defaultVirtualHost);
-            if (tlsCustomizers != null) {
-                tlsCustomizers.forEach(factoryBuilder::tlsCustomizer);
-            }
-            return factoryBuilder.build();
-        } catch (Throwable t) {
-            return ClientFactory.insecure();
-        }
-    }
-
-    @Nullable
-    private static SelfSignedCertificate selfSignedCertificate(VirtualHostBuilder defaultVirtualHost)
-            throws IllegalAccessException, NoSuchFieldException {
-        final Field selfSignedCertificateField =
-                VirtualHostBuilder.class.getDeclaredField("selfSignedCertificate");
-        selfSignedCertificateField.setAccessible(true);
-        return (SelfSignedCertificate) selfSignedCertificateField.get(defaultVirtualHost);
-    }
-
-    @Nullable
-    private static boolean tlsAllowUnsafeCiphers(VirtualHostBuilder defaultVirtualHost)
-            throws IllegalAccessException, NoSuchFieldException {
-        final Field tlsAllowUnsafeCiphersField =
-                VirtualHostBuilder.class.getDeclaredField("tlsAllowUnsafeCiphers");
-        tlsAllowUnsafeCiphersField.setAccessible(true);
-        return (boolean) tlsAllowUnsafeCiphersField.get(defaultVirtualHost);
-    }
-
-    @Nullable
-    private static List<Consumer<? super SslContextBuilder>> tlsCustomizers(
-            VirtualHostBuilder defaultVirtualHost) throws IllegalAccessException, NoSuchFieldException {
-        final Field tlsCustomizersField = VirtualHostBuilder.class.getDeclaredField("tlsCustomizers");
-        tlsCustomizersField.setAccessible(true);
-        return (List<Consumer<? super SslContextBuilder>>) tlsCustomizersField.get(defaultVirtualHost);
     }
 
     /**

@@ -1057,7 +1057,6 @@ public final class VirtualHostBuilder {
             final boolean tlsAllowUnsafeCiphers =
                     this.tlsAllowUnsafeCiphers != null ?
                     this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
-            this.tlsAllowUnsafeCiphers = tlsAllowUnsafeCiphers;
 
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
@@ -1085,8 +1084,6 @@ public final class VirtualHostBuilder {
                 } else {
                     tlsSelfSigned = template.tlsSelfSigned;
                     tlsCustomizers = template.tlsCustomizers;
-                    this.tlsSelfSigned = template.tlsSelfSigned;
-                    this.tlsCustomizers.addAll(template.tlsCustomizers);
                 }
 
                 if (tlsSelfSigned) {
