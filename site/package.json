@@ -16,7 +16,8 @@
     "lint": "eslint --ext json,js,jsx,ts,tsx .",
     "lint:fix": "eslint --fix --ext json,js,jsx,ts,tsx .",
     "source-map": "source-map-explorer public/*.js",
-    "gatsby-info": "gatsby info --clipboard"
+    "gatsby-info": "gatsby info --clipboard",
+    "release-note": "ts-node release-note.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^4.6.2",
@@ -98,5 +99,11 @@
     "source-map-explorer": "^2.5.2",
     "tocbot": "^4.12.3",
     "typescript": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^16.2.13",
+    "jsdom": "^18.0.0",
+    "octokit": "^1.7.0",
+    "ts-node": "^10.3.0"
   }
 }
