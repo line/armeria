@@ -53,6 +53,12 @@ allprojects {
     tasks.withType(Test) {
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
+
+        // Drop heap dump and exit on OOME.
+        jvmArgs '-XX:+ExitOnOutOfMemoryError'
+        jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
+        jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
+
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
