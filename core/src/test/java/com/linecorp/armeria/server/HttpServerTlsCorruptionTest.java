@@ -97,12 +97,13 @@ class HttpServerTlsCorruptionTest {
                           semaphore.release();
                           if (cause != null) {
                               caughtExceptions.add(cause);
-                          }
-                          try {
-                              assertThat(res.status()).isSameAs(HttpStatus.OK);
-                              assertThat(res.content()).isEqualTo(content);
-                          } catch (Throwable t) {
-                              caughtExceptions.add(t);
+                          } else {
+                              try {
+                                  assertThat(res.status()).isSameAs(HttpStatus.OK);
+                                  assertThat(res.content()).isEqualTo(content);
+                              } catch (Throwable t) {
+                                  caughtExceptions.add(t);
+                              }
                           }
                           return null;
                       });
