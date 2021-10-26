@@ -40,6 +40,9 @@ async function getMilestoneId(version: string): Promise<number> {
     state: 'all'
   });
   const milestone = response.data.find(milestone => milestone.title == version);
+  if (!milestone) {
+    throw new Error(`Failed to find a milestone from the given ${version}.`)
+  }
   return milestone.number;
 }
 
@@ -238,10 +241,10 @@ function labelToCategory(label: any): Category {
     case 'dependencies': {
       return Category.Dependency;
     }
-    case 'performance':
     case 'deprecation': {
       return Category.Deprecation;
     }
+    case 'performance':
     case 'improvement': {
       return Category.Improvement;
     }
