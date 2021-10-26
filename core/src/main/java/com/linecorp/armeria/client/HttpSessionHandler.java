@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
+import static io.netty.util.ReferenceCountUtil.release;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -268,20 +269,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof Http2Settings) {
-            final Long maxConcurrentStreams = ((Http2Settings) msg).maxConcurrentStreams();
-            if (maxConcurrentStreams != null) {
-                maxUnfinishedResponses =
-                        maxConcurrentStreams > Integer.MAX_VALUE ? Integer.MAX_VALUE
-                                                                 : maxConcurrentStreams.intValue();
-            } else {
-                maxUnfinishedResponses = Integer.MAX_VALUE;
-            }
-            return;
-        }
-
         // Handle an unexpected message by raising an exception with debugging information.
         try {
+            if (msg instanceof Http2Settings) {
+                final Long maxConcurrentStreams = ((Http2Settings) msg).maxConcurrentStreams();
+                if (maxConcurrentStreams != null) {
+                    maxUnfinishedResponses =
+                            maxConcurrentStreams > Integer.MAX_VALUE ? Integer.MAX_VALUE
+                                    : maxConcurrentStreams.intValue();
+                } else {
+                    maxUnfinishedResponses = Integer.MAX_VALUE;
+                }
+                return;
+            }
             final String typeInfo;
             if (msg instanceof ByteBuf) {
                 typeInfo = msg + " HexDump: " + ByteBufUtil.hexDump((ByteBuf) msg);
@@ -290,7 +290,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
             throw new IllegalStateException("unexpected message type: " + typeInfo + " (expected: ByteBuf)");
         } finally {
-            ReferenceCountUtil.release(msg);
+            if(msg instanceof ByteBuf)
+                release(msg);
         }
     }
 
