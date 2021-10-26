@@ -90,6 +90,7 @@ class HttpServerTlsCorruptionTest {
         int i = 0;
         try {
             for (; i < 1000; i++) {
+                server.requestContextCaptor().clear();
                 semaphore.acquire();
                 client.get("/")
                       .aggregate()
