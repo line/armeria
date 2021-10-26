@@ -16,7 +16,8 @@ enum Category {
   Deprecation = '🏚️ Deprecations',
   BreakingChange = '☢️ Breaking changes',
   Dependency = '⛓ Dependencies',
-  // Maintainers should manually decide whether to check in the PRs in this category.
+  // Maintainers should manually decide whether to check in the PRs
+  // in this category.
   MaybeIgnore = '🗑 Maybe ignore',
 }
 
@@ -32,18 +33,23 @@ interface PullRequest {
  * Converts a version into a milestone number in GitHub.
  */
 async function getMilestoneId(version: string): Promise<number> {
-  const response = await octokit.request('GET /repos/{owner}/{repo}/milestones', {
-    owner: 'line',
-    repo: 'armeria',
-    direction: 'desc',
-    per_page: 100,
-    state: 'all'
-  });
-  const milestone = response.data.find(milestone => milestone.title == version);
-  if (!milestone) {
-    throw new Error(`Failed to find a milestone from the given ${version}.`)
+  const response = await octokit.request(
+    'GET /repos/{owner}/{repo}/milestones',
+    {
+      owner: 'line',
+      repo: 'armeria',
+      direction: 'desc',
+      per_page: 100,
+      state: 'all',
+    },
+  );
+  const found = response.data.find((milestone) => milestone.title === version);
+  if (!found) {
+    throw new Error(
+      `Failed to find a milestone from the given version: ${version}.`,
+    );
   }
-  return milestone.number;
+  return found.number;
 }
 
 async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
@@ -51,48 +57,57 @@ async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
     owner: 'line',
     repo: 'armeria',
     milestone: milestone.toString(),
-    state: 'all'
+    state: 'all',
   });
 
   const pullRequestIds: number[] = response.data
-    .filter(it => it.html_url.includes('/pull/'))
-    .map(it => {
+    .filter((it) => it.html_url.includes('/pull/'))
+    .map((it) => {
       return it.number;
     });
 
   const result: PullRequest[] = [];
   for (const id of pullRequestIds) {
-    console.log(`💻 Collecting information for https://github.com/line/armeria/pull/${id} ...`);
+    console.log(
+      `💻 Collecting information for https://github.com/line/armeria/pull/${id} ...`,
+    );
 
-    const pr = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-      owner: 'line',
-      repo: 'armeria',
-      pull_number: id
-    });
+    const pr = await octokit.request(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}',
+      {
+        owner: 'line',
+        repo: 'armeria',
+        pull_number: id,
+      },
+    );
 
     const title: string = pr.data.title;
     let results: string[];
-    if (title == 'Update dependencies') {
+    if (title === 'Update dependencies') {
       // Use body as it is for the dependency PR.
       results = [pr.data.body.replace(/->/gi, '→')];
     } else {
       results = parseResult(pr.data.body);
     }
-    const categories: Category[] = pr.data.labels.map(label => labelToCategory(label));
+    const categories: Category[] = pr.data.labels.map((label) =>
+      labelToCategory(label),
+    );
 
     const html = await fetch(pr.data.html_url);
     const dom: JSDOM = new JSDOM(await html.text());
     const issues: number[] = getLinkedIssues(dom);
     const participants: string[] = getParticipants(dom);
-    const reporters: string[] = await Promise.all(issues.map((issue: number) => getIssueReporters(issue)));
+    const reporters: string[] = await Promise.all(
+      issues.map((issue) => getIssueReporters(issue)),
+    );
 
-    const elements: PullRequest[] = categories.map(category => {
+    const elements: PullRequest[] = categories.map((category) => {
       return {
         category,
         title,
         results,
         users: [pr.data.user.login, ...participants, ...reporters],
-        references: [...issues, id]
+        references: [...issues, id],
       };
     });
     result.push(...elements);
@@ -109,16 +124,16 @@ function parseResult(body: string | null): string[] {
   }
   const lines = body.split('\r\n');
   const value = chain(lines)
-    .dropWhile(line => !line.includes('Result:'))
+    .dropWhile((line) => !line.includes('Result:'))
     .drop()
-    .filter(line => !line.match(/([Cc]loses?|[Ff]ix(es)?) /))
+    .filter((line) => !line.match(/([Cc]loses?|[Ff]ix(es)?) /))
     .value();
 
   const result: string[] = [];
   let wasDash = false;
   let inComment = false;
   for (const line of value) {
-    if (line.length == 0) {
+    if (line.length === 0) {
       continue;
     }
 
@@ -159,29 +174,34 @@ function parseResult(body: string | null): string[] {
  * Extracts linked GitHub issues from the given PR page.
  * GitHub does not provide such an API at the moment.
  */
-function getLinkedIssues(pullRequestDom: JSDOM): number[] {
-  return Array.from(pullRequestDom.window.document.querySelectorAll('.css-truncate.my-1'))
+function getLinkedIssues(dom: JSDOM): number[] {
+  const elements = dom.window.document.querySelectorAll('.css-truncate.my-1');
+  return Array.from(elements)
     .map((el: any) => el.children[0].href)
     .map((href: string) => href.replace(/^.*\/issues\//, ''))
-    .map((number: string) => parseInt(number));
+    .map((number: string) => parseInt(number, 10));
 }
 
 /**
  * Extracts participants from the given PR page.
  * GitHub does not provide such an API at the moment.
  */
-function getParticipants(pullRequestDom: JSDOM): string[] {
-  return Array.from(pullRequestDom.window.document.querySelectorAll('a.participant-avatar'))
-      .map((el: any) => el.href)
-      .map((href: string) => href.replace(/^\//, ''));
+function getParticipants(dom: JSDOM): string[] {
+  const elements = dom.window.document.querySelectorAll('a.participant-avatar');
+  return Array.from(elements)
+    .map((el: any) => el.href)
+    .map((href: string) => href.replace(/^\//, ''));
 }
 
 async function getIssueReporters(issue: number): Promise<string> {
-  const pr = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
-    owner: 'line',
-    repo: 'armeria',
-    issue_number: issue
-  });
+  const pr = await octokit.request(
+    'GET /repos/{owner}/{repo}/issues/{issue_number}',
+    {
+      owner: 'line',
+      repo: 'armeria',
+      issue_number: issue,
+    },
+  );
   return pr.data.user.login;
 }
 
@@ -190,24 +210,24 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
   builder.push('---', `date: ${today()}`, '---', '');
 
   for (const category of Object.values(Category)) {
-    const changes: PullRequest[] = pullRequests.filter(pr => {
-      return pr.category == category;
+    const changes: PullRequest[] = pullRequests.filter((pr) => {
+      return pr.category === category;
     });
-    if (category == Category.Documentation && changes.length == 0) {
+    if (category === Category.Documentation && changes.length === 0) {
       continue;
     }
 
     builder.push(`## ${category}`, '');
 
-    if (changes.length == 0) {
+    if (changes.length === 0) {
       builder.push('- N/A');
     } else {
       for (const change of changes) {
-        if (change.category == Category.Dependency) {
+        if (change.category === Category.Dependency) {
           builder.push(change.results.shift());
         } else {
-          const links = change.references.map(id => `#${id}`).join(' ');
-          if (change.results.length == 0) {
+          const links = change.references.map((id) => `#${id}`).join(' ');
+          if (change.results.length === 0) {
             builder.push(`- ${change.title} ${links}`);
           } else {
             for (const result of change.results) {
@@ -223,10 +243,10 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
   builder.push('## 🙇 Thank you', '', '<ThankYou usernames={[');
 
   const users = chain(pullRequests)
-    .flatMap(pr => pr.users)
+    .flatMap((pr) => pr.users)
     .sortBy()
     .uniq()
-    .map(user => `  '${user}'`)
+    .map((user) => `  '${user}'`)
     .join(',\n')
     .value();
   builder.push(users, ']} />');
@@ -261,7 +281,7 @@ function labelToCategory(label: any): Category {
 
 function today(): string {
   const d = new Date();
-  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
 async function main() {
@@ -278,9 +298,9 @@ async function main() {
   const pullRequests: PullRequest[] = await getAllPullRequests(milestoneId);
   const notes: string = renderReleaseNotes(pullRequests);
 
-  const path = `${__dirname}/src/pages/release-notes/${version}.mdx`
+  const path = `${__dirname}/src/pages/release-notes/${version}.mdx`;
   fs.writeFileSync(path, notes);
-  console.log(`✅  The release note is successfully written to ${path}`)
+  console.log(`✅  The release note is successfully written to ${path}`);
 }
 
 main();
