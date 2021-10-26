@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import fetch from 'node-fetch';
 import fs from 'fs';
 
-// An access token has more quotas than anonymous access.
+// A GitHub access token has more quotas than anonymous access.
 // If not specified, defaults to anonymous.
 const octokit = new Octokit({ auth: process.env.GITHUB_ACCESS_TOKEN });
 
@@ -25,7 +25,7 @@ interface PullRequest {
   title: string;
   results: string[];
   references: number[];
-  user: string;
+  users: string[];
 }
 
 /**
@@ -76,14 +76,19 @@ async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
       results = parseResult(pr.data.body);
     }
     const categories: Category[] = pr.data.labels.map(label => labelToCategory(label));
-    const issues: number[] = await getLinkedIssues(pr.data.html_url);
+
+    const html = await fetch(pr.data.html_url);
+    const dom: JSDOM = new JSDOM(await html.text());
+    const issues: number[] = getLinkedIssues(dom);
+    const participants: string[] = getParticipants(dom);
+    const reporters: string[] = await Promise.all(issues.map((issue: number) => getIssueReporters(issue)));
 
     const elements: PullRequest[] = categories.map(category => {
       return {
         category,
         title,
         results,
-        user: pr.data.user.login,
+        users: [pr.data.user.login, ...participants, ...reporters],
         references: [...issues, id]
       };
     });
@@ -151,14 +156,30 @@ function parseResult(body: string | null): string[] {
  * Extracts linked GitHub issues from the given PR page.
  * GitHub does not provide such an API at the moment.
  */
-async function getLinkedIssues(html_url: string): Promise<number[]> {
-  const html = await fetch(html_url);
-  const dom = new JSDOM(await html.text());
-
-  return Array.from(dom.window.document.querySelectorAll('.css-truncate.my-1'))
+function getLinkedIssues(pullRequestDom: JSDOM): number[] {
+  return Array.from(pullRequestDom.window.document.querySelectorAll('.css-truncate.my-1'))
     .map((el: any) => el.children[0].href)
     .map((href: string) => href.replace(/^.*\/issues\//, ''))
     .map((number: string) => parseInt(number));
+}
+
+/**
+ * Extracts participants from the given PR page.
+ * GitHub does not provide such an API at the moment.
+ */
+function getParticipants(pullRequestDom: JSDOM): string[] {
+  return Array.from(pullRequestDom.window.document.querySelectorAll('a.participant-avatar'))
+      .map((el: any) => el.href)
+      .map((href: string) => href.replace(/^\//, ''));
+}
+
+async function getIssueReporters(issue: number): Promise<string> {
+  const pr = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
+    owner: 'line',
+    repo: 'armeria',
+    issue_number: issue
+  });
+  return pr.data.user.login;
 }
 
 function renderReleaseNotes(pullRequests: PullRequest[]): string {
@@ -199,8 +220,9 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
   builder.push('## 🙇 Thank you', '', '<ThankYou usernames={[');
 
   const users = chain(pullRequests)
-    .map(pr => pr.user)
-    .sortedUniq()
+    .flatMap(pr => pr.users)
+    .sortBy()
+    .uniq()
     .map(user => `  '${user}'`)
     .join(',\n')
     .value();
