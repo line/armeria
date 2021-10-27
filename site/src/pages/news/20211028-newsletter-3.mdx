@@ -1,0 +1,149 @@
+---
+date: 2021-10-28
+---
+
+# Armeria Newsletter vol. 3
+
+<video class="hideOnReducedMotion" src="../../images/armeria.m4v" preload="none" autoplay muted loop style="width: 282px; height: 112px;">
+  <img src="../../images/armeria.gif" loading="lazy" width="282" height="112" />
+</video>
+
+## From the devs
+
+<div class="noBullet">
+
+- 👂 Armeria team now hosts [bi-weekly virtual office hours](https://armeria.dev/community/office-hours/).
+  - Please feel free to join in and share your thoughts!
+
+</div>
+<div class="noBullet">
+
+- ✨ We released 15 releases since our last newsletter with a bunch of new exciting features!
+  - HTTP/JSON-to-gRPC transcoding like [Google does](https://cloud.google.com/endpoints/docs/grpc/transcoding),
+    _without_ any API gateway server
+  - GraphQL support with [GraphQL Java](https://www.graphql-java.com/) and [Sangria](https://sangria-graphql.github.io/).
+  - Immutable <type://Cookie> API designed with usability in mind
+  - Fully asynchronous OAuth 2.0 module
+  - Reactive multipart streaming API
+  - <type://WebClient> can now follow redirects with highly customizable redirect rules.
+  - Convenient stream transformation APIs such as `map`, `concat`, `recover` and `collect`
+  - Dynamic server reconfiguration with <type://Server#reconfigure()>
+  - [Scala integration](https://armeria.dev/docs/advanced-scala)
+  - Other numerous API usability improvements
+
+</div>
+
+## From the community
+
+<div class="noBullet">
+
+- 🎓 Did you know you can build a REST API with Armeria?
+  - [Try this guided tutorial](https://armeria.dev/tutorials/rest/blog) by @freevie to learn how to write a REST endpoint with Armeria.
+
+</div>
+<div class="noBullet">
+
+- 🖥️ Looking for a virtual tech conference?
+  - [Register now for the talk](https://linedevday.linecorp.com/2021/en/sessions/31/) by @cnabro about
+    his experience building a large scale gRPC and GraphQL service with Armeria on Nov 11th. 
+
+</div>
+<div class="noBullet">
+
+- 📈 [Monitoring Prometheus metrics from Armeria](https://engineering.linecorp.com/en/blog/monitoring-prometheus-metrics-from-armeria/)
+- 🎨 [Customizing Armeria metrics](https://engineering.linecorp.com/en/blog/customizing-armeria-metrics/)
+  - In this 2-part article, @jupiny shows you how you can record the detailed metrics and customize them
+    in your Armeria service. 
+
+</div>
+
+## We need your comments
+
+<div class="noBullet">
+
+- 🤔 Your opinion means a lot to us. Please let us know what you think about these proposals:
+  - #3598 Reconsider the restartability of <type://Server>.
+  - #3700 Should <type://Endpoint> have optional <type://SessionProtocol> and <type://SerializationFormat>?
+  - #3820 Nullable or exception-throwing getters in <type://RequestHeaders>
+
+</div>
+
+## Good first issues
+
+<div class="noBullet">
+
+- 🔰 Want to contribute but not sure where to start from? Try one of these:
+  - #2353 Add a gRPC reverse proxy example.
+  - #3788 Deprecate <type://Cookie#builder(String,String)> and introduce a method with secure defaults.
+
+</div>
+
+## Stay tuned
+
+Sign up for our newsletters to keep up-to-date with new releases and useful tips!
+
+<div style="max-width: 320px; margin-top: 0.5rem;">
+  <Mailchimp />
+</div>
+
+## Thank you!
+
+<ThankYou
+  message={() => <p>Since our last newsletter, we received awesome contributions from the following contributors:</p>}
+  usernames={[
+    'alexc-db',
+    'amitvc',
+    'andrew-teirney',
+    'andrey-tpt',
+    'anuraaga',
+    'berry120',
+    'dgahn',
+    'eisig',
+    'eugene70',
+    'fantayeneh',
+    'fclemonschool',
+    'freevie',
+    'ghkim3221',
+    'haithamgabr',
+    'heka1024',
+    'heowc',
+    'hexoul',
+    'hirakida',
+    'hyangtack',
+    'icepeppermint',
+    'ikhoon',
+    'imasahiro',
+    'inch772',
+    'jasper-vandemalle',
+    'jrhee17',
+    'JunoJunho',
+    'jupiny',
+    'KarboniteKream',
+    'karellen-kim',
+    'kezhenxu94',
+    'kojilin',
+    'ks-yim',
+    'm50d',
+    'mauhiz',
+    'max904-github',
+    'minwoox',
+    'mynameisjwlee',
+    'nirvanarsc',
+    'octo47',
+    'okue',
+    'policeman-kh',
+    'probepark',
+    'richieyan',
+    'selectAll',
+    'serajin00',
+    'sfc-gh-pbennes',
+    'sunken-kang',
+    'szeiger',
+    'TheWeaVer',
+    'tobias-',
+    'trustin',
+    'vivekkothari',
+    'wasifaleemdd',
+    'Waynefn'
+  ]}
+/>
