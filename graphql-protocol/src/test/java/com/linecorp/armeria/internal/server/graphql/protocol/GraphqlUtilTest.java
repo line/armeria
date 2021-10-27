@@ -43,12 +43,12 @@ class GraphqlUtilTest {
                                            .contentType(MediaType.ANY_TYPE)
                                            .accept(MediaType.ANY_TYPE)
                                            .build(),
-                             MediaType.ANY_TYPE),
+                             MediaType.GRAPHQL_JSON),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
                                            .contentType(MediaType.ANY_TYPE)
                                            .accept(MediaType.ANY_APPLICATION_TYPE)
                                            .build(),
-                             MediaType.ANY_APPLICATION_TYPE),
+                             MediaType.GRAPHQL_JSON),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
                                            .contentType(MediaType.ANY_TYPE)
                                            .accept(MediaType.JSON)
