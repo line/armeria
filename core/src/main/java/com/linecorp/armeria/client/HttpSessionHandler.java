@@ -61,7 +61,6 @@ import io.netty.handler.proxy.ProxyConnectionEvent;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AttributeKey;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
 final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
@@ -185,7 +184,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final boolean useHttp1Pipelining = clientFactory.useHttp1Pipelining();
             final CompletableFuture<Void> completionFuture =
                     useHttp1Pipelining ? req.whenComplete()
-                                       : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
+                            : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
                 if (!responseDecoder.needsToDisconnectWhenFinished()) {
                     pooledChannel.release();
@@ -258,7 +257,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         active = channel.isActive();
     }
 
@@ -290,13 +289,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
             throw new IllegalStateException("unexpected message type: " + typeInfo + " (expected: ByteBuf)");
         } finally {
-            if(msg instanceof ByteBuf)
+            if (msg instanceof ByteBuf) {
                 release(msg);
+            }
         }
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof SessionProtocol) {
             assert protocol == null;
             assert responseDecoder == null;
@@ -394,7 +394,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         active = false;
 
         // Protocol upgrade has failed, but needs to retry.
@@ -428,7 +428,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause instanceof ProxyConnectException) {
             final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
