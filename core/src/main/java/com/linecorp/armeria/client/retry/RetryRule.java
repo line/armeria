@@ -162,7 +162,15 @@ public interface RetryRule {
      * the specified {@link HttpStatus}es.
      */
     static RetryRule onStatus(Iterable<HttpStatus> statuses) {
-        return builder().onStatus(statuses).thenBackoff();
+        return onStatus(statuses, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with the specified {@link Backoff} if the
+     * response status is one of the specified {@link HttpStatus}es.
+     */
+    static RetryRule onStatus(Iterable<HttpStatus> statuses, Backoff backoff) {
+        return builder().onStatus(statuses).thenBackoff(backoff);
     }
 
     /**

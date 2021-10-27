@@ -123,6 +123,33 @@ public interface RetryRuleWithContent<T extends Response> {
     }
 
     /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the response status is one of the specified
+     * {@link HttpStatus}es.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatus(HttpStatus... statuses) {
+        return RetryRuleWithContent.<T>builder().onStatus(statuses).thenBackoff();
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the response status is one of the specified
+     * {@link HttpStatus}es.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatus(Iterable<HttpStatus> statuses) {
+        return onStatus(statuses, Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the specified {@link Backoff}
+     * if the response status is one of the specified {@link HttpStatus}es.
+     */
+    static <T extends Response> RetryRuleWithContent<T> onStatus(Iterable<HttpStatus> statuses,
+                                                                 Backoff backoff) {
+        return RetryRuleWithContent.<T>builder().onStatus(statuses).thenBackoff(backoff);
+    }
+
+    /**
      * Returns a newly created a {@link RetryRuleWithContent} that will retry with the
      * {@linkplain Backoff#ofDefault() default backoff} if the response status matches the specified
      * {@code statusFilter}.
