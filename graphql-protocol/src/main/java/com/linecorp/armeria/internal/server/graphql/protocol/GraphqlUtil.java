@@ -57,7 +57,7 @@ public final class GraphqlUtil {
         }
 
         for (MediaType accept : acceptTypes) {
-            if (accept.is(MediaType.GRAPHQL_JSON) || accept.is(MediaType.JSON)) {
+            if (MediaType.GRAPHQL_JSON.is(accept) || MediaType.JSON.is(accept)) {
                 return accept;
             }
         }
