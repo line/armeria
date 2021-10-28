@@ -30,6 +30,10 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static org.bouncycastle.asn1.x509.Extension.subjectAlternativeName;
+import static org.bouncycastle.asn1.x509.GeneralName.dNSName;
+import static org.bouncycastle.asn1.x509.GeneralName.iPAddress;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -360,21 +364,21 @@ public final class SelfSignedCertificate {
         // Add fqdn as Subject Alternative Name too for clients that don't use CN when validating such as
         // OkHttp.
         if (NetUtil.isValidIpV4Address(fqdn) || NetUtil.isValidIpV6Address(fqdn)) {
-            names.add(new GeneralName(GeneralName.iPAddress, fqdn));
+            names.add(new GeneralName(iPAddress, fqdn));
         } else {
-            names.add(new GeneralName(GeneralName.dNSName, fqdn));
+            names.add(new GeneralName(dNSName, fqdn));
         }
 
         // Support request with IP or domain for local connections.
         if ("localhost".equals(fqdn)) {
-            names.add(new GeneralName(GeneralName.iPAddress, "127.0.0.1"));
-            names.add(new GeneralName(GeneralName.iPAddress, "::1"));
+            names.add(new GeneralName(iPAddress, "127.0.0.1"));
+            names.add(new GeneralName(iPAddress, "::1"));
         } else if ("127.0.0.1".equals(fqdn)) {
-            names.add(new GeneralName(GeneralName.dNSName, "localhost"));
-            names.add(new GeneralName(GeneralName.iPAddress, "::1"));
+            names.add(new GeneralName(dNSName, "localhost"));
+            names.add(new GeneralName(iPAddress, "::1"));
         }
 
-        builder.addExtension(Extension.subjectAlternativeName,
+        builder.addExtension(subjectAlternativeName,
                              false,
                              new GeneralNames(names.toArray(new GeneralName[0])));
 
