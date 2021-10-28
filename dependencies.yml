@@ -173,6 +173,11 @@ com.spotify:
       to: com.linecorp.armeria.internal.shaded.futures
   futures-extra: { version: 4.3.0 }
 
+# OkHttp is used only for testing in it:okhttp module.
+com.squareup.okhttp3:
+  okhttp: { version: &OKHTTP_VERSION '4.9.2' }
+  okhttp-tls: { version: *OKHTTP_VERSION }
+
 com.squareup.retrofit2:
   retrofit:
     version: &RETROFIT2_VERSION '2.9.0'
