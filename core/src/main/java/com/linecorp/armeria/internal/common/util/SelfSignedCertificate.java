@@ -368,8 +368,10 @@ public final class SelfSignedCertificate {
         // Support request with IP or domain for local connections.
         if ("localhost".equals(fqdn)) {
             names.add(new GeneralName(GeneralName.iPAddress, "127.0.0.1"));
+            names.add(new GeneralName(GeneralName.iPAddress, "::1"));
         } else if ("127.0.0.1".equals(fqdn)) {
             names.add(new GeneralName(GeneralName.dNSName, "localhost"));
+            names.add(new GeneralName(GeneralName.iPAddress, "::1"));
         }
 
         builder.addExtension(Extension.subjectAlternativeName,

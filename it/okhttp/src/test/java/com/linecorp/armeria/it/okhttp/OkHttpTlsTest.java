@@ -17,6 +17,9 @@ package com.linecorp.armeria.it.okhttp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.Inet6Address;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -34,6 +37,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.util.NetUtil;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -90,21 +94,9 @@ class OkHttpTlsTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void localhost(OkHttpClient client, int serverPort) throws Exception {
+    void okhttpTls(OkHttpClient client, int serverPort, String address) throws Exception {
         final Request request = new Request.Builder()
-                .url("https://localhost:" + serverPort + '/')
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            assertThat(response.code()).isEqualTo(200);
-        }
-    }
-
-    @ParameterizedTest
-    @ArgumentsSource(ClientProvider.class)
-    void ip(OkHttpClient client, int serverPort) throws Exception {
-        final Request request = new Request.Builder()
-                .url("https://127.0.0.1:" + serverPort + '/')
+                .url("https://" + address + ':' + serverPort + '/')
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -115,9 +107,22 @@ class OkHttpTlsTest {
     static class ClientProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(
-                    Arguments.of(localhostClient, domainCertServer.httpsPort()),
-                    Arguments.of(ipClient, ipCertServer.httpsPort()));
+            final List<String> addresses = new ArrayList<>();
+            addresses.add("localhost");
+            addresses.add("127.0.0.1");
+            // Test ipv6 if available
+            if (NetUtil.LOCALHOST instanceof Inet6Address) {
+                // This is in the certificate.
+                addresses.add("[::1]");
+                // This isn't in the certificate, but it still works since OkHttp normalizes when verifying.
+                addresses.add("[0:0:0:0:0:0:0:1]");
+            }
+            return Stream
+                    .of(Arguments.of(localhostClient, domainCertServer.httpsPort()),
+                        Arguments.of(ipClient, ipCertServer.httpsPort()))
+                    .map(Arguments::get)
+                    .flatMap(item -> addresses.stream()
+                                              .map(address -> Arguments.of(item[0], item[1], address)));
         }
     }
 }
