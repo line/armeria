@@ -143,6 +143,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: ensure autotools is set up
+        run: |
+          sudo yum -y install autoconf automake
+
       - name: Install svgbob_cli
         # The latest version(0.6.0) of svgbob_cli fails to install in self-hosted runners
         run: |
