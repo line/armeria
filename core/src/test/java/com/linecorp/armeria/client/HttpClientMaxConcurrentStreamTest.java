@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
@@ -37,13 +36,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.base.Strings;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
@@ -74,7 +69,6 @@ public class HttpClientMaxConcurrentStreamTest {
                 responses.add(f);
                 return HttpResponse.from(f);
             });
-
             sb.http2MaxStreamsPerConnection(MAX_CONCURRENT_STREAMS);
             sb.maxNumConnections(MAX_NUM_CONNECTIONS);
             sb.idleTimeoutMillis(3000);
@@ -143,7 +137,7 @@ public class HttpClientMaxConcurrentStreamTest {
         }
 
         if (clientFactory != null) {
-            clientFactory.closeAsync().get(10, TimeUnit.SECONDS);
+            clientFactory.close();
         }
 
         await().until(() -> server.server().numConnections() == 0);
@@ -409,28 +403,5 @@ public class HttpClientMaxConcurrentStreamTest {
                 closeRunnable.run();
             }
         };
-    }
-
-    @Test
-    void testMaxConcurrentStreamsViolatedFromWrite() throws Exception {
-        connectionPoolListener = ConnectionPoolListener.noop();
-
-        final String requestBody = Strings.repeat("12345", 1000);
-        final WebClient webClient = WebClient.builder(server.uri(SessionProtocol.H2C))
-                                             .writeTimeoutMillis(1)
-                                             .factory(clientFactory)
-                                             .build();
-        final RequestHeaders requestHeaders = RequestHeaders.builder()
-                                                            .method(HttpMethod.GET).path(PATH).build();
-
-        // queue requests which occupies all available streams
-        for (int i = 0; i < MAX_CONCURRENT_STREAMS; i++) {
-            assertThatThrownBy(() -> webClient.execute(requestHeaders, requestBody).aggregate().join())
-                    .hasRootCauseInstanceOf(WriteTimeoutException.class);
-        }
-
-        // this request should not throw a http2 exception
-        assertThatThrownBy(() -> webClient.execute(requestHeaders, requestBody).aggregate().join())
-                .hasRootCauseInstanceOf(WriteTimeoutException.class);
     }
 }
