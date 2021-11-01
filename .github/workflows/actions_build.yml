@@ -145,7 +145,7 @@ jobs:
 
       - name: Ensure autotools is set up
         run: |
-          sudo yum -y install autoconf automake
+          sudo yum -y install autoconf automake libtool
 
       - name: Install svgbob_cli
         # The latest version(0.6.0) of svgbob_cli fails to install in self-hosted runners
