@@ -130,6 +130,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder appName(String appName) {
         requireNonNull(appName, "appName");
+        checkArgument(!appName.isEmpty(), "appName is empty.");
         checkState(vipAddress == null && secureVipAddress == null,
                    "cannot set appName with the %s.", vipAddress != null ? "vipAddress" : "secureVipAddress");
         this.appName = appName;
@@ -145,6 +146,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder instanceId(String instanceId) {
         requireNonNull(instanceId, "instanceId");
+        checkArgument(!instanceId.isEmpty(), "instanceId is empty.");
         checkState(vipAddress == null && secureVipAddress == null,
                    "cannot set instanceId with the %s.",
                    vipAddress != null ? "vipAddress" : "secureVipAddress");
@@ -161,6 +163,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder vipAddress(String vipAddress) {
         requireNonNull(vipAddress, "vipAddress");
+        checkArgument(!vipAddress.isEmpty(), "vipAddress is empty.");
         checkState(appName == null && instanceId == null && secureVipAddress == null,
                    "cannot set vipAddress with the %s.",
                    secureVipAddress != null ? "secureVipAddress" : "appName or instanceId");
@@ -177,6 +180,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder secureVipAddress(String secureVipAddress) {
         requireNonNull(secureVipAddress, "secureVipAddress");
+        checkArgument(!secureVipAddress.isEmpty(), "secureVipAddress is empty.");
         checkState(appName == null && instanceId == null && vipAddress == null,
                    "cannot set secureVipAddress with the %s.",
                    vipAddress != null ? "vipAddress" : "appName or instanceId");
