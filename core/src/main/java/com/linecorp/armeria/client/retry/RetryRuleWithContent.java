@@ -92,6 +92,15 @@ public interface RetryRuleWithContent<T extends Response> {
      * {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is the specified
      * {@link HttpStatusClass}es.
      */
+    static <T extends Response> RetryRuleWithContent<T> onStatusClass(HttpStatusClass... statusClasses) {
+        return RetryRuleWithContent.<T>builder().onStatusClass(statusClasses).thenBackoff();
+    }
+
+    /**
+     * Returns a newly created {@link RetryRuleWithContent} that will retry with the
+     * {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is the specified
+     * {@link HttpStatusClass}es.
+     */
     static <T extends Response> RetryRuleWithContent<T> onStatusClass(Iterable<HttpStatusClass> statusClasses) {
         return onStatusClass(statusClasses, Backoff.ofDefault());
     }

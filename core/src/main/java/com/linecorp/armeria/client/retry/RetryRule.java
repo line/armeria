@@ -116,6 +116,15 @@ public interface RetryRule {
     /**
      * Returns a newly created {@link RetryRule} that will retry with
      * the {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is
+     * the specified {@link HttpStatusClass}es.
+     */
+    static RetryRule onStatusClass(HttpStatusClass... statusClasses) {
+        return builder().onStatusClass(statusClasses).thenBackoff();
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that will retry with
+     * the {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is
      * one of the specified {@link HttpStatusClass}es.
      */
     static RetryRule onStatusClass(Iterable<HttpStatusClass> statusClasses) {
