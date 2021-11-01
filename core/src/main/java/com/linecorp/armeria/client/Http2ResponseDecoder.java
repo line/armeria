@@ -96,9 +96,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
-            // We are not closing the connection but just send a RST_STREAM,
-            // so we have to remove the response manually.
-            removeResponse(id);
+            // Removing the response and decrementing {@code unfinishedResponses} isn't done immediately
+            // here. Instead, we rely on {@code Http2ResponseDecoder#onStreamClosed} to decrement
+            // `unfinishedResponses` to match the timing where netty decrements {@code numActiveStreams}.
 
             // Reset the stream.
             final int streamId = idToStreamId(id);
