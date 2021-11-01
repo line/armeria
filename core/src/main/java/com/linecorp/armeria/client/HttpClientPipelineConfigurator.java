@@ -98,6 +98,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -164,6 +165,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingAndChannelDeactivatingHandler.INSTANCE);
+        // throttle bytes written s.t. http2 preface is sent (so channel becomes active),
+        // but subsequent writes fail
+        p.addLast(new ChannelTrafficShapingHandler(30, 0));
 
         try {
             if (sslCtx != null) {
