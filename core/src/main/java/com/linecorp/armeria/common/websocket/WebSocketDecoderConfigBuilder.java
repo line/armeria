@@ -35,7 +35,7 @@ public final class WebSocketDecoderConfigBuilder {
 
     /**
      * Sets the maximum length of a frame's payload. If the size of a payload data exceeds the value,
-     * {@link WebSocketCloseStatus#MESSAWebSocketFrameGE_TOO_BIG} is sent to the peer.
+     * {@link WebSocketCloseStatus#MESSAGE_TOO_BIG} is sent to the peer.
      */
     public WebSocketDecoderConfigBuilder maxFramePayloadLength(int maxFramePayloadLength) {
         checkArgument(maxFramePayloadLength > 0,
