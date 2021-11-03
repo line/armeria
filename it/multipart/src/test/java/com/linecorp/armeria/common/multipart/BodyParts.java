@@ -30,7 +30,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessages;
 import com.linecorp.armeria.server.ServiceRequestContext;

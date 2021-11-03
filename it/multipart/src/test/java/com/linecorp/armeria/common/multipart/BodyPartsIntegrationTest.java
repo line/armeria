@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class MultipartCollectorTest {
+class BodyPartsIntegrationTest {
 
     @TempDir
     static Path tempDir;
@@ -82,7 +82,7 @@ class MultipartCollectorTest {
     };
 
     @Test
-    void multipartFile() {
+    void fileUpload() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
