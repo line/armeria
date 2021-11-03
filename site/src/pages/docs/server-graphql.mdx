@@ -6,7 +6,29 @@ Visit [armeria-examples](https://github.com/line/armeria-examples) to find a ful
 
 </Tip>
 
-Let's assume we have the following [GraphQL](https://graphql.org/) service definition:
+First, You need the `armeria-graphql` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-graphql' },
+  ]}
+/>
+
+<Tip>
+
+Please note that this is entirely based on [graphql-java](https://www.graphql-java.com/).
+
+</Tip>
+
+- [GraphQL Java](https://www.graphql-java.com/) is the Java (server) implementation for GraphQL.
+- This documentation shows how to serve a service made from GraphQL Java over HTTP.
+- The main steps for creating a GraphQL service are:
+
+## Defining schema
+
+A schema which defines each field that can be queried or mutated and what types those fields are.
+This schema defines one top level field (in the type Query): which returns the details of a User.
 
 ```graphql
 type Query {
@@ -21,9 +43,10 @@ type User {
 
 Armeria provides a way to write an HTTP service using the GraphQL like this.
 
+## Loading data
 
-## `DataFetcher`
-And to fetch the data you need an implementation like this:
+A [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) fetches data for one field while the query is executed.
+The `UserDataFetcher` retrieves a user with a specific ID from a static map. This is made just for testing.
 
 ```java
 import graphql.schema.DataFetcher;
@@ -42,14 +65,8 @@ class UserDataFetcher implements DataFetcher<User> {
     }
 }
 ```
-<Tip>
 
-Please note that this is entirely based on [graphql-java](https://www.graphql-java.com/).
-
-</Tip>
-
-
-## `GraphqlService`
+## Building `GraphqlService`
 Once you've finished the implementation of the service, you need to build a <type://GraphqlService> using
 a <type://GraphqlServiceBuilder> and add it to the <type://ServerBuilder>:
 
