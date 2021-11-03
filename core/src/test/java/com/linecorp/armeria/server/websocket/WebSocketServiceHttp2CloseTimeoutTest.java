@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -73,7 +74,7 @@ class WebSocketServiceHttp2CloseTimeoutTest {
 
     @BeforeAll
     static void setUp() {
-        client = WebClient.of(server.httpUri());
+        client = WebClient.of(server.uri(SessionProtocol.H2C));
     }
 
     @Test
