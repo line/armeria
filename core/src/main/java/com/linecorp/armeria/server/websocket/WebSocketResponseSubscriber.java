@@ -56,13 +56,13 @@ final class WebSocketResponseSubscriber implements Subscriber<WebSocketFrame> {
     public void onNext(WebSocketFrame webSocketFrame) {
         assert subscription != null;
         try {
-            final ByteBuf encoded = encoder.encode(ctx, webSocketFrame);
             if (webSocketCloseHandler.isCloseFrameSent()) {
-                encoded.release();
+                webSocketFrame.close();
                 subscription.cancel();
                 return;
             }
 
+            final ByteBuf encoded = encoder.encode(ctx, webSocketFrame);
             if (!writer.tryWrite(HttpData.wrap(encoded))) {
                 subscription.cancel();
             } else if (webSocketFrame.type() == WebSocketFrameType.CLOSE) {

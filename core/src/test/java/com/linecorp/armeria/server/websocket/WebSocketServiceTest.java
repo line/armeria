@@ -86,8 +86,8 @@ class WebSocketServiceTest {
         // HttpResponseSubscriber subscribes the response in reality.
         final BodySubscriber bodySubscriber = new BodySubscriber();
         response.split().body().subscribe(bodySubscriber);
+        bodySubscriber.whenComplete.join();
         checkCloseFrame(bodySubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
-        await().until(bodySubscriber.whenComplete::isDone);
     }
 
     static void checkCloseFrame(HttpData httpData) throws InterruptedException {
