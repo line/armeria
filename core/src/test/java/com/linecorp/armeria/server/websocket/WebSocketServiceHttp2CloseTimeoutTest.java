@@ -36,7 +36,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -91,11 +90,11 @@ class WebSocketServiceHttp2CloseTimeoutTest {
         requestWriter.write(HttpData.wrap(encoder.encode(
                 ctx, WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE))));
 
-        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
-        client.execute(requestWriter).split().body().subscribe(httpResponseSubscriber);
+        final BodySubscriber bodySubscriber = new BodySubscriber();
+        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
 
-        httpResponseSubscriber.whenComplete.join();
-        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
+        bodySubscriber.whenComplete.join();
+        checkCloseFrame(bodySubscriber.messageQueue.take());
         await().until(() -> requestWriter.whenComplete().isDone());
     }
 
@@ -103,30 +102,30 @@ class WebSocketServiceHttp2CloseTimeoutTest {
     void closeAfterTimeoutWhenCloseFrameIsNotSent() throws InterruptedException {
         final HttpRequestWriter requestWriter =
                 HttpRequest.streaming(webSocketUpgradeHeaders("/2000MillisTimeout"));
-        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
-        client.execute(requestWriter).split().body().subscribe(httpResponseSubscriber);
+        final BodySubscriber bodySubscriber = new BodySubscriber();
+        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
 
         await().atLeast(1000, TimeUnit.MILLISECONDS) // buffer 1000 milliseconds
                .until(() -> requestWriter.whenComplete().isCompletedExceptionally());
         // Request is aborted because the client didn't send the close frame.
         assertThatThrownBy(() -> requestWriter.whenComplete().join())
                 .hasCauseInstanceOf(AbortedStreamException.class);
-        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
+        checkCloseFrame(bodySubscriber.messageQueue.take());
         // Response is completed normally because the client received close frame.
-        httpResponseSubscriber.whenComplete.join();
+        bodySubscriber.whenComplete.join();
     }
 
     @Test
     void notClosedIfCloseFrameIsNotSentWhenNoCloseTimeout() throws InterruptedException {
         final HttpRequestWriter requestWriter =
                 HttpRequest.streaming(webSocketUpgradeHeaders("/noCloseTimeout"));
-        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
-        client.execute(requestWriter).subscribe(httpResponseSubscriber);
+        final BodySubscriber bodySubscriber = new BodySubscriber();
+        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
 
         Thread.sleep(3000);
         // The request and response are not complete.
         assertThat(requestWriter.whenComplete().isDone()).isFalse();
-        assertThat(httpResponseSubscriber.whenComplete.isDone()).isFalse();
+        assertThat(bodySubscriber.whenComplete.isDone()).isFalse();
     }
 
     private static RequestHeaders webSocketUpgradeHeaders(String path) {
@@ -136,7 +135,7 @@ class WebSocketServiceHttp2CloseTimeoutTest {
                              .build();
     }
 
-    static final class HttpResponseSubscriber implements Subscriber<HttpObject> {
+    static final class BodySubscriber implements Subscriber<HttpData> {
 
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
 
@@ -148,10 +147,8 @@ class WebSocketServiceHttp2CloseTimeoutTest {
         }
 
         @Override
-        public void onNext(HttpObject httpObject) {
-            if (httpObject instanceof HttpData) {
-                messageQueue.add((HttpData) httpObject);
-            }
+        public void onNext(HttpData httpData) {
+            messageQueue.add(httpData);
         }
 
         @Override

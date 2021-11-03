@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
@@ -83,11 +84,10 @@ class WebSocketServiceTest {
                                      .encode(ctx, WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE));
         req.write(HttpData.wrap(encodedFrame));
         final HttpResponse response = webSocketService.serve(ctx, req);
-        // HttpResponseSubscriber subscribes the response in reality.
-        final BodySubscriber bodySubscriber = new BodySubscriber();
-        response.split().body().subscribe(bodySubscriber);
-        bodySubscriber.whenComplete.join();
-        checkCloseFrame(bodySubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
+        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
+        response.subscribe(httpResponseSubscriber);
+        httpResponseSubscriber.whenComplete.join();
+        checkCloseFrame(httpResponseSubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
     }
 
     static void checkCloseFrame(HttpData httpData) throws InterruptedException {
@@ -98,12 +98,11 @@ class WebSocketServiceTest {
     @Test
     void responseIsClosedAfterCloseTimeoutIfCloseFrameNotReceived() throws Exception {
         final HttpResponse response = webSocketService.serve(ctx, req);
-        // HttpResponseSubscriber subscribes the response in reality.
-        final BodySubscriber bodySubscriber = new BodySubscriber();
-        response.split().body().subscribe(bodySubscriber);
+        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
+        response.subscribe(httpResponseSubscriber);
         // 0 ~ 3 FIN, RSV1, RSV2, RSV3. 4 ~ 7 opcode
-        checkCloseFrame(bodySubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
-        final CompletableFuture<Void> whenComplete = bodySubscriber.whenComplete;
+        checkCloseFrame(httpResponseSubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
+        final CompletableFuture<Void> whenComplete = httpResponseSubscriber.whenComplete;
         assertThat(whenComplete.isDone()).isFalse();
         // response is complete 2000 milliseconds after the service sends the close frame.
         await().atLeast(1500 /* buffer 500 milliseconds */, TimeUnit.MILLISECONDS)
@@ -191,7 +190,7 @@ class WebSocketServiceTest {
         }
     }
 
-    static final class BodySubscriber implements Subscriber<HttpData> {
+    static final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
 
@@ -203,8 +202,10 @@ class WebSocketServiceTest {
         }
 
         @Override
-        public void onNext(HttpData httpData) {
-            messageQueue.add(httpData);
+        public void onNext(HttpObject httpObject) {
+            if (httpObject instanceof HttpData) {
+                messageQueue.add((HttpData) httpObject);
+            }
         }
 
         @Override
