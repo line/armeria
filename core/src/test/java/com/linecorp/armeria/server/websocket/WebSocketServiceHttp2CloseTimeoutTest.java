@@ -20,17 +20,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -42,7 +48,6 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.websocket.WebSocketServiceTest.AbstractWebSocketHandler;
-import com.linecorp.armeria.server.websocket.WebSocketServiceTest.BodySubscriber;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -86,11 +91,11 @@ class WebSocketServiceHttp2CloseTimeoutTest {
         requestWriter.write(HttpData.wrap(encoder.encode(
                 ctx, WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE))));
 
-        final BodySubscriber bodySubscriber = new BodySubscriber();
-        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
+        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
+        client.execute(requestWriter).split().body().subscribe(httpResponseSubscriber);
 
-        bodySubscriber.whenComplete.join();
-        checkCloseFrame(bodySubscriber.messageQueue.take());
+        httpResponseSubscriber.whenComplete.join();
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
         await().until(() -> requestWriter.whenComplete().isDone());
     }
 
@@ -98,30 +103,30 @@ class WebSocketServiceHttp2CloseTimeoutTest {
     void closeAfterTimeoutWhenCloseFrameIsNotSent() throws InterruptedException {
         final HttpRequestWriter requestWriter =
                 HttpRequest.streaming(webSocketUpgradeHeaders("/2000MillisTimeout"));
-        final BodySubscriber bodySubscriber = new BodySubscriber();
-        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
+        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
+        client.execute(requestWriter).split().body().subscribe(httpResponseSubscriber);
 
         await().atLeast(1000, TimeUnit.MILLISECONDS) // buffer 1000 milliseconds
                .until(() -> requestWriter.whenComplete().isCompletedExceptionally());
         // Request is aborted because the client didn't send the close frame.
         assertThatThrownBy(() -> requestWriter.whenComplete().join())
                 .hasCauseInstanceOf(AbortedStreamException.class);
-        checkCloseFrame(bodySubscriber.messageQueue.take());
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
         // Response is completed normally because the client received close frame.
-        bodySubscriber.whenComplete.join();
+        httpResponseSubscriber.whenComplete.join();
     }
 
     @Test
     void notClosedIfCloseFrameIsNotSentWhenNoCloseTimeout() throws InterruptedException {
         final HttpRequestWriter requestWriter =
                 HttpRequest.streaming(webSocketUpgradeHeaders("/noCloseTimeout"));
-        final BodySubscriber bodySubscriber = new BodySubscriber();
-        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
+        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
+        client.execute(requestWriter).subscribe(httpResponseSubscriber);
 
         Thread.sleep(3000);
         // The request and response are not complete.
         assertThat(requestWriter.whenComplete().isDone()).isFalse();
-        assertThat(bodySubscriber.whenComplete.isDone()).isFalse();
+        assertThat(httpResponseSubscriber.whenComplete.isDone()).isFalse();
     }
 
     private static RequestHeaders webSocketUpgradeHeaders(String path) {
@@ -129,5 +134,34 @@ class WebSocketServiceHttp2CloseTimeoutTest {
                              .add(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString())
                              .addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13)
                              .build();
+    }
+
+    static final class HttpResponseSubscriber implements Subscriber<HttpObject> {
+
+        final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
+
+        final BlockingQueue<HttpData> messageQueue = new LinkedBlockingQueue<>();
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            s.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(HttpObject httpObject) {
+            if (httpObject instanceof HttpData) {
+                messageQueue.add((HttpData) httpObject);
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            whenComplete.completeExceptionally(t);
+        }
+
+        @Override
+        public void onComplete() {
+            whenComplete.complete(null);
+        }
     }
 }
