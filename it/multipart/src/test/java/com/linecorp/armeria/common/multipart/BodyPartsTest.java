@@ -94,7 +94,7 @@ public class BodyPartsTest {
         await().untilAsserted(() -> {
             assertThatThrownBy(collect::join)
                     .hasCauseInstanceOf(NullPointerException.class)
-                    .hasMessageContaining("mappingFileName from collect returns null");
+                    .hasMessageContaining("mappingFileName returns null when mapping name3");
         });
     }
 }

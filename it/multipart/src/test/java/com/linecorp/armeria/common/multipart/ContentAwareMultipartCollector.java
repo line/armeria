@@ -130,7 +130,8 @@ final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
         if (path == null) {
             inProgressCount--;
             subscription.cancel();
-            future.completeExceptionally(new NullPointerException("mappingFileName from collect returns null"));
+            future.completeExceptionally(
+                    new NullPointerException("mappingFileName returns null when mapping " + name));
             return;
         }
         files.put(name, path);
