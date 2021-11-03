@@ -86,7 +86,7 @@ class WebSocketServiceTest {
         // HttpResponseSubscriber subscribes the response in reality.
         final BodySubscriber bodySubscriber = new BodySubscriber();
         response.split().body().subscribe(bodySubscriber);
-        checkCloseFrame(bodySubscriber.messageQueue.take());
+        checkCloseFrame(bodySubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
         await().until(bodySubscriber.whenComplete::isDone);
     }
 
@@ -102,7 +102,7 @@ class WebSocketServiceTest {
         final BodySubscriber bodySubscriber = new BodySubscriber();
         response.split().body().subscribe(bodySubscriber);
         // 0 ~ 3 FIN, RSV1, RSV2, RSV3. 4 ~ 7 opcode
-        checkCloseFrame(bodySubscriber.messageQueue.take());
+        checkCloseFrame(bodySubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
         final CompletableFuture<Void> whenComplete = bodySubscriber.whenComplete;
         assertThat(whenComplete.isDone()).isFalse();
         // response is complete 2000 milliseconds after the service sends the close frame.
