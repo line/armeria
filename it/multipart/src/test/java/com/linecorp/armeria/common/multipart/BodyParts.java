@@ -86,7 +86,7 @@ public class BodyParts {
      */
     public static CompletableFuture<CollectedBodyParts> collect(
             Multipart multipart,
-            Function<@Nullable String, Path> mappingFileName,
+            Function<String, Path> mappingFileName,
             OpenOption... options) {
         requireNonNull(multipart, "multipart");
         requireNonNull(options, "options");

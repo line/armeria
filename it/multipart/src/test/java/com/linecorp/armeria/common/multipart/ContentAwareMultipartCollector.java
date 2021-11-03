@@ -28,6 +28,8 @@ import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimaps;
@@ -49,6 +51,7 @@ import io.netty.util.concurrent.EventExecutor;
  * others in the {@link QueryParams}.
  */
 final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
+    private static final Logger logger = LoggerFactory.getLogger(ContentAwareMultipartCollector.class);
     private final CompletableFuture<CollectedBodyParts> future = new CompletableFuture<>();
     private final QueryParamsBuilder queryParamsBuilder = QueryParams.builder();
     private final ImmutableListMultimap.Builder<String, Path> files = new ImmutableListMultimap.Builder<>();
@@ -57,13 +60,13 @@ final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
     private int inProgressCount;
     private boolean canComplete;
 
-    private final Function<@Nullable String, Path> mappingFileName;
+    private final Function<String, Path> mappingFileName;
     private final OpenOption[] options;
     private final EventExecutor eventExecutor;
     private final ExecutorService blockingTaskExecutor;
 
     ContentAwareMultipartCollector(StreamMessage<? extends BodyPart> publisher,
-                                   Function<@Nullable String, Path> mappingFileName,
+                                   Function<String, Path> mappingFileName,
                                    OpenOption[] options,
                                    EventExecutor eventExecutor, ExecutorService blockingTaskExecutor) {
         this.mappingFileName = mappingFileName;
@@ -90,6 +93,7 @@ final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
         @Nullable
         final String name = bodyPart.name();
         if (name == null) {
+            logger.warn("Skip the BodyPart without name");
             // Content must be fully exhausted or consumed to trigger next BodyPart successfully
             bodyPart.content().abort();
             subscription.request(1);
@@ -123,6 +127,12 @@ final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
         }
 
         final Path path = mappingFileName.apply(name);
+        if (path == null) {
+            inProgressCount--;
+            subscription.cancel();
+            future.completeExceptionally(new NullPointerException("mappingFileName from collect returns null"));
+            return;
+        }
         files.put(name, path);
         bodyPart.writeFile(path, eventExecutor, blockingTaskExecutor, options)
                 .handleAsync((unused, throwable) -> {
