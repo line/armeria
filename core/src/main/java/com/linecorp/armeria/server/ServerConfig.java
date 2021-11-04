@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -109,6 +111,7 @@ public final class ServerConfig {
     private final Predicate<? super InetAddress> clientAddressTrustedProxyFilter;
     private final Predicate<? super InetAddress> clientAddressFilter;
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
+    private final boolean webSocketServiceEnabled;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final Supplier<RequestId> requestIdGenerator;
@@ -246,6 +249,11 @@ public final class ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
+        webSocketServiceEnabled = services.stream()
+                                          .map(serviceConfig -> serviceConfig.service()
+                                                                             .as(WebSocketService.class))
+                                          .filter(Objects::nonNull)
+                                          .findFirst().isPresent();
 
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
@@ -708,6 +716,13 @@ public final class ServerConfig {
      */
     public Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper() {
         return clientAddressMapper;
+    }
+
+    /**
+     * Returns whether {@link WebSocketService} is added to the {@link Server}.
+     */
+    public boolean isWebSocketServiceEnabled() {
+        return webSocketServiceEnabled;
     }
 
     /**

@@ -19,12 +19,10 @@ import static com.linecorp.armeria.common.websocket.PingWebSocketFrame.emptyPing
 import static com.linecorp.armeria.common.websocket.PongWebSocketFrame.emptyPong;
 import static java.util.Objects.requireNonNull;
 
-import org.reactivestreams.Subscriber;
+import java.nio.charset.StandardCharsets;
 
-import com.linecorp.armeria.common.ByteBufAccessMode;
+import com.linecorp.armeria.common.BinaryData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -35,10 +33,10 @@ import io.netty.buffer.ByteBuf;
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5">Data framing</a>
  */
 @UnstableApi
-public interface WebSocketFrame extends SafeCloseable {
+public interface WebSocketFrame extends BinaryData {
 
     /**
-     * Returns a new {@link TextWebSocketFrame} with the text whose {@code finalFragment}
+     * Returns a new text {@link WebSocketFrame} with the text whose {@code finalFragment}
      * is set to {@code true}.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
@@ -48,8 +46,8 @@ public interface WebSocketFrame extends SafeCloseable {
     }
 
     /**
-     * Returns a new {@link TextWebSocketFrame} with the text and {@code finalFragment}. When the
-     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames must be followed.
+     * Returns a new text {@link WebSocketFrame} with the text and {@code finalFragment}. When the
+     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[], boolean)} frames must be followed.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
@@ -59,7 +57,7 @@ public interface WebSocketFrame extends SafeCloseable {
     }
 
     /**
-     * Returns a new {@link TextWebSocketFrame} with the UTF-8 encoded text whose {@code finalFragment} is set
+     * Returns a new text {@link WebSocketFrame} with the UTF-8 encoded text whose {@code finalFragment} is set
      * to {@code true}.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
@@ -70,8 +68,9 @@ public interface WebSocketFrame extends SafeCloseable {
     }
 
     /**
-     * Returns a new {@link TextWebSocketFrame} with the UTF-8 encoded text and {@code finalFragment}.
-     * When the {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames must be followed.
+     * Returns a new text {@link WebSocketFrame} with the UTF-8 encoded text and {@code finalFragment}.
+     * When the {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[], boolean)} frames
+     * must be followed.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
@@ -92,7 +91,7 @@ public interface WebSocketFrame extends SafeCloseable {
 
     /**
      * Returns a new binary {@link WebSocketFrame} with the {@code finalFragment}. When the
-     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames must be followed.
+     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[], boolean)} frames must be followed.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
@@ -178,25 +177,47 @@ public interface WebSocketFrame extends SafeCloseable {
 
     /**
      * Returns a new continuation {@link WebSocketFrame} whose {@code finalFragment} is set to {@code true}.
+     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
      */
-    static WebSocketFrame ofContinuation(byte[] binary) {
-        return ofContinuation(binary, true);
+    static WebSocketFrame ofContinuation(byte[] binary, boolean isText) {
+        return ofContinuation(binary, true, isText);
     }
 
     /**
      * Returns a new continuation {@link WebSocketFrame} with the binary and {@code finalFragment}.
+     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
      */
-    static WebSocketFrame ofContinuation(byte[] binary, boolean frameFinalFlag) {
+    static WebSocketFrame ofContinuation(byte[] binary, boolean frameFinalFlag, boolean isText) {
         requireNonNull(binary, "binary");
-        return new ContinuationWebSocketFrame(binary, frameFinalFlag);
+        return new ContinuationWebSocketFrame(binary, frameFinalFlag, isText);
     }
 
     /**
-     * (Advanced users only) Returns a new {@link TextWebSocketFrame} with the {@link ByteBuf}
+     * Returns a new text continuation {@link WebSocketFrame} whose {@code finalFragment}
+     * is set to {@code true}.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
+     */
+    static WebSocketFrame ofContinuation(String text) {
+        return ofContinuation(text, true);
+    }
+
+    /**
+     * Returns a new text continuation {@link WebSocketFrame} with the text and {@code finalFragment}.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
+     */
+    static WebSocketFrame ofContinuation(String text, boolean frameFinalFlag) {
+        requireNonNull(text, "text");
+        return ofContinuation(text.getBytes(StandardCharsets.UTF_8), frameFinalFlag, true);
+    }
+
+    /**
+     * (Advanced users only) Returns a new text {@link WebSocketFrame} with the {@link ByteBuf}
      * whose {@code finalFragment} is set to {@code true}.
      *
      * @see #ofText(byte[])
@@ -208,9 +229,9 @@ public interface WebSocketFrame extends SafeCloseable {
     }
 
     /**
-     * (Advanced users only) Returns a new {@link TextWebSocketFrame} with the {@link ByteBuf}
+     * (Advanced users only) Returns a new text {@link WebSocketFrame} with the {@link ByteBuf}
      * and {@code finalFragment}. When the {@code finalFragment} is {@code false},
-     * {@link #ofPooledContinuation(ByteBuf)} frames must be followed.
+     * {@link #ofPooledContinuation(ByteBuf, boolean)} frames must be followed.
      *
      * @see #ofText(byte[])
      * @see PooledObjects
@@ -235,7 +256,7 @@ public interface WebSocketFrame extends SafeCloseable {
     /**
      * (Advanced users only) Returns a new binary {@link WebSocketFrame} with the {@link ByteBuf}
      * and {@code finalFragment}. When the {@code finalFragment} is {@code false},
-     * {@link #ofPooledContinuation(ByteBuf)} frames must be followed.
+     * {@link #ofPooledContinuation(ByteBuf, boolean)} frames must be followed.
      *
      * @see #ofBinary(byte[], boolean)
      * @see PooledObjects
@@ -287,24 +308,26 @@ public interface WebSocketFrame extends SafeCloseable {
     /**
      * (Advanced users only) Returns a new continuation {@link WebSocketFrame} with the {@link ByteBuf}
      * whose {@code finalFragment} is set to {@code true}.
+     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
      *
-     * @see #ofContinuation(byte[])
+     * @see #ofContinuation(byte[], boolean)
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledContinuation(ByteBuf binary) {
-        return ofPooledContinuation(binary, true);
+    static WebSocketFrame ofPooledContinuation(ByteBuf binary, boolean isText) {
+        return ofPooledContinuation(binary, true, isText);
     }
 
     /**
      * (Advanced users only) Returns a new binary {@link WebSocketFrame} with the {@link ByteBuf}
      * and {@code finalFragment}.
+     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
      *
-     * @see #ofContinuation(byte[], boolean)
+     * @see #ofContinuation(byte[], boolean, boolean)
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledContinuation(ByteBuf binary, boolean frameFinalFlag) {
+    static WebSocketFrame ofPooledContinuation(ByteBuf binary, boolean frameFinalFlag, boolean isText) {
         requireNonNull(binary, "binary");
-        return new ContinuationWebSocketFrame(binary, frameFinalFlag);
+        return new ContinuationWebSocketFrame(binary, frameFinalFlag, isText);
     }
 
     /**
@@ -315,68 +338,30 @@ public interface WebSocketFrame extends SafeCloseable {
     /**
      * Tells whether this frame is a final fragment or not.
      *
-     * @see #ofContinuation(byte[])
+     * @see #ofContinuation(byte[], boolean)
      */
     boolean isFinalFragment();
 
     /**
-     * Returns the underlying byte array of the payload data. Any changes made in the returned array affects
-     * the content of the payload data.
-     */
-    byte[] array();
-
-    /**
-     * Returns the length of the payload data.
-     */
-    int dataLength();
-
-    /**
-     * (Advanced users only) Returns whether the payload data is pooled. Note, if this method returns
-     * {@code true}, you must call {@link #close()} once you no longer need the payload data,
-     * because its underlying {@link ByteBuf} will not be released automatically.
+     * Tells whether this frame is a text frame or not.
+     * The {@linkplain #ofContinuation(byte[], boolean) continuation} frame followed by a text frame
+     * also returns {@code true}.
      *
-     * @see PooledObjects
+     * @see #ofText(String)
      */
-    boolean isPooled();
+    boolean isText();
 
     /**
-     * (Advanced users only) Returns a new duplicate of the underlying {@link ByteBuf} of this data.
-     * This method does not transfer the ownership of the underlying {@link ByteBuf}, i.e. the reference
-     * count of the {@link ByteBuf} does not change. If this data is not pooled, the returned {@link ByteBuf}
-     * is not pooled, either, which means you need to worry about releasing it only when you created this data
-     * with via {@code ofPooled} methods. Any changes made in the content of the returned {@link ByteBuf}
-     * affects the content of this data.
+     * Tells whether this frame is a binary frame or not.
+     * The {@linkplain #ofContinuation(byte[], boolean) continuation} frame followed by a binary frame
+     * also returns {@code true}.
      *
-     * @see PooledObjects
+     * @see #ofBinary(byte[])
      */
-    default ByteBuf byteBuf() {
-        return byteBuf(ByteBufAccessMode.DUPLICATE);
-    }
+    boolean isBinary();
 
     /**
-     * (Advanced users only) Returns a new duplicate of the underlying {@link ByteBuf} of the payload data.
-     * This method does not transfer the ownership of the underlying {@link ByteBuf}, i.e. the reference
-     * count of the {@link ByteBuf} does not change. If the payload data is not pooled,
-     * the returned {@link ByteBuf} is not pooled, either, which means you need to worry about releasing it
-     * only when you created the payload datavia {@code ofPooled} methods.
-     * Any changes made in the content of the returned {@link ByteBuf} affects the content of the payload data.
-     *
-     * @see PooledObjects
+     * Returns the text data in this frame.
      */
-    ByteBuf byteBuf(ByteBufAccessMode mode);
-
-    /**
-     * Releases the underlying {@link ByteBuf} if this frame was created via {@code ofPooled} methods.
-     * Otherwise, this method does nothing. You may want to call this method to reclaim the underlying
-     * {@link ByteBuf} when using operations that return pooled objects, such as:
-     * <ul>
-     *   <li>{@link WebSocket#subscribe(Subscriber, SubscriptionOption...)} with
-     *       {@link SubscriptionOption#WITH_POOLED_OBJECTS}</li>
-     * </ul>
-     * If you don't use such operations, you don't need to call this method.
-     *
-     * @see PooledObjects
-     */
-    @Override
-    void close();
+    String text();
 }

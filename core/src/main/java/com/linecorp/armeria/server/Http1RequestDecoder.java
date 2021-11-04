@@ -42,8 +42,8 @@ import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
-import com.linecorp.armeria.server.HttpServerPipelineConfigurator.WebSocketUpgradeContext;
-import com.linecorp.armeria.server.HttpServerPipelineConfigurator.WebSocketUpgradeListener;
+import com.linecorp.armeria.server.ServerHttp1ObjectEncoder.WebSocketUpgradeContext;
+import com.linecorp.armeria.server.ServerHttp1ObjectEncoder.WebSocketUpgradeListener;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -98,10 +98,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
     @Override
     public void upgraded(boolean success) {
         if (!success) {
-            if (req != null && req instanceof DefaultDecodedHttpRequest) {
+            if (req instanceof DefaultDecodedHttpRequest) {
                 req.close();
-                req = null;
             }
+            req = null;
         }
     }
 

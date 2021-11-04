@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.websocket.TextWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketDecoderConfig;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -175,7 +174,7 @@ class WebSocketFrameEncoderAndDecoderTest {
         requestWriter.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofText(testStr))));
         final WebSocketFrame decoded = frameQueue.take();
         assertThat(decoded.type()).isSameAs(WebSocketFrameType.TEXT);
-        assertThat(testStr).isEqualTo(((TextWebSocketFrame) decoded).text());
+        assertThat(testStr).isEqualTo(decoded.text());
         assertThat(frameQueue).isEmpty();
     }
 

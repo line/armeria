@@ -129,7 +129,7 @@ public final class WebSocketFrameEncoder {
 
     private ByteBuf encode0(RequestContext ctx, WebSocketFrame msg) {
         final WebSocketFrameType type = msg.type();
-        final int length = msg.dataLength();
+        final int length = msg.length();
         if (type == WebSocketFrameType.PING && length > 125) {
             throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was " +
                                             length);
@@ -189,7 +189,7 @@ public final class WebSocketFrameEncoder {
 
                 final int intMask = intMask(mask);
                 int counter = 0;
-                final ByteBuf data = msg.byteBuf(ByteBufAccessMode.DUPLICATE);
+                final ByteBuf data = msg.byteBuf();
                 int i = data.readerIndex();
                 final int end = data.writerIndex();
 
@@ -202,9 +202,9 @@ public final class WebSocketFrameEncoder {
                     buf.writeByte(byteData ^ mask[counter++ % 4]);
                 }
             } else {
-                if (buf.writableBytes() >= msg.dataLength()) {
+                if (buf.writableBytes() >= msg.length()) {
                     // merge buffers as this is cheaper then a gathering write if the payload is small enough
-                    buf.writeBytes(msg.byteBuf(ByteBufAccessMode.DUPLICATE));
+                    buf.writeBytes(msg.byteBuf());
                 } else {
                     buf = Unpooled.wrappedBuffer(buf, msg.byteBuf(ByteBufAccessMode.FOR_IO));
                 }

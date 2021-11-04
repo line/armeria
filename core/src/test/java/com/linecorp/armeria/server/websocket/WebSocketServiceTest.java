@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.websocket;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -38,8 +40,8 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
-import com.linecorp.armeria.common.websocket.TextWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -66,6 +68,8 @@ class WebSocketServiceTest {
     private static final WebSocketService webSocketService = WebSocketService.builder(handler)
                                                                              .closeTimeoutMillis(2000)
                                                                              .build();
+    private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
+
     private HttpRequestWriter req;
     private ServiceRequestContext ctx;
 
@@ -80,14 +84,13 @@ class WebSocketServiceTest {
     @Test
     void responseIsClosedRightAwayIfCloseFrameReceived() throws Exception {
         final ByteBuf encodedFrame =
-                WebSocketFrameEncoder.of(true)
-                                     .encode(ctx, WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE));
+                encoder.encode(ctx, WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE));
         req.write(HttpData.wrap(encodedFrame));
         final HttpResponse response = webSocketService.serve(ctx, req);
         final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
         response.subscribe(httpResponseSubscriber);
         httpResponseSubscriber.whenComplete.join();
-        checkCloseFrame(httpResponseSubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
     }
 
     static void checkCloseFrame(HttpData httpData) throws InterruptedException {
@@ -101,13 +104,62 @@ class WebSocketServiceTest {
         final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
         response.subscribe(httpResponseSubscriber);
         // 0 ~ 3 FIN, RSV1, RSV2, RSV3. 4 ~ 7 opcode
-        checkCloseFrame(httpResponseSubscriber.messageQueue.poll(3, TimeUnit.SECONDS));
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
         final CompletableFuture<Void> whenComplete = httpResponseSubscriber.whenComplete;
         assertThat(whenComplete.isDone()).isFalse();
         // response is complete 2000 milliseconds after the service sends the close frame.
         await().atLeast(1500 /* buffer 500 milliseconds */, TimeUnit.MILLISECONDS)
                .until(whenComplete::isDone);
         assertThat(whenComplete.isCompletedExceptionally()).isFalse();
+    }
+
+    @Test
+    void testDecodedContinuationFrame() throws Exception {
+        final CompletableFuture<List<WebSocketFrame>> collectFuture = new CompletableFuture<>();
+        final WebSocketService webSocketService = WebSocketService.of((ctx, messages) -> {
+            messages.collect().thenAccept(collectFuture::complete);
+            return WebSocket.streaming();
+        });
+
+        final HttpResponse response = webSocketService.serve(ctx, req);
+        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofText("foo", false))));
+        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofContinuation("bar", true))));
+        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofBinary(
+                "foo".getBytes(StandardCharsets.UTF_8), false))));
+        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofContinuation(
+                "bar".getBytes(StandardCharsets.UTF_8), true))));
+        req.close();
+
+        response.subscribe(NoopSubscriber.get());
+        final List<WebSocketFrame> frames = collectFuture.join();
+        assertThat(frames.size()).isEqualTo(4);
+        WebSocketFrame frame = frames.get(0);
+        assertThat(frame.isFinalFragment()).isFalse();
+        assertThat(frame.isText()).isTrue();
+        assertThat(frame.isBinary()).isFalse();
+        assertThat(frame.type()).isSameAs(WebSocketFrameType.TEXT);
+        assertThat(frame.text()).isEqualTo("foo");
+
+        frame = frames.get(1);
+        assertThat(frame.isFinalFragment()).isTrue();
+        assertThat(frame.isText()).isTrue();
+        assertThat(frame.isBinary()).isFalse();
+        assertThat(frame.type()).isSameAs(WebSocketFrameType.CONTINUATION);
+        assertThat(frame.text()).isEqualTo("bar");
+
+        frame = frames.get(2);
+        assertThat(frame.isFinalFragment()).isFalse();
+        assertThat(frame.isBinary()).isTrue();
+        assertThat(frame.isText()).isFalse();
+        assertThat(frame.type()).isSameAs(WebSocketFrameType.BINARY);
+        assertThat(frame.text()).isEqualTo("foo");
+
+        frame = frames.get(3);
+        assertThat(frame.isFinalFragment()).isTrue();
+        assertThat(frame.isBinary()).isTrue();
+        assertThat(frame.isText()).isFalse();
+        assertThat(frame.type()).isSameAs(WebSocketFrameType.CONTINUATION);
+        assertThat(frame.text()).isEqualTo("bar");
     }
 
     private static RequestHeaders webSocketUpgradeHeaders() {
@@ -137,7 +189,7 @@ class WebSocketServiceTest {
                     try (WebSocketFrame frame = webSocketFrame) {
                         switch (frame.type()) {
                             case TEXT:
-                                onMessage(writer, ((TextWebSocketFrame) frame).text());
+                                onMessage(writer, frame.text());
                                 break;
                             case BINARY:
                                 onMessage(writer, frame.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));

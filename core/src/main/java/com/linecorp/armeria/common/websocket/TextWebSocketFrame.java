@@ -20,10 +20,12 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
+import com.linecorp.armeria.internal.common.ByteBufBinaryData;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 
@@ -32,8 +34,7 @@ import io.netty.buffer.ByteBuf;
  *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
  */
-@UnstableApi
-public final class TextWebSocketFrame extends WebSocketFrameWrapper {
+final class TextWebSocketFrame extends DefaultWebSocketFrame {
 
     @Nullable
     private String text;
@@ -44,26 +45,23 @@ public final class TextWebSocketFrame extends WebSocketFrameWrapper {
     }
 
     TextWebSocketFrame(byte[] text, boolean finalFragment) {
-        super(new ByteArrayWebSocketFrame(WebSocketFrameType.TEXT, text, finalFragment));
+        this(new ByteArrayBinaryData(text), finalFragment);
     }
 
     TextWebSocketFrame(ByteBuf binary, boolean finalFragment) {
-        super(new ByteBufWebSocketFrame(WebSocketFrameType.TEXT, binary, finalFragment));
+        this(new ByteBufBinaryData(binary, true), finalFragment);
     }
 
-    /**
-     * Returns the text data in this frame.
-     */
+    private TextWebSocketFrame(BinaryData binaryData, boolean finalFragment) {
+        super(WebSocketFrameType.TEXT, binaryData, finalFragment, true, false);
+    }
+
+    @Override
     public String text() {
         if (text != null) {
             return text;
         }
-
-        final WebSocketFrame delegate = delegate();
-        if (delegate.isPooled()) {
-            return text = delegate.byteBuf().toString(StandardCharsets.UTF_8);
-        }
-        return text = new String(delegate.array());
+        return super.text();
     }
 
     @Override
@@ -87,9 +85,7 @@ public final class TextWebSocketFrame extends WebSocketFrameWrapper {
     }
 
     @Override
-    public String toString() {
-        return toString(MoreObjects.toStringHelper(this))
-                .add("text", text)
-                .toString();
+    void addToString(ToStringHelper toStringHelper) {
+        toStringHelper.add("text", text);
     }
 }

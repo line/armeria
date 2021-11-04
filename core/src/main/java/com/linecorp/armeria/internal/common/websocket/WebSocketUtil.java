@@ -31,6 +31,30 @@ import io.netty.util.AttributeMap;
 
 public final class WebSocketUtil {
 
+    private static final AttributeKey<StreamWriter<HttpObject>> WEB_SOCKET_STREAM =
+            AttributeKey.valueOf(WebSocketUtil.class, "WEB_SOCKET_STREAM");
+
+    public static void setWebSocketInboundStream(AttributeMap attributeMap, StreamWriter<HttpObject> writer) {
+        requireNonNull(attributeMap, "attributeMap");
+        requireNonNull(writer, "writer");
+        attributeMap.attr(WEB_SOCKET_STREAM).set(writer);
+    }
+
+    public static void closeWebSocketInboundStream(AttributeMap attributeMap) {
+        requireNonNull(attributeMap, "attributeMap");
+        if (attributeMap.hasAttr(WEB_SOCKET_STREAM)) {
+            attributeMap.attr(WEB_SOCKET_STREAM).get().close();
+        }
+    }
+
+    public static void closeWebSocketInboundStream(AttributeMap attributeMap, Throwable cause) {
+        requireNonNull(attributeMap, "attributeMap");
+        requireNonNull(cause, "cause");
+        if (attributeMap.hasAttr(WEB_SOCKET_STREAM)) {
+            attributeMap.attr(WEB_SOCKET_STREAM).get().close(cause);
+        }
+    }
+
     public static boolean isHttp1WebSocketUpgradeRequest(RequestHeaders headers) {
         requireNonNull(headers, "headers");
         // GET /chat HTTP/1.1
@@ -61,30 +85,6 @@ public final class WebSocketUtil {
         // ...
         return headers.method() == HttpMethod.CONNECT &&
                HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(headers.get(HttpHeaderNames.PROTOCOL));
-    }
-
-    private static final AttributeKey<StreamWriter<HttpObject>> WEB_SOCKET_STREAM =
-            AttributeKey.valueOf(WebSocketUtil.class, "WEB_SOCKET_STREAM");
-
-    public static void setWebSocketInboundStream(AttributeMap attributeMap, StreamWriter<HttpObject> writer) {
-        requireNonNull(attributeMap, "attributeMap");
-        requireNonNull(writer, "writer");
-        attributeMap.attr(WEB_SOCKET_STREAM).set(writer);
-    }
-
-    public static void closeWebSocketInboundStream(AttributeMap attributeMap) {
-        requireNonNull(attributeMap, "attributeMap");
-        if (attributeMap.hasAttr(WEB_SOCKET_STREAM)) {
-            attributeMap.attr(WEB_SOCKET_STREAM).get().close();
-        }
-    }
-
-    public static void closeWebSocketInboundStream(AttributeMap attributeMap, Throwable cause) {
-        requireNonNull(attributeMap, "attributeMap");
-        requireNonNull(cause, "cause");
-        if (attributeMap.hasAttr(WEB_SOCKET_STREAM)) {
-            attributeMap.attr(WEB_SOCKET_STREAM).get().close(cause);
-        }
     }
 
     static int intMask(byte[] mask) {

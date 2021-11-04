@@ -18,9 +18,11 @@ package com.linecorp.armeria.common.websocket;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
+import com.linecorp.armeria.internal.common.ByteBufBinaryData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
@@ -32,31 +34,31 @@ import io.netty.buffer.Unpooled;
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
  */
 @UnstableApi
-public final class CloseWebSocketFrame extends WebSocketFrameWrapper {
+public final class CloseWebSocketFrame extends DefaultWebSocketFrame {
 
     private final WebSocketCloseStatus status;
     private final String reason;
 
     CloseWebSocketFrame(byte[] binary) {
-        super(new ByteArrayWebSocketFrame(WebSocketFrameType.CLOSE, binary, true));
-        final ByteBuf byteBuf = Unpooled.wrappedBuffer(binary);
-        status = status(byteBuf);
-        reason = reason(byteBuf);
-    }
-
-    CloseWebSocketFrame(WebSocketCloseStatus status, String reason) {
-        this(binary(validateStatusCode(status.code()), reason), status, reason);
+        this(new ByteArrayBinaryData(binary), Unpooled.wrappedBuffer(binary));
     }
 
     CloseWebSocketFrame(ByteBuf binary) {
-        this(binary, null, null);
+        this(new ByteBufBinaryData(binary, true), binary);
     }
 
-    private CloseWebSocketFrame(ByteBuf binary, @Nullable WebSocketCloseStatus status,
-                                @Nullable String reason) {
-        super(new ByteBufWebSocketFrame(WebSocketFrameType.CLOSE, binary, true));
-        this.status = status != null ? status : status(binary);
-        this.reason = reason != null ? reason : reason(binary);
+    CloseWebSocketFrame(WebSocketCloseStatus status, String reason) {
+        this(new ByteBufBinaryData(binary(validateStatusCode(status.code()), reason), false), status, reason);
+    }
+
+    private CloseWebSocketFrame(BinaryData binaryData, ByteBuf binary) {
+        this(binaryData, status(binary), reason(binary));
+    }
+
+    private CloseWebSocketFrame(BinaryData binaryData, WebSocketCloseStatus status, String reason) {
+        super(WebSocketFrameType.CLOSE, binaryData, true, false, false);
+        this.status = status;
+        this.reason = reason;
     }
 
     /**
@@ -143,10 +145,8 @@ public final class CloseWebSocketFrame extends WebSocketFrameWrapper {
     }
 
     @Override
-    public String toString() {
-        return toString(MoreObjects.toStringHelper(this).omitNullValues())
-                .add("status", status)
-                .add("reason", reason)
-                .toString();
+    void addToString(ToStringHelper toStringHelper) {
+        toStringHelper.add("status", status)
+                      .add("reason", reason);
     }
 }

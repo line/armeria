@@ -30,7 +30,6 @@ import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
-import com.linecorp.armeria.server.HttpServerPipelineConfigurator.WebSocketUpgradeContext;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -46,11 +45,12 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
+
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final Http1HeaderNaming http1HeaderNaming;
-    private final WebSocketUpgradeContext webSocketUpgradeContext = new WebSocketUpgradeContext();
+    private final WebSocketUpgradeContext webSocketUpgradeContext;
 
     private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
@@ -58,12 +58,14 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private int lastResponseHeadersId;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
-                             boolean enableDateHeader, boolean enableServerHeader,
-                             Http1HeaderNaming http1HeaderNaming) {
+                             boolean isWebSocketServiceEnabled, boolean enableDateHeader,
+                             boolean enableServerHeader, Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
         assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
                keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
+        webSocketUpgradeContext = isWebSocketServiceEnabled ? new DefaultWebSocketUpgradeContext()
+                                                            : NoopWebSocketUpgradeContext.INSTANCE;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
         this.http1HeaderNaming = http1HeaderNaming;
@@ -224,5 +226,84 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
                 id, streamId, serviceConfig, status, message, cause);
 
         return future.addListener(ChannelFutureListener.CLOSE);
+    }
+
+    interface WebSocketUpgradeContext {
+        void setLastWebSocketUpgradeRequestId(int id);
+
+        int lastWebSocketUpgradeRequestId();
+
+        void setWebSocketEstablished(boolean success);
+
+        boolean webSocketEstablished();
+
+        void setWebSocketUpgradeListener(WebSocketUpgradeListener listener);
+    }
+
+    @FunctionalInterface
+    interface WebSocketUpgradeListener {
+        void upgraded(boolean success);
+    }
+
+    static final class DefaultWebSocketUpgradeContext implements WebSocketUpgradeContext {
+
+        private int lastWebSocketUpgradeRequestId = -1;
+
+        private boolean webSocketEstablished;
+        @SuppressWarnings("NotNullFieldNotInitialized")
+        private WebSocketUpgradeListener listener;
+
+        @Override
+        public void setLastWebSocketUpgradeRequestId(int id) {
+            lastWebSocketUpgradeRequestId = id;
+        }
+
+        @Override
+        public int lastWebSocketUpgradeRequestId() {
+            return lastWebSocketUpgradeRequestId;
+        }
+
+        @Override
+        public void setWebSocketEstablished(boolean success) {
+            webSocketEstablished = success;
+            if (!success) {
+                lastWebSocketUpgradeRequestId = -1; // reset
+            }
+            listener.upgraded(success);
+        }
+
+        @Override
+        public boolean webSocketEstablished() {
+            return webSocketEstablished;
+        }
+
+        @Override
+        public void setWebSocketUpgradeListener(WebSocketUpgradeListener listener) {
+            this.listener = listener;
+        }
+    }
+
+    private enum NoopWebSocketUpgradeContext implements WebSocketUpgradeContext {
+
+        INSTANCE;
+
+        @Override
+        public void setLastWebSocketUpgradeRequestId(int id) {}
+
+        @Override
+        public int lastWebSocketUpgradeRequestId() {
+            return -1;
+        }
+
+        @Override
+        public void setWebSocketEstablished(boolean success) {}
+
+        @Override
+        public boolean webSocketEstablished() {
+            return false;
+        }
+
+        @Override
+        public void setWebSocketUpgradeListener(WebSocketUpgradeListener listener) {}
     }
 }

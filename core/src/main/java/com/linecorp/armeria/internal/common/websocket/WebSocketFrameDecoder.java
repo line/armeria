@@ -61,7 +61,6 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private final WebSocketCloseHandler webSocketCloseHandler;
     private final boolean expectMaskedFrames;
 
-    private int fragmentedFramesCount;
     private boolean frameFinalFlag;
     private boolean frameMasked;
     private int frameRsv;
@@ -70,6 +69,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private byte[] maskingKey;
     private int framePayloadLen1;
     private boolean receivedClosingHandshake;
+    private int currentFragmentOpcode = -1;
     private State state = State.READING_FIRST;
 
     public WebSocketFrameDecoder(RequestContext ctx, WebSocketDecoderConfig config,
@@ -173,15 +173,15 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         }
 
                         // check opcode vs message fragmentation state 1/2
-                        if (fragmentedFramesCount == 0 &&
+                        if (currentFragmentOpcode == -1 &&
                             frameOpcode == WebSocketFrameType.CONTINUATION.opcode()) {
                             protocolViolation("received continuation data frame outside fragmented message");
                             return;
                         }
 
                         // check opcode vs message fragmentation state 2/2
-                        if (fragmentedFramesCount != 0 && frameOpcode !=
-                                                          WebSocketFrameType.CONTINUATION.opcode()) {
+                        if (currentFragmentOpcode != -1 &&
+                            frameOpcode != WebSocketFrameType.CONTINUATION.opcode()) {
                             protocolViolation(
                                     "received non-continuation data frame while inside fragmented message");
                             return;
@@ -286,11 +286,8 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                             continue;
                         }
 
-                        if (frameFinalFlag) {
-                            fragmentedFramesCount = 0;
-                        } else {
-                            // Increment counter
-                            fragmentedFramesCount++;
+                        if (!frameFinalFlag && currentFragmentOpcode == -1) {
+                            currentFragmentOpcode = frameOpcode;
                         }
 
                         // Return the frame
@@ -301,11 +298,17 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                             out.add(WebSocketFrame.ofPooledBinary(payloadBuffer, frameFinalFlag));
                             payloadBuffer = null;
                         } else if (frameOpcode == WebSocketFrameType.CONTINUATION.opcode()) {
-                            out.add(WebSocketFrame.ofPooledContinuation(payloadBuffer, frameFinalFlag));
+                            final boolean isText = currentFragmentOpcode == WebSocketFrameType.TEXT.opcode() ?
+                                                   true : false;
+                            out.add(WebSocketFrame.ofPooledContinuation(payloadBuffer, frameFinalFlag, isText));
                             payloadBuffer = null;
                         } else {
                             protocolViolation(WebSocketCloseStatus.INVALID_MESSAGE_TYPE,
                                               "Cannot decode web socket frame with opcode: " + frameOpcode);
+                        }
+
+                        if (frameFinalFlag) {
+                            currentFragmentOpcode = -1;
                         }
                     } finally {
                         if (payloadBuffer != null) {

@@ -13,48 +13,44 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.internal.common.ByteArrayUtil.generatePreview;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
+import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakHint;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
- * A {@link ByteBuf}-based {@link HttpData}.
+ * A {@link ByteBuf}-based {@link BinaryData}.
  */
-final class ByteBufHttpData implements HttpData, ResourceLeakHint {
-
-    private static final int FLAG_POOLED = 1;
-    private static final int FLAG_END_OF_STREAM = 2;
-    private static final int FLAG_CLOSED = 4;
+public final class ByteBufBinaryData implements BinaryData, ResourceLeakHint {
 
     private final ByteBuf buf;
+    private final Boolean pooled;
+    private boolean closed;
     @Nullable
     private byte[] array;
-    private int flags;
 
-    ByteBufHttpData(ByteBuf buf, boolean pooled) {
-        this(buf, pooled ? FLAG_POOLED : 0, null);
-    }
-
-    private ByteBufHttpData(ByteBuf buf, int flags, @Nullable byte[] array) {
+    /**
+     * Creates a new instance.
+     */
+    public ByteBufBinaryData(ByteBuf buf, boolean pooled) {
         this.buf = buf;
-        this.array = array;
-        this.flags = flags;
+        this.pooled = pooled;
     }
 
     @Override
@@ -64,7 +60,7 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
         }
 
         final int length = buf.readableBytes();
-        if (isPooled()) {
+        if (pooled) {
             buf.touch(this);
             // We don't use the pooled buffer's underlying array here,
             // because it will be in use by others when 'buf' is released.
@@ -104,14 +100,10 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder strBuf = tempThreadLocals.stringBuilder();
             strBuf.append('{').append(length).append("B, ");
-
-            if (isEndOfStream()) {
-                strBuf.append("EOS, ");
-            }
             if (isPooled()) {
                 strBuf.append("pooled, ");
             }
-            if ((flags & FLAG_CLOSED) != 0) {
+            if (closed) {
                 if (buf.refCnt() == 0) {
                     return strBuf.append("closed}").toString();
                 } else {
@@ -119,12 +111,37 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
                 }
             }
 
-            final byte[] array = this.array;
-            final ByteBuf buf = this.buf;
+            // Generate the preview array.
+            final int previewLength = Math.min(16, length);
+            byte[] array = this.array;
+            final int offset;
+            if (array == null) {
+                try {
+                    if (buf.hasArray()) {
+                        array = buf.array();
+                        offset = buf.arrayOffset() + buf.readerIndex();
+                    } else if (!hint) {
+                        array = ByteBufUtil.getBytes(buf, buf.readerIndex(), previewLength);
+                        offset = 0;
+                        if (previewLength == length) {
+                            this.array = array;
+                        }
+                    } else {
+                        // Can't call getBytes() when generating the hint string
+                        // because it will also create a leak record.
+                        return strBuf.append("<unknown>}").toString();
+                    }
+                } catch (IllegalReferenceCountException e) {
+                    // Shouldn't really happen when used ByteBuf correctly,
+                    // but we just don't make toString() fail because of this.
+                    return strBuf.append("badRefCnt}").toString();
+                }
+            } else {
+                offset = 0;
+            }
 
-            this.array = generatePreview(strBuf, array, buf, length, hint);
-            strBuf.append('}');
-            return strBuf.toString();
+            return ByteArrayBinaryData.appendPreviews(strBuf, array, offset, previewLength)
+                                      .append('}').toString();
         }
     }
 
@@ -143,32 +160,28 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
     }
 
     @Override
-    public boolean isEndOfStream() {
-        return (flags & FLAG_END_OF_STREAM) != 0;
-    }
-
-    @Override
-    public ByteBufHttpData withEndOfStream(boolean endOfStream) {
-        if (isEndOfStream() == endOfStream) {
-            return this;
-        }
-
-        int newFlags = flags & ~FLAG_END_OF_STREAM;
-        if (endOfStream) {
-            newFlags |= FLAG_END_OF_STREAM;
-        }
-
-        return new ByteBufHttpData(buf, newFlags, array);
-    }
-
-    @Override
     public boolean isPooled() {
-        return (flags & FLAG_POOLED) != 0;
+        return pooled;
     }
 
     @Override
     public ByteBuf byteBuf(ByteBufAccessMode mode) {
-        return PooledObjects.byteBuf(buf, mode);
+        switch (requireNonNull(mode, "mode")) {
+            case DUPLICATE:
+                return buf.duplicate();
+            case RETAINED_DUPLICATE:
+                return buf.retainedDuplicate();
+            case FOR_IO:
+                if (buf.isDirect()) {
+                    return buf.retainedDuplicate();
+                }
+
+                final ByteBuf copy = newDirectByteBuf();
+                copy.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+                return copy;
+        }
+
+        throw new Error(); // Never reaches here.
     }
 
     @Override
@@ -192,6 +205,10 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
         throw new Error(); // Never reaches here.
     }
 
+    private ByteBuf newDirectByteBuf() {
+        return newDirectByteBuf(buf.readableBytes());
+    }
+
     private static ByteBuf newDirectByteBuf(int length) {
         return PooledByteBufAllocator.DEFAULT.directBuffer(length);
     }
@@ -207,9 +224,11 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
     public void close() {
         // This is not thread safe, but an attempt to close one instance from multiple threads would fail
         // with an IllegalReferenceCountException anyway.
-        if ((flags & (FLAG_POOLED | FLAG_CLOSED)) == FLAG_POOLED) {
-            flags |= FLAG_CLOSED;
-            buf.release();
+        if (!closed) {
+            closed = true;
+            if (pooled) {
+                buf.release();
+            }
         }
     }
 
@@ -227,7 +246,7 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof HttpData)) {
+        if (!(obj instanceof ByteBufBinaryData)) {
             return false;
         }
 
@@ -235,7 +254,7 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
             return true;
         }
 
-        final HttpData that = (HttpData) obj;
+        final ByteBufBinaryData that = (ByteBufBinaryData) obj;
         if (buf.readableBytes() != that.length()) {
             return false;
         }

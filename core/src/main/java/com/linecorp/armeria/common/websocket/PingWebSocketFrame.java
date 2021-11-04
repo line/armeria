@@ -15,17 +15,25 @@
  */
 package com.linecorp.armeria.common.websocket;
 
+import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
+import com.linecorp.armeria.internal.common.ByteBufBinaryData;
+
 import io.netty.buffer.ByteBuf;
 
-final class PingWebSocketFrame extends WebSocketFrameWrapper {
+final class PingWebSocketFrame extends DefaultWebSocketFrame {
 
     static final PingWebSocketFrame emptyPing = new PingWebSocketFrame(new byte[0]);
 
     PingWebSocketFrame(byte[] binary) {
-        super(new ByteArrayWebSocketFrame(WebSocketFrameType.PING, binary, true));
+        this(new ByteArrayBinaryData(binary));
     }
 
     PingWebSocketFrame(ByteBuf binary) {
-        super(new ByteBufWebSocketFrame(WebSocketFrameType.PING, binary, true));
+        this(new ByteBufBinaryData(binary, true));
+    }
+
+    private PingWebSocketFrame(BinaryData binaryData) {
+        super(WebSocketFrameType.PING, binaryData, true, false, false);
     }
 }

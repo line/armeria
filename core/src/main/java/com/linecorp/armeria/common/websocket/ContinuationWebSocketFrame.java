@@ -15,15 +15,23 @@
  */
 package com.linecorp.armeria.common.websocket;
 
+import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
+import com.linecorp.armeria.internal.common.ByteBufBinaryData;
+
 import io.netty.buffer.ByteBuf;
 
-final class ContinuationWebSocketFrame extends WebSocketFrameWrapper {
+final class ContinuationWebSocketFrame extends DefaultWebSocketFrame {
 
-    ContinuationWebSocketFrame(byte[] binary, boolean finalFragment) {
-        super(new ByteArrayWebSocketFrame(WebSocketFrameType.CONTINUATION, binary, finalFragment));
+    ContinuationWebSocketFrame(byte[] binary, boolean finalFragment, boolean isText) {
+        this(new ByteArrayBinaryData(binary), finalFragment, isText);
     }
 
-    ContinuationWebSocketFrame(ByteBuf binary, boolean finalFragment) {
-        super(new ByteBufWebSocketFrame(WebSocketFrameType.CONTINUATION, binary, finalFragment));
+    ContinuationWebSocketFrame(ByteBuf binary, boolean finalFragment, boolean isText) {
+        this(new ByteBufBinaryData(binary, true), finalFragment, isText);
+    }
+
+    private ContinuationWebSocketFrame(BinaryData binaryData, boolean finalFragment, boolean isText) {
+        super(WebSocketFrameType.CONTINUATION, binaryData, finalFragment, isText, !isText);
     }
 }

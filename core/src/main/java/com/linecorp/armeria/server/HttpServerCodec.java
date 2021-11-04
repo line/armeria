@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Queue;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.HttpServerPipelineConfigurator.WebSocketUpgradeContext;
+import com.linecorp.armeria.server.ServerHttp1ObjectEncoder.WebSocketUpgradeContext;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -57,9 +57,7 @@ final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDeco
     // - Added a logic that does not decode HTTP palyoad when WebSocketSession is established.
 
     /** A queue that is used for correlating a request and a response. */
-    private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
-
-    private boolean webSocketEstablished;
+    private final Queue<HttpMethod> queue = new ArrayDeque<>();
 
     /**
      * Creates a new instance with the specified decoder options.

@@ -15,17 +15,25 @@
  */
 package com.linecorp.armeria.common.websocket;
 
+import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
+import com.linecorp.armeria.internal.common.ByteBufBinaryData;
+
 import io.netty.buffer.ByteBuf;
 
-final class PongWebSocketFrame extends WebSocketFrameWrapper {
+final class PongWebSocketFrame extends DefaultWebSocketFrame {
 
     static final PongWebSocketFrame emptyPong = new PongWebSocketFrame(new byte[0]);
 
     PongWebSocketFrame(byte[] binary) {
-        super(new ByteArrayWebSocketFrame(WebSocketFrameType.PONG, binary, true));
+        this(new ByteArrayBinaryData(binary));
     }
 
     PongWebSocketFrame(ByteBuf binary) {
-        super(new ByteBufWebSocketFrame(WebSocketFrameType.PONG, binary, true));
+        this(new ByteBufBinaryData(binary, true));
+    }
+
+    private PongWebSocketFrame(BinaryData binaryData) {
+        super(WebSocketFrameType.PONG, binaryData, true, false, false);
     }
 }

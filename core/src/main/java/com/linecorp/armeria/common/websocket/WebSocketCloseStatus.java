@@ -32,6 +32,7 @@ package com.linecorp.armeria.common.websocket;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -241,6 +242,7 @@ public final class WebSocketCloseStatus {
 
     private final int statusCode;
     private final String reasonText;
+    @Nullable
     private String text;
 
     private WebSocketCloseStatus(int statusCode, String reasonText) {

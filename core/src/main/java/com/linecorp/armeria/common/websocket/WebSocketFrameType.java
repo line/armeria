@@ -51,7 +51,7 @@ public enum WebSocketFrameType {
     }
 
     /**
-     * Tells whether this frams is one of {@link #CLOSE}, {@link #PING}, and {@link #PONG}.
+     * Tells whether this frame is one of {@link #CLOSE}, {@link #PING}, and {@link #PONG}.
      */
     public boolean isControlFrame() {
         return opcode > 7;

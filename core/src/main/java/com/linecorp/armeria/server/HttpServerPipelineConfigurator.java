@@ -208,9 +208,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler,
-                config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
-                config.http1HeaderNaming()
-        );
+                config.isWebSocketServiceEnabled(), config.isDateHeaderEnabled(),
+                config.isServerHeaderEnabled(), config.http1HeaderNaming());
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
         p.addLast(new HttpServerHandler(configHolder,
@@ -502,8 +501,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             }
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
-                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
-                    config.http1HeaderNaming());
+                    ch, H1, keepAliveHandler, config.isWebSocketServiceEnabled(), config.isDateHeaderEnabled(),
+                    config.isServerHeaderEnabled(), config.http1HeaderNaming());
             // TODO(minwoox): Consider combining HttpServerRequestDecoder in Netty with Http1RequestDecoder
             final HttpServerCodec httpServerCodec = new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
@@ -628,43 +627,5 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             p.addAfter(baseName, null, handler);
             return p.context(handler).name();
         }
-    }
-
-    static final class WebSocketUpgradeContext {
-
-        private int lastWebSocketUpgradeRequestId = -1;
-
-        private boolean webSocketEstablished;
-        private WebSocketUpgradeListener listener;
-
-        void setLastWebSocketUpgradeRequestId(int id) {
-            lastWebSocketUpgradeRequestId = id;
-        }
-
-        int lastWebSocketUpgradeRequestId() {
-            return lastWebSocketUpgradeRequestId;
-        }
-
-        void setWebSocketEstablished(boolean success) {
-            webSocketEstablished = success;
-            if (!success) {
-                lastWebSocketUpgradeRequestId = -1; // reset
-            }
-            listener.upgraded(success);
-        }
-
-        boolean webSocketEstablished() {
-            return webSocketEstablished;
-        }
-
-        void setWebSocketUpgradeListener(WebSocketUpgradeListener listener) {
-            this.listener = listener;
-        }
-    }
-
-    @FunctionalInterface
-    interface WebSocketUpgradeListener {
-
-        void upgraded(boolean success);
     }
 }
