@@ -36,8 +36,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 
 import java.nio.CharBuffer;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -47,7 +45,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpRequest;
@@ -68,14 +65,8 @@ final class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.UpgradeC
     // Forked from http://github.com/netty/netty/blob/cf624c93c5f97097f1b13fe926ed50c32c8b1430/codec-http2/src/main/java/io/netty/handler/codec/http2/Http2ServerUpgradeCodec.java
 
     private static final Logger logger = LoggerFactory.getLogger(Http2ServerUpgradeCodec.class);
-    private static final List<CharSequence> REQUIRED_UPGRADE_HEADERS =
-            Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
-    private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
 
-    @Nullable
-    private final String handlerName;
     private final Http2ConnectionHandler connectionHandler;
-    private final ChannelHandler[] handlers;
     private final Http2FrameReader frameReader;
 
     @Nullable
@@ -88,9 +79,7 @@ final class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.UpgradeC
      * @param connectionHandler the HTTP/2 connection handler
      */
     Http2ServerUpgradeCodec(Http2ConnectionHandler connectionHandler) {
-        handlerName = null;
         this.connectionHandler = connectionHandler;
-        handlers = EMPTY_HANDLERS;
         frameReader = new DefaultHttp2FrameReader();
     }
 
@@ -117,16 +106,7 @@ final class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.UpgradeC
     public void upgradeTo(ChannelHandlerContext ctx) {
         try {
             // Add the HTTP/2 connection handler to the pipeline immediately following the current handler.
-            ctx.pipeline().addAfter(ctx.name(), handlerName, connectionHandler);
-
-            // Add also all extra handlers as these may handle events / messages produced by the
-            // connectionHandler. See https://github.com/netty/netty/issues/9314
-            if (handlers != null) {
-                final String name = ctx.pipeline().context(connectionHandler).name();
-                for (int i = handlers.length - 1; i >= 0; i--) {
-                    ctx.pipeline().addAfter(name, null, handlers[i]);
-                }
-            }
+            ctx.pipeline().addAfter(ctx.name(), null, connectionHandler);
             connectionHandler.onHttpServerUpgrade(settings);
         } catch (Http2Exception e) {
             ctx.fireExceptionCaught(e);

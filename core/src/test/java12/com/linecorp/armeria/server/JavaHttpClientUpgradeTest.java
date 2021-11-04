@@ -60,7 +60,7 @@ class JavaHttpClientUpgradeTest {
             ThreadLocalRandom.current().nextBytes(bytes);
 
             final HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request =
+            final HttpRequest request =
                     HttpRequest.newBuilder()
                                .uri(server.httpUri().resolve("/echo"))
                                .POST(HttpRequest.BodyPublishers.ofByteArray(bytes))

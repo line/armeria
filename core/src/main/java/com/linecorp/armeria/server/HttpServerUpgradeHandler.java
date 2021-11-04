@@ -39,6 +39,7 @@ import java.util.List;
 
 import com.google.common.base.Splitter;
 
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.Unpooled;
@@ -72,7 +73,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
 
     /**
-     * A codec that the source can be upgraded to.
+     * A codec that the source can be upgraded to {@link SessionProtocol#H2C}.
      */
     interface UpgradeCodec {
         /**
@@ -82,8 +83,6 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
          * returned, the upgrade is aborted and the {@code upgradeRequest} will be passed through the inbound
          * pipeline as if no upgrade was performed. If {@code true} is returned, the upgrade will proceed to
          * the next step which invokes {@link #upgradeTo}.
-         * When returning {@code true}, you can add headers to the {@code upgradeHeaders} so that they are
-         * added to the 101 Switching protocols response.
          */
         boolean prepareUpgradeResponse(ChannelHandlerContext ctx, HttpRequest upgradeRequest);
 
@@ -97,16 +96,12 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
     }
 
     /**
-     * Creates a new {@link UpgradeCodec} for the requested protocol name.
+     * Creates a new {@link UpgradeCodec} for {@link SessionProtocol#H2C} upgrade.
      */
     @FunctionalInterface
-    public interface UpgradeCodecFactory {
+    interface UpgradeCodecFactory {
         /**
-         * Invoked by {@link HttpServerUpgradeHandler} for all the requested protocol names in the order of
-         * the client preference. The first non-{@code null} {@link UpgradeCodec} returned by this method
-         * will be selected.
-         *
-         * @return a new {@link UpgradeCodec}, or {@code null} if the specified protocol name is not supported
+         * Invoked by {@link HttpServerUpgradeHandler} for {@link SessionProtocol#H2C}.
          */
         UpgradeCodec newUpgradeCodec();
     }
@@ -217,7 +212,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
 
         if (handlingUpgrade && msg instanceof LastHttpContent) {
             // The client should send a full payload body before sending HTTP/2 frames.
-            // Hence, the sourceCodec could be safely removed with LastHttpContent.
+            // Hence, 'sourceCodec' could be lazily removed with the 'LastHttpContent'.
             // https://datatracker.ietf.org/doc/html/rfc7540#section-3.2
             sourceCodec.upgradeFrom(ctx);
             ctx.pipeline().remove(this);
