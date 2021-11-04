@@ -185,7 +185,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead();
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
-        if (res == null) {
+        if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Received a late HEADERS frame for a closed stream: {}",
@@ -234,7 +234,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         final int dataLength = data.readableBytes();
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
-        if (res == null) {
+        if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Received a late DATA frame for a closed stream: {}",
@@ -295,7 +295,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         keepAliveChannelRead();
         final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
-        if (res == null) {
+        if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Received a late RST_STREAM frame for a closed stream: {}",
