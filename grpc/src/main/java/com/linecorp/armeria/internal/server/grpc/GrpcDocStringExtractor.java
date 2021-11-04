@@ -24,11 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.DescriptorProtos.DescriptorProto;
 import com.google.protobuf.DescriptorProtos.EnumDescriptorProto;
 import com.google.protobuf.DescriptorProtos.FieldDescriptorProto;
@@ -67,13 +69,16 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcDocStringExtractor.class);
 
+    private static final Set<String> acceptableExtensions =
+            ImmutableSet.of(".bin", ".desc", ".dsc", ".pb", ".protobin");
+
     GrpcDocStringExtractor() {
         super("META-INF/armeria/grpc", "com.linecorp.armeria.grpc.descriptorDir");
     }
 
     @Override
     protected boolean acceptFile(String filename) {
-        return filename.endsWith(".dsc");
+        return acceptableExtensions.stream().anyMatch(filename::endsWith);
     }
 
     @Override
