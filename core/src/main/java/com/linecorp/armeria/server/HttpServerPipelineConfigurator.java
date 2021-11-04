@@ -68,7 +68,6 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
@@ -84,7 +83,6 @@ import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2InboundFrameLogger;
 import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
-import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
@@ -601,15 +599,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             baseName = addAfter(p, baseName, http1codec);
             baseName = addAfter(p, baseName, new HttpServerUpgradeHandler(
                     http1codec,
-                    protocol -> {
-                        if (!AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-                            return null;
-                        }
-
-                        return new Http2ServerUpgradeCodec(
-                                newHttp2ConnectionHandler(p, SCHEME_HTTP));
-                    },
-                    UPGRADE_REQUEST_MAX_LENGTH));
+                    () -> new Http2ServerUpgradeCodec(newHttp2ConnectionHandler(p, SCHEME_HTTP))));
 
             addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder));
         }

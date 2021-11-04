@@ -38,6 +38,7 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -45,14 +46,12 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpExpectationFailedEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -326,7 +325,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             ctx.fireChannelRead(DEFAULT_HTTP2_SETTINGS);
 
             // Continue handling the upgrade request after the upgrade is complete.
-            final FullHttpRequest nettyReq = ((UpgradeEvent) evt).upgradeRequest();
+            final HttpRequest nettyReq = ((UpgradeEvent) evt).upgradeRequest();
 
             // Remove the headers related with the upgrade.
             nettyReq.headers().remove(HttpHeaderNames.CONNECTION);
@@ -334,14 +333,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             nettyReq.headers().remove(Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER);
 
             if (logger.isDebugEnabled()) {
-                logger.debug("{} Handling the pre-upgrade request ({}): {} {} {} ({}B)",
+                logger.debug("{} Handling the pre-upgrade request ({}): {} {} {}",
                              ctx.channel(), ((UpgradeEvent) evt).protocol(),
-                             nettyReq.method(), nettyReq.uri(), nettyReq.protocolVersion(),
-                             nettyReq.content().readableBytes());
+                             nettyReq.method(), nettyReq.uri(), nettyReq.protocolVersion());
             }
 
             channelRead(ctx, nettyReq);
-            channelReadComplete(ctx);
             return;
         }
         if (evt instanceof InitiateConnectionShutdown) {
