@@ -30,7 +30,7 @@ import io.netty.util.ResourceLeakHint;
 /**
  * A {@code byte[]}-based {@link HttpData}.
  */
-class DefaultHttpData implements HttpData, ResourceLeakHint {
+final class DefaultHttpData implements HttpData, ResourceLeakHint {
 
     static final DefaultHttpData empty = new DefaultHttpData(ByteArrayBinaryData.empty(), false);
     static final DefaultHttpData emptyEos = new DefaultHttpData(ByteArrayBinaryData.empty(), true);
