@@ -118,7 +118,7 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
             {specification.getTypeSignatureHtml(variable.typeSignature)}
           </code>
         </TableCell>
-        <TableCell>{variable.docString}</TableCell>
+        <TableCell><pre>{variable.docString}</pre></TableCell>
         {hasChildren && (
           <TableCell>{expanded ? <ExpandLess /> : <ExpandMore />}</TableCell>
         )}
