@@ -20,6 +20,16 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implements WebSocketWriter {
 
     @Override
+    public boolean tryWrite(WebSocketFrame obj) {
+        final boolean written = super.tryWrite(obj);
+        if (written && obj.type() == WebSocketFrameType.CLOSE) {
+            // Close the stream if a close frame is written.
+            super.close();
+        }
+        return written;
+    }
+
+    @Override
     public void write(String text, boolean finalFragment) {
         write(WebSocketFrame.ofText(text, finalFragment));
     }

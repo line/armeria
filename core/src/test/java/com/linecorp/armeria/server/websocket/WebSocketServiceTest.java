@@ -60,8 +60,6 @@ class WebSocketServiceTest {
         @Override
         void onOpen(WebSocketWriter writer) {
             writer.close();
-            // write after close is ignored.
-            writer.write("foo");
         }
     };
 

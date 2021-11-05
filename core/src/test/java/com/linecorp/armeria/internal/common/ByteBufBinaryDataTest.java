@@ -22,8 +22,6 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.ByteBufAccessMode;
-import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
-import com.linecorp.armeria.internal.common.ByteBufBinaryData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

@@ -274,9 +274,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         settings.maxConcurrentStreams(Math.min(config.http2MaxStreamsPerConnection(), Integer.MAX_VALUE));
         settings.maxHeaderListSize(config.http2MaxHeaderListSize());
 
-        // Set SETTINGS_ENABLE_CONNECT_PROTOCOL to support protocol upgrades.
-        // See: https://datatracker.ietf.org/doc/html/rfc8441#section-3
-        settings.put((char) 0x8, (Long) 1L);
+        if (config.isWebSocketServiceEnabled()) {
+            // Set SETTINGS_ENABLE_CONNECT_PROTOCOL to support protocol upgrades.
+            // See: https://datatracker.ietf.org/doc/html/rfc8441#section-3
+            settings.put((char) 0x8, (Long) 1L);
+        }
 
         return settings;
     }

@@ -22,8 +22,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.common.ByteBufAccessMode;
-import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
-import com.linecorp.armeria.internal.common.ByteBufBinaryData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
