@@ -29,5 +29,6 @@ class DefaultWebSocketTest {
         streaming.write("foo");
         streaming.close(WebSocketCloseStatus.NORMAL_CLOSURE);
         assertThatThrownBy(() -> streaming.write("bar")).isInstanceOf(ClosedStreamException.class);
+        streaming.abort();
     }
 }

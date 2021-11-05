@@ -95,8 +95,10 @@ class WebSocketFrameEncoderAndDecoderTest {
     @Test
     public void testWebSocketProtocolViolation() throws InterruptedException {
         final int maxPayloadLength = 255;
+        final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
-        final WebSocketFrameDecoder decoder = frameDecoder(encoder, maxPayloadLength, false, true);
+        final WebSocketFrameDecoder decoder = frameDecoder(encoder, httpResponseWriter,
+                                                           maxPayloadLength, false, true);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(whenComplete));
@@ -113,11 +115,13 @@ class WebSocketFrameEncoderAndDecoderTest {
                     "Max frame length of " + maxPayloadLength + " has been exceeded.");
             return null;
         }).join();
+        httpResponseWriter.abort();
     }
 
-    private static WebSocketFrameDecoder frameDecoder(WebSocketFrameEncoder encoder, int maxPayloadLength,
+    private static WebSocketFrameDecoder frameDecoder(WebSocketFrameEncoder encoder,
+                                                      HttpResponseWriter httpResponseWriter,
+                                                      int maxPayloadLength,
                                                       boolean allowMaskMismatch, boolean maskPayload) {
-        final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketDecoderConfig config = WebSocketDecoderConfig.builder()
                                                                     .allowMaskMismatch(allowMaskMismatch)
                                                                     .maxFramePayloadLength(maxPayloadLength)
@@ -130,12 +134,14 @@ class WebSocketFrameEncoderAndDecoderTest {
     @ParameterizedTest
     public void testWebSocketEncodingAndDecoding(boolean maskPayload, boolean allowMaskMismatch)
             throws InterruptedException {
+        final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(maskPayload);
-        final WebSocketFrameDecoder decoder = frameDecoder(encoder, 1024 * 1024,
+        final WebSocketFrameDecoder decoder = frameDecoder(encoder, httpResponseWriter, 1024 * 1024,
                                                            allowMaskMismatch, maskPayload);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(new CompletableFuture<>()));
         executeTests(encoder, requestWriter);
+        httpResponseWriter.abort();
     }
 
     private static void executeTests(WebSocketFrameEncoder encoder, HttpRequestWriter requestWriter)

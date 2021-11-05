@@ -46,7 +46,7 @@ class DefaultHttpData implements HttpData, ResourceLeakHint {
     private final BinaryData binaryData;
     private final boolean endOfStream;
 
-    DefaultHttpData(BinaryData binaryData) {
+    private DefaultHttpData(BinaryData binaryData) {
         this(binaryData, false);
     }
 
