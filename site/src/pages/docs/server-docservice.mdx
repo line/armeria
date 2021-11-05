@@ -155,6 +155,9 @@ files into the specific location in the class path.
 - Put the generated `.json` file into the `META-INF/armeria/thrift` directory.
 
 ### For gRPC
+
+<Tip>Note that .bin, .desc, .dsc, .pb and .protobin are acceptable descriptor set file extensions.</Tip>
+
 - Configure the protobuf plugin to generate the `.dsc` file that contains the docstrings and
   put it into the `META-INF/armeria/grpc` directory:
 
@@ -201,8 +204,6 @@ files into the specific location in the class path.
     </executions>
   </plugin>
   ```
-
-- Note that `.bin`, `.desc`, `.dsc`, `.pb` and `.protobin` are acceptable descriptor set file extensions.
 
 ### For annotated service
 
