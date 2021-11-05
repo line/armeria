@@ -21,9 +21,9 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
 import com.linecorp.armeria.internal.common.ByteBufBinaryData;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
