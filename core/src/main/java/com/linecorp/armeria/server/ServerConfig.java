@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -249,11 +248,9 @@ public final class ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
-        webSocketServiceEnabled = services.stream()
-                                          .map(serviceConfig -> serviceConfig.service()
-                                                                             .as(WebSocketService.class))
-                                          .filter(Objects::nonNull)
-                                          .findFirst().isPresent();
+        webSocketServiceEnabled =
+                services.stream().anyMatch(serviceConfig -> serviceConfig.service()
+                                                                         .as(WebSocketService.class) != null);
 
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
