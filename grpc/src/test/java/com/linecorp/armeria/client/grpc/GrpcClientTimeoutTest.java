@@ -104,7 +104,6 @@ class GrpcClientTimeoutTest {
         assertThat(loggingEventCaptor.getAllValues()).noneMatch(event -> {
             return event.getLevel() == Level.WARN &&
                    event.getThrowableProxy() != null &&
-                   event.getThrowableProxy().getMessage() != null &&
                    event.getThrowableProxy().getMessage().contains("call already closed");
         });
     }

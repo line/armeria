@@ -96,9 +96,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
-            // Removing the response and decrementing {@code unfinishedResponses} isn't done immediately
-            // here. Instead, we rely on {@code Http2ResponseDecoder#onStreamClosed} to decrement
-            // `unfinishedResponses` to match the timing where netty decrements {@code numActiveStreams}.
+            // Removing the response and decrementing `unfinishedResponses` isn't done immediately
+            // here. Instead, we rely on `Http2ResponseDecoder#onStreamClosed` to decrement
+            // `unfinishedResponses` after Netty decrements `numActiveStreams` in `DefaultHttp2Connection`
+            // so that `unfinishedResponses` is never greater than `numActiveStreams`.
 
             // Reset the stream.
             final int streamId = idToStreamId(id);
