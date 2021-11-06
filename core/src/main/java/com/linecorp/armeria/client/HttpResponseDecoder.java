@@ -126,6 +126,10 @@ abstract class HttpResponseDecoder {
         return true;
     }
 
+    final void decrementUnfinishedResponses() {
+        unfinishedResponses--;
+    }
+
     final void failUnfinishedResponses(Throwable cause) {
         if (closing) {
             return;
