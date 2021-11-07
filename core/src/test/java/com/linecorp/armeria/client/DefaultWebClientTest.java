@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 
 class DefaultWebClientTest {
@@ -64,16 +65,16 @@ class DefaultWebClientTest {
     @Test
     void endpointRemapper() {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
-                                                     Endpoint.of("127.0.0.1", 1));
+                Endpoint.of("127.0.0.1", 1));
         final WebClient client = WebClient.builder("http://group")
-                                          .endpointRemapper(endpoint -> {
-                                              if ("group".equals(endpoint.host())) {
-                                                  return group;
-                                              } else {
-                                                  return endpoint;
-                                              }
-                                          })
-                                          .build();
+                .endpointRemapper(endpoint -> {
+                    if ("group".equals(endpoint.host())) {
+                        return group;
+                    } else {
+                        return endpoint;
+                    }
+                })
+                .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("/").aggregate();
@@ -89,16 +90,16 @@ class DefaultWebClientTest {
     @Test
     void endpointRemapperForUnspecifiedUri() {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
-                                                     Endpoint.of("127.0.0.1", 1));
+                Endpoint.of("127.0.0.1", 1));
         final WebClient client = WebClient.builder()
-                                          .endpointRemapper(endpoint -> {
-                                              if ("group".equals(endpoint.host())) {
-                                                  return group;
-                                              } else {
-                                                  return endpoint;
-                                              }
-                                          })
-                                          .build();
+                .endpointRemapper(endpoint -> {
+                    if ("group".equals(endpoint.host())) {
+                        return group;
+                    } else {
+                        return endpoint;
+                    }
+                })
+                .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("http://group").aggregate();
@@ -108,6 +109,30 @@ class DefaultWebClientTest {
                 assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
                 assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
             });
+        }
+    }
+
+    @Test
+    void testPassQueryParamsAsArgument() {
+        final String clientUriPath = "http://127.0.0.1/hello";
+        final String requestPath = "world/test";
+
+        final QueryParams queryParams1 = QueryParams.builder()
+                .add("q1", "foo")
+                .build();
+        final QueryParams queryParams2 = QueryParams.builder()
+                .build();
+
+        final QueryParams[] queryParams = new QueryParams[]{ queryParams1, queryParams2 };
+        final String[] expectedPaths = new String[]{ "/hello/world/test?q1=foo", "/hello/world/test" };
+
+        final WebClient client = WebClient.of(clientUriPath);
+
+        for (int idx = 0; idx < queryParams.length; idx++) {
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                client.get(requestPath, queryParams[idx]).aggregate();
+                assertThat(captor.get().request().path()).isEqualTo(expectedPaths[idx]);
+            }
         }
     }
 }

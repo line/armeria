@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Unwrappable;
@@ -312,6 +313,19 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default HttpResponse get(String path) {
         return execute(RequestHeaders.of(HttpMethod.GET, path));
+    }
+
+    /**
+     * Sends an HTTP GET request by appending the provided query params to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse get(String path, QueryParams params) {
+        requireNonNull(params, "params");
+        if (params.isEmpty()) {
+            return this.get(path);
+        }
+
+        return execute(RequestHeaders.of(HttpMethod.GET, String.format("%s?%s", path, params.toQueryString())));
     }
 
     /**
