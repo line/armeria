@@ -2749,7 +2749,6 @@ gaular.no
 gausdal.no
 gay
 gb
-gb.com
 gb.net
 gbiz
 gc.ca
