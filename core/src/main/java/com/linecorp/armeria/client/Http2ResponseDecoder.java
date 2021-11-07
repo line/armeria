@@ -139,16 +139,18 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             return;
         }
 
-        if (!goAwayHandler.receivedGoAway()) {
-            res.close(ClosedStreamException.get());
-            return;
-        }
+        if (res.isOpen()) {
+            if (!goAwayHandler.receivedGoAway()) {
+                res.close(ClosedStreamException.get());
+                return;
+            }
 
-        final int lastStreamId = conn.local().lastStreamKnownByPeer();
-        if (stream.id() > lastStreamId) {
-            res.close(UnprocessedRequestException.of(GoAwayReceivedException.get()));
-        } else {
-            res.close(ClosedStreamException.get());
+            final int lastStreamId = conn.local().lastStreamKnownByPeer();
+            if (stream.id() > lastStreamId) {
+                res.close(UnprocessedRequestException.of(GoAwayReceivedException.get()));
+            } else {
+                res.close(ClosedStreamException.get());
+            }
         }
 
         if (shouldSendGoAway()) {
@@ -185,7 +187,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead();
-        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
         if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -212,10 +214,6 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
-
-            if (shouldSendGoAway()) {
-                channel().close();
-            }
         }
     }
 
@@ -234,7 +232,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         keepAliveChannelRead();
 
         final int dataLength = data.readableBytes();
-        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
         if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -272,12 +270,6 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
-
-            if (shouldSendGoAway()) {
-                // The connection has reached its lifespan.
-                // Should send a GOAWAY frame if it did not receive or send a GOAWAY frame.
-                channel().close();
-            }
         }
 
         // All bytes have been processed.
@@ -295,7 +287,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         keepAliveChannelRead();
-        final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
         if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
