@@ -243,20 +243,17 @@ final class MimeParser {
                     case BODY:
                         logger.trace("state={}", State.BODY);
                         final ByteBuf bodyContent = readBody();
-                        if (boundaryStart == -1 || bodyContent == NEED_MORE) {
-                            if (bodyContent == NEED_MORE) {
-                                final BodyPartPublisher currentPublisher = bodyPartPublisher;
-                                currentPublisher.whenConsumed().thenRun(() -> {
-                                    if (currentPublisher.demand() > 0 && !currentPublisher.isComplete()) {
-                                        multipartDecoder.requestUpstreamForBodyPartData();
-                                    }
-                                });
-                                return;
-                            }
-                        } else {
+                        if (bodyContent == NEED_MORE) {
+                            final BodyPartPublisher currentPublisher = bodyPartPublisher;
+                            currentPublisher.whenConsumed().thenRun(() -> {
+                                if (currentPublisher.demand() > 0 && !currentPublisher.isComplete()) {
+                                    multipartDecoder.requestUpstreamForBodyPartData();
+                                }
+                            });
+                            return;
+                        } else if (boundaryStart != -1) {
                             startOfLine = false;
                         }
-
                         // Use tryWrite() to avoid throwing exception.
                         // For example, when body part is cancelled, MimeParser need to ignore it without
                         // throwing exception.

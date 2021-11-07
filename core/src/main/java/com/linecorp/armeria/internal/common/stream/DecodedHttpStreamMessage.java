@@ -143,9 +143,9 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     }
 
     @Override
-    protected void onRequest(long newDemand, long oldDemand) {
+    protected void onRequest(long n) {
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
-        if (initialized && newDemand > 0) {
+        if (initialized && n > 0) {
             if (requestHeaders != null) {
                 // A readily available HTTP headers is not delivered yet.
                 final HttpHeaders requestHeaders = this.requestHeaders;

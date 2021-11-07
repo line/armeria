@@ -56,7 +56,7 @@ final class DefaultBodyPart implements BodyPart {
     }
 
     @Override
-    public CompletableFuture<Path> writeFile(Path path, EventExecutor eventExecutor,
+    public CompletableFuture<Void> writeFile(Path path, EventExecutor eventExecutor,
                                              ExecutorService blockingTaskExecutor,
                                              OpenOption... options) {
         return StreamMessages.writeTo(content, path, eventExecutor, blockingTaskExecutor, options);
@@ -64,7 +64,7 @@ final class DefaultBodyPart implements BodyPart {
 
     @Override
     public CompletableFuture<AggregatedBodyPart> aggregate() {
-        return aggregate0(null, null);
+        return aggregate0(content().defaultSubscriberExecutor(), null);
     }
 
     @Override
@@ -76,7 +76,7 @@ final class DefaultBodyPart implements BodyPart {
     @Override
     public CompletableFuture<AggregatedBodyPart> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
-        return aggregate0(null, alloc);
+        return aggregate0(content().defaultSubscriberExecutor(), alloc);
     }
 
     @Override
@@ -87,14 +87,10 @@ final class DefaultBodyPart implements BodyPart {
         return aggregate0(executor, alloc);
     }
 
-    private CompletableFuture<AggregatedBodyPart> aggregate0(@Nullable EventExecutor executor,
+    private CompletableFuture<AggregatedBodyPart> aggregate0(EventExecutor executor,
                                                              @Nullable ByteBufAllocator alloc) {
         final CompletableFuture<AggregatedBodyPart> future = new CompletableFuture<>();
-        if (executor == null) {
-            content().subscribe(new ContentAggregator(this, future, alloc));
-        } else {
-            content().subscribe(new ContentAggregator(this, future, alloc), executor);
-        }
+        content().subscribe(new ContentAggregator(headers, future, alloc), executor);
         return future;
     }
 
@@ -111,12 +107,12 @@ final class DefaultBodyPart implements BodyPart {
      */
     private static final class ContentAggregator extends HttpObjectAggregator<AggregatedBodyPart> {
 
-        private final BodyPart bodyPart;
+        private HttpHeaders headers;
 
-        ContentAggregator(BodyPart bodyPart, CompletableFuture<AggregatedBodyPart> future,
+        ContentAggregator(HttpHeaders headers, CompletableFuture<AggregatedBodyPart> future,
                           @Nullable ByteBufAllocator alloc) {
             super(future, alloc);
-            this.bodyPart = bodyPart;
+            this.headers = headers;
         }
 
         @Override
@@ -124,7 +120,7 @@ final class DefaultBodyPart implements BodyPart {
 
         @Override
         protected AggregatedBodyPart onSuccess(HttpData content) {
-            return AggregatedBodyPart.of(bodyPart.headers(), content);
+            return AggregatedBodyPart.of(headers, content);
         }
 
         @Override

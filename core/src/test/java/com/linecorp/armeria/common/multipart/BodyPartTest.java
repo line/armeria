@@ -171,13 +171,12 @@ class BodyPartTest {
 
         final StreamMessage<HttpData> publisher = StreamMessage.of(httpData);
         final Path destination = tempDir.resolve("foo.bin");
-        final Path result = BodyPart.of(HttpHeaders.of(), publisher)
-                                    .writeFile(destination,
-                                               CommonPools.workerGroup().next(),
-                                               CommonPools.blockingTaskExecutor())
-                                    .join();
-        assertThat(result).isSameAs(destination);
-        final byte[] bytes = Files.readAllBytes(result);
+        BodyPart.of(HttpHeaders.of(), publisher)
+                .writeFile(destination,
+                           CommonPools.workerGroup().next(),
+                           CommonPools.blockingTaskExecutor())
+                .join();
+        final byte[] bytes = Files.readAllBytes(destination);
         assertThat(bytes).contains(expected);
 
         for (ByteBuf buf : bufs) {

@@ -148,18 +148,18 @@ public interface BodyPart {
     StreamMessage<HttpData> content();
 
     /**
-     * Write this {@link BodyPart}to the given {@link Path} with {@link OpenOption}.
+     * Write this {@link BodyPart} to the given {@link Path} with {@link OpenOption}.
      * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
      * @param path the {@link Path} to write to
-     * @param eventExecutor the {@link EventExecutor} to subscribe to the given publisher
+     * @param eventExecutor the {@link EventExecutor} to subscribe to this given publisher
      * @param blockingTaskExecutor the {@link ExecutorService} to which blocking tasks are submitted to handle
      *                             file I/O events and write operations
      * @param options the {@link OpenOption} specifying how the file is opened
-     * @return a {@link CompletableFuture} that completes with the specified {@link Path} or an error
+     * @return a {@link CompletableFuture} to handle asynchronous result
      */
-    CompletableFuture<Path> writeFile(Path path, EventExecutor eventExecutor,
+    CompletableFuture<Void> writeFile(Path path, EventExecutor eventExecutor,
                                       ExecutorService blockingTaskExecutor, OpenOption... options);
 
     /**
@@ -175,16 +175,16 @@ public interface BodyPart {
     CompletableFuture<AggregatedBodyPart> aggregate(EventExecutor executor);
 
     /**
-     * Aggregates this {@link BodyPart}. The returned {@link CompletableFuture} will be notified when
-     * the {@link BodyPart} is received fully.
+     * (Advanced users only) Aggregates this {@link BodyPart}. The returned {@link CompletableFuture}
+     * will be notified when the {@link BodyPart} is received fully.
      * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
      */
     CompletableFuture<AggregatedBodyPart> aggregateWithPooledObjects(ByteBufAllocator alloc);
 
     /**
-     * Aggregates this {@link BodyPart}. The returned {@link CompletableFuture} will be notified when
-     * the {@link BodyPart} is received fully.
+     * (Advanced users only) Aggregates this {@link BodyPart}. The returned {@link CompletableFuture}
+     * will be notified when the {@link BodyPart} is received fully.
      * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
      */

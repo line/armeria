@@ -23,8 +23,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
@@ -45,8 +43,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<BodyPart> {
-
-    private static final Logger logger = LoggerFactory.getLogger(MultipartDecoder.class);
 
     private static final AtomicIntegerFieldUpdater<MultipartDecoder>
             subscribedUpdater = AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "subscribed");
@@ -174,10 +170,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             // There is no subscriber
             return;
         }
-        subscribedCompleteFuture.handle((unused, throwable) -> {
-            decoded.abort(cause);
-            return null;
-        });
+        decoded.abort(cause);
     }
 
     BodyPartPublisher onBodyPartBegin() {
@@ -207,7 +200,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     final class BodyPartPublisher extends DefaultStreamMessage<HttpData> {
         @Override
-        protected void onRequest(long newDemand, long oldDemand) {
+        protected void onRequest(long n) {
             // Because whenConsumed will run in the same thread(called by onRequest) after looping the existing
             // queue.(onRequest & event notification in whenConsumed will run in the same executor specified
             // at subscribe)

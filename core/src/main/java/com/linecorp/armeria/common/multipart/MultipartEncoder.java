@@ -154,9 +154,9 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
         final DefaultStreamMessage<StreamMessage<HttpData>> emitter =
                 new DefaultStreamMessage<StreamMessage<HttpData>>() {
                     @Override
-                    protected void onRequest(long newDemand, long oldDemand) {
+                    protected void onRequest(long n) {
                         // A BodyPart is converted to a StreamMessage<HttpData> one to one.
-                        upstream.request(newDemand);
+                        upstream.request(n);
                     }
                 };
         emitter.whenComplete().handle((unused, cause) -> {
