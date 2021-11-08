@@ -92,7 +92,6 @@ public final class WebSocketCloseHandler {
         }
     }
 
-
     public boolean isCloseFrameSent() {
         return closeFrameSent;
     }
