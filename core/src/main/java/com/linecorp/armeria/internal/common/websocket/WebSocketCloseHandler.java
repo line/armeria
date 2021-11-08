@@ -64,6 +64,14 @@ public final class WebSocketCloseHandler {
     }
 
     public void closeStreams() {
+        closeStreams0(null);
+    }
+
+    public void closeStreams(Throwable cause) {
+        closeStreams0(cause);
+    }
+
+    private void closeStreams0(@Nullable Throwable cause) {
         if (streamsClosed) {
             return;
         }
@@ -75,22 +83,15 @@ public final class WebSocketCloseHandler {
                                    .ensureAvailable(RequestLogProperty.SESSION)
                                    .channel();
         assert channel != null;
-        WebSocketUtil.closeWebSocketInboundStream(channel);
-        writer.close();
+        if (cause != null) {
+            WebSocketUtil.closeWebSocketInboundStream(channel, cause);
+            writer.close(cause);
+        } else {
+            WebSocketUtil.closeWebSocketInboundStream(channel);
+            writer.close();
+        }
     }
 
-    public void closeStreams(Throwable cause) {
-        if (streamsClosed) {
-            return;
-        }
-        streamsClosed = true;
-        final Channel channel = ctx.log()
-                                   .ensureAvailable(RequestLogProperty.SESSION)
-                                   .channel();
-        assert channel != null;
-        WebSocketUtil.closeWebSocketInboundStream(channel, cause);
-        writer.close(cause);
-    }
 
     public boolean isCloseFrameSent() {
         return closeFrameSent;

@@ -72,13 +72,19 @@ public final class CloseWebSocketFrame extends DefaultWebSocketFrame {
 
     private static WebSocketCloseStatus status(ByteBuf binary) {
         if (binary.capacity() == 0) {
+            binary.release();
             throw new IllegalArgumentException("binary must have a close status.");
         }
 
         final int index = binary.readerIndex();
         final int statusCode = binary.getShort(0);
         binary.readerIndex(index);
-        validateStatusCode(statusCode);
+        try {
+            validateStatusCode(statusCode);
+        } catch (Throwable t) {
+            binary.release();
+            throw t;
+        }
         return WebSocketCloseStatus.valueOf(statusCode);
     }
 

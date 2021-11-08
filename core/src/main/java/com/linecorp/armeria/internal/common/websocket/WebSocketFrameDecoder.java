@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
@@ -66,6 +67,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
+    @Nullable
     private byte[] maskingKey;
     private int framePayloadLen1;
     private boolean receivedClosingHandshake;

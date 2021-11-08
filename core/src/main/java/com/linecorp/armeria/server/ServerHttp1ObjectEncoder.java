@@ -114,7 +114,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     private ChannelFuture handleWebSocketUpgradeResponse(int id, ResponseHeaders headers) {
         final HttpResponse res = new DefaultHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(headers.status().code()), false);
+                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS, false);
         convertHeaders(headers, res.headers(), false /* To remove Content-Length header */);
         lastResponseHeadersId = id;
         return write(id, res, false);

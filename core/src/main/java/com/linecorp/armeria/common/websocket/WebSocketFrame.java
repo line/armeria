@@ -286,6 +286,7 @@ public interface WebSocketFrame extends BinaryData {
     static WebSocketFrame ofPooledPing(ByteBuf binary) {
         requireNonNull(binary, "binary");
         if (binary.readableBytes() == 0) {
+            binary.release();
             return emptyPing;
         }
         return new PingWebSocketFrame(binary);
@@ -300,6 +301,7 @@ public interface WebSocketFrame extends BinaryData {
     static WebSocketFrame ofPooledPong(ByteBuf binary) {
         requireNonNull(binary, "binary");
         if (binary.readableBytes() == 0) {
+            binary.release();
             return emptyPong;
         }
         return new PongWebSocketFrame(binary);

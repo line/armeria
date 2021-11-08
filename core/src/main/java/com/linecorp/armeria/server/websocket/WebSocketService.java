@@ -24,7 +24,6 @@ import java.util.Base64;
 import java.util.Set;
 
 import com.google.common.base.Splitter;
-import com.google.common.collect.Streams;
 import com.google.common.hash.Hashing;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -189,13 +188,11 @@ public final class WebSocketService extends AbstractHttpService {
         if (isNullOrEmpty(subprotocols)) {
             return;
         }
-        final Iterable<String> split = commaSplitter.split(subprotocols);
-        Streams.stream(split)
-               .filter(sub -> SUB_PROTOCOL_WILDCARD.equals(sub) ||
-                              this.subprotocols.contains(sub))
-               .findFirst().ifPresent(
-                       selectedSubprotocol -> responseHeadersBuilder.add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL,
-                                                                         selectedSubprotocol));
+        commaSplitter.splitToStream(subprotocols)
+                     .filter(sub -> SUB_PROTOCOL_WILDCARD.equals(sub) ||
+                                    this.subprotocols.contains(sub))
+                     .findFirst().ifPresent(selectedSubprotocol -> responseHeadersBuilder.add(
+                             HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol));
     }
 
     // Generate Sec-WebSocket-Accept using Sec-WebSocket-Key.
@@ -209,7 +206,7 @@ public final class WebSocketService extends AbstractHttpService {
     private HttpResponse handleUpgradeRequest(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeaders responseHeaders) {
         if (ctx.requestTimeoutMillis() < closeTimeoutMillis) {
-            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, closeTimeoutMillis);
+            ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, closeTimeoutMillis);
         }
 
         final HttpResponseWriter responseWriter = HttpResponse.streaming();
