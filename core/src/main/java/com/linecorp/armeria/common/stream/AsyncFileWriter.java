@@ -51,12 +51,11 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
 
     private static final Logger logger = LoggerFactory.getLogger(AsyncFileWriter.class);
 
-    private final CompletableFuture<Path> completionFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
     private final Path path;
     private final EventExecutor eventExecutor;
     private final Set<OpenOption> options;
     private final ExecutorService blockingTaskExecutor;
-    private final StreamMessage<? extends HttpData> publisher;
 
     @Nullable
     private AsynchronousFileChannel fileChannel;
@@ -74,7 +73,6 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
         this.eventExecutor = eventExecutor;
         this.options = options;
         this.blockingTaskExecutor = blockingTaskExecutor;
-        this.publisher = publisher;
         publisher.subscribe(this, eventExecutor, SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
@@ -86,7 +84,7 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
         try {
             fileChannel = AsynchronousFileChannel.open(path, options, blockingTaskExecutor);
         } catch (IOException e) {
-            maybeCloseFileChannel(e);
+            maybeCloseFileChannel(e, false);
             return;
         }
 
@@ -105,26 +103,26 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
             try {
                 fileChannel.write(byteBuffer, position, Maps.immutableEntry(byteBuffer, byteBuf), this);
             } catch (Throwable ex) {
-                maybeCloseFileChannel(ex);
+                maybeCloseFileChannel(ex, false);
             }
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        maybeCloseFileChannel(t);
+        maybeCloseFileChannel(t, true);
     }
 
     @Override
     public void onComplete() {
         if (!writing) {
-            maybeCloseFileChannel(null);
+            maybeCloseFileChannel(null, false);
         } else {
             closing = true;
         }
     }
 
-    CompletableFuture<Path> whenComplete() {
+    CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }
 
@@ -140,14 +138,15 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
                     try {
                         fileChannel.write(byteBuffer, position, attachment, this);
                     } catch (Throwable ex) {
-                        maybeCloseFileChannel(ex);
+                        byteBuf.release();
+                        maybeCloseFileChannel(ex, false);
                     }
                 } else {
                     byteBuf.release();
                     writing = false;
 
                     if (closing) {
-                        maybeCloseFileChannel(null);
+                        maybeCloseFileChannel(null, false);
                     } else {
                         subscription.request(1);
                     }
@@ -155,8 +154,9 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
             } else {
                 byteBuf.release();
                 subscription.cancel();
-                maybeCloseFileChannel(new IOException(
-                        "Unexpected exception while writing data to '" + path + "' + : result " + result));
+                final IOException cause = new IOException(
+                        "Unexpected exception while writing data to '" + path + "' + : result " + result);
+                maybeCloseFileChannel(cause, false);
             }
         });
     }
@@ -166,18 +166,20 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
         assert subscription != null;
         subscription.cancel();
         attachment.getValue().release();
-        maybeCloseFileChannel(cause);
+        maybeCloseFileChannel(cause, false);
     }
 
-    private void maybeCloseFileChannel(@Nullable Throwable cause) {
+    private void maybeCloseFileChannel(@Nullable Throwable cause, boolean onError) {
         if (completionFuture.isDone()) {
             return;
         }
 
         if (cause == null) {
-            completionFuture.complete(path);
+            completionFuture.complete(null);
         } else {
-            publisher.abort(cause);
+            if (!onError) {
+                subscription.cancel();
+            }
             completionFuture.completeExceptionally(cause);
         }
 

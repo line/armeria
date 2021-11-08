@@ -49,9 +49,11 @@ public final class StreamMessages {
      * @param publisher the source of {@link HttpData} to be written
      * @param destination the {@link Path} to write to
      * @param options the {@link OpenOption} specifying how the file is opened
-     * @return a {@link CompletableFuture} that completes with the specified {@link Path} or an error
+     * @return a {@link CompletableFuture} that completes successfully when the {@link StreamMessage} is fully
+     *         written to the {@link Path} or exceptionally an error occurred while writing the
+     *         {@link StreamMessage}.
      */
-    public static CompletableFuture<Path> writeTo(StreamMessage<? extends HttpData> publisher,
+    public static CompletableFuture<Void> writeTo(StreamMessage<? extends HttpData> publisher,
                                                   Path destination, OpenOption... options) {
         requireNonNull(publisher, "publisher");
         requireNonNull(destination, "destination");
@@ -87,9 +89,11 @@ public final class StreamMessages {
      * @param blockingTaskExecutor the {@link ExecutorService} to which blocking tasks are submitted to handle
      *                             file I/O events and write operations
      * @param options the {@link OpenOption} specifying how the file is opened
-     * @return a {@link CompletableFuture} that completes with the specified {@link Path} or an error
+     * @return a {@link CompletableFuture} that completes successfully when the {@link StreamMessage} is fully
+     *         written to the {@link Path} or exceptionally an error occurred while writing the
+     *         {@link StreamMessage}.
      */
-    public static CompletableFuture<Path> writeTo(StreamMessage<? extends HttpData> publisher, Path destination,
+    public static CompletableFuture<Void> writeTo(StreamMessage<? extends HttpData> publisher, Path destination,
                                                   EventExecutor eventExecutor,
                                                   ExecutorService blockingTaskExecutor, OpenOption... options) {
         requireNonNull(publisher, "publisher");

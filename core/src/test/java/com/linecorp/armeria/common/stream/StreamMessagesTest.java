@@ -59,9 +59,8 @@ class StreamMessagesTest {
 
         final StreamMessage<HttpData> publisher = StreamMessage.of(httpData);
         final Path destination = tempDir.resolve("foo.bin");
-        final Path result = StreamMessages.writeTo(publisher, destination).join();
-        assertThat(result).isSameAs(destination);
-        final byte[] bytes = Files.readAllBytes(result);
+        StreamMessages.writeTo(publisher, destination).join();
+        final byte[] bytes = Files.readAllBytes(destination);
         assertThat(bytes).contains(expected);
 
         for (ByteBuf buf : bufs) {
@@ -86,7 +85,7 @@ class StreamMessagesTest {
             bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
         }
         final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
-        final CompletableFuture<Path> result =
+        final CompletableFuture<Void> result =
                 StreamMessages.writeTo(StreamMessage.of(httpData), invalidPath);
         assertThatThrownBy(result::join)
                 .isInstanceOf(CompletionException.class)
