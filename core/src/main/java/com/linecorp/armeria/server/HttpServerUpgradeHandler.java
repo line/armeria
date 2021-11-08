@@ -67,6 +67,11 @@ import io.netty.util.ReferenceCounted;
 final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
 
     // Forked from http://github.com/netty/netty/blob/cf624c93c5f97097f1b13fe926ed50c32c8b1430/codec-http/src/main/java/io/netty/handler/codec/http/HttpServerUpgradeHandler.java
+    // The upstream HttpServerUpgradeHandler fully aggregates an HTTP request. As a result, the upgrade handler
+    // cannot handle an upgrade request whose body is lager than the maximum length of the content specified
+    // when creating the upgrade handler. The forked HttpServerUpgradeHandler removed HttpObjectAggregator from
+    // superclass and only use HTTP headers to perform h2c upgrade so that it upgrades a request without
+    // limitation of the size of content.
 
     private static final FullHttpResponse UPGRADE_RESPONSE = newUpgradeResponse();
 

@@ -152,7 +152,6 @@ class HttpServerUpgradeHandlerTest {
         assertThat(channel.writeInbound(upgradeBodyBuf)).isTrue();
         assertThat(channel.pipeline().get(HttpServerCodec.class)).isNull();
 
-
         channel.flushOutbound();
         final ByteBuf upgradeMessage = channel.readOutbound();
         final String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
@@ -180,7 +179,8 @@ class HttpServerUpgradeHandlerTest {
 
         assertThat(channel.writeInbound(upgrade)).isTrue();
         assertThat(channel.pipeline().get(HttpServerCodec.class)).isNotNull();
-        assertThat(channel.pipeline().get(HttpServerUpgradeHandler.class)).isNotNull(); // Should not be removed.
+        // Should not be removed.
+        assertThat(channel.pipeline().get(HttpServerUpgradeHandler.class)).isNotNull();
         assertThat(channel.pipeline().get("marker")).isNull(); // Not added.
 
         final HttpRequest req = channel.readInbound();
