@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+
 final class SubscriberUtil {
 
     static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {

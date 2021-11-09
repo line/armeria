@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.multipart;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
@@ -37,6 +36,8 @@ import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
@@ -45,12 +46,10 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<BodyPart> {
 
-    private static final AtomicIntegerFieldUpdater<MultipartDecoder>
-            subscribedUpdater = AtomicIntegerFieldUpdater.newUpdater(MultipartDecoder.class, "subscribed");
-
-    private static final AtomicReferenceFieldUpdater<MultipartDecoder, Throwable>
-            abortCauseUpdater = AtomicReferenceFieldUpdater.newUpdater(MultipartDecoder.class, Throwable.class,
-                                                                       "abortCause");
+    private static final AtomicReferenceFieldUpdater<MultipartDecoder, MultipartSubscriber>
+            delegatedSubscriberUpdater = AtomicReferenceFieldUpdater.newUpdater(MultipartDecoder.class,
+                                                                                MultipartSubscriber.class,
+                                                                                "delegatedSubscriber");
 
     private final DecodedHttpStreamMessage<BodyPart> decoded;
     private final String boundary;
@@ -58,16 +57,8 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     @Nullable
     private MimeParser parser;
 
-    // 1 is subscribed, -1 is aborted
-    private volatile int subscribed;
-
     @Nullable
     private volatile MultipartSubscriber delegatedSubscriber;
-
-    // Preserve the cause of abort.
-    // Visible to subscribe and abort, because it's wrote before and read after updater
-    @Nullable
-    private volatile Throwable abortCause;
 
     // To track how many body part we need. Always keep DecodedHttpStreamMessage's demand less or equal than 1
     // This parameter is protected by the same executor of subscriber of this
@@ -133,27 +124,28 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        // Guarantee for delegatedSubscriber is the subscriber of this.decoded
-        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
-            if (executor.inEventLoop()) {
-                abortLateSubscriber(subscriber, abortCause);
-            } else {
-                executor.execute(() -> abortLateSubscriber(subscriber, abortCause));
-            }
+        final MultipartSubscriber multipartSubscriber = new MultipartSubscriber(subscriber, executor);
+        if (!delegatedSubscriberUpdater.compareAndSet(this, null, multipartSubscriber)) {
+            // Avoid calling method on late multipartSubscriber.
+            // Because it's not static, so it will affect MultipartDecoder.
+            failLateSubscriber(subscriber, executor);
             return;
         }
-        final MultipartSubscriber delegatedSubscriber = new MultipartSubscriber(subscriber, executor);
-        this.delegatedSubscriber = delegatedSubscriber;
         decoded.subscribe(delegatedSubscriber, executor, options);
     }
 
-    private static void abortLateSubscriber(Subscriber<? super BodyPart> subscriber,
-                                            @Nullable Throwable throwable) {
+    private void failLateSubscriber(Subscriber<? super BodyPart> subscriber, EventExecutor executor) {
         subscriber.onSubscribe(NoopSubscription.get());
-        if (throwable != null) {
-            subscriber.onError(throwable);
+        final Throwable abortCause;
+        if (delegatedSubscriber.subscriber instanceof AbortingSubscriber) {
+            abortCause = ((AbortingSubscriber) delegatedSubscriber.subscriber).cause();
         } else {
-            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+            abortCause = new IllegalStateException("subscribed by other subscriber already");
+        }
+        if (executor.inEventLoop()) {
+            subscriber.onError(abortCause);
+        } else {
+            executor.execute(() -> subscriber.onError(abortCause));
         }
     }
 
@@ -165,17 +157,12 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
-        // Setting cause before subscribed guarantees subscribe method read correct abortCause
-        // when it handles failed compareAndSet
-        abortCauseUpdater.compareAndSet(this, null, cause);
-        if (subscribedUpdater.getAndSet(this, -1) == -1) {
-            // Already aborted before
-            return;
+        if (delegatedSubscriber == null) {
+            final MultipartSubscriber abortedSubscriber = new MultipartSubscriber(
+                    AbortingSubscriber.get(cause), EventLoopGroups.directEventLoop());
+            delegatedSubscriberUpdater.compareAndSet(this, null, abortedSubscriber);
         }
-        @Nullable
-        final Throwable abortCause = this.abortCause;
-        assert abortCause != null;
-        decoded.abort(abortCause);
+        decoded.abort(cause);
     }
 
     BodyPartPublisher onBodyPartBegin() {

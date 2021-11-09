@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -11,23 +11,24 @@
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
- * under the License.
+ * under the Licenses
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 
-final class AbortingSubscriber<T> implements Subscriber<T> {
+public final class AbortingSubscriber<T> implements Subscriber<T> {
 
-    static final AbortingSubscriber<Object> INSTANCE =
+    public static final AbortingSubscriber<Object> INSTANCE =
             new AbortingSubscriber<>(AbortedStreamException.INSTANCE);
 
     @SuppressWarnings("unchecked")
-    static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
+    public static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
         return cause == null || cause == AbortedStreamException.INSTANCE ? (AbortingSubscriber<T>) INSTANCE
                                                                          : new AbortingSubscriber<>(cause);
     }
@@ -55,7 +56,7 @@ final class AbortingSubscriber<T> implements Subscriber<T> {
     /**
      * Returns the cause which tells why the stream has been aborted.
      */
-    Throwable cause() {
+    public Throwable cause() {
         return cause;
     }
 }

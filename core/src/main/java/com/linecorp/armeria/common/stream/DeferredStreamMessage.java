@@ -31,6 +31,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;

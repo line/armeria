@@ -28,7 +28,7 @@ public final class AbortedStreamException extends RuntimeException {
 
     private static final long serialVersionUID = -5271590540551141199L;
 
-    static final AbortedStreamException INSTANCE = new AbortedStreamException(false);
+    public static final AbortedStreamException INSTANCE = new AbortedStreamException(false);
 
     /**
      * Returns a {@link AbortedStreamException} which may be a singleton or a new instance, depending on
