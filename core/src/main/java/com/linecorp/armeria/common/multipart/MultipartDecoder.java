@@ -136,16 +136,16 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     private void failLateSubscriber(Subscriber<? super BodyPart> subscriber, EventExecutor executor) {
         subscriber.onSubscribe(NoopSubscription.get());
-        final Throwable abortCause;
+        final Throwable abortedCause;
         if (delegatedSubscriber.subscriber instanceof AbortingSubscriber) {
-            abortCause = ((AbortingSubscriber) delegatedSubscriber.subscriber).cause();
+            abortedCause = ((AbortingSubscriber) delegatedSubscriber.subscriber).cause();
         } else {
-            abortCause = new IllegalStateException("subscribed by other subscriber already");
+            abortedCause = new IllegalStateException("subscribed by other subscriber already");
         }
         if (executor.inEventLoop()) {
-            subscriber.onError(abortCause);
+            subscriber.onError(abortedCause);
         } else {
-            executor.execute(() -> subscriber.onError(abortCause));
+            executor.execute(() -> subscriber.onError(abortedCause));
         }
     }
 
