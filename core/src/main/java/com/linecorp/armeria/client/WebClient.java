@@ -300,11 +300,38 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Appends query params to the current path and returns the modified path.
+     */
+    default String addQueryParams(String path, QueryParams params) {
+        requireNonNull(params, "params");
+        if (params.isEmpty()) {
+            return path;
+        }
+
+        final StringBuilder appendedPath = new StringBuilder(path);
+        if (path.indexOf('?') == -1) {
+            appendedPath.append("?");
+        } else {
+            appendedPath.append("&");
+        }
+        appendedPath.append(params.toQueryString());
+        return appendedPath.toString();
+    }
+
+    /**
      * Sends an HTTP OPTIONS request.
      */
     @CheckReturnValue
     default HttpResponse options(String path) {
         return execute(RequestHeaders.of(HttpMethod.OPTIONS, path));
+    }
+
+    /**
+     * Sends an HTTP OPTIONS request, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse options(String path, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.OPTIONS, addQueryParams(path, params)));
     }
 
     /**
@@ -316,16 +343,11 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP GET request by appending the provided query params to the path.
+     * Sends an HTTP GET request, accepts query parameters to append to the path.
      */
     @CheckReturnValue
     default HttpResponse get(String path, QueryParams params) {
-        requireNonNull(params, "params");
-        if (params.isEmpty()) {
-            return this.get(path);
-        }
-
-        return execute(RequestHeaders.of(HttpMethod.GET, String.format("%s?%s", path, params.toQueryString())));
+        return execute(RequestHeaders.of(HttpMethod.GET, addQueryParams(path, params)));
     }
 
     /**
@@ -337,11 +359,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP HEAD request, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse head(String path, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.HEAD, addQueryParams(path, params)));
+    }
+
+    /**
      * Sends an HTTP POST request with the specified content.
      */
     @CheckReturnValue
     default HttpResponse post(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), content);
+    }
+
+    /**
+     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse post(String path, HttpData content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.POST, addQueryParams(path, params)), content);
     }
 
     /**
@@ -353,11 +391,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse post(String path, byte[] content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.POST, addQueryParams(path, params)), content);
+    }
+
+    /**
      * Sends an HTTP POST request with the specified content.
      */
     @CheckReturnValue
     default HttpResponse post(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.POST, path), HttpData.ofUtf8(content));
+    }
+
+    /**
+     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse post(String path, String content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.POST, addQueryParams(path, params)), content);
     }
 
     /**
@@ -369,11 +423,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse post(String path, String content, Charset charset, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.POST, addQueryParams(path, params)), content, charset);
+    }
+
+    /**
      * Sends an HTTP PUT request with the specified content.
      */
     @CheckReturnValue
     default HttpResponse put(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), content);
+    }
+
+    /**
+     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse put(String path, HttpData content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PUT, addQueryParams(path, params)), content);
     }
 
     /**
@@ -385,11 +455,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse put(String path, byte[] content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PUT, addQueryParams(path, params)), content);
+    }
+
+    /**
      * Sends an HTTP PUT request with the specified content.
      */
     @CheckReturnValue
     default HttpResponse put(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.PUT, path), HttpData.ofUtf8(content));
+    }
+
+    /**
+     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse put(String path, String content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PUT, addQueryParams(path, params)), content);
     }
 
     /**
@@ -401,11 +487,28 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse put(String path, String content, Charset charset, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PUT, addQueryParams(path, params)), content, charset);
+    }
+
+    /**
      * Sends an HTTP PATCH request with the specified content.
      */
     @CheckReturnValue
     default HttpResponse patch(String path, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), content);
+    }
+
+    /**
+     * Sends an HTTP PATCH request with the specified content by appending the provided
+     * query params to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse patch(String path, HttpData content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PATCH, addQueryParams(path, params)), content);
     }
 
     /**
@@ -417,11 +520,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse patch(String path, byte[] content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PATCH, addQueryParams(path, params)), content);
+    }
+
+    /**
      * Sends an HTTP PATCH request with the specified content.
      */
     @CheckReturnValue
     default HttpResponse patch(String path, String content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH, path), HttpData.ofUtf8(content));
+    }
+
+    /**
+     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse patch(String path, String content, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PATCH, addQueryParams(path, params)), content);
     }
 
     /**
@@ -433,6 +552,14 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse patch(String path, String content, Charset charset, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.PATCH, addQueryParams(path, params)), content, charset);
+    }
+
+    /**
      * Sends an HTTP DELETE request.
      */
     @CheckReturnValue
@@ -441,11 +568,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP DELETE request, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse delete(String path, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.DELETE, addQueryParams(path, params)));
+    }
+
+    /**
      * Sends an HTTP TRACE request.
      */
     @CheckReturnValue
     default HttpResponse trace(String path) {
         return execute(RequestHeaders.of(HttpMethod.TRACE, path));
+    }
+
+    /**
+     * Sends an HTTP TRACE request, accepts query parameters to append to the path.
+     */
+    @CheckReturnValue
+    default HttpResponse trace(String path, QueryParams params) {
+        return execute(RequestHeaders.of(HttpMethod.TRACE, addQueryParams(path, params)));
     }
 
     @Override

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.awaitility.Awaitility.await;
 
 import org.junit.jupiter.api.Test;
@@ -113,26 +114,41 @@ class DefaultWebClientTest {
     }
 
     @Test
-    void testPassQueryParamsAsArgument() {
+    void testFormingPathWithNullQueryParams() {
+        final String clientUriPath = "http://127.0.0.1/hello";
+        final String requestPath = "world/test";
+
+        final WebClient client = WebClient.of(clientUriPath);
+
+        assertThatNullPointerException().isThrownBy(() -> client.get(requestPath, null).aggregate());
+    }
+
+    @Test
+    @SuppressWarnings("checkstyle:RegexpMultiline")
+    void testFormingPathWithNonNullQueryParams() {
         final String clientUriPath = "http://127.0.0.1/hello";
         final String requestPath = "world/test";
 
         final QueryParams queryParams1 = QueryParams.builder()
-                .add("q1", "foo")
+                .add("q2", "foo")
                 .build();
         final QueryParams queryParams2 = QueryParams.builder()
                 .build();
 
-        final QueryParams[] queryParams = new QueryParams[]{ queryParams1, queryParams2 };
-        final String[] expectedPaths = new String[]{ "/hello/world/test?q1=foo", "/hello/world/test" };
-
+        final QueryParams[] queryParams = new QueryParams[]{queryParams1, queryParams2,
+                queryParams1, queryParams2};
+        final String[] paths = new String[]{"/world/test", "/world/test",
+                "/world/test?q1=foo", "/world/test?q1=foo"};
+        final String[] expectedPaths = new String[]{"/hello/world/test?q2=foo", "/hello/world/test",
+                "/hello/world/test?q1=foo&q2=foo", "/hello/world/test?q1=foo"};
         final WebClient client = WebClient.of(clientUriPath);
 
         for (int idx = 0; idx < queryParams.length; idx++) {
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                client.get(requestPath, queryParams[idx]).aggregate();
+                client.get(paths[idx], queryParams[idx]).aggregate();
                 assertThat(captor.get().request().path()).isEqualTo(expectedPaths[idx]);
             }
         }
+
     }
 }
