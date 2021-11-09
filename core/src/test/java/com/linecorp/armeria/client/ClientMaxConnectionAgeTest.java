@@ -23,7 +23,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
@@ -61,9 +60,9 @@ class ClientMaxConnectionAgeTest {
             sb.annotatedService("/delayed", new Object() {
 
                 @Get
-                public HttpResponse delayed(@Param("seconds") String seconds) {
+                public HttpResponse delayed(@Param("seconds") long seconds) {
                     return HttpResponse.delayed(
-                            HttpResponse.of(200), Duration.of(Long.valueOf(seconds), ChronoUnit.SECONDS));
+                            HttpResponse.of(200), Duration.ofSeconds(seconds));
                 }
             });
         }
@@ -175,7 +174,7 @@ class ClientMaxConnectionAgeTest {
 
     @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
     @ParameterizedTest
-    void shouldCloseLongRequestsByMaxConnectionAge(SessionProtocol protocol) throws Exception {
+    void shouldCloseConnectionAfterLongRequest(SessionProtocol protocol) throws Exception {
         try (ClientFactory factory = ClientFactory.builder()
                                                   .connectionPoolListener(connectionPoolListener)
                                                   .idleTimeoutMillis(0)
@@ -196,7 +195,7 @@ class ClientMaxConnectionAgeTest {
 
     @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
     @ParameterizedTest
-    void shouldCloseTimeoutLongRequestsByMaxConnectionAge(SessionProtocol protocol) throws Exception {
+    void shouldCloseConnectionAfterLongRequestTimeout(SessionProtocol protocol) throws Exception {
         try (ClientFactory factory = ClientFactory.builder()
                                                   .connectionPoolListener(connectionPoolListener)
                                                   .idleTimeoutMillis(0)
