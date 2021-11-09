@@ -16,19 +16,19 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 
 /**
- * Specifies the way a {@link ByteBuf} is retrieved from an {@link HttpData} or {@link WebSocket}.
+ * Specifies the way a {@link ByteBuf} is retrieved from an {@link HttpData} or {@link WebSocketFrame}.
  */
 @UnstableApi
 public enum ByteBufAccessMode {
     /**
      * Gets the duplicate (or slice) of the underlying {@link ByteBuf}. This mode is useful when you access
-     * the {@link ByteBuf} within the life cycle of the {@link HttpData} or {@link WebSocket}:
+     * the {@link ByteBuf} within the life cycle of the {@link HttpData} or {@link WebSocketFrame}:
      * <pre>{@code
      * try (HttpData content = ...) {
      *     ByteBuf buf = content.byteBuf(ByteBufAccessMode.DUPLICATE);
@@ -47,8 +47,8 @@ public enum ByteBufAccessMode {
     DUPLICATE,
     /**
      * Gets the retained duplicate (or slice) of the underlying {@link ByteBuf}. This mode is useful when
-     * you access the {@link ByteBuf} beyond the life cycle of the {@link HttpData} or {@link WebSocket},
-     * such as creating another {@link HttpData} or {@link WebSocket} that shares the {@link ByteBuf}'s
+     * you access the {@link ByteBuf} beyond the life cycle of the {@link HttpData} or {@link WebSocketFrame},
+     * such as creating another {@link HttpData} or {@link WebSocketFrame} that shares the {@link ByteBuf}'s
      * memory region:
      * <pre>{@code
      * HttpData data1 = HttpData.wrap(byteBuf);
