@@ -85,6 +85,7 @@ class HealthCheckedEndpointGroupIntegrationTest {
                         HEALTH_CHECK_PATH).useGet(useGet),
                 protocol)) {
 
+            endpointGroup.whenReady().join();
             endpointGroup.newMeterBinder("foo").bindTo(registry);
 
             await().untilAsserted(() -> {
@@ -136,6 +137,8 @@ class HealthCheckedEndpointGroupIntegrationTest {
                      HealthCheckedEndpointGroup.builder(Endpoint.of("localhost", portTwo),
                              HEALTH_CHECK_PATH),
                      protocol)) {
+            groupFoo.whenReady().join();
+            groupBar.whenReady().join();
 
             groupFoo.newMeterBinder("foo").bindTo(registry);
             groupBar.newMeterBinder("bar").bindTo(registry);
