@@ -60,6 +60,11 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     @Override
+    public void close() {
+        close(WebSocketCloseStatus.NORMAL_CLOSURE);
+    }
+
+    @Override
     public void close(WebSocketCloseStatus status) {
         close(WebSocketFrame.ofClose(status));
     }

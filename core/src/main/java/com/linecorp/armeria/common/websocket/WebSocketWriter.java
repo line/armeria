@@ -91,9 +91,7 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
      * Sends the closing handshake with {@link WebSocketCloseStatus#NORMAL_CLOSURE}.
      */
     @Override
-    default void close() {
-        close(WebSocketCloseStatus.NORMAL_CLOSURE);
-    }
+    void close();
 
     /**
      * Sends the closing handshake with the {@link WebSocketCloseStatus}.
