@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.awaitility.Awaitility.await;
 
 import org.junit.jupiter.api.Test;
@@ -24,13 +23,12 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 
 class DefaultWebClientTest {
 
     @Test
-    void testConcatenateRequestPath() throws Exception {
+    void testConcatenateRequestPath() {
         final String clientUriPath = "http://127.0.0.1/hello";
         final String requestPath = "world/test?q1=foo";
         final WebClient client = WebClient.of(clientUriPath);
@@ -42,7 +40,7 @@ class DefaultWebClientTest {
     }
 
     @Test
-    void testRequestParamsUndefinedEndPoint() throws Exception {
+    void testRequestParamsUndefinedEndPoint() {
         final String path = "http://127.0.0.1/helloWorld/test?q1=foo";
         final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
 
@@ -53,7 +51,7 @@ class DefaultWebClientTest {
     }
 
     @Test
-    void testWithoutRequestParamsUndefinedEndPoint() throws Exception {
+    void testWithoutRequestParamsUndefinedEndPoint() {
         final String path = "http://127.0.0.1/helloWorld/test";
         final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
 
@@ -66,16 +64,16 @@ class DefaultWebClientTest {
     @Test
     void endpointRemapper() {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
-                Endpoint.of("127.0.0.1", 1));
+                                                     Endpoint.of("127.0.0.1", 1));
         final WebClient client = WebClient.builder("http://group")
-                .endpointRemapper(endpoint -> {
-                    if ("group".equals(endpoint.host())) {
-                        return group;
-                    } else {
-                        return endpoint;
-                    }
-                })
-                .build();
+                                          .endpointRemapper(endpoint -> {
+                                              if ("group".equals(endpoint.host())) {
+                                                  return group;
+                                              } else {
+                                                  return endpoint;
+                                              }
+                                          })
+                                          .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("/").aggregate();
@@ -91,16 +89,16 @@ class DefaultWebClientTest {
     @Test
     void endpointRemapperForUnspecifiedUri() {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
-                Endpoint.of("127.0.0.1", 1));
+                                                     Endpoint.of("127.0.0.1", 1));
         final WebClient client = WebClient.builder()
-                .endpointRemapper(endpoint -> {
-                    if ("group".equals(endpoint.host())) {
-                        return group;
-                    } else {
-                        return endpoint;
-                    }
-                })
-                .build();
+                                          .endpointRemapper(endpoint -> {
+                                              if ("group".equals(endpoint.host())) {
+                                                  return group;
+                                              } else {
+                                                  return endpoint;
+                                              }
+                                          })
+                                          .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("http://group").aggregate();
@@ -111,44 +109,5 @@ class DefaultWebClientTest {
                 assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
             });
         }
-    }
-
-    @Test
-    void testFormingPathWithNullQueryParams() {
-        final String clientUriPath = "http://127.0.0.1/hello";
-        final String requestPath = "world/test";
-
-        final WebClient client = WebClient.of(clientUriPath);
-
-        assertThatNullPointerException().isThrownBy(() -> client.get(requestPath, null).aggregate());
-    }
-
-    @Test
-    @SuppressWarnings("checkstyle:RegexpMultiline")
-    void testFormingPathWithNonNullQueryParams() {
-        final String clientUriPath = "http://127.0.0.1/hello";
-        final String requestPath = "world/test";
-
-        final QueryParams queryParams1 = QueryParams.builder()
-                .add("q2", "foo")
-                .build();
-        final QueryParams queryParams2 = QueryParams.builder()
-                .build();
-
-        final QueryParams[] queryParams = new QueryParams[]{queryParams1, queryParams2,
-                queryParams1, queryParams2};
-        final String[] paths = new String[]{"/world/test", "/world/test",
-                "/world/test?q1=foo", "/world/test?q1=foo"};
-        final String[] expectedPaths = new String[]{"/hello/world/test?q2=foo", "/hello/world/test",
-                "/hello/world/test?q1=foo&q2=foo", "/hello/world/test?q1=foo"};
-        final WebClient client = WebClient.of(clientUriPath);
-
-        for (int idx = 0; idx < queryParams.length; idx++) {
-            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                client.get(paths[idx], queryParams[idx]).aggregate();
-                assertThat(captor.get().request().path()).isEqualTo(expectedPaths[idx]);
-            }
-        }
-
     }
 }
