@@ -64,7 +64,7 @@ class JavaHttpClientUpgradeTest {
             final HttpClient client = HttpClient.newHttpClient();
             final HttpRequest request =
                     HttpRequest.newBuilder()
-                            .version(version)
+                               .version(version)
                                .uri(server.httpUri().resolve("/echo"))
                                .POST(HttpRequest.BodyPublishers.ofByteArray(bytes))
                                .build();
