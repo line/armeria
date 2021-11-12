@@ -36,8 +36,7 @@ final class WebClientUtil {
         } else {
             appendedPath.append('&');
         }
-        appendedPath.append(params.toQueryString());
-        return appendedPath.toString();
+        return params.appendQueryString(appendedPath).toString();
     }
 
     private WebClientUtil() {}
