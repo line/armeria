@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 
 class DefaultWebClientTest {
@@ -108,6 +109,24 @@ class DefaultWebClientTest {
                 assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
                 assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
             });
+        }
+    }
+
+    @Test
+    void testWithQueryParams() {
+        final String path = "http://127.0.0.1/helloWorld/test";
+        final QueryParams queryParams = QueryParams.builder()
+                                                   .add("q1", "foo")
+                                                   .build();
+        final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.get(path, queryParams).aggregate();
+            assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
+        }
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.post(path, "", queryParams).aggregate();
+            assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
         }
     }
 }
