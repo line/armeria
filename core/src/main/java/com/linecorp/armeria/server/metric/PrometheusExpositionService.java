@@ -18,17 +18,21 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
@@ -85,11 +89,30 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
-            TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
-        }
-        return HttpResponse.of(HttpStatus.OK, CONTENT_TYPE_004, stream.toByteArray());
+        final HttpResponseWriter responseWriter = HttpResponse.streaming();
+        responseWriter.write(ResponseHeaders.builder(HttpStatus.OK).contentType(CONTENT_TYPE_004).build());
+        ctx.blockingTaskExecutor().execute(() -> {
+            try (BufferedWriter writer = new BufferedWriter(new Writer() {
+                @Override
+                public void write(char[] cbuf, int off, int len) throws IOException {
+                    responseWriter.write(HttpData.ofUtf8(new String(cbuf, off, len)));
+                }
+
+                @Override
+                public void flush() throws IOException {
+                }
+
+                @Override
+                public void close() throws IOException {
+                    responseWriter.close();
+                }
+            })) {
+                TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
+            } catch (IOException e) {
+                responseWriter.close(e);
+            }
+        });
+        return responseWriter;
     }
 
     @Override
