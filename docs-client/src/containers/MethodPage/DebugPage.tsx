@@ -426,6 +426,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
       if (isAnnotatedService) {
         if (queries) {
           params.set('queries', queries);
+        } else {
+          params.delete('queries');
         }
         if (!exactPathMapping) {
           transport.getDebugMimeTypeEndpoint(method, additionalPath);
