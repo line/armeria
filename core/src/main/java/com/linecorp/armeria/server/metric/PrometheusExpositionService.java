@@ -25,6 +25,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -42,8 +43,6 @@ import io.prometheus.client.exporter.common.TextFormat;
  * format 0.0.4</a>.
  */
 public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
-
-    private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
 
     /**
      * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from the specified
@@ -85,11 +84,17 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final String accept = req.headers().get(HttpHeaderNames.ACCEPT);
+        final String format = TextFormat.chooseContentType(accept);
         final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
-            TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
+            TextFormat.writeFormat(
+                format,
+                writer,
+                collectorRegistry.metricFamilySamples()
+            );
         }
-        return HttpResponse.of(HttpStatus.OK, CONTENT_TYPE_004, stream.toByteArray());
+        return HttpResponse.of(HttpStatus.OK, MediaType.parse(format), stream.toByteArray());
     }
 
     @Override
