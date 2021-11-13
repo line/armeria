@@ -251,7 +251,8 @@ final class MimeParser {
                                 }
                             });
                             return;
-                        } else if (boundaryStart != -1) {
+                        }
+                        if (boundaryStart != -1) {
                             startOfLine = false;
                         }
                         // Use tryWrite() to avoid throwing exception.

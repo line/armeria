@@ -19,7 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
+import static com.linecorp.armeria.internal.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;

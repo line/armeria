@@ -35,11 +35,11 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.common.stream.SubscriberUtil;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -128,25 +128,10 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         if (!delegatedSubscriberUpdater.compareAndSet(this, null, multipartSubscriber)) {
             // Avoid calling method on late multipartSubscriber.
             // Because it's not static, so it will affect MultipartDecoder.
-            failLateSubscriber(subscriber, executor);
+            SubscriberUtil.failLateSubscriber(executor, subscriber, delegatedSubscriber.subscriber);
             return;
         }
-        decoded.subscribe(delegatedSubscriber, executor, options);
-    }
-
-    private void failLateSubscriber(Subscriber<? super BodyPart> subscriber, EventExecutor executor) {
-        subscriber.onSubscribe(NoopSubscription.get());
-        final Throwable abortedCause;
-        if (delegatedSubscriber.subscriber instanceof AbortingSubscriber) {
-            abortedCause = ((AbortingSubscriber) delegatedSubscriber.subscriber).cause();
-        } else {
-            abortedCause = new IllegalStateException("subscribed by other subscriber already");
-        }
-        if (executor.inEventLoop()) {
-            subscriber.onError(abortedCause);
-        } else {
-            executor.execute(() -> subscriber.onError(abortedCause));
-        }
+        decoded.subscribe(multipartSubscriber, executor, options);
     }
 
     @Override
@@ -174,19 +159,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         final MultipartSubscriber delegatedSubscriber = this.delegatedSubscriber;
         if (delegatedSubscriber != null) {
             delegatedSubscriber.requestUpstreamForBodyPartData();
-        }
-    }
-
-    /**
-     * Called by delegated MultipartSubscriber.
-     * e.g.
-     * 1. MultipartDecoder#abort -> MultipartSubscriber#onError -> MultipartSubscriber#cleanup ->
-     *    MultipartDecoder#cleanup
-     * 2. MultipartSubscriber#onComplete -> MultipartSubscriber#cleanup -> MultipartDecoder#cleanup
-     */
-    private void cleanup() {
-        if (delegatedSubscriber != null) {
-            delegatedSubscriber = null;
         }
     }
 
@@ -237,7 +209,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             }
 
             currentExposedBodyPartPublisher = bodyPart.content();
-            // We only publish one bodyPart one time.
+            // We only publish one bodyPart at a time.
             // Next BodyPart must wait the current BodyPart close and fully consumed.
             currentExposedBodyPartPublisher.whenComplete().handle((unused, throwable) -> {
                 if (executor.inEventLoop()) {
@@ -345,11 +317,16 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             cleanup();
         }
 
+        /**
+         * Called by delegated MultipartSubscriber.
+         * e.g.
+         * 1. MultipartDecoder#abort -> MultipartSubscriber#onError -> MultipartSubscriber#cleanup ->
+         *    MultipartDecoder#cleanup
+         * 2. MultipartSubscriber#onComplete -> MultipartSubscriber#cleanup -> MultipartDecoder#cleanup
+         */
         private void cleanup() {
-            if (currentExposedBodyPartPublisher != null) {
-                currentExposedBodyPartPublisher = null;
-            }
-            MultipartDecoder.this.cleanup();
+            currentExposedBodyPartPublisher = null;
+            delegatedSubscriber = null;
         }
     }
 }
