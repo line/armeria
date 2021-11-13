@@ -25,7 +25,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
