@@ -115,7 +115,6 @@ class BodyPartsIntegrationTest {
                                })))
               .maxRequestLength(0);
         }
-
     };
 
     @Test
@@ -163,8 +162,8 @@ class BodyPartsIntegrationTest {
                 restTemplate.postForEntity(server.httpUri().resolve("/multipart/large-file"), requestEntity,
                                            String.class);
         assertThat(response.getBody()).isEqualTo(
-                "file1/9567542e4526116e64c43a145dbff3f79884b73931b2984b91432b72a97a4b2e\n"
-                + "file2/0d825d57ce699f684a6a5d2e297efd9d3ce959bf13b5b889e22813d7b31af526");
+                "file1/9567542e4526116e64c43a145dbff3f79884b73931b2984b91432b72a97a4b2e\n" +
+                "file2/0d825d57ce699f684a6a5d2e297efd9d3ce959bf13b5b889e22813d7b31af526");
     }
 
     private static class MultipartInputStreamResource extends InputStreamResource {
