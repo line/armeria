@@ -32,10 +32,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -110,7 +112,8 @@ class BodyPartsIntegrationTest {
                                        throw new RuntimeException(e);
                                    }
                                    return HttpResponse.of(responseStringBuilder.toString());
-                               })));
+                               })))
+              .maxRequestLength(0);
         }
 
     };
@@ -144,22 +147,24 @@ class BodyPartsIntegrationTest {
     void fileUploadLargeContent() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        final InputStreamResource file1 = new MultipartInputStreamResource(0, 128 * 1024 * 1024);
-        final InputStreamResource file2 = new MultipartInputStreamResource(3, 64 * 1024 * 1024);
+        final Resource file1 = new MultipartInputStreamResource(0, 128 * 1024 * 1024);
+        final Resource file2 = new MultipartInputStreamResource(3, 32 * 1024 * 1024);
 
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file1", file1);
         body.add("file2", file2);
         final HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        final RestTemplate restTemplate = new RestTemplate();
+        // To allow sending large file
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setBufferRequestBody(false);
+        final RestTemplate restTemplate = new RestTemplate(requestFactory);
         final ResponseEntity<String> response =
                 restTemplate.postForEntity(server.httpUri().resolve("/multipart/large-file"), requestEntity,
                                            String.class);
-
         assertThat(response.getBody()).isEqualTo(
-                "file1/a93cf61307111272db812bf0aa2309c4562de783bd65ed678c16d8a5472becdf\n"
-                + "file2/e794beaa42424e827d69de64ab8bdf14b112f810bd01f3ca96982aa325f51cb6");
+                "file1/9567542e4526116e64c43a145dbff3f79884b73931b2984b91432b72a97a4b2e\n"
+                + "file2/0d825d57ce699f684a6a5d2e297efd9d3ce959bf13b5b889e22813d7b31af526");
     }
 
     private static class MultipartInputStreamResource extends InputStreamResource {
@@ -168,15 +173,15 @@ class BodyPartsIntegrationTest {
         MultipartInputStreamResource(int seed, long fileSize) {
             super(new InputStream() {
                 private final Random random = new Random(seed);
-                private int count = 0;
+                int count = 0;
 
                 @Override
                 public int read() throws IOException {
-                    if (count > fileSize) {
+                    if (count >= fileSize) {
                         return -1;
                     }
                     count++;
-                    return (byte) random.nextInt();
+                    return random.nextInt(256);
                 }
             });
             this.fileSize = fileSize;
