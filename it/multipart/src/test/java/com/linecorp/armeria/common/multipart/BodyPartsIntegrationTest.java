@@ -156,7 +156,7 @@ class BodyPartsIntegrationTest {
         final HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         // To allow sending large file
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        final SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setBufferRequestBody(false);
         final RestTemplate restTemplate = new RestTemplate(requestFactory);
         final ResponseEntity<String> response =
@@ -173,7 +173,7 @@ class BodyPartsIntegrationTest {
         MultipartInputStreamResource(int seed, long fileSize) {
             super(new InputStream() {
                 private final Random random = new Random(seed);
-                int count = 0;
+                int count;
 
                 @Override
                 public int read() throws IOException {
