@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 80
     strategy:
@@ -112,6 +113,7 @@ jobs:
         retention-days: 3
 
   lint:
+    if: github.repository == 'line/armeria'
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
@@ -138,6 +140,7 @@ jobs:
         shell: bash
 
   site:
+    if: github.repository == 'line/armeria'
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
@@ -170,6 +173,7 @@ jobs:
         shell: bash
 
   flaky-tests:
+    if: github.repository == 'line/armeria'
     runs-on: self-hosted
     timeout-minutes: 60
     steps:

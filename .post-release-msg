@@ -1,17 +1,13 @@
-1. Upload the artifacts to the staging repository and prepare the web site:
+1. Build the web site:
 
    git checkout ${tag} && \
-   ./gradlew --no-daemon clean publish site
+   ./gradlew --no-daemon clean site
 
-2. Close and release the staging repository at:
-
-   https://oss.sonatype.org/
-
-3. Close the milestone and set its due date with the date of the release at:
+2. Close the milestone and set its due date with the date of the release at:
 
    https://github.com/line/armeria/milestones
 
-4. Copy the generated web site to the 'gh-pages' branch, e.g.
+3. Copy the generated web site to the 'gh-pages' branch, e.g.
 
    cd ../site-armeria && \
    git checkout gh-pages && \
@@ -21,11 +17,11 @@
    git commit --amend -m 'Deploy the web site' && \
    git push --force
 
-5. Update the release note at:
+4. Update the release note at:
 
    https://github.com/line/armeria/releases/tag/${tag}
 
-6. Copy the examples to armeria-examples using the script:
+5. Copy the examples to armeria-examples using the script:
 
    cd ../armeria-examples && \
    ./update-examples.sh ${releaseVersion} ../upstream-armeria && \
@@ -33,7 +29,7 @@
    git commit -m 'Update Armeria to ${releaseVersion}' && \
    git push
 
-7. Announce the release via Twitter.
+6. Announce the release via Twitter.
 
-8. Send an update pull request to https://github.com/TechEmpower/FrameworkBenchmarks
+7. Send an update pull request to https://github.com/TechEmpower/FrameworkBenchmarks
    if we made performance improvements.
