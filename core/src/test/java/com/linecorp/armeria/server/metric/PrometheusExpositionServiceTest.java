@@ -25,7 +25,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -36,7 +35,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -76,7 +74,6 @@ class PrometheusExpositionServiceTest {
 
     @Test
     void prometheusRequests() throws InterruptedException {
-        System.out.println(server.httpUri());
         when(logger.isDebugEnabled()).thenReturn(true);
         final WebClient client = WebClient.of(server.httpUri());
         assertThat(client.get("/api").aggregate().join().status()).isSameAs(HttpStatus.OK);
@@ -84,7 +81,12 @@ class PrometheusExpositionServiceTest {
         verify(logger, times(2)).isDebugEnabled();
         verify(logger, times(2)).debug(anyString(), any(), any());
 
-        client.get("/disabled").aggregate().join();
+        final String exportedContent = client.get("/disabled").aggregate().join().contentUtf8();
+        assertThat(exportedContent).contains("armeria_build_info{");
+        // The last line must end with a line feed character.
+        // see https://prometheus.io/docs/instrumenting/exposition_formats/
+        assertThat(exportedContent).endsWith("\n");
+
         // prometheus requests are not collected.
         await().untilAsserted(() -> {
             final Map<String, Double> measurements = measureAll(registry);
@@ -99,9 +101,7 @@ class PrometheusExpositionServiceTest {
         verify(logger, times(4)).isDebugEnabled();
         verify(logger, times(2)).debug(anyString(), any(), any());
 
-        final AggregatedHttpResponse response = client.get("/enabled").aggregate().join();
-        assertThat(response.content(StandardCharsets.UTF_8)).hasLineCount(181);
-
+        client.get("/enabled").aggregate().join();
         // prometheus requests are collected.
         await().untilAsserted(() -> {
             final Map<String, Double> measurements = measureAll(registry);

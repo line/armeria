@@ -48,6 +48,7 @@ import io.prometheus.client.exporter.common.TextFormat;
 public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
 
     private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
+    private static final int CHAR_BUFFER_SIZE = 32 * 1024;
 
     /**
      * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from the specified
@@ -94,19 +95,19 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
         ctx.blockingTaskExecutor().execute(() -> {
             try (BufferedWriter writer = new BufferedWriter(new Writer() {
                 @Override
-                public void write(char[] cbuf, int off, int len) throws IOException {
+                public void write(char[] cbuf, int off, int len) {
                     responseWriter.write(HttpData.ofUtf8(new String(cbuf, off, len)));
                 }
 
                 @Override
-                public void flush() throws IOException {
+                public void flush() {
                 }
 
                 @Override
-                public void close() throws IOException {
+                public void close() {
                     responseWriter.close();
                 }
-            })) {
+            }, CHAR_BUFFER_SIZE)) {
                 TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
             } catch (IOException e) {
                 responseWriter.close(e);
