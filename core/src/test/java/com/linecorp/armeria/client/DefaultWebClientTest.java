@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -125,7 +125,7 @@ class DefaultWebClientTest {
         }
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            client.post(path, "", queryParams).aggregate();
+            client.post(path, queryParams, "").aggregate();
             assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
         }
     }
