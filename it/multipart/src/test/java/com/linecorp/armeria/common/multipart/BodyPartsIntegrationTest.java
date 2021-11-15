@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -113,6 +114,7 @@ class BodyPartsIntegrationTest {
                                    }
                                    return HttpResponse.of(responseStringBuilder.toString());
                                })))
+              .requestTimeout(Duration.ZERO)
               .maxRequestLength(0);
         }
     };
@@ -146,7 +148,7 @@ class BodyPartsIntegrationTest {
     void fileUploadLargeContent() {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        final Resource file1 = new MultipartInputStreamResource(0, 128 * 1024 * 1024);
+        final Resource file1 = new MultipartInputStreamResource(0, 16 * 1024 * 1024);
         final Resource file2 = new MultipartInputStreamResource(3, 32 * 1024 * 1024);
 
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -162,7 +164,7 @@ class BodyPartsIntegrationTest {
                 restTemplate.postForEntity(server.httpUri().resolve("/multipart/large-file"), requestEntity,
                                            String.class);
         assertThat(response.getBody()).isEqualTo(
-                "file1/9567542e4526116e64c43a145dbff3f79884b73931b2984b91432b72a97a4b2e\n" +
+                "file1/bbece10379bddacb638d637c0db0b16630a050b31e2d406190e48894ac3c32a8\n" +
                 "file2/0d825d57ce699f684a6a5d2e297efd9d3ce959bf13b5b889e22813d7b31af526");
     }
 
