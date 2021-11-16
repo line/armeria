@@ -146,32 +146,33 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private void setCandidates(List<Endpoint> candidates) {
         final List<Endpoint> endpoints = healthCheckStrategy.select(candidates);
         final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(endpoints.size());
-        for (Endpoint endpoint : endpoints) {
-            final DefaultHealthCheckerContext context = findContext(endpoint);
-            if (context != null) {
-                contexts.put(endpoint, context.retain());
-            } else {
-                contexts.computeIfAbsent(endpoint, this::newCheckerContext);
-            }
-        }
 
-        final HealthCheckContextGroup contextGroup = new HealthCheckContextGroup(contexts, candidates,
-                                                                                 checkerFactory);
         synchronized (contextGroupChain) {
+            for (Endpoint endpoint : endpoints) {
+                final DefaultHealthCheckerContext context = findContext(endpoint);
+                if (context != null) {
+                    contexts.put(endpoint, context.retain());
+                } else {
+                    contexts.computeIfAbsent(endpoint, this::newCheckerContext);
+                }
+            }
+
+            final HealthCheckContextGroup contextGroup = new HealthCheckContextGroup(contexts, candidates,
+                                                                                     checkerFactory);
             // 'updateHealth()' that retrieves 'contextGroupChain' could be invoked while initializing
-            // HealthCheckerContext. Therefore 'contexts' should be added to 'contextGroupChain'
+            // HealthCheckerContext. For this reason, 'contexts' should be added to 'contextGroupChain'
             // before 'contextGroup.initialize()'.
             contextGroupChain.add(contextGroup);
             contextGroup.initialize();
-        }
 
-        // Remove old contexts when the newly created contexts are fully initialized to smoothly transition
-        // to new endpoints.
-        contextGroup.whenInitialized().thenRun(() -> {
-            initialized = true;
-            destroyOldContexts(contextGroup);
-            setEndpoints(allHealthyEndpoints());
-        });
+            // Remove old contexts when the newly created contexts are fully initialized to smoothly transition
+            // to new endpoints.
+            contextGroup.whenInitialized().thenRun(() -> {
+                initialized = true;
+                destroyOldContexts(contextGroup);
+                setEndpoints(allHealthyEndpoints());
+            });
+        }
     }
 
     private List<Endpoint> allHealthyEndpoints() {
@@ -239,13 +240,18 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             final ImmutableList.Builder<CompletableFuture<?>> completionFutures = ImmutableList.builder();
             for (HealthCheckContextGroup group : contextGroupChain) {
                 for (DefaultHealthCheckerContext context : group.contexts().values()) {
-                    final CompletableFuture<?> closeFuture = context.release();
-                    if (closeFuture != null) {
-                        completionFutures.add(closeFuture.exceptionally(cause -> {
-                            logger.warn("Failed to stop a health checker for: {}",
-                                        context.endpoint(), cause);
-                            return null;
-                        }));
+                    try {
+                        final CompletableFuture<?> closeFuture = context.release();
+                        if (closeFuture != null) {
+                            completionFutures.add(closeFuture.exceptionally(cause -> {
+                                logger.warn("Failed to stop a health checker for: {}",
+                                            context.endpoint(), cause);
+                                return null;
+                            }));
+                        }
+                    } catch (Exception ex) {
+                        logger.warn("Unexpected exception while closing a health checker for: {}",
+                                    context.endpoint(), ex);
                     }
                 }
             }

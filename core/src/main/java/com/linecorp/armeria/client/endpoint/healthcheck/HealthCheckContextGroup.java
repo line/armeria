@@ -56,7 +56,7 @@ final class HealthCheckContextGroup {
     void initialize() {
         initFutures = CompletableFuture.allOf(contexts.values().stream()
                                                       .peek(context -> {
-                                                          if (context.refCnt() == 1) {
+                                                          if (!context.isInitialized()) {
                                                               // A newly created context
                                                               context.init(checkerFactory.apply(context));
                                                           }
