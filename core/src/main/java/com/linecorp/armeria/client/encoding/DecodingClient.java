@@ -16,19 +16,12 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.Objects.requireNonNull;
-
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.HttpClient;
@@ -39,6 +32,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
@@ -124,7 +125,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
             return unwrap().execute(ctx, req);
         }
 
-        final List<String> encodings = ImmutableList.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
+        final Set<String> encodings = ImmutableSet.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
         final ImmutableMap.Builder<String, StreamDecoderFactory> factoryBuilder =
                 ImmutableMap.builderWithExpectedSize(encodings.size());
 

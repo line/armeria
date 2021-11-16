@@ -16,18 +16,6 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import java.io.UnsupportedEncodingException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.function.Function;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -44,6 +32,17 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import java.io.UnsupportedEncodingException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.function.Function;
+
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DecodingClientTest {
 
@@ -205,5 +204,24 @@ class DecodingClientTest {
                                    HttpHeaderNames.ACCEPT_ENCODING, "gzip,br");
         response = client.execute(header).aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("gzip");
+    }
+
+    @Test
+    void shouldAllowDuplicatedEncodings() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+            .decorator(DecodingClient.builder()
+                .autoFillAcceptEncoding(false)
+                .newDecorator())
+            .build();
+
+        // Request can have duplicated content encoding
+        final HttpRequest request = HttpRequest.builder()
+            .get("/encoding-test")
+            .header(HttpHeaderNames.ACCEPT_ENCODING, "gzip,gzip")
+            .build();
+
+        // Response has correct encoding
+        AggregatedHttpResponse response = client.execute(request).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
     }
 }
