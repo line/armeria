@@ -30,13 +30,13 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.linecorp.armeria.common.*;
+import io.prometheus.client.exporter.common.TextFormat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -110,5 +110,18 @@ class PrometheusExpositionServiceTest {
         await().pollDelay(500, TimeUnit.MILLISECONDS).until(() -> logs.size() == 2);
         verify(logger, times(6)).isDebugEnabled();
         verify(logger, times(4)).debug(anyString(), any(), any());
+    }
+
+    @Test
+    void prometheusRequestsOpenMetricsFormat() throws InterruptedException {
+        final WebClient client = WebClient.of(server.httpUri());
+        HttpRequest request = HttpRequest.builder()
+            .get("/enabled")
+            .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_OPENMETRICS_100)
+            .build();
+        AggregatedHttpResponse response = client.execute(request).aggregate().join();
+        assertThat(
+            response.headers().get(HttpHeaderNames.CONTENT_TYPE)
+        ).isEqualTo(TextFormat.CONTENT_TYPE_OPENMETRICS_100);
     }
 }
