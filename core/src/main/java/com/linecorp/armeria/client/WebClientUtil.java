@@ -25,6 +25,7 @@ final class WebClientUtil {
      * Appends query params to the current path and returns the modified path.
      */
     static String addQueryParams(String path, QueryParams params) {
+        requireNonNull(path, "path");
         requireNonNull(params, "params");
         if (params.isEmpty()) {
             return path;
