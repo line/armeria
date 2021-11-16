@@ -265,9 +265,7 @@ final class DefaultHealthCheckerContext
 
     @Nullable
     CompletableFuture<?> release() {
-        if (destroyed || refCnt == 0) {
-            throw new IllegalStateException("HealthCheckerContext is closed already");
-        }
+        assert refCnt > 0 : refCnt;
 
         if (--refCnt == 0) {
             return destroy();
