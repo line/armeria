@@ -113,6 +113,19 @@ class PrometheusExpositionServiceTest {
     }
 
     @Test
+    void prometheusRequestsPrometheusFormat() throws InterruptedException {
+        final WebClient client = WebClient.of(server.httpUri());
+        HttpRequest request = HttpRequest.builder()
+            .get("/enabled")
+            .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_004)
+            .build();
+        AggregatedHttpResponse response = client.execute(request).aggregate().join();
+        assertThat(
+            response.headers().get(HttpHeaderNames.CONTENT_TYPE)
+        ).isEqualTo(TextFormat.CONTENT_TYPE_004);
+    }
+
+    @Test
     void prometheusRequestsOpenMetricsFormat() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         HttpRequest request = HttpRequest.builder()
