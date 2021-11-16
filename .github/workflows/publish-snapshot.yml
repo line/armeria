@@ -1,4 +1,4 @@
-name: Publish sanpshots to Maven Central repository
+name: Publish sanpshots to oss.sonatype.org
 
 on:
   push:
