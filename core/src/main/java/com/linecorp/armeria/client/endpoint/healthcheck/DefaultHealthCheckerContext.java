@@ -54,12 +54,12 @@ final class DefaultHealthCheckerContext
      * Note that this field is also used as a lock.
      */
     private final Map<Future<?>, Boolean> scheduledFutures = new IdentityHashMap<>();
+    private final CompletableFuture<Void> initialCheckFuture = new EventLoopCheckingFuture<>();
     private final Backoff retryBackoff;
     private final BiConsumer<Endpoint, Boolean> onUpdateHealth;
 
     @Nullable
     private AsyncCloseable handle;
-    private final CompletableFuture<Void> initialCheckFuture = new EventLoopCheckingFuture<>();
     private boolean destroyed;
     private int refCnt = 1;
 
