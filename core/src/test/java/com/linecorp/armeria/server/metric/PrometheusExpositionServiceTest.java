@@ -30,7 +30,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
-import io.prometheus.client.exporter.common.TextFormat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
@@ -38,8 +37,8 @@ import org.slf4j.Logger;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -50,6 +49,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.prometheus.client.exporter.common.TextFormat;
 
 class PrometheusExpositionServiceTest {
 
@@ -119,11 +119,11 @@ class PrometheusExpositionServiceTest {
     @Test
     void prometheusRequestsPrometheusFormat() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
-        HttpRequest request = HttpRequest.builder()
+        final HttpRequest request = HttpRequest.builder()
             .get("/enabled")
             .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_004)
             .build();
-        AggregatedHttpResponse response = client.execute(request).aggregate().join();
+        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(
             response.headers().get(HttpHeaderNames.CONTENT_TYPE)
         ).isEqualTo(TextFormat.CONTENT_TYPE_004);
@@ -132,11 +132,11 @@ class PrometheusExpositionServiceTest {
     @Test
     void prometheusRequestsOpenMetricsFormat() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
-        HttpRequest request = HttpRequest.builder()
+        final HttpRequest request = HttpRequest.builder()
             .get("/enabled")
             .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_OPENMETRICS_100)
             .build();
-        AggregatedHttpResponse response = client.execute(request).aggregate().join();
+        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(
             response.headers().get(HttpHeaderNames.CONTENT_TYPE)
         ).isEqualTo(TextFormat.CONTENT_TYPE_OPENMETRICS_100);
