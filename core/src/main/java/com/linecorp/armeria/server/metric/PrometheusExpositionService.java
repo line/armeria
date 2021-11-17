@@ -88,11 +88,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
         final String format = TextFormat.chooseContentType(accept);
         final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
-            TextFormat.writeFormat(
-                format,
-                writer,
-                collectorRegistry.metricFamilySamples()
-            );
+            TextFormat.writeFormat(format, writer, collectorRegistry.metricFamilySamples());
         }
         return HttpResponse.of(HttpStatus.OK, MediaType.parse(format), stream.toByteArray());
     }
