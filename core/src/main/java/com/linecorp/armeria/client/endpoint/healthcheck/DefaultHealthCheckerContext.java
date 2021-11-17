@@ -60,7 +60,6 @@ final class DefaultHealthCheckerContext
     @Nullable
     private AsyncCloseable handle;
     private final CompletableFuture<Void> initialCheckFuture = new EventLoopCheckingFuture<>();
-    boolean isHealth;
     private boolean destroyed;
     private int refCnt = 1;
 
@@ -154,8 +153,7 @@ final class DefaultHealthCheckerContext
 
     @Override
     public void updateHealth(double health) {
-        isHealth = health > 0;
-        onUpdateHealth.accept(originalEndpoint, isHealth);
+        onUpdateHealth.accept(originalEndpoint,  health > 0);
 
         if (!initialCheckFuture.isDone()) {
             initialCheckFuture.complete(null);
