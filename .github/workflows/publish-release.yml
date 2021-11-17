@@ -9,7 +9,7 @@ jobs:
   publish:
     name: Publish final artifacts
     if: github.repository == 'line/armeria'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
 
@@ -31,9 +31,14 @@ jobs:
             build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
             build-${{ matrix.java }}-${{ runner.os }}-
 
+      - name: Build with Gradle
+        run: |
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PflakyTests=false build
+        shell: bash
+
       - name: Publish and close repository
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=1 publish closeAndReleaseStagingRepository
+          ./gradlew --no-daemon --stacktrace --max-workers=1 clean publish closeAndReleaseStagingRepository
         env:
           # Should not use '-P' option with 'secrets' that can cause unexpected results
           # if secret values contains white spaces or new lines.
