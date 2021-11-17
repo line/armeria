@@ -112,6 +112,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
                 responseWriter.close(e);
                 return;
             }
+            // Need to wait writer is flushed by close
             responseWriter.close();
         });
         return responseWriter;
