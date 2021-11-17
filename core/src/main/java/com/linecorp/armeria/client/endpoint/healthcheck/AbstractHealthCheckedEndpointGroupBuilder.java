@@ -199,16 +199,12 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     public final HealthCheckedEndpointGroup build() {
         final HealthCheckStrategy healthCheckStrategy;
         if (maxEndpointCount != null) {
-            healthCheckStrategy = PartialHealthCheckStrategy.builder()
-                                                            .maxEndpointCount(maxEndpointCount)
-                                                            .build();
+            healthCheckStrategy = HealthCheckStrategy.ofCount(maxEndpointCount);
         } else {
             if (maxEndpointRatio == null || maxEndpointRatio == 1.0) {
                 healthCheckStrategy = HealthCheckStrategy.all();
             } else {
-                healthCheckStrategy = PartialHealthCheckStrategy.builder()
-                                                                .maxEndpointRatio(maxEndpointRatio)
-                                                                .build();
+                healthCheckStrategy = HealthCheckStrategy.ofRatio(maxEndpointRatio);
             }
         }
 
