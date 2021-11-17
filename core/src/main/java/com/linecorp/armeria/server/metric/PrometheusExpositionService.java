@@ -108,11 +108,11 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
                 }
             }, CHAR_BUFFER_SIZE)) {
                 TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
-                writer.flush();
-                responseWriter.close();
             } catch (IOException e) {
                 responseWriter.close(e);
+                return;
             }
+            responseWriter.close();
         });
         return responseWriter;
     }
