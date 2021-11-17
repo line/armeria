@@ -88,7 +88,7 @@ final class DefaultHealthCheckerContext
     }
 
     boolean isInitialized() {
-        return handle == null;
+        return handle != null;
     }
 
     CompletableFuture<Void> whenInitialized() {
