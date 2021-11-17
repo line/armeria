@@ -89,7 +89,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     }
 
     @Override
-    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
         final HttpResponseWriter responseWriter = HttpResponse.streaming();
         responseWriter.write(ResponseHeaders.builder(HttpStatus.OK).contentType(CONTENT_TYPE_004).build());
         ctx.blockingTaskExecutor().execute(() -> {
@@ -105,10 +105,11 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
 
                 @Override
                 public void close() {
-                    responseWriter.close();
                 }
             }, CHAR_BUFFER_SIZE)) {
                 TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
+                writer.flush();
+                responseWriter.close();
             } catch (IOException e) {
                 responseWriter.close(e);
             }
