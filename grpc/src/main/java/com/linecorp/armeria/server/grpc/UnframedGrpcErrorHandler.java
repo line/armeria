@@ -27,7 +27,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;
@@ -44,12 +45,12 @@ public interface UnframedGrpcErrorHandler {
      * Returns a plain text or json response based on the content type.
      */
     static UnframedGrpcErrorHandler of() {
-        return (ctx, status, response) -> {
+        return (ctx, status, response, statusFunction) -> {
             final MediaType grpcMediaType = response.contentType();
             if (grpcMediaType != null && grpcMediaType.isJson()) {
-                return ofJson().handle(ctx, status, response);
+                return ofJson().handle(ctx, status, response, statusFunction);
             } else {
-                return ofPlainText().handle(ctx, status, response);
+                return ofPlainText().handle(ctx, status, response, statusFunction);
             }
         };
     }
@@ -58,7 +59,7 @@ public interface UnframedGrpcErrorHandler {
      * Returns a json response.
      */
     static UnframedGrpcErrorHandler ofJson() {
-        return (ctx, status, response) -> {
+        return (ctx, status, response, statusFunction) -> {
             final Code grpcCode = status.getCode();
             final Map<String, Object> message;
             final String grpcMessage = status.getDescription();
@@ -68,7 +69,14 @@ public interface UnframedGrpcErrorHandler {
             } else {
                 message = ImmutableMap.of("grpc-code", grpcCode.name());
             }
-            final HttpStatus httpStatus = GrpcStatus.grpcStatusToHttpStatus(status);
+            final RequestLogAccess log = ctx.log();
+            final Throwable cause;
+            if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                cause = log.partial().responseCause();
+            } else {
+                cause = null;
+            }
+            final HttpStatus httpStatus = statusFunction.apply(ctx, status, cause);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.JSON_UTF_8)
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
@@ -82,14 +90,21 @@ public interface UnframedGrpcErrorHandler {
      * Returns a plain text response.
      */
     static UnframedGrpcErrorHandler ofPlainText() {
-        return (ctx, status, response) -> {
+        return (ctx, status, response, statusFunction) -> {
             final Code grpcCode = status.getCode();
             final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());
             final String grpcMessage = status.getDescription();
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
             }
-            final HttpStatus httpStatus = GrpcStatus.grpcStatusToHttpStatus(status);
+            final RequestLogAccess log = ctx.log();
+            final Throwable cause;
+            if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                cause = log.partial().responseCause();
+            } else {
+                cause = null;
+            }
+            final HttpStatus httpStatus = statusFunction.apply(ctx, status, cause);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.PLAIN_TEXT_UTF_8)
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
@@ -105,8 +120,10 @@ public interface UnframedGrpcErrorHandler {
      * @param ctx the service context.
      * @param status the gRPC {@link Status} code.
      * @param response the gRPC response.
+     * @param statusFunction the gRPC HTTP status code mapper.
      *
      * @return the {@link HttpResponse}.
      */
-    HttpResponse handle(ServiceRequestContext ctx, Status status, AggregatedHttpResponse response);
+    HttpResponse handle(ServiceRequestContext ctx, Status status, AggregatedHttpResponse response,
+                        UnframedGrpcStatusFunction statusFunction);
 }

@@ -64,14 +64,18 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
     private final GrpcService delegate;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
+    private final UnframedGrpcStatusFunction unframedGrpcStatusFunction;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    AbstractUnframedGrpcService(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+    AbstractUnframedGrpcService(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+                                UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
         super(delegate);
         this.delegate = delegate;
         this.unframedGrpcErrorHandler = requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
+        this.unframedGrpcStatusFunction = requireNonNull(unframedGrpcStatusFunction,
+                                                         "unframedGrpcStatusFunction");
     }
 
     @Override
@@ -135,7 +139,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                         if (t != null) {
                             res.completeExceptionally(t);
                         } else {
-                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler);
+                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
+                                              unframedGrpcStatusFunction);
                         }
                     }
                     return null;
@@ -147,7 +152,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             ServiceRequestContext ctx,
             AggregatedHttpResponse grpcResponse,
             CompletableFuture<HttpResponse> res,
-            UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+            UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+            UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -159,7 +165,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
         if (grpcStatus.getCode() != Code.OK) {
             PooledObjects.close(grpcResponse.content());
-            res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse));
+            res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse,
+                                                         unframedGrpcStatusFunction));
             return;
         }
 

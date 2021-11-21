@@ -118,7 +118,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
      * to support HTTP/JSON to gRPC transcoding, a new {@link HttpJsonTranscodingService} instance
      * would be returned. Otherwise, the {@code delegate} would be returned.
      */
-    static GrpcService of(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+    static GrpcService of(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+                          UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
         requireNonNull(delegate, "delegate");
         requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
 
@@ -183,7 +184,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             // We don't need to create a new HttpJsonTranscodingService instance in this case.
             return delegate;
         }
-        return new HttpJsonTranscodingService(delegate, routeAndSpecs, unframedGrpcErrorHandler);
+        return new HttpJsonTranscodingService(delegate, routeAndSpecs, unframedGrpcErrorHandler,
+                                              unframedGrpcStatusFunction);
     }
 
     @Nullable
@@ -373,8 +375,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     private HttpJsonTranscodingService(GrpcService delegate,
                                        Map<Route, TranscodingSpec> routeAndSpecs,
-                                       UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
-        super(delegate, unframedGrpcErrorHandler);
+                                       UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+                                       UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
+        super(delegate, unframedGrpcErrorHandler, unframedGrpcStatusFunction);
         this.routeAndSpecs = routeAndSpecs;
         routes = ImmutableSet.<Route>builder()
                              .addAll(delegate.routes())

@@ -44,6 +44,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -125,6 +126,9 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
+
+    @Nullable
+    private UnframedGrpcStatusFunction unframedGrpcStatusFunction;
 
     @Nullable
     private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
@@ -444,6 +448,20 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Set a custom HTTP status code mapper. This is useful to serve custom HTTP status code when using unframed
+     * gRPC service.
+     * @param unframedGrpcStatusFunction The function which maps the {@link Throwable} or grpc
+     * {@link Status} code to an {@link HttpStatus} code.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder unframedGrpcStatusMapping(
+            UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
+        requireNonNull(unframedGrpcStatusFunction, "unframedGrpcStatusFunction");
+        this.unframedGrpcStatusFunction = unframedGrpcStatusFunction;
+        return this;
+    }
+
+    /**
      * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
      *
      * <p>Limitations:
@@ -708,6 +726,10 @@ public final class GrpcServiceBuilder {
             throw new IllegalStateException(
                     "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
         }
+        if (!enableUnframedRequests  && unframedGrpcStatusFunction != null) {
+            throw new IllegalStateException(
+                    "'unframedGrpcStatusFunction' can only be set if unframed requests are enabled");
+        }
         if (!enableHttpJsonTranscoding && httpJsonTranscodingErrorHandler != null) {
             throw new IllegalStateException(
                     "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
@@ -758,13 +780,17 @@ public final class GrpcServiceBuilder {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
-                                                     : UnframedGrpcErrorHandler.of());
+                                                     : UnframedGrpcErrorHandler.of(),
+                    unframedGrpcStatusFunction != null ? unframedGrpcStatusFunction
+                                                       : UnframedGrpcStatusFunction.of());
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
                     grpcService,
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
-                                                            : UnframedGrpcErrorHandler.ofJson());
+                                                            : UnframedGrpcErrorHandler.ofJson(),
+                    unframedGrpcStatusFunction != null ? unframedGrpcStatusFunction
+                                                       : UnframedGrpcStatusFunction.of());
         }
         return grpcService;
     }

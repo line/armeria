@@ -63,8 +63,9 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
     UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
-                        UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
-        super(delegate, unframedGrpcErrorHandler);
+                        UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+                        UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
+        super(delegate, unframedGrpcErrorHandler, unframedGrpcStatusFunction);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         methodsByName = registry.methods();
     }

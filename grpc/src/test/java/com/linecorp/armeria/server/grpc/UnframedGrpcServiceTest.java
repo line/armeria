@@ -45,6 +45,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.grpc.BindableService;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -125,11 +126,40 @@ class UnframedGrpcServiceTest {
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
-        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of());
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
+                                              UnframedGrpcStatusFunction.of());
         assertThat(byteBuf.refCnt()).isZero();
     }
 
+    @Test
+    void unframedGrpcStatusFunction() throws Exception {
+        final TestService spyTestService = spy(testService);
+        doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
+                .when(spyTestService)
+                .emptyCall(any(), any());
+        UnframedGrpcStatusFunction statusFunction = (ctx, status, cause) -> {
+            if (status.getCode() == Code.UNKNOWN) {
+                // not INTERNAL_SERVER_ERROR
+                return HttpStatus.UNKNOWN;
+            }
+            return null;
+        };
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(
+                spyTestService,
+                statusFunction.orElse(UnframedGrpcStatusFunction.of()));
+        final HttpResponse response = unframedGrpcService.serve(ctx, request);
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.UNKNOWN);
+        assertThat(res.contentUtf8())
+                .isEqualTo("grpc-code: UNKNOWN, grpc error message");
+    }
+
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
+        return buildUnframedGrpcService(bindableService, UnframedGrpcStatusFunction.of());
+    }
+
+    private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService,
+                                                                UnframedGrpcStatusFunction statusFunction) {
         return (UnframedGrpcService) GrpcService.builder()
                                                 .addService(bindableService)
                                                 .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
@@ -139,6 +169,7 @@ class UnframedGrpcServiceTest {
                                                 .enableUnframedRequests(true)
                                                 .unframedGrpcErrorHandler(
                                                         UnframedGrpcErrorHandler.ofPlainText())
+                                                .unframedGrpcStatusMapping(statusFunction)
                                                 .build();
     }
 
