@@ -426,6 +426,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
       if (isAnnotatedService) {
         if (queries) {
           params.set('queries', queries);
+        } else {
+          params.delete('queries');
         }
         if (!exactPathMapping) {
           transport.getDebugMimeTypeEndpoint(method, additionalPath);
@@ -446,7 +448,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
         }
         if (minifiedHeaders.length > 0) {
           params.set('headers', minifiedHeaders);
+        } else {
+          params.delete('headers');
         }
+      } else {
+        params.delete('headers');
       }
     } catch (e) {
       setDebugResponse(e.toString());
