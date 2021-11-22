@@ -68,9 +68,22 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @param name the name of the {@link Cookie}
      * @param value the value of the {@link Cookie}
+     *
+     * @deprecated Use {@link #secureBuilder(String, String)} instead to create secure cookie.
      */
+    @Deprecated
     static CookieBuilder builder(String name, String value) {
         return new CookieBuilder(name, value);
+    }
+
+    /**
+     * Returns a newly created {@link CookieBuilder} which builds a {@link Cookie} with secure settings.
+     *
+     * @param name the name of the {@link Cookie}
+     * @param value the value of the {@link Cookie}
+     */
+    static CookieBuilder secureBuilder(String name, String value) {
+        return new CookieBuilder(name, value).secure(true).httpOnly(true);
     }
 
     /**
