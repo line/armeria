@@ -21,12 +21,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -124,7 +126,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
             return unwrap().execute(ctx, req);
         }
 
-        final List<String> encodings = ImmutableList.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
+        final Set<String> encodings = ImmutableSet.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
         final ImmutableMap.Builder<String, StreamDecoderFactory> factoryBuilder =
                 ImmutableMap.builderWithExpectedSize(encodings.size());
 
