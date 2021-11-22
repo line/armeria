@@ -210,10 +210,10 @@ class DecodingClientTest {
     @Test
     void shouldAllowDuplicatedEncodings() throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
-            .decorator(DecodingClient.builder()
-            .autoFillAcceptEncoding(false)
-            .newDecorator())
-            .build();
+                                          .decorator(DecodingClient.builder()
+                                          .autoFillAcceptEncoding(false)
+                                          .newDecorator())
+                                          .build();
 
         // Request can have duplicated content encoding
         final HttpRequest request = HttpRequest.builder()
