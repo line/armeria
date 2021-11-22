@@ -617,6 +617,13 @@ public interface HttpResponse extends Response, HttpMessage {
         return new AbortedHttpResponse(cause);
     }
 
+    /**
+     * Returns a new {@link HttpResponseBuilder}.
+     */
+    static HttpResponseBuilder builder() {
+        return new HttpResponseBuilder();
+    }
+
     @Override
     CompletableFuture<Void> whenComplete();
 
