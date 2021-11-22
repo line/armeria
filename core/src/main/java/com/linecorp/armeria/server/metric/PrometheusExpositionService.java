@@ -34,6 +34,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
@@ -45,7 +46,6 @@ import io.prometheus.client.exporter.common.TextFormat;
 public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
 
     private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
-    private static final int CHAR_BUFFER_SIZE = 32 * 1024;
 
     /**
      * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from the specified
@@ -87,11 +87,18 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(ctx.alloc().buffer());
-        try (OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
+        final ByteBuf buffer = ctx.alloc().buffer();
+        boolean success = false;
+        try (ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(buffer);
+             OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
             TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
+            success = true;
+        } finally {
+            if (!success) {
+                buffer.release();
+            }
         }
-        return HttpResponse.of(HttpStatus.OK, CONTENT_TYPE_004, HttpData.wrap(byteBufOutputStream.buffer()));
+        return HttpResponse.of(HttpStatus.OK, CONTENT_TYPE_004, HttpData.wrap(buffer));
     }
 
     @Override
