@@ -217,9 +217,9 @@ class DecodingClientTest {
 
         // Request can have duplicated content encoding
         final HttpRequest request = HttpRequest.builder()
-            .get("/encoding-test")
-            .header(HttpHeaderNames.ACCEPT_ENCODING, "gzip,gzip")
-            .build();
+                                               .get("/encoding-test")
+                                               .header(HttpHeaderNames.ACCEPT_ENCODING, "gzip,gzip")
+                                               .build();
 
         // Response has correct encoding
         final AggregatedHttpResponse response = client.execute(request).aggregate().get();
