@@ -70,7 +70,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     InternalServices internalServices;
 
     @Test
-    void exposeInternalServicesToMangementServerPort() throws Exception {
+    void exposeInternalServicesToManagementServerPort() throws Exception {
         final Port internalServicePort = internalServices.internalServicePort();
         assertThat(internalServicePort).isNotNull();
         assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);

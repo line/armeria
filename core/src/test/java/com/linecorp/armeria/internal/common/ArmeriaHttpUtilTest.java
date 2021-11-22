@@ -173,7 +173,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ClientHeaders(in, out, AsciiString::toString);
+        toNettyHttp1ClientHeaders(in, out, Http1HeaderNaming.ofDefault());
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
     }
@@ -414,7 +414,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ServerHeaders(in, out);
+        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault());
         assertThat(out).isEqualTo(new DefaultHttpHeaders()
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.TRAILER, "foo")
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.HOST, "bar"));
@@ -474,15 +474,23 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CACHE_CONTROL, "dummy")
                                           .build();
 
-        final io.netty.handler.codec.http.HttpHeaders out =
+        final io.netty.handler.codec.http.HttpHeaders clientOutHeaders =
                 new DefaultHttpHeaders();
-        toNettyHttp1ClientHeaders(in, out, Http1HeaderNaming.traditional());
+        toNettyHttp1ClientHeaders(in, clientOutHeaders, Http1HeaderNaming.traditional());
+        assertThat(clientOutHeaders).isEqualTo(new DefaultHttpHeaders()
+                                                       .add("foo", "bar")
+                                                       .add("Authorization", "dummy")
+                                                       .add("Content-Length", "dummy")
+                                                       .add("Cache-Control", "dummy"));
 
-        assertThat(out).isEqualTo(new DefaultHttpHeaders()
-                                          .add("foo", "bar")
-                                          .add("Authorization", "dummy")
-                                          .add("Content-Length", "dummy")
-                                          .add("Cache-Control", "dummy"));
+        final io.netty.handler.codec.http.HttpHeaders serverOutHeaders =
+                new DefaultHttpHeaders();
+        toNettyHttp1ServerHeaders(in, serverOutHeaders, Http1HeaderNaming.traditional());
+        assertThat(serverOutHeaders).isEqualTo(new DefaultHttpHeaders()
+                                                       .add("foo", "bar")
+                                                       .add("Authorization", "dummy")
+                                                       .add("Content-Length", "dummy")
+                                                       .add("Cache-Control", "dummy"));
     }
 
     @Test

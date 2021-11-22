@@ -52,12 +52,16 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
      * <ul>
      *   <li>16384 - The maximum length of a cleartext TLS record.</li>
      *   <li>6 - The maximum header length of an HTTP chunk. i.e. "4000\r\n".length()</li>
+     *   <li>2 - The trailing "\r\n".</li>
      * </ul>
      *
-     * <p>To be precise, we have a chance of wasting 6 bytes because we may not use chunked encoding,
+     * <p>To be precise, we have a chance of wasting 8 bytes because we may not use chunked encoding,
      * but it is not worth adding complexity to be that precise.
+     *
+     * <p>TODO(trustin): Remove this field as well as {@link #doWriteSplitData(int, HttpData, boolean)}
+     *                   once https://github.com/netty/netty/issues/11792 is fixed.
      */
-    private static final int MAX_TLS_DATA_LENGTH = 16384 - 6;
+    private static final int MAX_TLS_DATA_LENGTH = 16384 - 8;
 
     /**
      * A non-last empty {@link HttpContent}.

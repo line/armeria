@@ -61,6 +61,7 @@ import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -195,6 +196,7 @@ public final class ServerBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
+    private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1122,7 +1124,7 @@ public final class ServerBuilder {
         }
 
         final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
+        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(finalDecorated));
         return this;
     }
 
@@ -1676,6 +1678,17 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
+        requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        this.http1HeaderNaming = http1HeaderNaming;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1759,7 +1772,11 @@ public final class ServerBuilder {
             for (VirtualHost h : virtualHosts) {
                 final SslContext sslCtx = h.sslContext();
                 if (sslCtx != null) {
-                    mappingBuilder.add(h.hostnamePattern(), sslCtx);
+                    final String originalHostnamePattern = h.originalHostnamePattern();
+                    // The SslContext for the default virtual host was added when creating DomainMappingBuilder.
+                    if (!"*".equals(originalHostnamePattern)) {
+                        mappingBuilder.add(originalHostnamePattern, sslCtx);
+                    }
                 }
             }
             sslContexts = mappingBuilder.build();
@@ -1803,7 +1820,8 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
+                http1HeaderNaming);
     }
 
     /**
@@ -1863,12 +1881,12 @@ public final class ServerBuilder {
         return null;
     }
 
-    private static void warnIfServiceHasMultipleRoutes(String pathPrefix, HttpService service) {
-        if (service instanceof HttpServiceWithRoutes) {
-            if (((HttpServiceWithRoutes) service).routes().size() > 1) {
-                logger.warn("The service that you are trying to add with 'serviceUnder' has multiple routes, " +
-                            "but its routes will be ignored and it will be served under '{}': service={}",
-                            pathPrefix, service);
+    private static void warnIfServiceHasMultipleRoutes(String path, HttpService service) {
+        if (service instanceof ServiceWithRoutes) {
+            if (((ServiceWithRoutes) service).routes().size() > 0) {
+                logger.warn("The service has self-defined routes but the routes will be ignored. " +
+                            "It will be served at the route you specified: path={}, service={}",
+                            path, service);
             }
         }
     }
