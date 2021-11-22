@@ -57,12 +57,10 @@ class ClientCookieEncoderTest {
         final String c1 = "myCookie=myValue";
         final String c2 = "myCookie2=myValue2";
         final String c3 = "myCookie3=myValue3";
-        final Cookie cookie1 = Cookie.builder("myCookie", "myValue")
+        final Cookie cookie1 = Cookie.secureBuilder("myCookie", "myValue")
                                      .domain(".adomainsomewhere")
                                      .maxAge(50)
                                      .path("/apathsomewhere")
-                                     .secure(true)
-                                     .httpOnly(true)
                                      .sameSite("Strict")
                                      .build();
         final Cookie cookie2 = Cookie.builder("myCookie2", "myValue2")
