@@ -18,9 +18,7 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.Writer;
+import java.io.OutputStreamWriter;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
@@ -29,15 +27,14 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
+import io.netty.buffer.ByteBufOutputStream;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
 
@@ -89,33 +86,12 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     }
 
     @Override
-    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-        final HttpResponseWriter responseWriter = HttpResponse.streaming();
-        responseWriter.write(ResponseHeaders.builder(HttpStatus.OK).contentType(CONTENT_TYPE_004).build());
-        ctx.blockingTaskExecutor().execute(() -> {
-            try (BufferedWriter writer = new BufferedWriter(new Writer() {
-                @Override
-                public void write(char[] cbuf, int off, int len) {
-                    responseWriter.write(HttpData.ofUtf8(new String(cbuf, off, len)));
-                }
-
-                @Override
-                public void flush() {
-                }
-
-                @Override
-                public void close() {
-                }
-            }, CHAR_BUFFER_SIZE)) {
-                TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
-            } catch (IOException e) {
-                responseWriter.close(e);
-                return;
-            }
-            // Need to wait writer is flushed by close
-            responseWriter.close();
-        });
-        return responseWriter;
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(ctx.alloc().buffer());
+        try (OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
+            TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
+        }
+        return HttpResponse.of(HttpStatus.OK, CONTENT_TYPE_004, HttpData.wrap(byteBufOutputStream.buffer()));
     }
 
     @Override
