@@ -235,10 +235,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                                 .transferred(transferredLength)
                                                 .build();
 
-                writeErrorResponse(streamId, HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
+                final HttpStatus entityTooLarge = HttpStatus.REQUEST_ENTITY_TOO_LARGE;
+                writeErrorResponse(streamId, entityTooLarge, null, cause);
 
                 if (decodedReq.isOpen()) {
-                    decodedReq.close(cause);
+                    decodedReq.close(HttpStatusException.of(entityTooLarge, cause));
                 }
             } else {
                 // The response has been started already. Abort the request and let the response continue.

@@ -1,0 +1,55 @@
+---
+date: 2021-11-23
+---
+
+## 🌟 New features
+
+- N/A
+
+## 📈 Improvements
+
+- N/A
+
+## 🛠️ Bug fixes
+
+- You no longer see `Maximum active streams violated for this endpoint.` exception anymore. #3858 #3908
+- <type://DecodingClient> does not raise an exception anymore when duplicated encodings are specified. #3932 #3934
+  - The duplicated encodings are silently ignored.
+- An early cancelled <type://HttpResponse> is now correctly decremented from the number of active responses. #3920
+- The text in the description sections is now correctly rendered in <type://DocService>. #3917
+- The status of a protocol violation is now correctly logged by <type://LoggingService> #3914
+    - A <type://ResponseHeaders> is written exactly once when a protocol violation error is raised.
+- <type://DocServicePlugin> for gRPC now reads description from `bin`, `desc`, `dsc`, `pb`, and `protobin` file.
+  #3912
+- <type://EurekaEndpointGroupBuilder> now fails if an empty string is specified for `appName` and
+  other parameters. #3903
+- OkHttp can be used with self-signed certificate in Armeria. #3902
+  - Users can use `https://127.0.0.1:` with the default self-signed certificate.
+- <type://GraphqlService> now produces a `graphql+json` response when the `Accept` header is `*`. #3898
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- N/A
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'anuraaga',
+  'eisig',
+  'heowc',
+  'hyangtack',
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'ohadgur',
+  'techno',
+  'trustin'
+]} />
