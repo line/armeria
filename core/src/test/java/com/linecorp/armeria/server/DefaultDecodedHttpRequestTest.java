@@ -113,7 +113,7 @@ public class DefaultDecodedHttpRequestTest {
         final DefaultDecodedHttpRequest
                 request = new DefaultDecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
                                                         InboundTrafficController.disabled(),
-                                                        sctx.maxRequestLength());
+                                                        sctx.maxRequestLength(), null, null);
         request.init(sctx);
         return request;
     }

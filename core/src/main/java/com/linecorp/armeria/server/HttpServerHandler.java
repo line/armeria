@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -28,7 +27,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -63,6 +61,7 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.server.EarlyResponseRoutingContext.Reason;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -89,7 +88,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
-    private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
+    static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
 
     private static final HttpData DATA_INVALID_REQUEST_PATH = HttpData.ofUtf8(MSG_INVALID_REQUEST_PATH);
 
@@ -155,8 +154,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private final ServerConfigHolder configHolder;
-    private ServerConfig config;
+    private final ServerConfig config;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -170,11 +168,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final ProxiedAddresses proxiedAddresses;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
-    private final Consumer<ServerConfig> configUpdateListener = this::swapServerConfig;
     private boolean isReading;
     private boolean handledLastRequest;
 
-    HttpServerHandler(ServerConfigHolder configHolder,
+    HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
@@ -182,15 +179,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
-        this.configHolder = requireNonNull(configHolder, "configHolder");
+        this.config = requireNonNull(config, "config");
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
         this.responseEncoder = responseEncoder;
         this.proxiedAddresses = proxiedAddresses;
-        config = requireNonNull(configHolder.getConfig(), "config");
         unfinishedRequests = new IdentityHashMap<>();
-        configHolder.addListener(configUpdateListener);
     }
 
     @Override
@@ -227,8 +222,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // endOfStream set.
                 cleanup();
         }
-        // Clean up the listener from ServerConfigHolder once the channel becomes inactive.
-        configHolder.removeListener(configUpdateListener);
     }
 
     private void cleanup() {
@@ -253,6 +246,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         if (msg instanceof Http2Settings) {
             handleHttp2Settings(ctx, (Http2Settings) msg);
+        } else if (msg instanceof RoutingContext) {
+            // handle
         } else {
             handleRequest(ctx, (DecodedHttpRequest) msg);
         }
@@ -312,9 +307,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
-        final String hostname = hostname(headers);
-        final int port = ((InetSocketAddress) channel.localAddress()).getPort();
-        final VirtualHost virtualHost = config.findVirtualHost(hostname, port);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
@@ -325,13 +317,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
-        // Handle 'OPTIONS * HTTP/1.1'.
-        final String originalPath = headers.path();
-        if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
+        final RoutingContext routingCtx = req.routingContext();
+        if (routingCtx instanceof EarlyResponseRoutingContext) {
+            final Reason earlyRespondingReason = ((EarlyResponseRoutingContext) routingCtx).reason();
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
-                                                     proxiedAddresses, clientAddress, null);
-            if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
+                    newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
+            if (earlyRespondingReason == Reason.OPTIONS_REQUEST) {
+                // Handle 'OPTIONS * HTTP/1.1'.
                 handleOptions(ctx, reqCtx);
             } else {
                 rejectInvalidPath(ctx, reqCtx);
@@ -339,33 +331,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
-        // Validate and split path and query.
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(originalPath);
-        if (pathAndQuery == null) {
-            final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
-                                                     proxiedAddresses, clientAddress, null);
-            rejectInvalidPath(ctx, reqCtx);
-            return;
-        }
-
-        final RoutingContext routingCtx =
-                DefaultRoutingContext.of(virtualHost, hostname, pathAndQuery.path(), pathAndQuery.query(),
-                                         headers, isCorsPreflightRequest(req));
         // Find the service that matches the path.
-        final Routed<ServiceConfig> routed;
-        try {
-            routed = virtualHost.findServiceConfig(routingCtx, true);
-        } catch (Throwable cause) {
-            logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
-            final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
-                                                     proxiedAddresses, clientAddress, routingCtx);
-            respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, HttpData.empty(), cause);
-            return;
-        }
-
-        assert routed.isPresent();
+        final Routed<ServiceConfig> routed = req.route();
+        assert routed != null;
 
         // Decode the request and create a new invocation context from it to perform an invocation.
         final RoutingResult routingResult = routed.routingResult();
@@ -413,11 +381,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
             unfinishedRequests.put(req, res);
 
-            if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), routed.route())) {
+            if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
                 reqCtx.log().whenComplete().thenAccept(log -> {
                     final int statusCode = log.responseHeaders().status().code();
-                    if (statusCode >= 200 && statusCode < 400) {
-                        pathAndQuery.storeInCache(originalPath);
+                    if (statusCode >= 200 && statusCode < 400 && routingCtx instanceof DefaultRoutingContext) {
+                        final PathAndQuery pathAndQuery = ((DefaultRoutingContext) routingCtx).pathAndQuery();
+                        assert pathAndQuery != null;
+                        pathAndQuery.storeInCache(req.path());
                     }
                 });
             }
@@ -462,6 +432,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             req.setResponse(res);
 
             assert responseEncoder != null;
+            // TODO(ikhoon): Use AggregatedHttpResponse for non-streaming response for
+            //               ExchangeType.UNARY and ExchangeType.REQUEST_STREAMING.
             final HttpResponseSubscriber resSubscriber =
                     new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
             res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
@@ -491,17 +463,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, reqCtx,
                 HttpStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH,
                 new ProtocolViolationException(MSG_INVALID_REQUEST_PATH));
-    }
-
-    private static String hostname(RequestHeaders headers) {
-        final String authority = headers.authority();
-        assert authority != null;
-        final int hostnameColonIdx = authority.lastIndexOf(':');
-        if (hostnameColonIdx < 0) {
-            return authority;
-        }
-
-        return authority.substring(0, hostnameColonIdx);
     }
 
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
@@ -644,22 +605,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ServiceRequestContext newEarlyRespondingRequestContext(
-            Channel channel, HttpRequest req,
-            String hostname, VirtualHost virtualHost,
-            ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            @Nullable RoutingContext routingCtx) {
-        if (routingCtx == null) {
-            routingCtx = DefaultRoutingContext.of(virtualHost, hostname,
-                                                  req.path(), /* query */ null,
-                                                  req.headers(), /* isCorsPreflight */ false);
-        }
-
+    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, HttpRequest req,
+                                                                   ProxiedAddresses proxiedAddresses,
+                                                                   InetAddress clientAddress,
+                                                                   RoutingContext routingCtx) {
         final RoutingResult routingResult = RoutingResult.builder()
                                                          .path(routingCtx.path())
                                                          .build();
         return new DefaultServiceRequestContext(
-                virtualHost.fallbackServiceConfig(),
+                routingCtx.virtualHost().fallbackServiceConfig(),
                 channel, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(), routingCtx, routingResult,
                 req, sslSession, proxiedAddresses, clientAddress,
@@ -677,10 +631,5 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } else {
             return id;
         }
-    }
-
-    void swapServerConfig(ServerConfig config) {
-        requireNonNull(config, "config");
-        this.config = config;
     }
 }

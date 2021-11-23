@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
+
 import java.net.URISyntaxException;
 
 import org.slf4j.Logger;
@@ -190,19 +192,33 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final EventLoop eventLoop = ctx.channel().eventLoop();
                     final RequestHeaders armeriaRequestHeaders =
                             ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
-                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
-                    if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
-                        this.req = req = new EmptyContentDecodedHttpRequest(
-                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive);
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx, armeriaRequestHeaders);
+                    final Routed<ServiceConfig> routed;
+                    if (routingCtx instanceof EarlyResponseRoutingContext) {
+                        routed = null;
                     } else {
-                        this.req = req = new DefaultDecodedHttpRequest(
-                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, inboundTrafficController,
-                                // FIXME(trustin): Use a different maxRequestLength for a different virtual
-                                //                 host.
-                                cfg.defaultVirtualHost().maxRequestLength());
+                        try {
+                            // Find the service that matches the path.
+                            routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                        } catch (Throwable cause) {
+                            logger.warn("{} Unexpected exception: {}", ctx.channel(), armeriaRequestHeaders,
+                                        cause);
+                            fail(id, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+                            return;
+                        }
+                        assert routed.isPresent();
                     }
 
-                    ctx.fireChannelRead(req);
+                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
+                    final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
+                    this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, armeriaRequestHeaders,
+                                                           keepAlive, inboundTrafficController, routingCtx,
+                                                           routed);
+
+                    // AggregatingDecodedHttpRequest will be fired after all objects are collected.
+                    if (!(req instanceof AggregatingDecodedHttpRequest)) {
+                        ctx.fireChannelRead(req);
+                    }
                 } else {
                     fail(id, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
                     return;
@@ -213,8 +229,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             if (msg instanceof LastHttpContent && req instanceof EmptyContentDecodedHttpRequest) {
                 this.req = null;
             } else if (msg instanceof HttpContent) {
-                assert req instanceof DefaultDecodedHttpRequest;
-                final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+                assert req instanceof DecodedHttpRequestWriter;
+                final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
@@ -253,6 +269,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     decodedReq.close();
+                    if (decodedReq instanceof AggregatingDecodedHttpRequest) {
+                        // AggregatingDecodedHttpRequest is now ready to be fired.
+                        ctx.fireChannelRead(decodedReq);
+                    }
                     this.req = null;
                 }
             }

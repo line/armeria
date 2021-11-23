@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
@@ -32,9 +32,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -42,7 +45,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 /**
  * A {@link StreamMessage} which only publishes a fixed number of objects known at construction time.
  */
-abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
+public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
 
@@ -79,8 +82,8 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     @Override
-    public final boolean isOpen() {
-        // Fixed streams are closed on construction.
+    public boolean isOpen() {
+        // Fixed streams are closed on construction except for AggregatingStreamMessage.
         return false;
     }
 

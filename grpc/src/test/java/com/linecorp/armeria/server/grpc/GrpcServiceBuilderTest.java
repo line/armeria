@@ -23,17 +23,29 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.grpc.testing.MetricsServiceGrpc.MetricsServiceImplBase;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A1Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A2Exception;
@@ -43,6 +55,7 @@ import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.B2Exception;
 
 import io.grpc.BindableService;
 import io.grpc.Metadata;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
@@ -241,6 +254,71 @@ class GrpcServiceBuilderTest {
         for (GrpcService s : ImmutableList.of(grpcService1, grpcService2, grpcService3, grpcService4)) {
             assertThat(s.services().stream().map(it -> it.getServiceDescriptor().getName()))
                     .containsExactlyInAnyOrderElementsOf(serviceNames);
+        }
+    }
+
+    @ArgumentsSource(ExchangeTypeProvider.class)
+    @ParameterizedTest
+    void exchangeType(MethodDescriptor<?, ?> method, ExchangeType expectedExchangeType) {
+        final TestServiceImpl testService = new TestServiceImpl(null);
+        final GrpcService grpcService = GrpcService.builder()
+                                                   .addService(testService)
+                                                   .build();
+        final ExchangeType exchangeType = grpcService.exchangeType(
+                RequestHeaders.of(HttpMethod.POST, '/' + method.getFullMethodName()), null);
+        assertThat(exchangeType).isEqualTo(expectedExchangeType);
+    }
+
+    @ArgumentsSource(ExchangeTypeProvider.class)
+    @ParameterizedTest
+    void exchangeTypeWithUnframed(MethodDescriptor<?, ?> method, ExchangeType expectedExchangeType) {
+        final TestServiceImpl testService = new TestServiceImpl(null);
+        final GrpcService grpcService = GrpcService.builder()
+                                                   .addService(testService)
+                                                   .enableUnframedRequests(true)
+                                                   .build();
+
+        final RequestHeaders framedHeaders =
+                RequestHeaders.builder(HttpMethod.POST, '/' + method.getFullMethodName())
+                              .contentType(GrpcSerializationFormats.PROTO.mediaType())
+                              .build();
+
+        ExchangeType exchangeType = grpcService.exchangeType(framedHeaders, null);
+        assertThat(exchangeType).isEqualTo(expectedExchangeType);
+
+        final RequestHeaders unframedHeaders1 =
+                RequestHeaders.builder(HttpMethod.POST, '/' + method.getFullMethodName())
+                              .contentType(MediaType.JSON_UTF_8)
+                              .build();
+        exchangeType = grpcService.exchangeType(unframedHeaders1, null);
+        assertThat(exchangeType).isEqualTo(ExchangeType.UNARY);
+
+        final RequestHeaders unframedHeaders2 =
+                RequestHeaders.builder(HttpMethod.POST, '/' + method.getFullMethodName())
+                              .contentType(MediaType.PROTOBUF)
+                              .build();
+        exchangeType = grpcService.exchangeType(unframedHeaders2, null);
+        assertThat(exchangeType).isEqualTo(ExchangeType.UNARY);
+
+        final RequestHeaders unknownContentType =
+                RequestHeaders.builder(HttpMethod.POST, '/' + method.getFullMethodName())
+                              .contentType(MediaType.OCTET_STREAM)
+                              .build();
+        exchangeType = grpcService.exchangeType(unknownContentType, null);
+        assertThat(exchangeType).isEqualTo(ExchangeType.BIDI_STREAMING);
+    }
+
+    private static final class ExchangeTypeProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            return Stream.of(
+                    Arguments.of(TestServiceGrpc.getUnaryCallMethod(), ExchangeType.UNARY),
+                    Arguments.of(TestServiceGrpc.getStreamingOutputCallMethod(),
+                                 ExchangeType.RESPONSE_STREAMING),
+                    Arguments.of(TestServiceGrpc.getStreamingInputCallMethod(), ExchangeType.REQUEST_STREAMING),
+                    Arguments.of(TestServiceGrpc.getFullDuplexCallMethod(), ExchangeType.BIDI_STREAMING)
+            );
         }
     }
 

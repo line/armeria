@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import javax.annotation.Nonnull;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -27,7 +29,7 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
 
-final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequest {
+final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequestWriter {
 
     private final EventLoop eventLoop;
     private final int id;
@@ -35,6 +37,8 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     private final boolean keepAlive;
     private final InboundTrafficController inboundTrafficController;
     private final long maxRequestLength;
+    private final RoutingContext routingCtx;
+    private final Routed<ServiceConfig> routed;
     @Nullable
     private ServiceRequestContext ctx;
     private long transferredBytes;
@@ -45,7 +49,8 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
 
     DefaultDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                               boolean keepAlive, InboundTrafficController inboundTrafficController,
-                              long maxRequestLength) {
+                              long maxRequestLength, RoutingContext routingCtx,
+                              Routed<ServiceConfig> routed) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -54,11 +59,24 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
         this.keepAlive = keepAlive;
         this.inboundTrafficController = inboundTrafficController;
         this.maxRequestLength = maxRequestLength;
+        this.routingCtx = routingCtx;
+        this.routed = routed;
     }
 
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Override
+    public RoutingContext routingContext() {
+        return routingCtx;
+    }
+
+    @Nonnull
+    @Override
+    public Routed<ServiceConfig> route() {
+        return routed;
     }
 
     @Override
@@ -76,15 +94,18 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
         return keepAlive;
     }
 
-    long maxRequestLength() {
+    @Override
+    public long maxRequestLength() {
         return ctx != null ? ctx.maxRequestLength() : maxRequestLength;
     }
 
-    long transferredBytes() {
+    @Override
+    public long transferredBytes() {
         return transferredBytes;
     }
 
-    void increaseTransferredBytes(long delta) {
+    @Override
+    public void increaseTransferredBytes(long delta) {
         if (transferredBytes > Long.MAX_VALUE - delta) {
             transferredBytes = Long.MAX_VALUE;
         } else {

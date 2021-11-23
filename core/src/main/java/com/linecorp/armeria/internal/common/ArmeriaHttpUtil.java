@@ -391,13 +391,13 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns {@code true} if the specified {@code request} is a CORS preflight request.
+     * Returns {@code true} if the specified {@code headers} is a CORS preflight request.
      */
-    public static boolean isCorsPreflightRequest(com.linecorp.armeria.common.HttpRequest request) {
-        requireNonNull(request, "request");
-        return request.method() == HttpMethod.OPTIONS &&
-               request.headers().contains(HttpHeaderNames.ORIGIN) &&
-               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    public static boolean isCorsPreflightRequest(RequestHeaders headers) {
+        requireNonNull(headers, "headers");
+        return headers.method() == HttpMethod.OPTIONS &&
+               headers.contains(HttpHeaderNames.ORIGIN) &&
+               headers.contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
 
     /**

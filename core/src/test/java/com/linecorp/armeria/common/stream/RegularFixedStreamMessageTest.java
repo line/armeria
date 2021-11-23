@@ -28,6 +28,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 

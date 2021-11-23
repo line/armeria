@@ -287,6 +287,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 return;
             }
 
+            // Upstream -> [ filter -> HttpData ]  -> downstream
             final Subscriber<? super HttpData> downstream = this.downstream;
             assert downstream != null;
             assert httpObject instanceof HttpData;

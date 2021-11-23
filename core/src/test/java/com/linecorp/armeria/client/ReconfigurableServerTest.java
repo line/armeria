@@ -31,7 +31,6 @@ class ReconfigurableServerTest {
     @Test
     void shouldBeAbleToReconfigureServer() throws Exception {
         final ServerBuilder sb = Server.builder();
-        sb.http(9009);
 
         sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
@@ -101,7 +100,6 @@ class ReconfigurableServerTest {
     @Test
     void reconfigureShouldConfigureAtleastOneService() throws Exception {
         final ServerBuilder sb = Server.builder();
-        sb.http(9010);
         sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
         final Server server = sb.build();
@@ -121,7 +119,7 @@ class ReconfigurableServerTest {
     @Test
     void reconfigureHttpsServerConfig() throws Exception {
         final ServerBuilder sb = Server.builder();
-        sb.https(9009);
+        sb.https(0);
         sb.tlsSelfSigned();
 
         sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));

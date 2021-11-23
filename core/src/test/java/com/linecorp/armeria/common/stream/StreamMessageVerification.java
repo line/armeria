@@ -36,6 +36,7 @@ import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 
 public abstract class StreamMessageVerification<T> extends PublisherVerification<T> {
 

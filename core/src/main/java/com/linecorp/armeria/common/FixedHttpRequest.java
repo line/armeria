@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.stream.EmptyFixedStreamMessage;
-import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
-import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
-import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 
 /**
  * An {@link HttpRequest} optimized for when all the {@link HttpObject}s that will be published are known at

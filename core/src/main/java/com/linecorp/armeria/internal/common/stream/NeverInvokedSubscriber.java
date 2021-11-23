@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,17 +14,17 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-final class NeverInvokedSubscriber<T> implements Subscriber<T> {
+public final class NeverInvokedSubscriber<T> implements Subscriber<T> {
 
     private static final NeverInvokedSubscriber<Object> INSTANCE = new NeverInvokedSubscriber<>();
 
     @SuppressWarnings("unchecked")
-    static <T> NeverInvokedSubscriber<T> get() {
+    public static <T> NeverInvokedSubscriber<T> get() {
         return (NeverInvokedSubscriber<T>) INSTANCE;
     }
 

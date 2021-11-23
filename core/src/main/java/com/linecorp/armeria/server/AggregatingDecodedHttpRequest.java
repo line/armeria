@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,60 +16,69 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import javax.annotation.Nonnull;
 
-import org.reactivestreams.Subscriber;
-
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.stream.AggregatingStreamMessage;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.EventExecutor;
 
-final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
+final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpObject>
+        implements DecodedHttpRequestWriter {
 
-    private final HttpRequest delegate;
     private final EventLoop eventLoop;
     private final int id;
     private final int streamId;
     private final boolean keepAlive;
-    private final RoutingContext routingContext;
-    @Nullable
+    private final long maxRequestLength;
+    private final RequestHeaders headers;
+    private final RoutingContext routingCtx;
     private final Routed<ServiceConfig> routed;
     @Nullable
     private ServiceRequestContext ctx;
+    @Nullable
+    private HttpHeaders trailers;
+    private long transferredBytes;
 
     @Nullable
     private HttpResponse response;
     private boolean isResponseAborted;
 
-    EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
-                                   boolean keepAlive, RoutingContext routingContext,
-                                   @Nullable Routed<ServiceConfig> routed) {
-        delegate = HttpRequest.of(headers);
+    AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
+                                  boolean keepAlive, long maxRequestLength,
+                                  RoutingContext routingCtx,
+                                  Routed<ServiceConfig> routed) {
+        super(4);
+        this.headers = headers;
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
         this.keepAlive = keepAlive;
-        this.routingContext = routingContext;
+        this.maxRequestLength = maxRequestLength;
+        this.routingCtx = routingCtx;
         this.routed = routed;
     }
 
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+        ctx.logBuilder().increaseRequestLength(transferredBytes);
+        if (trailers != null) {
+            ctx.logBuilder().requestTrailers(trailers);
+        }
     }
 
     @Override
     public RoutingContext routingContext() {
-        return routingContext;
+        return routingCtx;
     }
 
+    @Nonnull
     @Override
     public Routed<ServiceConfig> route() {
         return routed;
@@ -91,34 +100,22 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public boolean isOpen() {
-        return delegate.isOpen();
+    public long maxRequestLength() {
+        return ctx != null ? ctx.maxRequestLength() : maxRequestLength;
     }
 
     @Override
-    public boolean isEmpty() {
-        return delegate.isEmpty();
+    public long transferredBytes() {
+        return transferredBytes;
     }
 
     @Override
-    public long demand() {
-        return delegate.demand();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
-        delegate.subscribe(subscriber, executor);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        delegate.subscribe(subscriber, executor, options);
+    public void increaseTransferredBytes(long delta) {
+        if (transferredBytes > Long.MAX_VALUE - delta) {
+            transferredBytes = Long.MAX_VALUE;
+        } else {
+            transferredBytes += delta;
+        }
     }
 
     @Override
@@ -127,30 +124,21 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public void abort() {
-        delegate.abort();
+    public boolean tryWrite(HttpObject obj) {
+        final boolean published = super.tryWrite(obj);
+
+        if (obj instanceof HttpData) {
+            ((HttpData) obj).touch(routingCtx);
+            if (obj.isEndOfStream()) {
+                close();
+            }
+        }
+        if (obj instanceof HttpHeaders) {
+            trailers = (HttpHeaders) obj;
+            close();
+        }
+        return published;
     }
-
-    @Override
-    public void abort(Throwable cause) {
-        delegate.abort(cause);
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> collect(EventExecutor executor, SubscriptionOption... options) {
-        return delegate.collect(executor, options);
-    }
-
-    @Override
-    public RequestHeaders headers() {
-        return delegate.headers();
-    }
-
-    @Override
-    public void close() {}
-
-    @Override
-    public void close(Throwable cause) {}
 
     @Override
     public void setResponse(HttpResponse response) {
@@ -177,5 +165,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
+    }
+
+    @Override
+    public RequestHeaders headers() {
+        return headers;
     }
 }

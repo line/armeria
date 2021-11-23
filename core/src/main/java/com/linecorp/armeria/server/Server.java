@@ -102,9 +102,7 @@ public final class Server implements ListenableAsyncCloseable {
         return new ServerBuilder();
     }
 
-    private ServerConfig config;
-    @Nullable
-    private HttpServerPipelineConfigurator pipelineConfigurator;
+    private final UpdatableServerConfig config;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
 
@@ -117,13 +115,12 @@ public final class Server implements ListenableAsyncCloseable {
     @VisibleForTesting
     ServerBootstrap serverBootstrap;
 
-    Server(ServerConfig config) {
-        this.config = requireNonNull(config, "config");
+    Server(DefaultServerConfig serverConfig) {
+        serverConfig.setServer(this);
+        config = new UpdatableServerConfig(requireNonNull(serverConfig, "config"));
         sslContexts = config.sslContextMapping();
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
-
-        config.setServer(this);
 
         // Server-wide cache metrics.
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsed.path.cache");
@@ -406,15 +403,14 @@ public final class Server implements ListenableAsyncCloseable {
      */
     public void reconfigure(ServerConfigurator serverConfigurator) {
         requireNonNull(serverConfigurator, "serverConfigurator");
-        requireNonNull(pipelineConfigurator, "pipelineConfigurator");
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
-        config = sb.buildServerConfig(config());
-        config.setServer(this);
+        final DefaultServerConfig newConfig = sb.buildServerConfig(config());
+        newConfig.setServer(this);
+        config.updateConfig(newConfig);
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
-        pipelineConfigurator.updateConfig(config);
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
@@ -474,12 +470,8 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            pipelineConfigurator = new HttpServerPipelineConfigurator(
-                    config,
-                    port, sslContexts,
-                    gracefulShutdownSupport);
-
-            b.childHandler(pipelineConfigurator);
+            b.childHandler(new HttpServerPipelineConfigurator(config, port,
+                                                              sslContexts, gracefulShutdownSupport));
             return b.bind(port.localAddress());
         }
 
