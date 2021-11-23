@@ -61,7 +61,6 @@ class ClientCookieEncoderTest {
                                      .domain(".adomainsomewhere")
                                      .maxAge(50)
                                      .path("/apathsomewhere")
-                                     .sameSite("Strict")
                                      .build();
         final Cookie cookie2 = Cookie.builder("myCookie2", "myValue2")
                                      .domain(".anotherdomainsomewhere")
