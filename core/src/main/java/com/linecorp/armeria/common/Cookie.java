@@ -77,13 +77,14 @@ public interface Cookie extends Comparable<Cookie> {
     }
 
     /**
-     * Returns a newly created {@link CookieBuilder} which builds a {@link Cookie} with secure settings.
+     * Returns a newly created {@link CookieBuilder} which builds a {@link Cookie} with secure settings,
+     * which set "Strict" to "SameSite" attribute to never send cross-site requests.
      *
      * @param name the name of the {@link Cookie}
      * @param value the value of the {@link Cookie}
      */
     static CookieBuilder secureBuilder(String name, String value) {
-        return new CookieBuilder(name, value).secure(true).httpOnly(true);
+        return new CookieBuilder(name, value).secure(true).httpOnly(true).sameSite("Strict");
     }
 
     /**
