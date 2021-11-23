@@ -47,7 +47,8 @@ import com.linecorp.armeria.server.docs.DocStringExtractor;
  *
  * <p>To include docstrings in {@link DocService} pages, configure the protobuf compiler to generate
  * a descriptor set with source info and all imports included. Place the descriptor set in the classpath
- * location {@code META-INF/armeria/grpc} and ensure the file extension is '.dsc'. The classpath location
+ * location {@code META-INF/armeria/grpc} and ensure the file extension is one of '.bin', '.desc', '.dsc',
+ * '.pb', and '.protobin'. The classpath location
  * can be changed by setting the {@code com.linecorp.armeria.grpc.descriptorDir} system property.
  *
  * <p>For example, to generate a descriptor set in Gradle:
