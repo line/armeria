@@ -85,7 +85,7 @@ class HttpRequestBuilderTest {
 
     @Test
     void buildEmptyPathWithQueryParams() {
-        final HttpRequest request = HttpRequest.builder().get("").queryParam("foo","bar").build();
+        final HttpRequest request = HttpRequest.builder().get("").queryParam("foo", "bar").build();
         assertThat(request.path()).isEqualTo("?foo=bar");
     }
 
