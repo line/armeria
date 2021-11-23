@@ -134,7 +134,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamClosed(Http2Stream stream) {
         goAwayHandler.onStreamClosed(channel(), stream);
 
-        final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
+        final HttpResponseWrapper res = removeResponse(streamIdToId(stream.id()));
         if (res == null) {
             return;
         }
