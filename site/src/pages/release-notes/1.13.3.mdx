@@ -12,14 +12,15 @@ date: 2021-11-23
 
 ## 🛠️ Bug fixes
 
+- You no longer see `Maximum active streams violated for this endpoint.` exception anymore. #3858 #3908
 - <type://DecodingClient> does not raise an exception anymore when duplicated encodings are specified. #3932 #3934
   - The duplicated encodings are silently ignored.
-- `unfinishedResponse` is correctly decremented when the <type://HttpResponse> is cancelled. #3920
-- The text in the description sections are now correctly rendered in DocService. #3917
+- An early cancelled <type://HttpResponse> is now correctly decremented from the number of active responses. #3920
+- The text in the description sections is now correctly rendered in <type://DocService>. #3917
 - The status of a protocol violation is now correctly logged by <type://LoggingService> #3914
     - A response headers is exactly written once when a protocol violation error is raised.
-- `GrpcDocStringExtractor` now reads description from `bin`, `desc`, `dsc`, `pb`, and `protobin` file. #3912
-- You no longer see `Maximum active streams violated for this endpoint.` exception anymore. #3858 #3908
+- <type://DocServicePlugin> for gRPC now reads description from `bin`, `desc`, `dsc`, `pb`, and `protobin` file.
+  #3912
 - <type://EurekaEndpointGroupBuilder> now fails if an empty string is specified for `appName` and
   other parameters. #3903
 - OkHttp can be used with self-signed certificate in Armeria. #3902
