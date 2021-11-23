@@ -40,7 +40,7 @@ async function getMilestoneId(version: string): Promise<number> {
       repo: 'armeria',
       direction: 'desc',
       per_page: 100,
-      state: 'all',
+      state: 'open',
     },
   );
   const found = response.data.find((milestone) => milestone.title === version);
