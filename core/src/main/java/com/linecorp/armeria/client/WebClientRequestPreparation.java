@@ -197,6 +197,11 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     }
 
     @Override
+    public WebClientRequestPreparation content(String content) {
+        return (WebClientRequestPreparation) super.content(content);
+    }
+
+    @Override
     public WebClientRequestPreparation content(MediaType contentType, CharSequence content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
     }
@@ -204,6 +209,12 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     @Override
     public WebClientRequestPreparation content(MediaType contentType, String content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
+    }
+
+    @Override
+    @FormatMethod
+    public WebClientRequestPreparation content(@FormatString String format, Object... content) {
+        return (WebClientRequestPreparation) super.content(format, content);
     }
 
     @Override
@@ -219,13 +230,28 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     }
 
     @Override
+    public WebClientRequestPreparation content(HttpData content) {
+        return (WebClientRequestPreparation) super.content(content);
+    }
+
+    @Override
     public WebClientRequestPreparation content(MediaType contentType, HttpData content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
     }
 
     @Override
+    public WebClientRequestPreparation content(Publisher<? extends HttpData> content) {
+        return (WebClientRequestPreparation) super.content(content);
+    }
+
+    @Override
     public WebClientRequestPreparation content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         return (WebClientRequestPreparation) super.content(contentType, publisher);
+    }
+
+    @Override
+    public WebClientRequestPreparation contentJson(Object content) {
+        return (WebClientRequestPreparation) super.contentJson(content);
     }
 
     @Override
@@ -279,10 +305,5 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     @Override
     public WebClientRequestPreparation cookies(Iterable<? extends Cookie> cookies) {
         return (WebClientRequestPreparation) super.cookies(cookies);
-    }
-
-    @Override
-    protected WebClientRequestPreparation getThis() {
-        return this;
     }
 }

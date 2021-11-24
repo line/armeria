@@ -18,16 +18,20 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Map.Entry;
 
 import org.reactivestreams.Publisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 /**
  * Builds a new {@link HttpResponse}.
  */
-public final class HttpResponseBuilder extends AbstractHttpMessageBuilder<HttpResponseBuilder> {
+public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
 
     private final ResponseHeadersBuilder responseHeadersBuilder = ResponseHeaders.builder();
 
@@ -123,13 +127,87 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder<HttpRe
     }
 
     /**
+     * Sets the content as UTF_8 for this response.
+     */
+    @Override
+    public HttpResponseBuilder content(String content) {
+        return content(MediaType.PLAIN_TEXT_UTF_8, content);
+    }
+
+    /**
+     * Sets the content for this response.
+     */
+    @Override
+    public HttpResponseBuilder content(MediaType contentType, CharSequence content) {
+        return content(contentType,
+                       HttpData.of(contentType.charset(StandardCharsets.UTF_8),
+                                   content));
+    }
+
+    /**
+     * Sets the content for this response.
+     */
+    @Override
+    public HttpResponseBuilder content(MediaType contentType, String content) {
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
+                                                content));
+    }
+
+    /**
+     * Sets the content as UTF_8 for this response. The {@code content} is formatted by
+     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
+     */
+    @Override
+    @FormatMethod
+    public HttpResponseBuilder content(@FormatString String format, Object... content) {
+        return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
+    }
+
+    /**
+     * Sets the content for this response. The {@code content} is formatted by
+     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
+     */
+    @Override
+    @FormatMethod
+    public HttpResponseBuilder content(MediaType contentType, @FormatString String format,
+                                       Object... content) {
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
+                                                format, content));
+    }
+
+    /**
+     * Sets the content for this response. The {@code content} will be wrapped using
+     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the response.
+     */
+    @Override
+    public HttpResponseBuilder content(MediaType contentType, byte[] content) {
+        return content(contentType, HttpData.wrap(content));
+    }
+
+    /**
+     * Sets the content for this response.
+     */
+    @Override
+    public HttpResponseBuilder content(HttpData content) {
+        return (HttpResponseBuilder) super.content(content);
+    }
+
+    /**
      * Sets the content for this response.
      */
     @Override
     public HttpResponseBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
         responseHeadersBuilder.contentType(contentType);
-        return super.content(contentType, content);
+        return (HttpResponseBuilder) super.content(content);
+    }
+
+    /**
+     * Sets the {@link Publisher} for this response.
+     */
+    @Override
+    public HttpResponseBuilder content(Publisher<? extends HttpData> content) {
+        return (HttpResponseBuilder) super.content(content);
     }
 
     /**
@@ -139,7 +217,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder<HttpRe
     public HttpResponseBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
         requireNonNull(contentType, "contentType");
         responseHeadersBuilder.contentType(contentType);
-        return super.content(contentType, content);
+        return (HttpResponseBuilder) super.content(content);
     }
 
     /**
@@ -149,7 +227,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder<HttpRe
     @Override
     public HttpResponseBuilder contentJson(Object content) {
         responseHeadersBuilder.contentType(MediaType.JSON);
-        return super.contentJson(content);
+        return (HttpResponseBuilder) super.contentJson(content);
     }
 
     /**
@@ -205,10 +283,5 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder<HttpRe
         } else {
             return HttpResponse.of(responseHeaders, publisher);
         }
-    }
-
-    @Override
-    protected HttpResponseBuilder getThis() {
-        return this;
     }
 }

@@ -22,15 +22,19 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.reactivestreams.Publisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
@@ -42,10 +46,9 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 /**
  * Builds a new {@link HttpRequest}.
  */
-public abstract class AbstractHttpRequestBuilder
-        extends AbstractHttpMessageBuilder<AbstractHttpRequestBuilder> {
+public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuilder {
 
-    private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
+    protected final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
     @Nullable
     private HttpHeadersBuilder httpTrailers;
     @Nullable
@@ -135,13 +138,87 @@ public abstract class AbstractHttpRequestBuilder
     }
 
     /**
+     * Sets the content as UTF_8 for this request.
+     */
+    @Override
+    public AbstractHttpRequestBuilder content(String content) {
+        return content(MediaType.PLAIN_TEXT_UTF_8, content);
+    }
+
+    /**
+     * Sets the content for this request.
+     */
+    @Override
+    public AbstractHttpRequestBuilder content(MediaType contentType, CharSequence content) {
+        return content(contentType,
+                       HttpData.of(contentType.charset(StandardCharsets.UTF_8),
+                                   content));
+    }
+
+    /**
+     * Sets the content for this request.
+     */
+    @Override
+    public AbstractHttpRequestBuilder content(MediaType contentType, String content) {
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
+                                                content));
+    }
+
+    /**
+     * Sets the content as UTF_8 for this request. The {@code content} is formatted by
+     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
+     */
+    @Override
+    @FormatMethod
+    public AbstractHttpRequestBuilder content(@FormatString String format, Object... content) {
+        return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
+    }
+
+    /**
+     * Sets the content for this request. The {@code content} is formatted by
+     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
+     */
+    @Override
+    @FormatMethod
+    public AbstractHttpRequestBuilder content(MediaType contentType, @FormatString String format,
+                                              Object... content) {
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
+                                                format, content));
+    }
+
+    /**
+     * Sets the content for this request.
+     */
+    @Override
+    public AbstractHttpRequestBuilder content(HttpData content) {
+        return (AbstractHttpRequestBuilder) super.content(content);
+    }
+
+    /**
+     * Sets the content for this request. The {@code content} will be wrapped using
+     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
+     */
+    @Override
+    public AbstractHttpRequestBuilder content(MediaType contentType, byte[] content) {
+        return content(contentType, HttpData.wrap(content));
+    }
+
+    /**
      * Sets the content for this request.
      */
     @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
         requestHeadersBuilder.contentType(contentType);
-        return super.content(contentType, content);
+        return (AbstractHttpRequestBuilder) content(content);
+    }
+
+    /**
+     * Sets the {@link Publisher} for this request.
+     */
+    @Override
+    public AbstractHttpRequestBuilder content(Publisher<? extends HttpData> content) {
+        return (AbstractHttpRequestBuilder) super.content(content);
     }
 
     /**
@@ -151,7 +228,7 @@ public abstract class AbstractHttpRequestBuilder
     public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         requireNonNull(contentType, "contentType");
         requestHeadersBuilder.contentType(contentType);
-        return super.content(contentType, publisher);
+        return (AbstractHttpRequestBuilder) content(publisher);
     }
 
     /**
@@ -161,7 +238,7 @@ public abstract class AbstractHttpRequestBuilder
     @Override
     public AbstractHttpRequestBuilder contentJson(Object content) {
         requestHeadersBuilder.contentType(MediaType.JSON);
-        return super.contentJson(content);
+        return (AbstractHttpRequestBuilder) super.contentJson(content);
     }
 
     /**
