@@ -45,13 +45,13 @@ class CookieClientTest {
         protected void configure(ServerBuilder sb) {
             sb.virtualHost("foo.com")
               .service("/set-cookie", (ctx, req) -> {
-                  final String cookie1 = Cookie.builder("some-cookie", "foo").path("/").build()
-                                               .toSetCookieHeader();
-                  final String cookie2 = Cookie.builder("some-cookie2", "bar").path("/").build()
-                                               .toSetCookieHeader();
-                  final String cookie3 = Cookie.builder("bad-cookie", "hmm").path("/").domain("bar.com")
-                                               .build()
-                                               .toSetCookieHeader();
+                  // Set false to "secure" attribute to use HTTP.
+                  final String cookie1 = Cookie.secureBuilder("some-cookie", "foo").path("/").secure(false)
+                                               .build().toSetCookieHeader();
+                  final String cookie2 = Cookie.secureBuilder("some-cookie2", "bar").path("/").secure(false)
+                                               .build().toSetCookieHeader();
+                  final String cookie3 = Cookie.secureBuilder("bad-cookie", "hmm").path("/").domain("bar.com")
+                                               .secure(false).build().toSetCookieHeader();
                   final HttpHeaders headers = HttpHeaders.builder()
                                                          .add(HttpHeaderNames.SET_COOKIE, cookie1)
                                                          .add(HttpHeaderNames.SET_COOKIE, cookie2)

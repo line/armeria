@@ -58,13 +58,11 @@ public class ServerCookieEncoderTest {
         final int maxAge = 50;
 
         final String result = "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere; " +
-                              "Domain=adomainsomewhere; Secure; SameSite=Strict";
-        final Cookie cookie = Cookie.builder("myCookie", "myValue")
+                              "Domain=adomainsomewhere; Secure; HTTPOnly; SameSite=Strict";
+        final Cookie cookie = Cookie.secureBuilder("myCookie", "myValue")
                                     .domain(".adomainsomewhere")
                                     .maxAge(maxAge)
                                     .path("/apathsomewhere")
-                                    .secure(true)
-                                    .sameSite("Strict")
                                     .build();
 
         final String encodedCookie = cookie.toSetCookieHeader();

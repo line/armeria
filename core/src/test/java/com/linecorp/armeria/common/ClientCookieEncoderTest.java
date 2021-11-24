@@ -62,7 +62,7 @@ class ClientCookieEncoderTest {
                                      .maxAge(50)
                                      .path("/apathsomewhere")
                                      .build();
-        final Cookie cookie2 = Cookie.builder("myCookie2", "myValue2")
+        final Cookie cookie2 = Cookie.secureBuilder("myCookie2", "myValue2")
                                      .domain(".anotherdomainsomewhere")
                                      .path("/anotherpathsomewhere")
                                      .build();
