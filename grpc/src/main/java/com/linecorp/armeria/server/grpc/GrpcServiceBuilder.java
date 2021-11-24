@@ -777,12 +777,12 @@ public final class GrpcServiceBuilder {
                 maxInboundMessageSizeBytes,
                 enableUnframedRequests || enableHttpJsonTranscoding);
         if (enableUnframedRequests) {
-            grpcService = new UnframedGrpcService(
-                    grpcService, handlerRegistry,
-                    unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
-                                                     : UnframedGrpcErrorHandler.of(),
-                    unframedGrpcStatusFunction != null ? unframedGrpcStatusFunction
-                                                       : UnframedGrpcStatusFunction.of());
+            final UnframedGrpcErrorHandler unframedGrpcErrorHandler = firstNonNull(
+                    this.unframedGrpcErrorHandler, UnframedGrpcErrorHandler.of());
+            final UnframedGrpcStatusFunction unframedGrpcStatusFunction = firstNonNull(
+                    this.unframedGrpcStatusFunction, UnframedGrpcStatusFunction.of());
+            grpcService = new UnframedGrpcService(grpcService, handlerRegistry, unframedGrpcErrorHandler,
+                                                  unframedGrpcStatusFunction);
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
