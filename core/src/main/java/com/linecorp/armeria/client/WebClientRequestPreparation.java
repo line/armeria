@@ -280,4 +280,9 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     public WebClientRequestPreparation cookies(Iterable<? extends Cookie> cookies) {
         return (WebClientRequestPreparation) super.cookies(cookies);
     }
+
+    @Override
+    protected WebClientRequestPreparation getThis() {
+        return this;
+    }
 }

@@ -173,4 +173,9 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     public HttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
         return (HttpRequestBuilder) super.cookies(cookies);
     }
+
+    @Override
+    protected HttpRequestBuilder getThis() {
+        return this;
+    }
 }

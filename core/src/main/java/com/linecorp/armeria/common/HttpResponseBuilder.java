@@ -18,33 +18,20 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 import java.util.Map.Entry;
 
 import org.reactivestreams.Publisher;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.errorprone.annotations.FormatMethod;
-import com.google.errorprone.annotations.FormatString;
-
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * Builds a new {@link HttpResponse}.
  */
-public final class HttpResponseBuilder {
+public final class HttpResponseBuilder extends AbstractHttpMessageBuilder<HttpResponseBuilder> {
 
     private final ResponseHeadersBuilder responseHeadersBuilder = ResponseHeaders.builder();
 
-    private HttpData content = HttpData.empty();
-
     private final HttpHeadersBuilder httpTrailers = HttpHeaders.builder();
-
-    @Nullable
-    private Publisher<? extends HttpData> publisher;
 
     /**
      * Sets the status for this response.
@@ -136,108 +123,33 @@ public final class HttpResponseBuilder {
     }
 
     /**
-     * Sets the content as UTF_8 for this response.
-     */
-    public HttpResponseBuilder content(String content) {
-        requireNonNull(content, "content");
-        return content(MediaType.PLAIN_TEXT_UTF_8, content);
-    }
-
-    /**
      * Sets the content for this response.
      */
-    public HttpResponseBuilder content(MediaType contentType, CharSequence content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
-    }
-
-    /**
-     * Sets the content for this response.
-     */
-    public HttpResponseBuilder content(MediaType contentType, String content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
-    }
-
-    /**
-     * Sets the content as UTF_8 for this response. The {@code content} is formatted by
-     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
-     */
-    @FormatMethod
-    public HttpResponseBuilder content(@FormatString String format, Object... content) {
-        requireNonNull(format, "format");
-        requireNonNull(content, "content");
-        return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
-    }
-
-    /**
-     * Sets the content for this response. The {@code content} is formatted by
-     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
-     */
-    @FormatMethod
-    public HttpResponseBuilder content(MediaType contentType, @FormatString String format,
-                                       Object... content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(format, "format");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), format, content));
-    }
-
-    /**
-     * Sets the content for this response. The {@code content} will be wrapped using
-     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the response.
-     */
-    public HttpResponseBuilder content(MediaType contentType, byte[] content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.wrap(content));
-    }
-
-    /**
-     * Sets the content for this response.
-     */
+    @Override
     public HttpResponseBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
         responseHeadersBuilder.contentType(contentType);
-        this.content = content;
-        return this;
+        return super.content(contentType, content);
     }
 
     /**
      * Sets the {@link Publisher} for this response.
      */
-    public HttpResponseBuilder content(Publisher<? extends HttpData> content) {
-        requireNonNull(content, "publisher");
-        publisher = content;
-        return this;
-    }
-
-    /**
-     * Sets the {@link Publisher} for this response.
-     */
+    @Override
     public HttpResponseBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
         requireNonNull(contentType, "contentType");
-        requireNonNull(content, "publisher");
         responseHeadersBuilder.contentType(contentType);
-        publisher = content;
-        return this;
+        return super.content(contentType, content);
     }
 
     /**
      * Sets the content for this response. The {@code content} that is converted into JSON
      * using the default {@link ObjectMapper}.
      */
+    @Override
     public HttpResponseBuilder contentJson(Object content) {
-        try {
-            this.content = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(e.toString(), e);
-        }
         responseHeadersBuilder.contentType(MediaType.JSON);
-        return this;
+        return super.contentJson(content);
     }
 
     /**
@@ -286,9 +198,17 @@ public final class HttpResponseBuilder {
         final ResponseHeaders responseHeaders = responseHeadersBuilder.build();
         final HttpHeaders trailers = httpTrailers.build();
         if (publisher == null) {
+            if (content == null) {
+                content = HttpData.empty();
+            }
             return HttpResponse.of(responseHeaders, content, trailers);
         } else {
             return HttpResponse.of(responseHeaders, publisher);
         }
+    }
+
+    @Override
+    protected HttpResponseBuilder getThis() {
+        return this;
     }
 }

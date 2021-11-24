@@ -22,18 +22,15 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.reactivestreams.Publisher;
 
-import com.google.errorprone.annotations.FormatMethod;
-import com.google.errorprone.annotations.FormatString;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
@@ -45,7 +42,8 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 /**
  * Builds a new {@link HttpRequest}.
  */
-public abstract class AbstractHttpRequestBuilder {
+public abstract class AbstractHttpRequestBuilder
+        extends AbstractHttpMessageBuilder<AbstractHttpRequestBuilder> {
 
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
     @Nullable
@@ -56,10 +54,6 @@ public abstract class AbstractHttpRequestBuilder {
     private Map<String, String> pathParams;
     @Nullable
     private List<Cookie> cookies;
-    @Nullable
-    private HttpData content;
-    @Nullable
-    private Publisher<? extends HttpData> publisher;
     @Nullable
     private String path;
     private boolean disablePathParams;
@@ -143,65 +137,31 @@ public abstract class AbstractHttpRequestBuilder {
     /**
      * Sets the content for this request.
      */
-    public AbstractHttpRequestBuilder content(MediaType contentType, CharSequence content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
-    }
-
-    /**
-     * Sets the content for this request.
-     */
-    public AbstractHttpRequestBuilder content(MediaType contentType, String content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
-    }
-
-    /**
-     * Sets the content for this request. The {@code content} is formatted by
-     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
-     */
-    @FormatMethod
-    public AbstractHttpRequestBuilder content(MediaType contentType, @FormatString String format,
-                                              Object... content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(format, "format");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), format, content));
-    }
-
-    /**
-     * Sets the content for this request. The {@code content} will be wrapped using
-     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
-     */
-    public AbstractHttpRequestBuilder content(MediaType contentType, byte[] content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.wrap(content));
-    }
-
-    /**
-     * Sets the content for this request.
-     */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
         requestHeadersBuilder.contentType(contentType);
-        this.content = content;
-        return this;
+        return super.content(contentType, content);
     }
 
     /**
      * Sets the {@link Publisher} for this request.
      */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         requireNonNull(contentType, "contentType");
-        requireNonNull(publisher, "publisher");
-        checkState(content == null, "content has been set already");
         requestHeadersBuilder.contentType(contentType);
-        this.publisher = publisher;
-        return this;
+        return super.content(contentType, publisher);
+    }
+
+    /**
+     * Sets the content for this request. The {@code content} that is converted into JSON
+     * using the default {@link ObjectMapper}.
+     */
+    @Override
+    public AbstractHttpRequestBuilder contentJson(Object content) {
+        requestHeadersBuilder.contentType(MediaType.JSON);
+        return super.contentJson(content);
     }
 
     /**
