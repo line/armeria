@@ -48,7 +48,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  */
 public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuilder {
 
-    protected final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
+    private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
     @Nullable
     private HttpHeadersBuilder httpTrailers;
     @Nullable
@@ -428,6 +428,8 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
+        final HttpData content = getContent();
+        final Publisher<? extends HttpData> publisher = getPublisher();
         if (publisher != null) {
             if (httpTrailers == null) {
                 return HttpRequest.of(requestHeaders, publisher);
@@ -456,6 +458,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
         if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
+        final HttpData content = getContent();
         if (content == null || content.isEmpty()) {
             requestHeadersBuilder.remove(CONTENT_LENGTH);
         } else {

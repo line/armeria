@@ -34,10 +34,20 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 abstract class AbstractHttpMessageBuilder {
 
     @Nullable
-    protected HttpData content;
+    private HttpData content;
 
     @Nullable
-    protected Publisher<? extends HttpData> publisher;
+    private Publisher<? extends HttpData> publisher;
+
+    @Nullable
+    protected HttpData getContent() {
+        return content;
+    }
+
+    @Nullable
+    protected Publisher<? extends HttpData> getPublisher() {
+        return publisher;
+    }
 
     /**
      * Sets the content for this response.
@@ -55,19 +65,6 @@ abstract class AbstractHttpMessageBuilder {
         requireNonNull(content, "publisher");
         checkState(this.content == null, "content has been set already");
         publisher = content;
-        return this;
-    }
-
-    /**
-     * Sets the content for this response. The {@code content} that is converted into JSON
-     * using the default {@link ObjectMapper}.
-     */
-    public AbstractHttpMessageBuilder contentJson(Object content) {
-        try {
-            this.content = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(e.toString(), e);
-        }
         return this;
     }
 
@@ -118,4 +115,16 @@ abstract class AbstractHttpMessageBuilder {
     public abstract AbstractHttpMessageBuilder content(MediaType contentType,
                                                        Publisher<? extends HttpData> content);
 
+    /**
+     * Sets the content for this response. The {@code content} that is converted into JSON
+     * using the default {@link ObjectMapper}.
+     */
+    public AbstractHttpMessageBuilder contentJson(Object content) {
+        try {
+            this.content = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException(e.toString(), e);
+        }
+        return this;
+    }
 }
