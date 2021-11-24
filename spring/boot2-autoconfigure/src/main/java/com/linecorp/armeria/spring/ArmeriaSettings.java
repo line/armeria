@@ -305,6 +305,10 @@ public class ArmeriaSettings {
          *       <td>{@code health}</td>
          *       <td>{@link HealthCheckService}</td>
          *     </tr>
+         *     <tr>
+         *       <td>{@code actuator}</td>
+         *       <td>To bind WebOperationService.</td>
+         *     </tr>
          *   </tbody>
          * </table>
          *

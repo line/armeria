@@ -102,6 +102,10 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     private static final Class<?> INTERNAL_SERVICES_CLASS;
     @Nullable
     private static final Method MANAGEMENT_SERVER_PORT_METHOD;
+    @Nullable
+    private static final Method INTERNAL_SERVER_PORT_METHOD;
+    @Nullable
+    private static final Method INTERNAL_ACTUATOR_ENABLED_METHOD;
 
     static {
         Class<?> internalServicesClass = null;
@@ -113,16 +117,10 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         }
         INTERNAL_SERVICES_CLASS = internalServicesClass;
 
-        Method managementServerPortMethod = null;
-        if (INTERNAL_SERVICES_CLASS != null) {
-            try {
-                managementServerPortMethod = INTERNAL_SERVICES_CLASS.getMethod("managementServerPort");
-            } catch (NoSuchMethodException ignored) {
-                // Should never reach here.
-                throw new Error();
-            }
-        }
-        MANAGEMENT_SERVER_PORT_METHOD = managementServerPortMethod;
+        MANAGEMENT_SERVER_PORT_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "managementServerPort");
+        INTERNAL_SERVER_PORT_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "internalServicePort");
+        INTERNAL_ACTUATOR_ENABLED_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS,
+                                                            "isInternalActuatorEnabled");
     }
 
     @Bean
@@ -278,6 +276,13 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         }
 
         try {
+            final boolean internalActuatorEnabled =
+                    (boolean) INTERNAL_ACTUATOR_ENABLED_METHOD.invoke(internalServices);
+            final Port internalPort = (Port) INTERNAL_SERVER_PORT_METHOD.invoke(internalServices);
+            if (internalActuatorEnabled && internalPort != null) {
+                return internalPort.getPort();
+            }
+
             final Port port = (Port) MANAGEMENT_SERVER_PORT_METHOD.invoke(internalServices);
             if (port == null) {
                 return null;
@@ -324,5 +329,18 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static Set<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
         return Streams.stream(mediaTypes).map(MediaType::parse).collect(toImmutableSet());
+    }
+
+    @Nullable
+    private static Method getInvokedMethod(@Nullable Class<?> internalServiceClass, String methodName) {
+        if (internalServiceClass == null) {
+            return null;
+        }
+        try {
+            return internalServiceClass.getMethod(methodName);
+        } catch (NoSuchMethodException e) {
+            // Should never reach here.
+            throw new Error();
+        }
     }
 }

@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
@@ -95,19 +96,76 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
                       actuatorStatus = 404;
                       internalServiceStatus = 404;
                   }
-
-                  assertStatus(port, "/actuator", actuatorStatus);
-                  assertStatus(port, "/actuator/health", actuatorStatus);
-                  assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, actuatorStatus);
-                  assertStatus(port, "/actuator/prometheus", actuatorStatus);
-
-                  assertStatus(port, settings.getHealthCheckPath(), internalServiceStatus);
-                  assertStatus(port, settings.getMetricsPath(), internalServiceStatus);
-
-                  // DocService was not included to internal services.
-                  // Therefore, all ports could access DocService.
-                  assertStatus(port, settings.getDocsPath(), 200);
+                  assertActuatorStatus(port, actuatorStatus);
+                  assertInternalServiceStatus(port, internalServiceStatus, settings);
               });
+    }
+
+    @Nested
+    @SpringBootTest(classes = InternalActuatorTest.TestConfiguration.class)
+    @ActiveProfiles({ "local", "internalActuatorTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class InternalActuatorTest {
+        @SpringBootApplication
+        static class TestConfiguration {}
+
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        InternalServices internalServices;
+
+        @Test
+        void exposeInternalActuatorServicesToInternalServicePort() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(internalServicePort.getPort()).isEqualTo(actuatorPort);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort()).isNull();
+
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int actuatorStatus;
+                      final int internalServiceStatus;
+                      if (internalServicePort.getPort() == port) {
+                          actuatorStatus = 200;
+                          internalServiceStatus = 200;
+                      } else {
+                          actuatorStatus = 404;
+                          internalServiceStatus = 404;
+                      }
+                      assertActuatorStatus(port, actuatorStatus);
+                      assertInternalServiceStatus(port, internalServiceStatus, settings);
+                  });
+        }
+    }
+
+    private static void assertActuatorStatus(int port, int actuatorStatus) {
+        assertStatus(port, "/actuator", actuatorStatus);
+        assertStatus(port, "/actuator/health", actuatorStatus);
+        assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, actuatorStatus);
+        assertStatus(port, "/actuator/prometheus", actuatorStatus);
+    }
+
+    private static void assertInternalServiceStatus(int port, int internalServiceStatus,
+                                                    ArmeriaSettings settings) {
+        assertStatus(port, settings.getHealthCheckPath(), internalServiceStatus);
+        assertStatus(port, settings.getMetricsPath(), internalServiceStatus);
+
+        // DocService was not included to internal services.
+        // Therefore, all ports could access DocService.
+        assertStatus(port, settings.getDocsPath(), 200);
     }
 
     private static void assertStatus(int port, String url, int statusCode) {
