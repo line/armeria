@@ -22,8 +22,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map.Entry;
 
+import org.reactivestreams.Publisher;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a new {@link HttpResponse}.
@@ -35,6 +39,9 @@ public final class HttpResponseBuilder {
     private HttpData content = HttpData.empty();
 
     private final HttpHeadersBuilder httpTrailers = HttpHeaders.builder();
+
+    @Nullable
+    private Publisher<? extends HttpData> publisher;
 
     /**
      * Sets the status for this response.
@@ -197,6 +204,26 @@ public final class HttpResponseBuilder {
     }
 
     /**
+     * Sets the {@link Publisher} for this response.
+     */
+    public HttpResponseBuilder content(Publisher<? extends HttpData> content) {
+        requireNonNull(content, "publisher");
+        publisher = content;
+        return this;
+    }
+
+    /**
+     * Sets the {@link Publisher} for this response.
+     */
+    public HttpResponseBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
+        requireNonNull(contentType, "contentType");
+        requireNonNull(content, "publisher");
+        responseHeadersBuilder.contentType(contentType);
+        publisher = content;
+        return this;
+    }
+
+    /**
      * Sets a header for this response. For example:
      * <pre>{@code
      * HttpResponse.builder()
@@ -241,6 +268,10 @@ public final class HttpResponseBuilder {
     public HttpResponse build() {
         final ResponseHeaders responseHeaders = responseHeadersBuilder.build();
         final HttpHeaders trailers = httpTrailers.build();
-        return HttpResponse.of(responseHeaders, content, trailers);
+        if (publisher == null) {
+            return HttpResponse.of(responseHeaders, content, trailers);
+        } else {
+            return HttpResponse.of(responseHeaders, publisher);
+        }
     }
 }

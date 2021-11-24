@@ -23,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.stream.StreamMessage;
+
 class HttpResponseBuilderTest {
 
     @Test
@@ -155,6 +157,24 @@ class HttpResponseBuilderTest {
                                              .content(MediaType.PLAIN_TEXT_UTF_8,
                                                       "Armeriaはいろんな使い方がアルメリア"
                                                               .getBytes(StandardCharsets.UTF_8))
+                                             .build();
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
+        assertThat(aggregatedRes.contentType()).isNotNull();
+        assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+    }
+
+    @Test
+    void buildWithPublisherContent() {
+        final HttpResponse res = HttpResponse.builder()
+                                             .ok()
+                                             .content(MediaType.PLAIN_TEXT_UTF_8,
+                                                      StreamMessage.of(
+                                                              HttpData.ofUtf8(
+                                                                      "Armeriaはいろんな使い方がアルメリア"
+                                                              )
+                                                      ))
                                              .build();
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
