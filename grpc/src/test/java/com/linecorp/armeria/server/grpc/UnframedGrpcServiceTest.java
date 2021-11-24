@@ -137,7 +137,7 @@ class UnframedGrpcServiceTest {
         doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
                 .emptyCall(any(), any());
-        UnframedGrpcStatusFunction statusFunction = (ctx, status, cause) -> {
+        final UnframedGrpcStatusFunction statusFunction = (ctx, status, cause) -> {
             if (status.getCode() == Code.UNKNOWN) {
                 // not INTERNAL_SERVER_ERROR
                 return HttpStatus.UNKNOWN;
