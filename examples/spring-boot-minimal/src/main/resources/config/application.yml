@@ -8,12 +8,3 @@ armeria:
   - port: 8080
     protocols:
     - http
-  internal-services:
-    include: all
-    port: 18080
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, loggers, prometheus

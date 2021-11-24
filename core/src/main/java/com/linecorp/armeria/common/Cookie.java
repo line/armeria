@@ -69,7 +69,7 @@ public interface Cookie extends Comparable<Cookie> {
      * @param name the name of the {@link Cookie}
      * @param value the value of the {@link Cookie}
      *
-     * @deprecated Use {@link #secureBuilder(String, String)} instead to create secure cookie.
+     * @deprecated Use {@link #secureBuilder(String, String)} instead to create a secure {@link Cookie}.
      */
     @Deprecated
     static CookieBuilder builder(String name, String value) {
@@ -77,8 +77,8 @@ public interface Cookie extends Comparable<Cookie> {
     }
 
     /**
-     * Returns a newly created {@link CookieBuilder} which builds a {@link Cookie} with secure settings,
-     * which set "Strict" to "SameSite" attribute to never send cross-site requests.
+     * Returns a newly created {@link CookieBuilder} which builds a {@link Cookie} with secure settings.
+     * {@code "Secure"}, {@code "HttpOnly"}, and {@code "SameSite=Strict"} are enabled by default.
      *
      * @param name the name of the {@link Cookie}
      * @param value the value of the {@link Cookie}
