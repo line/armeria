@@ -348,13 +348,37 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void listenerNotificationFailure() throws Exception {
+    public void listenerNotifyStartingFailure() throws Exception {
         final EventListener listener = mock(EventListener.class);
         final AnticipatedException exception = new AnticipatedException();
         final List<String> recording = new ArrayList<>();
         final StartStop startStop = new StartStop(arg -> "foo", arg -> null) {
             @Override
-            protected void notifyStarting(EventListener listener, @Nullable Integer arg) {
+            protected void notifyStarting(EventListener listener, @Nullable Integer arg) throws Exception {
+                throw exception;
+            }
+
+            @Override
+            protected void notificationFailed(EventListener listener, Throwable cause) {
+                recording.add(listener + " " + cause);
+            }
+        };
+
+        startStop.addListener(listener);
+        assertThatThrownBy(() -> startStop.start(true).join())
+                .hasCause(exception);
+        assertThat(recording).containsExactly(listener + " " + exception);
+    }
+
+    @Test
+    public void listenerNotifyStartedFailure() throws Exception {
+        final EventListener listener = mock(EventListener.class);
+        final AnticipatedException exception = new AnticipatedException();
+        final List<String> recording = new ArrayList<>();
+        final StartStop startStop = new StartStop(arg -> "foo", arg -> null) {
+            @Override
+            protected void notifyStarted(EventListener listener, @Nullable Integer arg,
+                                         @Nullable String result) throws Exception {
                 throw exception;
             }
 

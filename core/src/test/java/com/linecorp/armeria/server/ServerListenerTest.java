@@ -17,23 +17,24 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.assertj.core.util.Lists;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class ServerListenerTest {
+class ServerListenerTest {
     private static long STARTING_AT;
     private static long STARTED_AT;
     private static long STOPPING_AT;
     private static long STOPPED_AT;
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.meterRegistry(PrometheusMeterRegistries.newRegistry())
@@ -65,7 +66,7 @@ public class ServerListenerTest {
     };
 
     @Test
-    public void testServerListener() throws Exception {
+    void testServerListener() throws Exception {
         // Before stop
         assertThat(STARTING_AT).isGreaterThan(0L);
         assertThat(STARTED_AT).isGreaterThanOrEqualTo(STARTING_AT);
@@ -80,5 +81,21 @@ public class ServerListenerTest {
         assertThat(STARTED_AT).isEqualTo(0L);
         assertThat(STOPPING_AT).isGreaterThanOrEqualTo(0L);
         assertThat(STOPPED_AT).isGreaterThanOrEqualTo(STOPPING_AT);
+    }
+
+    @Test
+    void serverStartingExceptionAbortsStartup() {
+        final Exception ex = new RuntimeException();
+        final Server server = Server
+                .builder()
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .serverListener(new ServerListenerAdapter() {
+                    @Override
+                    public void serverStarting(Server server) throws Exception {
+                        throw ex;
+                    }
+                })
+                .build();
+        assertThatThrownBy(() -> server.start().join()).hasCause(ex);
     }
 }
