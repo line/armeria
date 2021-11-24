@@ -126,9 +126,8 @@ public final class InternalServices {
             internalPort.setPort(SocketUtils.findAvailableTcpPort());
         }
         final boolean actuatorEnabled =
-                internalPort != null && internalPort.getInclude() != null
-                ? internalPort.getInclude().contains(InternalServiceId.ACTUATOR)
-                : false;
+                internalPort != null && internalPort.getInclude() != null ?
+                internalPort.getInclude().contains(InternalServiceId.ACTUATOR) : false;
         return new InternalServices(docService, expositionService,
                                     healthCheckService, internalPort,
                                     maybeNewPort(managementServerPort, SessionProtocol.HTTP),
