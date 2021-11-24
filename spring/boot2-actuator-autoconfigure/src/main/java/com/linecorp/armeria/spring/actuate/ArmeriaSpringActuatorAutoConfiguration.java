@@ -105,7 +105,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     @Nullable
     private static final Method INTERNAL_SERVER_PORT_METHOD;
     @Nullable
-    private static final Method INTERNAL_ACTUATOR_ENABLED_METHOD;
+    private static final Method ACTUATOR_ENABLED_METHOD;
 
     static {
         Class<?> internalServicesClass = null;
@@ -119,8 +119,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
         MANAGEMENT_SERVER_PORT_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "managementServerPort");
         INTERNAL_SERVER_PORT_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "internalServicePort");
-        INTERNAL_ACTUATOR_ENABLED_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS,
-                                                            "isInternalActuatorEnabled");
+        ACTUATOR_ENABLED_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "isActuatorEnabled");
     }
 
     @Bean
@@ -276,10 +275,10 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         }
 
         try {
-            final boolean internalActuatorEnabled =
-                    (boolean) INTERNAL_ACTUATOR_ENABLED_METHOD.invoke(internalServices);
+            final boolean actuatorEnabled =
+                    (boolean) ACTUATOR_ENABLED_METHOD.invoke(internalServices);
             final Port internalPort = (Port) INTERNAL_SERVER_PORT_METHOD.invoke(internalServices);
-            if (internalActuatorEnabled && internalPort != null) {
+            if (actuatorEnabled && internalPort != null) {
                 return internalPort.getPort();
             }
 

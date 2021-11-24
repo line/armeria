@@ -125,14 +125,14 @@ public final class InternalServices {
         if (internalPort != null && internalPort.getPort() == 0) {
             internalPort.setPort(SocketUtils.findAvailableTcpPort());
         }
-        final boolean internalActuatorEnabled =
+        final boolean actuatorEnabled =
                 internalPort != null && internalPort.getInclude() != null
                 ? internalPort.getInclude().contains(InternalServiceId.ACTUATOR)
                 : false;
         return new InternalServices(docService, expositionService,
                                     healthCheckService, internalPort,
                                     maybeNewPort(managementServerPort, SessionProtocol.HTTP),
-                                    internalActuatorEnabled);
+                                    actuatorEnabled);
     }
 
     @Nullable
@@ -147,7 +147,7 @@ public final class InternalServices {
     @Nullable
     private final Port managementServerPort;
 
-    private final boolean internalActuatorEnabled;
+    private final boolean actuatorEnabled;
 
     private InternalServices(
             @Nullable DocService docService,
@@ -155,13 +155,13 @@ public final class InternalServices {
             @Nullable HealthCheckService healthCheckService,
             @Nullable Port internalServicePort,
             @Nullable Port managementServerPort,
-            boolean internalActuatorEnabled) {
+            boolean actuatorEnabled) {
         this.healthCheckService = healthCheckService;
         this.metricsExpositionService = metricsExpositionService;
         this.docService = docService;
         this.internalServicePort = internalServicePort;
         this.managementServerPort = managementServerPort;
-        this.internalActuatorEnabled = internalActuatorEnabled;
+        this.actuatorEnabled = actuatorEnabled;
     }
 
     /**
@@ -206,10 +206,10 @@ public final class InternalServices {
     }
 
     /**
-     * Return true if "WebOperationService" is exposed to internal service.
+     * Return true if {@link InternalServiceId#ACTUATOR} is specified in the properties of internal services.
      */
-    public boolean isInternalActuatorEnabled() {
-        return internalActuatorEnabled;
+    public boolean isActuatorEnabled() {
+        return actuatorEnabled;
     }
 
     @Override
@@ -220,7 +220,7 @@ public final class InternalServices {
                           .add("healthCheckService", healthCheckService)
                           .add("internalServicePort", internalServicePort)
                           .add("managementServerPort", managementServerPort)
-                          .add("internalActuatorEnabled", internalActuatorEnabled)
+                          .add("actuatorEnabled", actuatorEnabled)
                           .toString();
     }
 }

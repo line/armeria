@@ -102,14 +102,14 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     }
 
     @Nested
-    @SpringBootTest(classes = InternalActuatorTest.TestConfiguration.class)
-    @ActiveProfiles({ "local", "internalActuatorTest" })
+    @SpringBootTest(classes = ActuatorTest.TestConfiguration.class)
+    @ActiveProfiles({ "local", "actuatorTest" })
     @DirtiesContext
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(10)
-    static class InternalActuatorTest {
+    static class ActuatorTest {
         @SpringBootApplication
         static class TestConfiguration {}
 
@@ -123,7 +123,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         InternalServices internalServices;
 
         @Test
-        void exposeInternalActuatorServicesToInternalServicePort() throws Exception {
+        void exposeActuatorServiceToInternalServicePort() throws Exception {
             final Port internalServicePort = internalServices.internalServicePort();
             assertThat(internalServicePort).isNotNull();
             assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
