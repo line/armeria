@@ -450,8 +450,8 @@ public final class GrpcServiceBuilder {
     /**
      * Set a custom HTTP status code mapper. This is useful to serve custom HTTP status code when using unframed
      * gRPC service.
-     * @param unframedGrpcStatusFunction The function which maps the {@link Throwable} or grpc
-     * {@link Status} code to an {@link HttpStatus} code.
+     * @param unframedGrpcStatusFunction The function which maps the {@link Throwable} or grp {@link Status}
+     *                                   code to an {@link HttpStatus} code.
      */
     @UnstableApi
     public GrpcServiceBuilder unframedGrpcStatusMapping(

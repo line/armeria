@@ -29,6 +29,9 @@ import io.grpc.Status;
 @FunctionalInterface
 public interface UnframedGrpcStatusFunction {
 
+    /**
+     * Return a mapping function which follows the mapping rules defined in upstream Google APIs.
+     */
     static UnframedGrpcStatusFunction of() {
         return (ctx, status, response) -> GrpcStatus.grpcStatusToHttpStatus(status);
     }
@@ -45,7 +48,7 @@ public interface UnframedGrpcStatusFunction {
      */
     default UnframedGrpcStatusFunction orElse(UnframedGrpcStatusFunction other) {
         return (ctx, status, cause) -> {
-            HttpStatus httpStatus = apply(ctx, status, cause);
+            final HttpStatus httpStatus = apply(ctx, status, cause);
             if (httpStatus != null) {
                 return httpStatus;
             }
