@@ -184,6 +184,20 @@ class HttpResponseBuilderTest {
     }
 
     @Test
+    void buildWithContentJson() {
+        final HttpResponse res = HttpResponse.builder()
+                                             .ok()
+                                             .contentJson(new SampleObject(15, "Armeria"))
+                                             .build();
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        // language=JSON
+        assertThat(aggregatedRes.contentUtf8()).isEqualTo("{\"id\":15,\"name\":\"Armeria\"}");
+        assertThat(aggregatedRes.contentType()).isNotNull();
+        assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.JSON);
+    }
+
+    @Test
     void buildWithHeader() {
         final HttpResponse res = HttpResponse.builder()
                                              .ok()
@@ -248,5 +262,24 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(aggregatedRes.trailers().contains("trailer-name")).isTrue();
         assertThat(aggregatedRes.trailers().get("trailer-name")).isEqualTo("trailer-value");
+    }
+
+    static class SampleObject {
+        private final int id;
+
+        private final String name;
+
+        SampleObject(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
     }
 }

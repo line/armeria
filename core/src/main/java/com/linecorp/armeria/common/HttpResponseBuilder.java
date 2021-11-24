@@ -24,10 +24,13 @@ import java.util.Map.Entry;
 
 import org.reactivestreams.Publisher;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * Builds a new {@link HttpResponse}.
@@ -220,6 +223,20 @@ public final class HttpResponseBuilder {
         requireNonNull(content, "publisher");
         responseHeadersBuilder.contentType(contentType);
         publisher = content;
+        return this;
+    }
+
+    /**
+     * Sets the content for this response. The {@code content} that is converted into JSON
+     * using the default {@link ObjectMapper}.
+     */
+    public HttpResponseBuilder contentJson(Object content) {
+        try {
+            this.content = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException(e.toString(), e);
+        }
+        responseHeadersBuilder.contentType(MediaType.JSON);
         return this;
     }
 
