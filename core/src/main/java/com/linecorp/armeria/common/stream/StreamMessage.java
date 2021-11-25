@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -565,6 +566,23 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return FuseableStreamMessage.error(this, function);
+    }
+
+    /**
+     * Peeks values emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> ifEvenExistsThenThrow = source.peek(x -> {
+     *      if (x % 2 == 0) {
+     *          throw new IllegalArgumentException();
+     *      }
+     * });
+     * }</pre>
+     */
+    default StreamMessage<T> peek(Consumer<? super T> action) {
+        requireNonNull(action, "action");
+        return FuseableStreamMessage.peek(this, action);
     }
 
     /**
