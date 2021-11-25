@@ -213,7 +213,7 @@ public abstract class AbstractHttpRequestBuilder {
      * }</pre>
      */
     public AbstractHttpRequestBuilder header(CharSequence name, Object value) {
-        requestHeadersBuilder.setObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
+        requestHeadersBuilder.addObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
         return this;
     }
 
