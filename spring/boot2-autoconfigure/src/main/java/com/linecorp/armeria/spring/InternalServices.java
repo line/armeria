@@ -207,7 +207,7 @@ public final class InternalServices {
     /**
      * Return true if {@link InternalServiceId#ACTUATOR} is specified in the properties of internal services.
      */
-    public boolean isActuatorEnabled() {
+    public boolean actuatorEnabled() {
         return actuatorEnabled;
     }
 
