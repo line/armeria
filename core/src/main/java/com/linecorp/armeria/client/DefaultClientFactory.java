@@ -21,25 +21,24 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -90,7 +89,7 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     private final HttpClientFactory httpClientFactory;
-    private final Map<Scheme, ClientFactory> clientFactories;
+    private final Multimap<Scheme, ClientFactory> clientFactories;
     private final List<ClientFactory> clientFactoriesToClose;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
     @Nullable
@@ -107,7 +106,7 @@ final class DefaultClientFactory implements ClientFactory {
                .map(provider -> provider.newFactory(httpClientFactory))
                .forEach(availableClientFactories::add);
 
-        final ImmutableMap.Builder<Scheme, ClientFactory> builder = ImmutableMap.builder();
+        final ImmutableListMultimap.Builder<Scheme, ClientFactory> builder = ImmutableListMultimap.builder();
         for (ClientFactory f : availableClientFactories) {
             f.supportedSchemes().forEach(s -> builder.put(s, f));
         }
@@ -162,10 +161,16 @@ final class DefaultClientFactory implements ClientFactory {
     public Object newClient(ClientBuilderParams params) {
         validateParams(params);
         final Scheme scheme = params.scheme();
-        // `factory` must be non-null because we validated params.scheme() with validateParams().
-        final ClientFactory factory = clientFactories.get(scheme);
-        assert factory != null;
-        return factory.newClient(params);
+        final Class<?> clientType = params.clientType();
+        for (ClientFactory factory : clientFactories.get(scheme)) {
+            if (factory.isClientTypeSupported(clientType)) {
+                return factory.newClient(params);
+            }
+        }
+        // Since we passed validation, there should have been at least 1 factory for this scheme,
+        // but for some reason none of these passed the filter.
+        throw new IllegalStateException(
+                "No ClientFactory for scheme: " + scheme + " matched clientType: " + clientType);
     }
 
     @Override

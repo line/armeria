@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.server.file;
 
+import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateData;
+import static com.linecorp.armeria.server.file.MimeTypeUtil.guessFromPath;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Objects;
@@ -27,8 +30,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
-
-import javax.annotation.Nullable;
+import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,9 +44,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.encoding.StreamDecoder;
+import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -194,27 +197,31 @@ public final class FileService extends AbstractHttpService {
     }
 
     private HttpFile findFile(ServiceRequestContext ctx, HttpRequest req) {
-        final String decodedMappedPath = ctx.decodedMappedPath();
+        final EnumSet<ContentEncoding> encodings = EnumSet.noneOf(ContentEncoding.class);
 
-        final EnumSet<FileServiceContentEncoding> supportedEncodings =
-                EnumSet.noneOf(FileServiceContentEncoding.class);
-
+        boolean needsDecompression = false;
         if (config.serveCompressedFiles()) {
             // We do a simple parse of the accept-encoding header, without worrying about star values
             // or priorities.
             final String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
             if (acceptEncoding != null) {
                 for (String encoding : COMMA_SPLITTER.split(acceptEncoding)) {
-                    for (FileServiceContentEncoding possibleEncoding : FileServiceContentEncoding.values()) {
+                    for (ContentEncoding possibleEncoding : ContentEncoding.values()) {
                         if (encoding.contains(possibleEncoding.headerValue)) {
-                            supportedEncodings.add(possibleEncoding);
+                            encodings.add(possibleEncoding);
                         }
                     }
                 }
             }
+            if (config().autoDecompress() && encodings.isEmpty()) {
+                needsDecompression = true;
+                Collections.addAll(encodings, ContentEncoding.values());
+            }
         }
+        final boolean decompress = needsDecompression;
 
-        return HttpFile.from(findFile(ctx, decodedMappedPath, supportedEncodings).thenCompose(file -> {
+        final String decodedMappedPath = ctx.decodedMappedPath();
+        return HttpFile.from(findFile(ctx, decodedMappedPath, encodings, decompress).thenCompose(file -> {
             if (file != null) {
                 return UnmodifiableFuture.completedFuture(file);
             }
@@ -223,23 +230,23 @@ public final class FileService extends AbstractHttpService {
             if (endsWithSlash) {
                 // Try index.html if it was a directory access.
                 final String indexPath = decodedMappedPath + "index.html";
-                return findFile(ctx, indexPath, supportedEncodings).thenCompose(indexFile -> {
+                return findFile(ctx, indexPath, encodings, decompress).thenCompose(indexFile -> {
                     if (indexFile != null) {
                         return UnmodifiableFuture.completedFuture(indexFile);
                     }
 
                     // Auto-generate directory listing if enabled.
-                    final Executor fileReadExecutor = ctx.blockingTaskExecutor();
+                    final Executor readExecutor = ctx.blockingTaskExecutor();
                     if (!config.autoIndex()) {
                         return NON_EXISTENT_FILE_FUTURE;
                     }
 
-                    return config.vfs().canList(fileReadExecutor, decodedMappedPath).thenCompose(canList -> {
+                    return config.vfs().canList(readExecutor, decodedMappedPath).thenCompose(canList -> {
                         if (!canList) {
                             return NON_EXISTENT_FILE_FUTURE;
                         }
 
-                        return config.vfs().list(fileReadExecutor, decodedMappedPath).thenApply(listing -> {
+                        return config.vfs().list(readExecutor, decodedMappedPath).thenApply(listing -> {
                             final HttpData autoIndex =
                                     AutoIndex.listingToHtml(ctx.decodedPath(), decodedMappedPath, listing);
                             return HttpFile.builder(autoIndex)
@@ -254,7 +261,7 @@ public final class FileService extends AbstractHttpService {
                 // 1) /index.html exists or
                 // 2) it has a directory listing.
                 final String indexPath = decodedMappedPath + "/index.html";
-                return findFile(ctx, indexPath, supportedEncodings).thenCompose(indexFile -> {
+                return findFile(ctx, indexPath, encodings, decompress).thenCompose(indexFile -> {
                     if (indexFile != null) {
                         return UnmodifiableFuture.completedFuture(true);
                     }
@@ -266,9 +273,7 @@ public final class FileService extends AbstractHttpService {
                     return config.vfs().canList(ctx.blockingTaskExecutor(), decodedMappedPath);
                 }).thenApply(canList -> {
                     if (canList) {
-                        throw HttpResponseException.of(HttpResponse.of(
-                                ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
-                                                   HttpHeaderNames.LOCATION, ctx.path() + '/')));
+                        throw HttpResponseException.of(HttpResponse.ofRedirect(ctx.path() + '/'));
                     } else {
                         return HttpFile.nonExistent();
                     }
@@ -277,44 +282,62 @@ public final class FileService extends AbstractHttpService {
         }));
     }
 
-    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
-                                                 Set<FileServiceContentEncoding> supportedEncodings) {
-        return findFile(ctx, path, supportedEncodings.iterator()).thenCompose(file -> {
+    private CompletableFuture<@Nullable HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                           Set<ContentEncoding> supportedEncodings,
+                                                           boolean decompress) {
+        if (decompress) {
+            return findFileAndDecompress(ctx, path, supportedEncodings);
+        }
+
+        return findFile(ctx, path, supportedEncodings.iterator(), false).thenCompose(file -> {
             if (file != null) {
                 return UnmodifiableFuture.completedFuture(file);
             } else {
-                return findFile(ctx, path, (String) null);
+                return findFile(ctx, path, (ContentEncoding) null, false);
             }
         });
     }
 
-    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
-                                                 Iterator<FileServiceContentEncoding> i) {
+    private CompletableFuture<@Nullable HttpFile> findFile(ServiceRequestContext ctx, String path,
+                                                           Iterator<ContentEncoding> i,
+                                                           boolean decompress) {
         if (!i.hasNext()) {
             return UnmodifiableFuture.completedFuture(null);
         }
 
-        final FileServiceContentEncoding encoding = i.next();
-        final String contentEncoding = encoding.headerValue;
-        return findFile(ctx, path + encoding.extension, contentEncoding).thenCompose(file -> {
+        final ContentEncoding encoding = i.next();
+        return findFile(ctx, path + encoding.extension, encoding, decompress).thenCompose(file -> {
             if (file != null) {
                 return UnmodifiableFuture.completedFuture(file);
             } else {
-                return findFile(ctx, path, i);
+                return findFile(ctx, path, i, decompress);
             }
         });
     }
 
-    private CompletableFuture<HttpFile> findFile(ServiceRequestContext ctx, String path,
-                                                 @Nullable String contentEncoding) {
+    private CompletableFuture<@Nullable HttpFile> findFile(ServiceRequestContext ctx,
+                                                           String path,
+                                                           @Nullable ContentEncoding encoding,
+                                                           boolean decompress) {
 
-        final ScheduledExecutorService fileReadExecutor = ctx.blockingTaskExecutor();
-        final HttpFile uncachedFile = config.vfs().get(fileReadExecutor, path, config.clock(),
+        final ScheduledExecutorService readExecutor = ctx.blockingTaskExecutor();
+        @Nullable
+        final String contentEncoding = encoding != null ? encoding.headerValue : null;
+        final HttpFile uncachedFile = config.vfs().get(readExecutor, path, config.clock(),
                                                        contentEncoding, config.headers());
 
-        return uncachedFile.readAttributes(fileReadExecutor).thenApply(uncachedAttrs -> {
+        return uncachedFile.readAttributes(readExecutor).thenApply(uncachedAttrs -> {
             if (cache == null) {
-                return uncachedAttrs != null ? uncachedFile : null;
+                if (uncachedAttrs != null) {
+                    if (decompress && encoding != null) {
+                        // The compressed data will be decompressed while being served.
+                        return new DecompressingHttpFile(uncachedFile, encoding,
+                                                         guessFromPath(path, encoding.headerValue));
+                    } else {
+                        return uncachedFile;
+                    }
+                }
+                return null;
             }
 
             final PathAndEncoding pathAndEncoding = new PathAndEncoding(path, contentEncoding);
@@ -330,10 +353,11 @@ public final class FileService extends AbstractHttpService {
                 return uncachedFile;
             }
 
+            @Nullable
             final AggregatedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
             if (cachedFile == null) {
                 // Cache miss. Add a new entry to the cache.
-                return cache(ctx, pathAndEncoding, uncachedFile);
+                return cache(ctx, pathAndEncoding, uncachedFile, encoding, decompress);
             }
 
             final HttpFileAttributes cachedAttrs = cachedFile.attributes();
@@ -345,12 +369,24 @@ public final class FileService extends AbstractHttpService {
 
             // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
             cache.invalidate(pathAndEncoding);
-            return cache(ctx, pathAndEncoding, uncachedFile);
+            return cache(ctx, pathAndEncoding, uncachedFile, encoding, decompress);
         });
     }
 
-    private HttpFile cache(
-            ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile uncachedFile) {
+    private CompletableFuture<@Nullable HttpFile> findFileAndDecompress(
+            ServiceRequestContext ctx, String path, Set<ContentEncoding> supportedEncodings) {
+        // Look up a non-compressed file first to avoid extra decompression
+        return findFile(ctx, path, (ContentEncoding) null, false).thenCompose(file -> {
+            if (file != null) {
+                return UnmodifiableFuture.completedFuture(file);
+            } else {
+                return findFile(ctx, path, supportedEncodings.iterator(), true);
+            }
+        });
+    }
+
+    private HttpFile cache(ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile uncachedFile,
+                           @Nullable ContentEncoding encoding, boolean decompress) {
 
         assert cache != null;
 
@@ -358,12 +394,55 @@ public final class FileService extends AbstractHttpService {
         final ByteBufAllocator alloc = ctx.alloc();
 
         return HttpFile.from(uncachedFile.aggregateWithPooledObjects(executor, alloc).thenApply(aggregated -> {
+            if (decompress && encoding != null) {
+                assert aggregated instanceof HttpDataFile;
+                aggregated = decompress((HttpDataFile) aggregated, encoding, alloc);
+                if (aggregated.attributes().length() > config.maxCacheEntrySizeBytes()) {
+                    // Invalidate the cache just in case the file was small previously.
+                    cache.invalidate(pathAndEncoding);
+                    return aggregated.toHttpFile();
+                }
+            }
+
             cache.put(pathAndEncoding, aggregated);
             return aggregated.toHttpFile();
         }).exceptionally(cause -> {
             logger.warn("{} Failed to cache a file: {}", ctx, uncachedFile, Exceptions.peel(cause));
             return uncachedFile;
         }));
+    }
+
+    private static HttpDataFile decompress(HttpDataFile compressed, ContentEncoding encoding,
+                                           ByteBufAllocator alloc) {
+
+        @Nullable
+        final HttpData content = compressed.content();
+        if (content.isEmpty()) {
+            return compressed;
+        }
+
+        final StreamDecoder decoder = encoding.decoderFactory.newDecoder(alloc);
+        final HttpData decoded = aggregateData(decoder.decode(content), decoder.finish(), alloc);
+
+        final HttpFileAttributes attributes = compressed.attributes();
+
+        // Rebuild an AggregatedHttpFile with a decompressed content.
+        final AggregatedHttpFileBuilder builder =
+                AggregatedHttpFile.builder(decoded, attributes.lastModifiedMillis());
+        builder.clock(compressed.clock());
+        builder.date(compressed.isDateEnabled());
+        builder.lastModified(compressed.isLastModifiedEnabled());
+        builder.setHeaders(compressed.headers());
+
+        @Nullable
+        final BiFunction<String, HttpFileAttributes, String> entityFunction =
+                compressed.entityTagFunction();
+        if (entityFunction == null) {
+            builder.entityTag(false);
+        } else {
+            builder.entityTag(entityFunction);
+        }
+        return (HttpDataFile) builder.build();
     }
 
     /**
@@ -425,18 +504,20 @@ public final class FileService extends AbstractHttpService {
      * {@link EncodingService} because new formats can be added as soon as browsers and build tools
      * support them, without having to implement on-the-fly compression.
      */
-    private enum FileServiceContentEncoding {
+    enum ContentEncoding {
         // Order matters, we use the enum ordinal as the priority to pick an encoding in. Encodings should
         // be ordered by priority.
-        BROTLI(".br", "br"),
-        GZIP(".gz", "gzip");
+        BROTLI(".br", "br", StreamDecoderFactory.brotli()),
+        GZIP(".gz", "gzip", StreamDecoderFactory.gzip());
 
         private final String extension;
-        private final String headerValue;
+        final String headerValue;
+        final StreamDecoderFactory decoderFactory;
 
-        FileServiceContentEncoding(String extension, String headerValue) {
+        ContentEncoding(String extension, String headerValue, StreamDecoderFactory decoderFactory) {
             this.extension = extension;
             this.headerValue = headerValue;
+            this.decoderFactory = decoderFactory;
         }
     }
 

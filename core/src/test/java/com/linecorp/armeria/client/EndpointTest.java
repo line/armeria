@@ -18,7 +18,9 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.InetAddress;
 import java.net.StandardProtocolFamily;
+import java.net.UnknownHostException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -415,5 +417,32 @@ class EndpointTest {
 
         // Weight is not part of comparison.
         assertThat(Endpoint.of("a").withWeight(1)).isEqualByComparingTo(Endpoint.of("a").withWeight(2));
+    }
+
+    @Test
+    void cache() {
+        final Endpoint newEndpoint = Endpoint.parse("foo:10");
+        final Endpoint cachedEndpoint = Endpoint.parse("foo:10");
+        assertThat(cachedEndpoint).isSameAs(newEndpoint);
+        final Endpoint differentEndpoint = Endpoint.of("foo", 10);
+        assertThat(differentEndpoint).isNotSameAs(cachedEndpoint);
+        assertThat(differentEndpoint).isEqualTo(cachedEndpoint);
+    }
+
+    @Test
+    void inetAddress() throws UnknownHostException {
+        final Endpoint endpoint = Endpoint.of("a");
+
+        final InetAddress ipv4Address = InetAddress.getByName("1.1.1.1");
+        final Endpoint endpointWithIpv4 = endpoint.withInetAddress(ipv4Address);
+        assertThat(endpointWithIpv4.hasIpAddr()).isTrue();
+        assertThat(endpointWithIpv4.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
+        assertThat(endpointWithIpv4.ipAddr()).isEqualTo("1.1.1.1");
+
+        final InetAddress ipv6Address = InetAddress.getByName("[::1]");
+        final Endpoint endpointWithIpv6 = endpoint.withInetAddress(ipv6Address);
+        assertThat(endpointWithIpv6.hasIpAddr()).isTrue();
+        assertThat(endpointWithIpv6.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
+        assertThat(endpointWithIpv6.ipAddr()).isEqualTo("0:0:0:0:0:0:0:1");
     }
 }

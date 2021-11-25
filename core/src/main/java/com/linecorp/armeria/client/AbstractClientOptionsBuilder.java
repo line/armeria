@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -25,13 +26,15 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -309,31 +312,60 @@ public class AbstractClientOptionsBuilder {
      * Sets the
      * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>
      * header using {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(BasicToken token) {
-        requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
-        return this;
+        return auth((AuthToken) token);
     }
 
     /**
      * Sets the <a href="https://oauth.net/core/1.0a/">OAuth Core 1.0 Revision A</a> header
      * using {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
+        return auth((AuthToken) token);
+    }
+
+    /**
+     * Sets the <a href="https://www.oauth.com/">OAuth 2.0</a> header using
+     * {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
+     */
+    @Deprecated
+    public AbstractClientOptionsBuilder auth(OAuth2Token token) {
+        return auth((AuthToken) token);
+    }
+
+    /**
+     * Sets the {@link AuthToken} header using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractClientOptionsBuilder auth(AuthToken token) {
         requireNonNull(token, "token");
         headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
     }
 
     /**
-     * Sets the <a href="https://www.oauth.com/">OAuth 2.0</a> header using
-     * {@link HttpHeaderNames#AUTHORIZATION}.
+     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
      */
-    public AbstractClientOptionsBuilder auth(OAuth2Token token) {
-        requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
-        return this;
+    @UnstableApi
+    public AbstractClientOptionsBuilder followRedirects() {
+        return option(REDIRECT_CONFIG, RedirectConfig.of());
+    }
+
+    /**
+     * Sets the {@link RedirectConfig} to enable
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {
+        return option(REDIRECT_CONFIG, requireNonNull(redirectConfig, "redirectConfig"));
     }
 
     /**

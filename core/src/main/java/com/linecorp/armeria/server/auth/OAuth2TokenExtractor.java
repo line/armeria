@@ -22,8 +22,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +29,8 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 
 import io.netty.util.AsciiString;
@@ -65,6 +65,6 @@ final class OAuth2TokenExtractor implements Function<RequestHeaders, OAuth2Token
             return null;
         }
 
-        return OAuth2Token.of(matcher.group("accessToken"));
+        return AuthToken.ofOAuth2(matcher.group("accessToken"));
     }
 }

@@ -18,10 +18,8 @@ package com.linecorp.armeria.internal.server.rxjava3;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.rxjava3.ObservableResponseConverterFunction;
@@ -41,12 +39,11 @@ public final class ObservableResponseConverterFunctionProvider implements Respon
     @Override
     public ResponseConverterFunction createResponseConverterFunction(
             Type returnType,
-            ResponseConverterFunction responseConverter,
-            ExceptionHandlerFunction exceptionHandler) {
+            ResponseConverterFunction responseConverter) {
         final Class<?> clazz = typeToClass(returnType);
         if (clazz != null && isSupportedClass(clazz)) {
             ensureNoMoreObservableSource(returnType, returnType);
-            return new ObservableResponseConverterFunction(responseConverter, exceptionHandler);
+            return new ObservableResponseConverterFunction(responseConverter);
         }
         return null;
     }

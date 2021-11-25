@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -45,12 +44,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -62,7 +58,6 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -158,7 +153,7 @@ class HttpServerStreamingTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("413 Request Entity Too Large");
+        assertThat(res.contentUtf8()).startsWith("Status: 413\n");
     }
 
     @ParameterizedTest
@@ -168,32 +163,9 @@ class HttpServerStreamingTest {
         serverMaxRequestLength = maxContentLength;
 
         final byte[] content = new byte[maxContentLength + 1];
-        if (client.scheme().sessionProtocol().uriText().startsWith("h1")) {
-            // Unlike HTTP/2, ClosedSessionException is raised because Http1RequestDecoder closes
-            // the connection before the content of "404 Not Found" is sent.
-            //
-            // When the Http1RequestDecoder notices that the request entity is too large, the only thing it
-            // can do is that just closing the connection if the response headers (e.g 404 in this case)
-            // is already sent.
-            // If we wait for the response to be sent fully and close the connection, then the subsequent
-            // following request that uses the same connection will encounter ClosedSessionException which
-            // is undesirable.
-            // However, HTTP/2 can wait for the response to be sent, because the following request uses the
-            // next stream.
-            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                assertThatThrownBy(() -> client.post("/non-existent", content).aggregate().join())
-                        .hasCauseInstanceOf(ClosedSessionException.class);
-                final ResponseHeaders responseHeaders =
-                        captor.get().log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
-                              .responseHeaders();
-                // Even though the request is failed, the client got the 404 response headers.
-                assertThat(responseHeaders.status()).isSameAs(HttpStatus.NOT_FOUND);
-            }
-        } else {
-            final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
-            assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-            assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
-        }
+        final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
+        assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
     }
 
     @ParameterizedTest

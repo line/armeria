@@ -39,12 +39,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.internal.common.stream.SubscriptionArbiter;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -154,6 +154,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
         ConcatArraySubscriber(Subscriber<? super T> downstream, List<StreamMessage<? extends T>> sources,
                               EventExecutor executor, SubscriptionOption... options) {
+            super(executor);
             this.downstream = downstream;
             this.sources = sources;
             this.executor = executor;
@@ -219,12 +220,12 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 super.cancel();
-                abortUnsubscribedSources(CancelledSubscriptionException.get());
-
+                final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
                 if (containsNotifyCancellation(options)) {
-                    downstream.onError(CancelledSubscriptionException.get());
+                    downstream.onError(cause);
                 }
                 downstream = NoopSubscriber.get();
+                abortUnsubscribedSources(cause);
             }
         }
 

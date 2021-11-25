@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,14 +27,13 @@ import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
 
 /**
@@ -104,7 +101,7 @@ public final class EurekaWebClient {
         }
         final RequestHeaders headers =
                 RequestHeaders.builder(HttpMethod.PUT, path + '?' + queryBuilder.toQueryString())
-                              .add(HttpHeaderNames.ACCEPT, MediaTypeNames.JSON)
+                              .accept(MediaType.JSON)
                               .build();
         return webClient.execute(headers);
     }
@@ -138,7 +135,7 @@ public final class EurekaWebClient {
 
     private HttpResponse sendGetRequest(String path) {
         final RequestHeaders headers = RequestHeaders.builder(HttpMethod.GET, path)
-                                                     .add(HttpHeaderNames.ACCEPT, MediaTypeNames.JSON)
+                                                     .accept(MediaType.JSON)
                                                      .build();
         return webClient.execute(headers);
     }

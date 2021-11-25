@@ -17,22 +17,21 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
@@ -133,14 +132,13 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
-                onError0(abortCause);
+                onError(abortCause);
             } else if (isEmpty()) {
                 onComplete();
             }
         } catch (Throwable t) {
-            completed = true;
             cleanupObjects(t);
-            onError0(t);
+            onError(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
@@ -297,7 +295,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         if (completed) {
             return;
         }
-        completed = true;
 
         if (cause == null) {
             cause = AbortedStreamException.get();
@@ -306,11 +303,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
         abortCause = cause;
         if (executor == null) {
-            // abortCause will be propagated when subscribed
+            // 'abortCause' will be propagated and 'completed' will be set to true when subscribed
             completionFuture.completeExceptionally(cause);
         } else {
             // Subscribed already
-            onError0(cause);
+            onError(cause);
         }
     }
 }

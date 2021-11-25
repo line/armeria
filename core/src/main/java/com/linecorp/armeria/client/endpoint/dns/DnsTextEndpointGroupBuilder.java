@@ -24,6 +24,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.EventLoop;
 
@@ -33,9 +34,9 @@ import io.netty.channel.EventLoop;
  */
 public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
 
-    private final Function<byte[], Endpoint> mapping;
+    private final Function<byte[], @Nullable Endpoint> mapping;
 
-    DnsTextEndpointGroupBuilder(String hostname, Function<byte[], Endpoint> mapping) {
+    DnsTextEndpointGroupBuilder(String hostname, Function<byte[], @Nullable Endpoint> mapping) {
         super(hostname);
         this.mapping = requireNonNull(mapping, "mapping");
     }

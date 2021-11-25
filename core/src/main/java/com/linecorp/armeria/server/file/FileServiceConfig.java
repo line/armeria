@@ -21,12 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.time.Clock;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
@@ -41,16 +41,19 @@ public final class FileServiceConfig {
     private final String entryCacheSpec;
     private final int maxCacheEntrySizeBytes;
     private final boolean serveCompressedFiles;
+    private final boolean autoDecompress;
     private final boolean autoIndex;
     private final HttpHeaders headers;
 
     FileServiceConfig(HttpVfs vfs, Clock clock, @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
-                      boolean serveCompressedFiles, boolean autoIndex, HttpHeaders headers) {
+                      boolean serveCompressedFiles, boolean autoDecompress, boolean autoIndex,
+                      HttpHeaders headers) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.entryCacheSpec = validateEntryCacheSpec(entryCacheSpec);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         this.serveCompressedFiles = serveCompressedFiles;
+        this.autoDecompress = autoDecompress;
         this.autoIndex = autoIndex;
         this.headers = requireNonNull(headers, "headers");
     }
@@ -114,6 +117,14 @@ public final class FileServiceConfig {
      */
     public boolean serveCompressedFiles() {
         return serveCompressedFiles;
+    }
+
+    /**
+     * Returns whether pre-compressed files should be automatically decompressed if there is no
+     * {@link HttpHeaderNames#ACCEPT_ENCODING} corresponding to the compressed file.
+     */
+    public boolean autoDecompress() {
+        return autoDecompress;
     }
 
     /**

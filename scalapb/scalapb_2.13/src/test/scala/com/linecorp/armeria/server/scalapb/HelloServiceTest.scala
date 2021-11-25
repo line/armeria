@@ -5,13 +5,11 @@ import armeria.scalapb.hello.{Add, HelloReply, HelloRequest, HelloServiceGrpc, L
 import com.google.common.base.Stopwatch
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.client.grpc.GrpcClientOptions
-import com.linecorp.armeria.client.logging.{ContentPreviewingClient, LoggingClient}
 import com.linecorp.armeria.common.SerializationFormat
 import com.linecorp.armeria.common.grpc.{GrpcJsonMarshaller, GrpcSerializationFormats}
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.grpc.GrpcService
-import com.linecorp.armeria.server.logging.{ContentPreviewingService, LoggingService}
 import com.linecorp.armeria.server.scalapb.HelloServiceImpl.toMessage
 import com.linecorp.armeria.server.scalapb.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension

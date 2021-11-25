@@ -29,8 +29,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.ToIntFunction;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +38,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
@@ -147,8 +146,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
                                          @Nullable Endpoint endpoint) {
         if (endpoint == null) {
             // Use a fake endpoint if no endpoint was selected from the endpointGroup.
-            endpoint = Endpoint.of(
-                    "armeria-group-" + Integer.toHexString(System.identityHashCode(endpointGroup)));
+            endpoint = Endpoint.unsafeCreate(
+                    "armeria-group-" + Integer.toHexString(System.identityHashCode(endpointGroup)), 0);
         }
 
         final String firstTryHost;

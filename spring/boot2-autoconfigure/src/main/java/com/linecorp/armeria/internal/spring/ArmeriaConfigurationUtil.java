@@ -19,6 +19,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationSettingsUtil.configureSettings;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -34,12 +35,14 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.util.ResourceUtils;
 
 import com.google.common.base.Ascii;
@@ -51,21 +54,19 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.server.healthcheck.HealthCheckService;
-import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
-import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.MetricCollectingServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
-import com.linecorp.armeria.spring.DocServiceConfigurator;
-import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
+import com.linecorp.armeria.spring.ArmeriaSettings.InternalServiceProperties;
+import com.linecorp.armeria.spring.ArmeriaSettings.Port;
+import com.linecorp.armeria.spring.InternalServiceId;
+import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 import com.linecorp.armeria.spring.Ssl;
 
@@ -95,26 +96,39 @@ public final class ArmeriaConfigurationUtil {
     public static void configureServerWithArmeriaSettings(
             ServerBuilder server,
             ArmeriaSettings settings,
+            InternalServices internalServices,
             List<ArmeriaServerConfigurator> armeriaServerConfigurators,
             List<Consumer<ServerBuilder>> armeriaServerBuilderConsumers,
-            List<DocServiceConfigurator> docServiceConfigurators,
             MeterRegistry meterRegistry,
-            List<HealthChecker> healthCheckers,
-            List<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
             MeterIdPrefixFunction meterIdPrefixFunction,
-            List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators) {
+            List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
+            BeanFactory beanFactory) {
 
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
         requireNonNull(armeriaServerConfigurators, "armeriaServerConfigurators");
         requireNonNull(armeriaServerBuilderConsumers, "armeriaServerBuilderConsumers");
-        requireNonNull(docServiceConfigurators, "docServiceConfigurators");
         requireNonNull(meterRegistry, "meterRegistry");
-        requireNonNull(healthCheckers, "healthCheckers");
-        requireNonNull(healthCheckServiceConfigurators, "healthCheckServiceConfigurators");
         requireNonNull(metricCollectingServiceConfigurators, "metricCollectingServiceConfigurators");
 
+        final Port internalServicePort = internalServices.internalServicePort();
+        final Port managementServerPort = internalServices.managementServerPort();
+        final ImmutableList.Builder<Port> internalPortsBuilder = ImmutableList.builder();
+        if (internalServicePort != null) {
+            internalPortsBuilder.add(internalServicePort);
+        }
+
+        final boolean needsManagementPort =
+                findBean(beanFactory, "actuatorServerConfigurator", ArmeriaServerConfigurator.class) != null;
+
+        if (needsManagementPort && managementServerPort != null) {
+            internalPortsBuilder.add(managementServerPort);
+        }
+        final List<Port> internalPorts = internalPortsBuilder.build();
         configurePorts(server, settings.getPorts());
+        configurePorts(server, internalPorts);
+
+        configureSettings(server, settings);
         armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
         armeriaServerBuilderConsumers.forEach(consumer -> consumer.accept(server));
 
@@ -127,17 +141,21 @@ public final class ArmeriaConfigurationUtil {
                          settings.getGracefulShutdownTimeoutMillis());
         }
 
-        final String healthCheckPath = settings.getHealthCheckPath();
-        if (!Strings.isNullOrEmpty(healthCheckPath)) {
-            final HealthCheckServiceBuilder builder = HealthCheckService.builder().checkers(healthCheckers);
-            healthCheckServiceConfigurators.forEach(configurator -> configurator.configure(builder));
-            server.service(healthCheckPath, builder.build());
-        } else if (!healthCheckServiceConfigurators.isEmpty()) {
-            logger.warn("{}s exist but they are disabled by the empty 'health-check-path' property." +
-                        " configurators: {}",
-                        HealthCheckServiceConfigurator.class.getSimpleName(),
-                        healthCheckServiceConfigurators);
+        final InternalServiceProperties internalServiceProperties = settings.getInternalServices();
+        final List<InternalServiceId> internalServiceIds;
+        if (internalServiceProperties == null) {
+            internalServiceIds = InternalServiceId.defaultServiceIds();
+        } else {
+            internalServiceIds = internalServiceProperties.getInclude();
         }
+
+        configureInternalService(server, InternalServiceId.DOCS, settings.getDocsPath(),
+                                 internalServices.docService(),
+                                 internalPorts, internalServiceIds, true);
+
+        configureInternalService(server, InternalServiceId.HEALTH, settings.getHealthCheckPath(),
+                                 internalServices.healthCheckService(),
+                                 internalPorts, internalServiceIds, false);
 
         server.meterRegistry(meterRegistry);
 
@@ -153,40 +171,13 @@ public final class ArmeriaConfigurationUtil {
                 server.decorator(MetricCollectingService.newDecorator(meterIdPrefixFunction));
             }
 
-            if (!Strings.isNullOrEmpty(settings.getMetricsPath())) {
-                final boolean hasPrometheus = hasAllClasses(
-                        "io.micrometer.prometheus.PrometheusMeterRegistry",
-                        "io.prometheus.client.CollectorRegistry");
-
-                final boolean addedPrometheusExposition;
-                if (hasPrometheus) {
-                    addedPrometheusExposition =
-                            PrometheusSupport.addExposition(settings, server, meterRegistry);
-                } else {
-                    addedPrometheusExposition = false;
-                }
-
-                if (!addedPrometheusExposition) {
-                    final boolean hasDropwizard = hasAllClasses(
-                            "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
-                            "com.codahale.metrics.MetricRegistry",
-                            "com.codahale.metrics.json.MetricsModule");
-                    if (hasDropwizard) {
-                        DropwizardSupport.addExposition(settings, server, meterRegistry);
-                    }
-                }
-            }
+            configureInternalService(server, InternalServiceId.METRICS, settings.getMetricsPath(),
+                                     internalServices.metricsExpositionService(), internalPorts,
+                                     internalServiceIds, false);
         }
 
         if (settings.getSsl() != null) {
             configureTls(server, settings.getSsl());
-        }
-
-        final String docsPath = settings.getDocsPath();
-        if (!Strings.isNullOrEmpty(docsPath)) {
-            final DocServiceBuilder docServiceBuilder = DocService.builder();
-            docServiceConfigurators.forEach(configurator -> configurator.configure(docServiceBuilder));
-            server.serviceUnder(docsPath, docServiceBuilder.build());
         }
 
         final ArmeriaSettings.Compression compression = settings.getCompression();
@@ -199,15 +190,73 @@ public final class ArmeriaConfigurationUtil {
         }
     }
 
-    private static boolean hasAllClasses(String... classNames) {
-        for (String className : classNames) {
-            try {
-                Class.forName(className, false, ArmeriaConfigurationUtil.class.getClassLoader());
-            } catch (Throwable t) {
-                return false;
+    private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,
+                                                 @Nullable String servicePath,
+                                                 @Nullable HttpService service,
+                                                 List<Port> internalPorts,
+                                                 @Nullable List<InternalServiceId> internalServiceIds,
+                                                 boolean usesPrefixPath) {
+        if (service == null) {
+            return;
+        }
+        // An internal service should be created only when a servicePath is not null.
+        assert servicePath != null;
+        internalServiceIds = firstNonNull(internalServiceIds, ImmutableList.of());
+
+        if (internalPorts.isEmpty()) {
+            // No internal ports are configured. The default virtual is used to use the service.
+            configureInternalService(server, serviceId, servicePath, service,
+                                     (Port) null, internalServiceIds, usesPrefixPath);
+        } else {
+            for (Port internalPort : internalPorts) {
+                configureInternalService(server, serviceId, servicePath, service,
+                                         internalPort, internalServiceIds, usesPrefixPath);
             }
         }
-        return true;
+    }
+
+    private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,
+                                                 String servicePath,
+                                                 HttpService service, @Nullable Port internalPort,
+                                                 List<InternalServiceId> internalServiceIds,
+                                                 boolean usesPrefixPath) {
+        final boolean needsPortBasedVirtualHost;
+        if (internalPort == null) {
+            needsPortBasedVirtualHost = false;
+        } else {
+            if (internalServiceIds.contains(InternalServiceId.ALL)) {
+                // All internal services use the internal port.
+                needsPortBasedVirtualHost = true;
+            } else {
+                // The service specified in internalServiceIds uses the internal port.
+                needsPortBasedVirtualHost = internalServiceIds.contains(serviceId);
+            }
+        }
+
+        if (needsPortBasedVirtualHost) {
+            if (usesPrefixPath) {
+                server.virtualHost(internalPort.getPort()).serviceUnder(servicePath, service);
+            } else {
+                server.virtualHost(internalPort.getPort()).service(servicePath, service);
+            }
+        } else {
+            if (usesPrefixPath) {
+                server.serviceUnder(servicePath, service);
+            } else {
+                server.service(servicePath, service);
+            }
+        }
+    }
+
+    @Nullable
+    private static <T> T findBean(BeanFactory beanFactory, String name, Class<T> clazz) {
+        try {
+            return beanFactory.getBean(name, clazz);
+        } catch (NoUniqueBeanDefinitionException e) {
+            throw new IllegalStateException("Too many " + clazz.getSimpleName() + " beans: (expected: 1)", e);
+        } catch (NoSuchBeanDefinitionException e) {
+            return null;
+        }
     }
 
     /**

@@ -78,12 +78,7 @@ public final class AnnotatedServiceElement {
         HttpService decoratedService = decorator.apply(service);
         // Apply localDecorator passed in through method parameter
         decoratedService = decoratedService.decorate(localDecorator);
-        // If there is a decorator, we should add one more decorator which handles an exception
-        // raised from decorators.
-        if (decoratedService != service) {
-            decoratedService = service.exceptionHandlingDecorator().apply(decoratedService);
-        }
-        return decoratedService;
+        return service.withExceptionHandler(decoratedService);
     }
 
     @Override

@@ -31,13 +31,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -53,6 +51,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -273,26 +272,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final ChannelPipeline pipeline = ctx.pipeline();
-        final Http2ServerConnectionHandler handler = pipeline.get(Http2ServerConnectionHandler.class);
-        if (responseEncoder == null) {
-            responseEncoder = newServerHttp2ObjectEncoder(ctx, handler);
-        } else if (responseEncoder instanceof Http1ObjectEncoder) {
+        final ChannelHandlerContext connectionHandlerCtx =
+                pipeline.context(Http2ServerConnectionHandler.class);
+        final Http2ServerConnectionHandler connectionHandler =
+                (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
+        if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
-            responseEncoder = newServerHttp2ObjectEncoder(ctx, handler);
         }
+        responseEncoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
 
         // Update the connection-level flow-control window size.
         final int initialWindow = config.http2InitialConnectionWindowSize();
         if (initialWindow > DEFAULT_WINDOW_SIZE) {
             incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
         }
-    }
-
-    private ServerHttp2ObjectEncoder newServerHttp2ObjectEncoder(ChannelHandlerContext ctx,
-                                                                 Http2ServerConnectionHandler handler) {
-        return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
-                                            config.isDateHeaderEnabled(),
-                                            config.isServerHeaderEnabled());
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
@@ -320,7 +313,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
         final String hostname = hostname(headers);
-        final VirtualHost virtualHost = config.findVirtualHost(hostname);
+        final int port = ((InetSocketAddress) channel.localAddress()).getPort();
+        final VirtualHost virtualHost = config.findVirtualHost(hostname, port);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
@@ -386,41 +380,28 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
+            final ServerErrorHandler serverErrorHandler = config.errorHandler();
             HttpResponse serviceResponse;
-            Throwable raisedException = null;
             try {
                 req.init(reqCtx);
                 serviceResponse = service.serve(reqCtx, req);
             } catch (Throwable cause) {
-                if (cause instanceof HttpResponseException) {
-                    serviceResponse = ((HttpResponseException) cause).httpResponse();
-                } else {
-                    final AggregatedHttpResponse convertedResponse =
-                            config.exceptionHandler().convert(reqCtx, cause);
-                    if (convertedResponse != null) {
-                        serviceResponse = convertedResponse.toHttpResponse();
-                    } else {
-                        final AggregatedHttpResponse defaultResponse =
-                                ExceptionHandler.ofDefault().convert(reqCtx, cause);
-                        assert defaultResponse != null;
-                        serviceResponse = defaultResponse.toHttpResponse();
-                    }
-                    if (!(cause instanceof HttpStatusException)) {
-                        // Do not set HttpStatusException to the raisedException because we don't want to log it
-                        // as a cause.
-                        raisedException = cause;
-                    }
-                }
-
                 // No need to consume further since the response is ready.
-                if (raisedException != null) {
-                    req.close(raisedException);
-                } else {
+                if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
                     req.close();
+                } else {
+                    req.close(cause);
                 }
+                serviceResponse = HttpResponse.ofFailure(cause);
             }
+
+            serviceResponse = serviceResponse.recover(cause -> {
+                // Store the cause to set as the log.responseCause().
+                CapturedServiceException.set(reqCtx, cause);
+                // Recover the failed response with the error handler.
+                return serverErrorHandler.onServiceException(reqCtx, cause);
+            });
             final HttpResponse res = serviceResponse;
-            final Throwable primaryCause = raisedException;
             final EventLoop eventLoop = channel.eventLoop();
 
             // Keep track of the number of unfinished requests and
@@ -457,9 +438,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             res.whenComplete().handleAsync((ret, cause) -> {
                 try {
-                    if (primaryCause != null) {
-                        req.abort(primaryCause);
-                    } else if (cause == null) {
+                    if (cause == null) {
                         req.abort();
                     } else {
                         req.abort(cause);
@@ -484,7 +463,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, primaryCause);
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
             res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
         }
     }

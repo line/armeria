@@ -20,12 +20,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 

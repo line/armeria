@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    implementation project(':graphql-protocol')
     implementation project(':graphql')
 
     runtimeOnly 'org.slf4j:slf4j-simple'

@@ -21,11 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.x.discovery.ServiceInstance;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a {@link ZooKeeperDiscoverySpec} for
@@ -39,7 +38,7 @@ public final class CuratorDiscoverySpecBuilder {
     @Nullable
     private Boolean useSsl;
     @Nullable
-    private Function<? super ServiceInstance<?>, Endpoint> converter;
+    private Function<? super ServiceInstance<?>, @Nullable Endpoint> converter;
 
     /**
      * Creates a new instance.
@@ -79,7 +78,7 @@ public final class CuratorDiscoverySpecBuilder {
         return this;
     }
 
-    private Function<? super ServiceInstance<?>, Endpoint> converter() {
+    private Function<? super ServiceInstance<?>, @Nullable Endpoint> converter() {
         if (converter != null) {
             return converter;
         }

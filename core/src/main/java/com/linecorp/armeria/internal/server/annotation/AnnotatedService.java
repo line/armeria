@@ -31,13 +31,11 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,23 +43,20 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
-import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -123,11 +118,13 @@ public final class AnnotatedService implements HttpService {
     private final List<AnnotatedValueResolver> resolvers;
 
     private final AggregationStrategy aggregationStrategy;
+    @Nullable
     private final ExceptionHandlerFunction exceptionHandler;
     private final ResponseConverterFunction responseConverter;
 
     private final Route route;
-    private final ResponseHeaders defaultHttpHeaders;
+    private final HttpStatus defaultStatus;
+    private final HttpHeaders defaultHttpHeaders;
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
@@ -140,7 +137,8 @@ public final class AnnotatedService implements HttpService {
                      List<ExceptionHandlerFunction> exceptionHandlers,
                      List<ResponseConverterFunction> responseConverters,
                      Route route,
-                     ResponseHeaders defaultHttpHeaders,
+                     HttpStatus defaultStatus,
+                     HttpHeaders defaultHttpHeaders,
                      HttpHeaders defaultHttpTrailers,
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
@@ -149,14 +147,21 @@ public final class AnnotatedService implements HttpService {
                       method.getDeclaringClass().getSimpleName(), method.getName());
         isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
         this.resolvers = requireNonNull(resolvers, "resolvers");
-        exceptionHandler =
-                new CompositeExceptionHandlerFunction(object.getClass().getSimpleName(), method.getName(),
-                                                      requireNonNull(exceptionHandlers, "exceptionHandlers"));
+
+        requireNonNull(exceptionHandlers, "exceptionHandlers");
+        if (exceptionHandlers.isEmpty()) {
+            exceptionHandler = null;
+        } else {
+            exceptionHandler = new CompositeExceptionHandlerFunction(object.getClass().getSimpleName(),
+                                                                     method.getName(), exceptionHandlers);
+        }
+
         responseConverter = responseConverter(
-                method, requireNonNull(responseConverters, "responseConverters"), exceptionHandler);
+                method, requireNonNull(responseConverters, "responseConverters"));
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");
 
+        this.defaultStatus = requireNonNull(defaultStatus, "defaultStatus");
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -192,18 +197,9 @@ public final class AnnotatedService implements HttpService {
     }
 
     private static ResponseConverterFunction responseConverter(
-            Method method, List<ResponseConverterFunction> responseConverters,
-            ExceptionHandlerFunction exceptionHandler) {
+            Method method, List<ResponseConverterFunction> responseConverters) {
 
-        final Type actualType;
-        if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
-            final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
-            warnIfHttpResponseArgumentExists(type, type);
-            actualType = type.getActualTypeArguments()[0];
-        } else {
-            actualType = method.getGenericReturnType();
-        }
-
+        final Type actualType = getActualReturnType(method);
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList
                         .<ResponseConverterFunction>builder()
@@ -217,18 +213,39 @@ public final class AnnotatedService implements HttpService {
                         // It is the last converter to try to convert the result object into an HttpResponse
                         // after aggregating the published object from a Publisher or Stream.
                         .add(new AggregatedResponseConverterFunction(
-                                new CompositeResponseConverterFunction(backingConverters), exceptionHandler))
+                                new CompositeResponseConverterFunction(backingConverters)))
                         .build());
 
         for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
             final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(actualType, responseConverter, exceptionHandler);
+                    provider.createResponseConverterFunction(actualType, responseConverter);
             if (func != null) {
                 return func;
             }
         }
 
         return responseConverter;
+    }
+
+    private static Type getActualReturnType(Method method) {
+        final Class<?> returnType;
+        final Type genericReturnType;
+
+        if (KotlinUtil.isSuspendingFunction(method)) {
+            returnType = KotlinUtil.kFunctionReturnType(method);
+            genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
+        } else {
+            returnType = method.getReturnType();
+            genericReturnType = method.getGenericReturnType();
+        }
+
+        if (HttpResult.class.isAssignableFrom(returnType)) {
+            final ParameterizedType type = (ParameterizedType) genericReturnType;
+            warnIfHttpResponseArgumentExists(type, type);
+            return type.getActualTypeArguments()[0];
+        } else {
+            return genericReturnType;
+        }
     }
 
     private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
@@ -276,7 +293,26 @@ public final class AnnotatedService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(serve0(ctx, req));
+        final HttpResponse response = HttpResponse.from(serve0(ctx, req));
+        if (exceptionHandler == null) {
+            // If an error occurs, the default ExceptionHandler will handle the error.
+            if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
+                logger.isWarnEnabled()) {
+                return response.mapError(cause -> {
+                    logger.warn("{} Exception raised by method '{}' in '{}':",
+                                ctx, methodName(), object.getClass().getSimpleName(), Exceptions.peel(cause));
+                    return cause;
+                });
+            }
+        }
+        return response;
+    }
+
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
     }
 
     /**
@@ -297,13 +333,11 @@ public final class AnnotatedService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
-                final Function<AggregatedHttpRequest, HttpResponse> httpResponseApplyFunction =
-                        msg -> new ExceptionFilteredHttpResponse(
-                                ctx, req, (HttpResponse) invoke(ctx, req, msg), exceptionHandler);
                 if (useBlockingTaskExecutor) {
-                    return f.thenApplyAsync(httpResponseApplyFunction, ctx.blockingTaskExecutor());
+                    return f.thenApplyAsync(aReq -> (HttpResponse) invoke(ctx, req, aReq),
+                                            ctx.blockingTaskExecutor());
                 } else {
-                    return f.thenApply(httpResponseApplyFunction);
+                    return f.thenApply(aReq -> (HttpResponse) invoke(ctx, req, aReq));
                 }
 
             case COMPLETION_STAGE:
@@ -312,22 +346,17 @@ public final class AnnotatedService implements HttpService {
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
                     composedFuture = f.thenComposeAsync(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor()),
+                            aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.blockingTaskExecutor()),
                             ctx.blockingTaskExecutor());
                 } else {
                     composedFuture = f.thenCompose(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop()));
+                            aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()));
                 }
-                return composedFuture.handle(
-                        (result, cause) -> {
-                            if (cause != null) {
-                                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
-                            }
-                            return convertResponse(ctx, req, null, result, HttpHeaders.of());
-                        });
+                return composedFuture
+                        .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
-                        msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());
+                        aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
                 if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
                 } else {
@@ -347,32 +376,30 @@ public final class AnnotatedService implements HttpService {
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
+                final ScheduledExecutorService executor;
+                // The request context will be injected by ArmeriaRequestCoroutineContext
+                if (useBlockingTaskExecutor) {
+                    executor = ctx.blockingTaskExecutor().withoutContext();
+                } else {
+                    executor = ctx.eventLoop().withoutContext();
+                }
                 return callKotlinSuspendingMethod.invoke(
                         method, object, arguments,
-                        useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
+                        executor,
                         ctx);
             } else {
                 return methodHandle.invoke(arguments);
             }
         } catch (Throwable cause) {
-            return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
-        }
-    }
-
-    private static HttpResponse handleExceptionWithContext(ExceptionHandlerFunction exceptionHandler,
-                                                           ServiceRequestContext ctx, HttpRequest req,
-                                                           Throwable cause) {
-        try (SafeCloseable ignored = ctx.push()) {
-            return exceptionHandler.handleException(ctx, req, cause);
+            return HttpResponse.ofFailure(cause);
         }
     }
 
     /**
      * Converts the specified {@code result} to an {@link HttpResponse}.
      */
-    private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
-                                         @Nullable HttpHeaders headers, @Nullable Object result,
-                                         HttpHeaders trailers) {
+    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable HttpHeaders headers,
+                                         @Nullable Object result, HttpHeaders trailers) {
         final ResponseHeaders newHeaders;
         final HttpHeaders newTrailers;
         if (result instanceof HttpResult) {
@@ -388,31 +415,21 @@ public final class AnnotatedService implements HttpService {
         }
 
         if (result instanceof HttpResponse) {
-            return new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) result, exceptionHandler);
+            return (HttpResponse) result;
         }
         if (result instanceof AggregatedHttpResponse) {
             return ((AggregatedHttpResponse) result).toHttpResponse();
         }
         if (result instanceof CompletionStage) {
-            return HttpResponse.from(
-                    ((CompletionStage<?>) result)
-                            .thenApply(object -> convertResponse(ctx, req, newHeaders, object,
-                                                                 newTrailers))
-                            .exceptionally(
-                                    cause -> handleExceptionWithContext(exceptionHandler, ctx, req, cause)));
+            final CompletionStage<?> future = (CompletionStage<?>) result;
+            return HttpResponse.from(future.thenApply(object -> convertResponse(ctx, newHeaders, object,
+                                                                                newTrailers)));
         }
 
         try (SafeCloseable ignored = ctx.push()) {
-            final HttpResponse response =
-                    responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
-            if (response instanceof HttpResponseWriter) {
-                // A streaming response has more chance to get an exception.
-                return new ExceptionFilteredHttpResponse(ctx, req, response, exceptionHandler);
-            } else {
-                return response;
-            }
+            return responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
         } catch (Exception cause) {
-            return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
+            return HttpResponse.ofFailure(cause);
         }
     }
 
@@ -437,8 +454,7 @@ public final class AnnotatedService implements HttpService {
             return headers.build();
         }
 
-        final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
-        return headers.status(defaultHttpStatus).build();
+        return headers.status(defaultStatus).build();
     }
 
     /**
@@ -452,75 +468,6 @@ public final class AnnotatedService implements HttpService {
             return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
-    }
-
-    /**
-     * Returns a {@link Function} which produces an {@link HttpService} wrapped with an
-     * {@link ExceptionFilteredHttpResponseDecorator}.
-     */
-    public Function<? super HttpService, ? extends HttpService> exceptionHandlingDecorator() {
-        return ExceptionFilteredHttpResponseDecorator::new;
-    }
-
-    /**
-     * Intercepts an {@link HttpResponse} and wraps the response with an {@link ExceptionFilteredHttpResponse}
-     * if it is not an instance of {@link ExceptionFilteredHttpResponse}. This decorator will make an
-     * {@link Exception} to be handled by {@link ExceptionHandlerFunction}s even if the exception is raised
-     * from a decorator.
-     */
-    private class ExceptionFilteredHttpResponseDecorator extends SimpleDecoratingHttpService {
-
-        ExceptionFilteredHttpResponseDecorator(HttpService delegate) {
-            super(delegate);
-        }
-
-        @Override
-        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            try {
-                final HttpResponse response = unwrap().serve(ctx, req);
-                if (response instanceof ExceptionFilteredHttpResponse) {
-                    return response;
-                }
-                return new ExceptionFilteredHttpResponse(ctx, req, response, exceptionHandler);
-            } catch (Exception cause) {
-                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
-            }
-        }
-    }
-
-    /**
-     * Intercepts a {@link Throwable} raised from {@link HttpResponse} and then rewrites it as an
-     * {@link HttpResponseException} by {@link ExceptionHandlerFunction}.
-     */
-    private static class ExceptionFilteredHttpResponse extends FilteredHttpResponse {
-
-        private final ServiceRequestContext ctx;
-        private final HttpRequest req;
-        private final ExceptionHandlerFunction exceptionHandler;
-
-        // TODO(hyangtack) Remove this class if we could provide a better way to handle an exception
-        //                 without this class. See https://github.com/line/armeria/issues/1514.
-        ExceptionFilteredHttpResponse(ServiceRequestContext ctx, HttpRequest req,
-                                      HttpResponse delegate, ExceptionHandlerFunction exceptionHandler) {
-            super(delegate);
-            this.ctx = ctx;
-            this.req = req;
-            this.exceptionHandler = exceptionHandler;
-        }
-
-        @Override
-        protected HttpObject filter(HttpObject obj) {
-            return obj;
-        }
-
-        @Override
-        protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-            if (cause instanceof HttpResponseException) {
-                // Do not convert again if it has been already converted.
-                return cause;
-            }
-            return HttpResponseException.of(handleExceptionWithContext(exceptionHandler, ctx, req, cause));
-        }
     }
 
     /**
@@ -542,7 +489,6 @@ public final class AnnotatedService implements HttpService {
         @Override
         public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             final Throwable peeledCause = Exceptions.peel(cause);
-
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
                 logger.isWarnEnabled()) {
                 logger.warn("{} Exception raised by method '{}' in '{}':",
@@ -566,7 +512,31 @@ public final class AnnotatedService implements HttpService {
                 }
             }
 
-            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            return HttpResponse.ofFailure(peeledCause);
+        }
+    }
+
+    private static final class ExceptionHandlingHttpService extends SimpleDecoratingHttpService {
+
+        private final ExceptionHandlerFunction exceptionHandler;
+
+        ExceptionHandlingHttpService(HttpService service, ExceptionHandlerFunction exceptionHandler) {
+            super(service);
+            this.exceptionHandler = exceptionHandler;
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            try {
+                final HttpResponse response = unwrap().serve(ctx, req);
+                return response.recover(cause -> {
+                    try (SafeCloseable ignored = ctx.push()) {
+                        return exceptionHandler.handleException(ctx, req, cause);
+                    }
+                });
+            } catch (Exception ex) {
+                return exceptionHandler.handleException(ctx, req, ex);
+            }
         }
     }
 
@@ -577,12 +547,9 @@ public final class AnnotatedService implements HttpService {
     private static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
 
         private final ResponseConverterFunction responseConverter;
-        private final ExceptionHandlerFunction exceptionHandler;
 
-        AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter,
-                                            ExceptionHandlerFunction exceptionHandler) {
+        AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter) {
             this.responseConverter = responseConverter;
-            this.exceptionHandler = exceptionHandler;
         }
 
         @Override
@@ -593,7 +560,7 @@ public final class AnnotatedService implements HttpService {
                                             HttpHeaders trailers) throws Exception {
             final CompletableFuture<?> f;
             if (result instanceof Publisher) {
-                f = collectFrom((Publisher<Object>) result);
+                f = collectFrom((Publisher<Object>) result, ctx);
             } else if (result instanceof Stream) {
                 f = collectFrom((Stream<Object>) result, ctx.blockingTaskExecutor());
             } else {
@@ -601,14 +568,11 @@ public final class AnnotatedService implements HttpService {
             }
 
             assert f != null;
-            return HttpResponse.from(f.handle((aggregated, cause) -> {
-                if (cause != null) {
-                    return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), cause);
-                }
+            return HttpResponse.from(f.thenApply(aggregated -> {
                 try {
                     return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
-                } catch (Exception e) {
-                    return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), e);
+                } catch (Exception ex) {
+                    return Exceptions.throwUnsafely(ex);
                 }
             }));
         }

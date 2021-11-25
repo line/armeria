@@ -30,7 +30,9 @@
 
   <logger name="com.linecorp.armeria" level="DEBUG" />
   <logger name="com.linecorp.armeria.logging.traffic.server" level="OFF" />
+  <logger name="com.linecorp.armeria.logging.traffic.server.http2" level="OFF" />
   <logger name="com.linecorp.armeria.logging.traffic.client" level="OFF" />
+  <logger name="com.linecorp.armeria.logging.traffic.client.http2" level="OFF" />
   <logger name="com.linecorp.armeria.internal.common.Http2GoAwayHandler" level="INFO" />
   <logger name="com.pszymczyk.consul" level="INFO" />
   <logger name="io.netty.resolver.dns.TraceDnsQueryLifeCycleObserverFactory" level="DEBUG" />

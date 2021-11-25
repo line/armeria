@@ -130,7 +130,7 @@ dependencies {
     // Do not upgrade to Scala 2.13.x that causes 'java.lang.ClassNotFoundException: scala.Serializable'
     // See https://github.com/scala/bug/issues/11832#issuecomment-568185023
     // If needed, you should consider to add 'armeria-scala' module.
-    optionalImplementation 'org.scala-lang:scala-library:2.12.14'
+    optionalImplementation 'org.scala-lang:scala-library:2.12.15'
 
     // Bouncy Castle
     implementation 'org.bouncycastle:bcpkix-jdk15on'
@@ -141,10 +141,10 @@ dependencies {
     testImplementation 'org.eclipse.jetty:jetty-webapp'
 
     // Brotli
-    implementation "com.aayushatharva.brotli4j:brotli4j:1.5.0"
-    optionalImplementation "com.aayushatharva.brotli4j:native-linux-x86_64:1.5.0"
-    optionalImplementation "com.aayushatharva.brotli4j:native-osx-x86_64:1.5.0"
-    optionalImplementation "com.aayushatharva.brotli4j:native-windows-x86_64:1.5.0"
+    implementation 'com.aayushatharva.brotli4j:brotli4j'
+    optionalImplementation 'com.aayushatharva.brotli4j:native-linux-x86_64'
+    optionalImplementation 'com.aayushatharva.brotli4j:native-osx-x86_64'
+    optionalImplementation 'com.aayushatharva.brotli4j:native-windows-x86_64'
 }
 
 if (!rootProject.hasProperty('noWeb')) {

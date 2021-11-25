@@ -20,13 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.security.Principal;
 
-import javax.annotation.Nullable;
 import javax.ws.rs.core.SecurityContext;
 
 import org.jboss.resteasy.plugins.server.embedded.SecurityDomain;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

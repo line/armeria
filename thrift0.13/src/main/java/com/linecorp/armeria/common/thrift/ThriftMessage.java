@@ -18,10 +18,10 @@ package com.linecorp.armeria.common.thrift;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A container of a Thrift message produced by Apache Thrift.

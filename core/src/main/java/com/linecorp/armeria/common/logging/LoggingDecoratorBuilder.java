@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +29,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Functions;
 
 /**
@@ -54,25 +53,27 @@ public abstract class LoggingDecoratorBuilder {
             log -> requestLogLevel();
     private Function<? super RequestLog, LogLevel> responseLogLevelMapper =
             log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
+
     private boolean isRequestLogLevelSet;
     private boolean isResponseLogLevelSet;
     private boolean isRequestLogLevelMapperSet;
     private boolean isResponseLogLevelMapperSet;
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
-    private BiFunction<? super RequestContext, Object, ?> requestContentSanitizer =
-            DEFAULT_CONTENT_SANITIZER;
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
 
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
-    private BiFunction<? super RequestContext, Object, ?> responseContentSanitizer =
-            DEFAULT_CONTENT_SANITIZER;
-    private BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer =
-            DEFAULT_CAUSE_SANITIZER;
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
+            requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
+    private BiFunction<? super RequestContext, Object, ? extends @Nullable Object>
+            requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
+            requestTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
+
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
+            responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
+    private BiFunction<? super RequestContext, Object, ? extends @Nullable Object>
+            responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
+    private BiFunction<? super RequestContext, ? super Throwable, ? extends @Nullable Object>
+            responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
+            responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -212,7 +213,8 @@ public abstract class LoggingDecoratorBuilder {
      * not sanitize request headers.
      */
     public LoggingDecoratorBuilder requestHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer) {
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         return this;
     }
@@ -220,7 +222,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize request headers before logging.
      */
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
+    requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
@@ -230,7 +233,8 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize response headers.
      */
     public LoggingDecoratorBuilder responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseHeadersSanitizer) {
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         return this;
     }
@@ -238,7 +242,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize response headers before logging.
      */
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
+    responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
@@ -247,7 +252,8 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize request trailers.
      */
     public LoggingDecoratorBuilder requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer) {
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
         return this;
     }
@@ -255,7 +261,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize request trailers before logging.
      */
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable Object> requestTrailersSanitizer() {
         return requestTrailersSanitizer;
     }
 
@@ -264,7 +271,8 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize response trailers.
      */
     public LoggingDecoratorBuilder responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseTrailersSanitizer) {
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         return this;
     }
@@ -272,7 +280,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link Function} to use to sanitize response trailers before logging.
      */
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
+    responseTrailersSanitizer() {
         return responseTrailersSanitizer;
     }
 
@@ -293,7 +302,8 @@ public abstract class LoggingDecoratorBuilder {
      * @see #responseTrailersSanitizer(BiFunction)
      */
     public LoggingDecoratorBuilder headersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> headersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> headersSanitizer) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requestHeadersSanitizer(headersSanitizer);
@@ -309,7 +319,8 @@ public abstract class LoggingDecoratorBuilder {
      * If unset, will not sanitize request content.
      */
     public LoggingDecoratorBuilder requestContentSanitizer(
-            BiFunction<? super RequestContext, Object, ?> requestContentSanitizer) {
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> requestContentSanitizer) {
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         return this;
     }
@@ -317,7 +328,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize request content before logging.
      */
-    protected final BiFunction<? super RequestContext, Object, ?> requestContentSanitizer() {
+    protected final BiFunction<? super RequestContext, Object, ? extends @Nullable Object>
+    requestContentSanitizer() {
         return requestContentSanitizer;
     }
 
@@ -327,7 +339,8 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize response content.
      */
     public LoggingDecoratorBuilder responseContentSanitizer(
-            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer) {
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> responseContentSanitizer) {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         return this;
     }
@@ -335,7 +348,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize response content before logging.
      */
-    protected final BiFunction<? super RequestContext, Object, ?> responseContentSanitizer() {
+    protected final BiFunction<? super RequestContext, Object, ? extends @Nullable Object>
+    responseContentSanitizer() {
         return responseContentSanitizer;
     }
 
@@ -353,7 +367,7 @@ public abstract class LoggingDecoratorBuilder {
      * @see #responseContentSanitizer(BiFunction)
      */
     public LoggingDecoratorBuilder contentSanitizer(
-            BiFunction<? super RequestContext, Object, ?> contentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends @Nullable Object> contentSanitizer) {
         requireNonNull(contentSanitizer, "contentSanitizer");
         requestContentSanitizer(contentSanitizer);
         responseContentSanitizer(contentSanitizer);
@@ -367,7 +381,8 @@ public abstract class LoggingDecoratorBuilder {
      * sanitize a response cause.
      */
     public LoggingDecoratorBuilder responseCauseSanitizer(
-            BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer) {
+            BiFunction<? super RequestContext, ? super Throwable,
+                    ? extends @Nullable Object> responseCauseSanitizer) {
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         return this;
     }
@@ -375,7 +390,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link BiFunction} to use to sanitize response cause before logging.
      */
-    protected final BiFunction<? super RequestContext, ? super Throwable, ?> responseCauseSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super Throwable, ? extends @Nullable Object>
+    responseCauseSanitizer() {
         return responseCauseSanitizer;
     }
 
@@ -385,7 +401,8 @@ public abstract class LoggingDecoratorBuilder {
                         requestLogLevelMapper, responseLogLevelMapper,
                         isRequestLogLevelMapperSet, isResponseLogLevelMapperSet,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
-                        responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer);
+                        responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
+                        responseCauseSanitizer);
     }
 
     private static String toString(
@@ -398,12 +415,20 @@ public abstract class LoggingDecoratorBuilder {
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             boolean isRequestLogLevelMapperSet,
             boolean isResponseLogLevelMapperSet,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, ?, ?> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> responseTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, ?,
+                    ? extends @Nullable Object> requestContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable,
+                    ? extends @Nullable Object> responseCauseSanitizer) {
 
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .omitNullValues()
@@ -439,6 +464,9 @@ public abstract class LoggingDecoratorBuilder {
         }
         if (responseTrailersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("responseTrailersSanitizer", responseTrailersSanitizer);
+        }
+        if (responseCauseSanitizer != DEFAULT_CAUSE_SANITIZER) {
+            helper.add("responseCauseSanitizer", responseCauseSanitizer);
         }
         return helper.toString();
     }

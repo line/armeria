@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.tomcat;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised when configuring or starting an embedded Tomcat fails.

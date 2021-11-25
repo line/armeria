@@ -24,7 +24,6 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
@@ -34,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.buffer.ByteBuf;
@@ -76,6 +76,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
         return "";
     }
 
+    @Nonnull
     @Override
     public HttpFileAttributes attributes() {
         return attrs;
@@ -86,6 +87,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
         return UnmodifiableFuture.completedFuture(attrs);
     }
 
+    @Nonnull
     @Override
     public ResponseHeaders headers() {
         return readHeaders(attrs);

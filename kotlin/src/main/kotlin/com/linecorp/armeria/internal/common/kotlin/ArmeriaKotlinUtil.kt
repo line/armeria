@@ -15,17 +15,19 @@
  */
 
 @file:JvmName("ArmeriaKotlinUtil")
+@file:Suppress("unused")
 
 package com.linecorp.armeria.internal.common.kotlin
 
 import java.lang.reflect.Method
+import java.lang.reflect.Type
+import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 import kotlin.reflect.jvm.kotlinFunction
 
 /**
  * Returns true if a method is a suspending function.
  */
-@Suppress("unused")
 internal fun isSuspendingFunction(method: Method): Boolean {
     return method.kotlinFunction
         ?.isSuspend
@@ -35,8 +37,21 @@ internal fun isSuspendingFunction(method: Method): Boolean {
 /**
  * Returns true if a method returns kotlin.Unit.
  */
-@Suppress("unused")
 internal fun isReturnTypeUnit(method: Method): Boolean {
     val kFunction = method.kotlinFunction ?: return false
     return kFunction.returnType.jvmErasure == Unit::class
 }
+
+/**
+ * [Method.getReturnType] equivalent for kotlin suspending function.
+ */
+internal fun kFunctionReturnType(method: Method): Class<*> =
+    requireNotNull(method.kotlinFunction) { "method is not a kotlin function" }
+        .returnType.jvmErasure.java
+
+/**
+ * [Method.getGenericReturnType] equivalent for kotlin suspending function.
+ */
+internal fun kFunctionGenericReturnType(method: Method): Type =
+    requireNotNull(method.kotlinFunction) { "method is not a kotlin function" }
+        .returnType.javaType

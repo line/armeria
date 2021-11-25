@@ -25,13 +25,13 @@ import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
 
@@ -58,28 +58,38 @@ public final class TransportTypeProvider {
     private static final Logger logger = LoggerFactory.getLogger(TransportTypeProvider.class);
 
     static {
-        final Map<String, Version> nettyVersions =
-                Version.identify(TransportTypeProvider.class.getClassLoader());
+        if (Flags.warnNettyVersions()) {
+            final String howToDisableWarning =
+                    "This means 1) you specified Netty versions inconsistently in your build or " +
+                    "2) the Netty JARs in the classpath were repackaged or shaded incorrectly. " +
+                    "Specify the '-Dcom.linecorp.armeria.warnNettyVersions=false' JVM option to " +
+                    "disable this warning at the risk of unexpected Netty behavior, if you think " +
+                    "it is a false positive.";
 
-        final Set<String> distinctNettyVersions = nettyVersions.values().stream().filter(v -> {
-            final String artifactId = v.artifactId();
-            return artifactId != null &&
-                   artifactId.startsWith("netty") &&
-                   !artifactId.startsWith("netty-incubator") &&
-                   !artifactId.startsWith("netty-tcnative");
-        }).map(Version::artifactVersion).collect(toImmutableSet());
+            final Map<String, Version> nettyVersions =
+                    Version.identify(TransportTypeProvider.class.getClassLoader());
 
-        switch (distinctNettyVersions.size()) {
-            case 0:
-                logger.warn("Using Netty with unknown version");
-                break;
-            case 1:
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Using Netty {}", distinctNettyVersions.iterator().next());
-                }
-                break;
-            default:
-                logger.warn("Inconsistent Netty versions detected: {}", nettyVersions);
+            final Set<String> distinctNettyVersions = nettyVersions.values().stream().filter(v -> {
+                final String artifactId = v.artifactId();
+                return artifactId != null &&
+                       artifactId.startsWith("netty") &&
+                       !artifactId.startsWith("netty-incubator") &&
+                       !artifactId.startsWith("netty-tcnative");
+            }).map(Version::artifactVersion).collect(toImmutableSet());
+
+            switch (distinctNettyVersions.size()) {
+                case 0:
+                    logger.warn("Using Netty with unknown version. {}", howToDisableWarning);
+                    break;
+                case 1:
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Using Netty {}", distinctNettyVersions.iterator().next());
+                    }
+                    break;
+                default:
+                    logger.warn("Inconsistent Netty versions detected: {} {}",
+                                nettyVersions, howToDisableWarning);
+            }
         }
     }
 

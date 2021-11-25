@@ -1,0 +1,1 @@
+com.linecorp.armeria.internal.client.grpc.protocol.UnaryGrpcClientFactoryProvider

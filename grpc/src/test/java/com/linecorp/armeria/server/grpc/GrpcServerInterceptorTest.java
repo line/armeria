@@ -37,7 +37,6 @@ import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
-import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 
@@ -46,11 +45,10 @@ class GrpcServerInterceptorTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service(GrpcService.builder()
-                                  .addService(ServerInterceptors.intercept(
-                                          new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
-                                          NoPassInterceptor.INSTANCE))
+                                  .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                                  .intercept(NoPassInterceptor.INSTANCE)
                                   .build());
         }
     };

@@ -21,14 +21,13 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
@@ -62,7 +61,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     private CaffeineSpec cacheSpec;
 
     /**
-     * Constructs new new builder for OAuth 2.0 Token Introspection {@link Authorizer},
+     * Constructs new builder for OAuth 2.0 Token Introspection {@link Authorizer},
      * as per<a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2">[RFC7662], Section 2</a>.
      *
      * @param introspectionEndpoint A {@link WebClient} to facilitate the Token Introspection request. Must
@@ -163,7 +162,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     }
 
     /**
-     * An array of of case-sensitive scope strings permitted by this authorizer.
+     * An array of case-sensitive scope strings permitted by this authorizer.
      * The authorizer will accept any scope if empty.
      */
     public OAuth2TokenIntrospectionAuthorizerBuilder permittedScope(String... scope) {

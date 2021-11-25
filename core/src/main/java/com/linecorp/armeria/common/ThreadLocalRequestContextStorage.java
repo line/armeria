@@ -19,7 +19,7 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPoppingException;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;

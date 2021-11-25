@@ -32,7 +32,6 @@ import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
@@ -53,6 +52,7 @@ import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
@@ -61,6 +61,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientService;
@@ -70,6 +71,7 @@ import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
@@ -172,6 +174,8 @@ public final class Flags {
     @Nullable
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
             System.getProperty(PREFIX + "requestContextStorageProvider");
+
+    private static final boolean WARN_NETTY_VERSIONS = getBoolean("warnNettyVersions", true);
 
     private static final boolean USE_EPOLL = getBoolean("useEpoll", TransportType.EPOLL.isAvailable(),
                                                         value -> TransportType.EPOLL.isAvailable() || !value);
@@ -287,6 +291,12 @@ public final class Flags {
     private static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS =
             getLong("defaultMaxClientConnectionAgeMillis",
                     DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
+    private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
+            getLong("defaultServerConnectionDrainDurationMicros",
+                    DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -549,6 +559,18 @@ public final class Flags {
     @Nullable
     public static String requestContextStorageProvider() {
         return REQUEST_CONTEXT_STORAGE_PROVIDER;
+    }
+
+    /**
+     * Returns whether to log a warning message when any Netty version issues are detected, such as
+     * version inconsistencies or missing version information in Netty JARs.
+     *
+     * <p>The default value of this flag is {@code true}, which means a warning message will be logged
+     * if any Netty version issues are detected, which may lead to unexpected behavior. Specify the
+     * {@code -Dcom.linecorp.armeria.warnNettyVersions=false} to disable this flag.</p>
+     */
+    public static boolean warnNettyVersions() {
+        return WARN_NETTY_VERSIONS;
     }
 
     /**
@@ -937,6 +959,34 @@ public final class Flags {
     }
 
     /**
+     * Returns the default server-side graceful connection shutdown drain duration in microseconds.
+     * If the value of this flag is greater than {@code 0}, a connection shutdown will have a drain period
+     * when client will be notified about the shutdown, but in flight requests will still be accepted.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
+     * JVM option to override the default value.
+     *
+     * <p>
+     * At the beginning of the drain period server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * After the drain period end server stops accepting new requests.
+     * </p>
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain period microseconds
+     * is always {@code 0}, which means the connection will be closed immediately as soon as
+     * the current in-progress request is handled.
+     * </p>
+     *
+     * @see ServerBuilder#connectionDrainDuration(Duration)
+     * @see ServerBuilder#connectionDrainDurationMicros(long)
+     */
+    public static long defaultServerConnectionDrainDurationMicros() {
+        return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
+    }
+
+    /**
      * Returns the default value of the {@link ServerBuilder#http2InitialConnectionWindowSize(int)} and
      * {@link ClientFactoryBuilder#http2InitialConnectionWindowSize(int)} option.
      * Note that this flag has no effect if a user specified the value explicitly via
@@ -1150,7 +1200,11 @@ public final class Flags {
      * to override the default value.
      *
      * @see ExceptionVerbosity
+     *
+     * @deprecated Use {@link LoggingService} or log exceptions using
+     *             {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
      */
+    @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
     }
@@ -1326,7 +1380,7 @@ public final class Flags {
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
-        return ExceptionVerbosity.valueOf(mode.toUpperCase());
+        return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {

@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -30,6 +32,7 @@ import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -43,19 +46,32 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+    private final Http1HeaderNaming http1HeaderNaming;
 
+    private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
 
     private int lastResponseHeadersId;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
-                             boolean enableDateHeader, boolean enableServerHeader) {
+                             boolean enableDateHeader, boolean enableServerHeader,
+                             Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
         assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
                keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
+        this.http1HeaderNaming = http1HeaderNaming;
+    }
+
+    @Override
+    public KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
+
+    public void initiateConnectionShutdown() {
+        shouldSendConnectionCloseHeader = true;
     }
 
     @Override
@@ -71,8 +87,8 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         }
         lastResponseHeadersId = id;
 
-        if (keepAliveHandler.needToCloseConnection()) {
-            converted.headers().set(HttpHeaderNames.CONNECTION, "close");
+        if (shouldSendConnectionCloseHeader || keepAliveHandler.needToCloseConnection()) {
+            converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             sentConnectionCloseHeader = true;
         }
         return writeNonInformationalHeaders(id, converted, endStream);
@@ -85,7 +101,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         final HttpResponse res;
         if (headers.status().isInformational()) {
             res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
-            ArmeriaHttpUtil.toNettyHttp1ServerHeader(headers, res.headers());
+            ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers(), http1HeaderNaming);
         } else if (endStream) {
             res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
@@ -117,7 +133,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     private void convertHeaders(HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
                                 boolean isTrailersEmpty) {
-        ArmeriaHttpUtil.toNettyHttp1ServerHeader(inHeaders, outHeaders);
+        ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders, http1HeaderNaming);
 
         if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
@@ -148,12 +164,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        ArmeriaHttpUtil.toNettyHttp1ServerTrailer(inputHeaders, outputHeaders);
-    }
-
-    @Override
-    public KeepAliveHandler keepAliveHandler() {
-        return keepAliveHandler;
+        ArmeriaHttpUtil.toNettyHttp1ServerTrailers(inputHeaders, outputHeaders, http1HeaderNaming);
     }
 
     @Override
@@ -168,5 +179,25 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
         return id <= lastResponseHeadersId;
+    }
+
+    @Override
+    public ChannelFuture writeErrorResponse(int id, int streamId,
+                                            ServiceConfig serviceConfig,
+                                            HttpStatus status,
+                                            @Nullable String message,
+                                            @Nullable Throwable cause) {
+
+        // Destroy keepAlive handler before writing headers so that ServerHttp1ObjectEncoder sets
+        // "Connection: close" to the response headers
+        keepAliveHandler().destroy();
+
+        final ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
+                id, streamId, serviceConfig, status, message, cause);
+        // Update the closed ID to prevent the HttpResponseSubscriber from
+        // writing additional headers or messages.
+        updateClosedId(id);
+
+        return future.addListener(ChannelFutureListener.CLOSE);
     }
 }

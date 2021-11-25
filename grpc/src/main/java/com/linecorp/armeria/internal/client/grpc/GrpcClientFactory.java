@@ -40,6 +40,7 @@ import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
+import com.linecorp.armeria.client.grpc.protocol.UnaryGrpcClient;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -81,6 +82,11 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     @Override
     public Set<Scheme> supportedSchemes() {
         return SUPPORTED_SCHEMES;
+    }
+
+    @Override
+    public boolean isClientTypeSupported(Class<?> clientType) {
+        return clientType != UnaryGrpcClient.class;
     }
 
     @Override

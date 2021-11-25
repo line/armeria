@@ -26,7 +26,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
@@ -39,8 +38,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
     @Override
     public ResponseConverterFunction createResponseConverterFunction(
             Type returnType,
-            ResponseConverterFunction responseConverter,
-            ExceptionHandlerFunction exceptionHandler) {
+            ResponseConverterFunction responseConverter) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();
         }

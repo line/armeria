@@ -29,8 +29,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +38,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
@@ -144,6 +143,14 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * Returns the {@link Scheme}s supported by this {@link ClientFactory}.
      */
     Set<Scheme> supportedSchemes();
+
+    /**
+     * Verifies that client type {@link Class} is supported by this {@link ClientFactory}.
+     * Can be used to support multiple {@link ClientFactory}s for a single {@link Scheme}.
+     */
+    default boolean isClientTypeSupported(Class<?> clientType) {
+        return true;
+    }
 
     /**
      * Returns the {@link EventLoopGroup} being used by this {@link ClientFactory}. Can be used to, e.g.,

@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
@@ -35,6 +33,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 

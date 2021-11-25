@@ -18,10 +18,17 @@ package com.linecorp.armeria.server.annotation;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 /**
  * The verbosity of exceptions logged by annotated HTTP services.
+ *
+ * @deprecated Use {@link LoggingService} or log exceptions using
+ *             {@link ServerBuilder#errorHandler(ServerErrorHandler)} instead.
  */
+@Deprecated
 public enum ExceptionVerbosity {
     /**
      * Log all exceptions.

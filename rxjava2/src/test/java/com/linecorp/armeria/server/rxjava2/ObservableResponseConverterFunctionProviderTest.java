@@ -22,8 +22,6 @@ import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.ServiceLoader;
 
-import javax.annotation.Nullable;
-
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.rxjava2.ObservableResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -61,9 +60,7 @@ public class ObservableResponseConverterFunctionProviderTest {
         final Type returnType = Sample.class.getMethod("unsupported")
                                             .getGenericReturnType();
         assertThatThrownBy(
-                () -> provider.createResponseConverterFunction(returnType,
-                                                               new DummyResponseConverter(),
-                                                               new DummyExceptionHandler()))
+                () -> provider.createResponseConverterFunction(returnType, new DummyResponseConverter()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Disallowed type exists in the generic type arguments of the return type " +

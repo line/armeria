@@ -26,8 +26,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -42,6 +40,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -235,9 +234,10 @@ class HttpServerRequestTimeoutTest {
 
     @Test
     void cancel() {
-        final AggregatedHttpResponse response =
-                withoutTimeoutServerClient.get("/cancel").aggregate().join();
-        assertThat(response.status().code()).isEqualTo(503);
+        assertThatThrownBy(() -> withoutTimeoutServerClient.get("/cancel").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasRootCauseInstanceOf(ClosedStreamException.class)
+                .hasRootCauseMessage("received a RST_STREAM frame: CANCEL");
     }
 
     @Test

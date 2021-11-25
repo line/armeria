@@ -43,8 +43,6 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,8 +62,6 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -84,8 +80,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -503,7 +499,7 @@ class HttpServerTest {
         final AggregatedHttpResponse res = client.get("/delay/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.contentUtf8()).startsWith("Status: 503\n");
         assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -514,7 +510,7 @@ class HttpServerTest {
         final AggregatedHttpResponse res = client.get("/delay-deferred/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.contentUtf8()).startsWith("Status: 503\n");
         assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -553,7 +549,7 @@ class HttpServerTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.contentUtf8()).startsWith("Status: 503\n");
         assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -600,32 +596,9 @@ class HttpServerTest {
     @ArgumentsSource(ClientAndProtocolProvider.class)
     void testTooLargeContentToNonExistentService(WebClient client) {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
-        if (client.scheme().sessionProtocol().uriText().startsWith("h1")) {
-            // Unlike HTTP/2, ClosedSessionException is raised because Http1RequestDecoder closes
-            // the connection before the content of "404 Not Found" is sent.
-            //
-            // When the Http1RequestDecoder notices that the request entity is too large, the only thing it
-            // can do is that just closing the connection if the response headers (e.g 404 in this case)
-            // is already sent.
-            // If we wait for the response to be sent fully and close the connection, then the subsequent
-            // following request that uses the same connection will encounter ClosedSessionException which
-            // is undesirable.
-            // However, HTTP/2 can wait for the response to be sent, because the following request uses the
-            // next stream.
-            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                assertThatThrownBy(() -> client.post("/non-existent", content).aggregate().join())
-                        .hasCauseInstanceOf(ClosedSessionException.class);
-                final ResponseHeaders responseHeaders =
-                        captor.get().log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
-                              .responseHeaders();
-                // Even though the request is failed, the client got the 404 response headers.
-                assertThat(responseHeaders.status()).isSameAs(HttpStatus.NOT_FOUND);
-            }
-        } else {
-            final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
-            assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-            assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
-        }
+        final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
     }
 
     @ParameterizedTest

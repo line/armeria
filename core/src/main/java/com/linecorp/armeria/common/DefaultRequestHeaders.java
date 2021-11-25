@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestHeaders {
@@ -82,6 +82,11 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     @Override
     public Cookies cookies() {
         return cookie();
+    }
+
+    @Override
+    public List<MediaType> accept() {
+        return super.accept();
     }
 
     @Override

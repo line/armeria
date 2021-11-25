@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -96,9 +97,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
         assertThat(res.contentUtf8())
-                .isEqualTo("http-status: 499, Client Closed Request\n" +
-                           "Caused by: \n" +
-                           "grpc-status: 1, CANCELLED, grpc error message");
+                .isEqualTo("grpc-code: CANCELLED, grpc error message");
     }
 
     @Test
@@ -112,8 +111,9 @@ class UnframedGrpcServiceTest {
         });
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpResponse res = response.aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().isEmpty()).isTrue();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.contentUtf8())
+                .isEqualTo("grpc-code: CANCELLED, Completed without a response");
     }
 
     @Test
@@ -125,7 +125,7 @@ class UnframedGrpcServiceTest {
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
-        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res);
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of());
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -137,6 +137,22 @@ class UnframedGrpcServiceTest {
                                                 .supportedSerializationFormats(
                                                         GrpcSerializationFormats.values())
                                                 .enableUnframedRequests(true)
+                                                .unframedGrpcErrorHandler(
+                                                        UnframedGrpcErrorHandler.ofPlainText())
                                                 .build();
+    }
+
+    @Test
+    void shouldThrowExceptionIfUnframedRequestHandlerAddedButUnframedRequestsAreDisabled() {
+        final IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                GrpcService.builder()
+                           .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                           .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                           .supportedSerializationFormats(GrpcSerializationFormats.values())
+                           .enableUnframedRequests(false)
+                           .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
+                           .build());
+        assertThat(exception).hasMessage(
+                "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
     }
 }

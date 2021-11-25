@@ -27,7 +27,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableMap;
@@ -44,6 +43,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -323,7 +323,7 @@ public enum BuiltInProperty {
     }),
 
     /**
-     * {@code "tls.proto"} - the current {@linkplain SSLSession#getProtocol()} TLS protocol}.
+     * {@code "tls.proto"} - the current {@linkplain SSLSession#getProtocol() TLS protocol}.
      * Unavailable if TLS handshake is not finished or the connection is not a TLS connection, such as
      * {@code "TLSv1.2"}.
      */

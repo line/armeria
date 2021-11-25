@@ -15,9 +15,10 @@
  */
 package com.linecorp.armeria.server.saml;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder which builds a {@link SamlAssertionConsumerConfig}.
@@ -34,9 +35,18 @@ public final class SamlAssertionConsumerConfigBuilder {
         this.parent = parent;
     }
 
+    SamlAssertionConsumerConfigBuilder(SamlServiceProviderBuilder parent, SamlEndpoint endpoint) {
+        this.parent = parent;
+        this.endpoint = endpoint;
+    }
+
     /**
      * Sets an endpoint of this assertion consumer service.
+     *
+     * @deprecated Use {@link SamlServiceProviderBuilder#acs(SamlEndpoint)} to specify {@link SamlEndpoint} when
+     *             creating this {@link SamlAssertionConsumerConfigBuilder}.
      */
+    @Deprecated
     public SamlAssertionConsumerConfigBuilder endpoint(SamlEndpoint endpoint) {
         this.endpoint = requireNonNull(endpoint, "endpoint");
         return this;
@@ -61,6 +71,7 @@ public final class SamlAssertionConsumerConfigBuilder {
      * Builds a {@link SamlAssertionConsumerConfig}.
      */
     SamlAssertionConsumerConfig build() {
+        checkState(endpoint != null, "The endpoint must not be null.");
         return new SamlAssertionConsumerConfig(endpoint, isDefault);
     }
 }

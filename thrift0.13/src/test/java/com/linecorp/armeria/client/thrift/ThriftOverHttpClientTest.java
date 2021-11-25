@@ -36,6 +36,7 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TTupleProtocol;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -722,6 +723,8 @@ public class ThriftOverHttpClientTest {
                                                  .options(clientOptions)
                                                  .build(Handlers.HELLO.iface());
         assertThatThrownBy(() -> client.hello(""))
+                .isInstanceOf(TTransportException.class)
+                .getCause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
                 })

@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
 
 final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
@@ -31,10 +32,10 @@ final class CuratorDiscoverySpec implements ZooKeeperDiscoverySpec {
     private static final Logger logger = LoggerFactory.getLogger(CuratorDiscoverySpec.class);
 
     private final String path;
-    private final Function<? super ServiceInstance<?>, Endpoint> converter;
+    private final Function<? super ServiceInstance<?>, @Nullable Endpoint> converter;
 
     CuratorDiscoverySpec(
-            String serviceName, Function<? super ServiceInstance<?>, Endpoint> converter) {
+            String serviceName, Function<? super ServiceInstance<?>, @Nullable Endpoint> converter) {
         path = '/' + serviceName;
         this.converter = converter;
     }

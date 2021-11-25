@@ -108,6 +108,11 @@ This product contains a modified part of RxJava, distributed by RxJava Contribut
   * License: licenses/LICENSE.rxjava.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/ReactiveX/RxJava
 
+This product contains a modified part of Sangria Jackson, distributed by Sangria Contributors:
+
+  * License: licenses/LICENSE.sangria.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/sangria-graphql/sangria-jackson
+
 This product contains a modified part of Spring Boot, distributed by Pivotal Software, Inc:
 
   * License: licenses/LICENSE.spring.al20.txt (Apache License v2.0)
@@ -151,6 +156,11 @@ This product depends on Brave, distributed by Zipkin.io:
 
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/openzipkin/brave
+
+This product depends on Brotli4j, distributed by the Brotli4j authors:
+
+  * License: licenses/LICENSE.brotli4j.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/hyperxpro/Brotli4j
 
 This product depends on Caffeine, distributed by Ben Manes:
 
@@ -331,6 +341,11 @@ This product depends on SLF4J, distributed by QOS.ch:
 
   * License: licenses/LICENSE.slf4j.mit.txt (MIT License)
   * Homepage: https://www.slf4j.org/
+
+This product depends on Sangria GraphQL, distributed by Sangria Contributors:
+
+  * License: licenses/LICENSE.sangria.al20.txt (Apache License v2.0)
+  * Homepage: https://sangria-graphql.github.io/
 
 This product depends on Spring Boot, distributed by Pivotal Software, Inc:
 

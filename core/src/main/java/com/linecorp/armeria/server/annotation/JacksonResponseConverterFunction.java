@@ -22,8 +22,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,8 +32,9 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.server.JacksonUtil;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 
@@ -84,7 +83,8 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
                 // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {
                     if (result instanceof Publisher) {
-                        return aggregateFrom((Publisher<?>) result, headers, trailers, this::toJsonHttpData);
+                        return aggregateFrom((Publisher<?>) result, headers, trailers,
+                                             this::toJsonHttpData, ctx);
                     }
                     if (result instanceof Stream) {
                         return aggregateFrom((Stream<?>) result, headers, trailers,

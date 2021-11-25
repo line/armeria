@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +30,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An instance information.

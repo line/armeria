@@ -26,9 +26,11 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -49,10 +51,13 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
+import com.linecorp.armeria.internal.common.HttpMessageAggregator;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
-import com.linecorp.armeria.internal.server.JacksonUtil;
+import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -109,6 +114,26 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} provided by the {@link Supplier}.
+     *
+     * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
+     * @param executor the {@link Executor} that executes the {@link Supplier}.
+     */
+    static HttpResponse from(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(executor, "executor");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.execute(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        });
+        return res;
+    }
+
+    /**
      * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
      * publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
      */
@@ -137,7 +162,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(HttpResponse response, Duration delay) {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
-        return delayed(response, delay, CommonPools.workerGroup().next());
+        return delayed(() -> response, delay);
     }
 
     /**
@@ -148,8 +173,44 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
+        return delayed(() -> response, delay, executor);
+    }
+
+    /**
+     * Invokes the specified {@link Supplier} and creates a new HTTP response that
+     * delegates to the provided {@link HttpResponse} by {@link Supplier}.
+     *
+     * <p>The {@link Supplier} is invoked from the current thread-local {@link RequestContext}'s event loop.
+     * If there's no thread local {@link RequestContext} is set, one of the threads
+     * from {@code CommonPools.workerGroup().next()} will be used.
+     */
+    static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(delay, "delay");
+        return delayed(responseSupplier, delay,
+                       RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                 CommonPools.workerGroup()::next));
+    }
+
+    /**
+     * Invokes the specified {@link Supplier} and creates a new HTTP response that
+     * delegates to the provided {@link HttpResponse} {@link Supplier},
+     * beginning publishing after {@code delay} has passed from the provided {@link ScheduledExecutorService}.
+     */
+    static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier,
+                                Duration delay,
+                                ScheduledExecutorService executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(delay, "delay");
+        requireNonNull(executor, "executor");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.schedule(() -> res.delegate(response), delay.toNanos(), TimeUnit.NANOSECONDS);
+        executor.schedule(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        }, delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }
 
@@ -274,8 +335,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse of(HttpStatus status, MediaType mediaType,
                            @FormatString String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
-        return of(status, mediaType,
-                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
+        return of(status, mediaType, HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
     }
 
     /**
@@ -428,7 +488,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(Object content) {
         return ofJson(HttpStatus.OK, content);
@@ -439,7 +499,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(HttpStatus status, Object content) {
         requireNonNull(status, "status");
@@ -455,13 +515,26 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
      *                                  if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(MediaType contentType, Object content) {
+        return ofJson(HttpStatus.OK, contentType, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link HttpStatus}, {@link MediaType} and
+     * {@code content} that is converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
+     *                                  if failed to encode the {@code content} into JSON.
+     * @see JacksonObjectMapperProvider
+     */
+    static HttpResponse ofJson(HttpStatus status, MediaType contentType, Object content) {
+        requireNonNull(status, "status");
         requireNonNull(contentType, "contentType");
         checkArgument(contentType.isJson(),
-                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.");
-        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.", contentType);
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
                                                        .contentType(contentType)
                                                        .build();
         return ofJson(headers, content);
@@ -472,7 +545,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
-     * @see JacksonModuleProvider
+     * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(ResponseHeaders headers, Object content) {
         requireNonNull(headers, "headers");
@@ -541,9 +614,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new failed HTTP response.
      */
     static HttpResponse ofFailure(Throwable cause) {
-        final HttpResponseWriter res = streaming();
-        res.close(cause);
-        return res;
+        return new AbortedHttpResponse(cause);
     }
 
     @Override
@@ -752,5 +823,33 @@ public interface HttpResponse extends Response, HttpMessage {
     default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return of(HttpMessage.super.mapError(function));
+    }
+
+    /**
+     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link HttpResponse}
+     * when any error occurs before a {@link ResponseHeaders} is written.
+     * Note that the failed {@link HttpResponse} cannot be recovered from an error if a {@link ResponseHeaders}
+     * was written already.
+     *
+     * <p>Example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // The failed HttpResponse will be recovered by the fallback function.
+     * HttpResponse recovered = response.recover(cause -> HttpResponse.of("Fallback"));
+     * assert recovered.aggregate().join().contentUtf8().equals("Fallback");
+     *
+     * // As HTTP headers and body were written already before an error occurred,
+     * // the fallback function could not be applied for the failed HttpResponse.
+     * HttpResponseWriter response = HttpResponse.streaming();
+     * response.write(ResponseHeaders.of(HttpStatus.OK));
+     * response.write(HttpData.ofUtf8("Hello"));
+     * response.close(new IllegalStateException("Oops..."));
+     * HttpResponse notRecovered = response.recover(cause -> HttpResponse.of("Fallback"));
+     * // The IllegalStateException will be raised even though a fallback function was added.
+     * notRecovered.aggregate().join();
+     * }</pre>
+     */
+    default HttpResponse recover(Function<? super Throwable, ? extends HttpResponse> function) {
+        requireNonNull(function, "function");
+        return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
     }
 }

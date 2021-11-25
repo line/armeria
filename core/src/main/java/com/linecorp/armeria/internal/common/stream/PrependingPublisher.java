@@ -20,14 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.math.LongMath;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 
 public final class PrependingPublisher<T> implements Publisher<T> {

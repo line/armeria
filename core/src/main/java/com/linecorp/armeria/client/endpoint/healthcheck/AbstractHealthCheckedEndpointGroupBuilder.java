@@ -23,8 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -32,7 +30,10 @@ import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 /**
@@ -182,6 +183,15 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
         checkArgument(maxEndpointCount > 0, "maxEndpointCount: %s (expected: > 0)", maxEndpointCount);
 
         this.maxEndpointCount = maxEndpointCount;
+        return this;
+    }
+
+    /**
+     * Sets the {@link AuthToken} header using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder auth(AuthToken token) {
+        requireNonNull(token, "token");
+        clientOptionsBuilder.auth(token);
         return this;
     }
 

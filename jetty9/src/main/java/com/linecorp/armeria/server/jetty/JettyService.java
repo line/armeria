@@ -27,7 +27,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
 
 import org.eclipse.jetty.http.HttpFields;
@@ -56,8 +55,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -268,7 +269,10 @@ public final class JettyService implements HttpService {
                     return null;
                 });
 
-                fillRequest(ctx, aReq, httpChannel.getRequest());
+                final Request jReq = httpChannel.getRequest();
+                fillRequest(ctx, aReq, jReq);
+                ServletTlsAttributes.fill(ctx.sslSession(), jReq::setAttribute);
+
                 ctx.blockingTaskExecutor().execute(() -> {
                     try {
                         httpChannel.handle();

@@ -24,14 +24,14 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -288,37 +288,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            Throwable cause = event.cause;
+            final Throwable cause = event.cause;
             if (state == State.CLEANUP) {
                 cleanupCause = cause;
             }
-            for (;;) {
-                final Object e = queue.poll();
-                if (e == null) {
-                    break;
-                }
-
-                // We already notified to the subscriber so skip.
-                if (e instanceof CloseEvent) {
-                    continue;
-                }
-
-                if (e instanceof CompletableFuture) {
-                    if (cause == null) {
-                        cause = ClosedStreamException.get();
-                    }
-                    ((CompletableFuture<?>) e).completeExceptionally(cause);
-                    continue;
-                }
-
-                try {
-                    @SuppressWarnings("unchecked")
-                    final T obj = (T) e;
-                    onRemoval(obj);
-                } finally {
-                    StreamMessageUtil.closeOrAbort(e, cause);
-                }
-            }
+            cleanupObjects(cause);
         }
     }
 
@@ -373,7 +347,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         for (;;) {
             if (state == State.CLEANUP) {
-                cleanupObjects();
+                cleanupObjects(null);
                 return;
             }
 
@@ -467,7 +441,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * @return {@code true} if the stream has been closed by this method call.
      *         {@code false} if the stream has been closed already by other party.
      */
-    protected final boolean tryClose(Throwable cause) {
+    public final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(new CloseEvent(cause));
             return true;
@@ -480,8 +454,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return stateUpdater.compareAndSet(this, oldState, newState);
     }
 
-    private void cleanupObjects() {
-        Throwable cause = null;
+    private void cleanupObjects(@Nullable Throwable cause) {
         for (;;) {
             final Object e = queue.poll();
             if (e == null) {

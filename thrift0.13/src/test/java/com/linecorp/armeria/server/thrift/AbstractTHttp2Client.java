@@ -20,13 +20,14 @@ import static org.junit.Assert.assertTrue;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;

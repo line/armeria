@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -24,6 +26,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
@@ -42,10 +45,10 @@ public final class ConcurrencyLimitingClient
     /**
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      */
-    public static Function<? super HttpClient, ConcurrencyLimitingClient>
-    newDecorator(int maxConcurrency) {
-        validateMaxConcurrency(maxConcurrency);
-        return delegate -> new ConcurrencyLimitingClient(delegate, maxConcurrency);
+    public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(int maxConcurrency) {
+        final ConcurrencyLimit limit = ConcurrencyLimit.builder(maxConcurrency)
+                                                       .build();
+        return newDecorator(limit);
     }
 
     /**
@@ -53,17 +56,24 @@ public final class ConcurrencyLimitingClient
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             int maxConcurrency, long timeout, TimeUnit unit) {
-        validateAll(maxConcurrency, timeout, unit);
-        return delegate -> new ConcurrencyLimitingClient(delegate, maxConcurrency, timeout, unit);
+        final ConcurrencyLimit limit = ConcurrencyLimit.builder(maxConcurrency)
+                                                       .timeoutMillis(unit.toMillis(timeout))
+                                                       .build();
+        return newDecorator(limit);
     }
 
-    ConcurrencyLimitingClient(HttpClient delegate, int maxConcurrency) {
-        super(delegate, maxConcurrency);
+    /**
+     * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
+     */
+    @UnstableApi
+    public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
+            ConcurrencyLimit concurrencyLimit) {
+        requireNonNull(concurrencyLimit, "concurrencyLimit");
+        return delegate -> new ConcurrencyLimitingClient(delegate, concurrencyLimit);
     }
 
-    private ConcurrencyLimitingClient(HttpClient delegate,
-                                      int maxConcurrency, long timeout, TimeUnit unit) {
-        super(delegate, maxConcurrency, timeout, unit);
+    private ConcurrencyLimitingClient(HttpClient delegate, ConcurrencyLimit concurrencyLimit) {
+        super(delegate, concurrencyLimit);
     }
 
     @Override

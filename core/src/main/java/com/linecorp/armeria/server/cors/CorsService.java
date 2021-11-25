@@ -22,8 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -128,7 +127,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowMethods(headers);
-            policy.setCorsAllowHeaders(headers);
+            policy.setCorsAllowHeaders(req.headers(), headers);
             policy.setCorsAllowCredentials(headers);
             policy.setCorsMaxAge(headers);
             policy.setCorsPreflightResponseHeaders(headers);
@@ -148,7 +147,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowCredentials(headers);
-            policy.setCorsAllowHeaders(headers);
+            policy.setCorsAllowHeaders(req.headers(), headers);
             policy.setCorsExposeHeaders(headers);
         }
     }

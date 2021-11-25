@@ -1,6 +1,6 @@
 final def SPRING_BOOT_VERSION = '2.1.18.RELEASE'
 final def SPRING_VERSION = '5.1.20.RELEASE'
-final def TOMCAT_VERSION = '8.5.68'
+final def TOMCAT_VERSION = '8.5.71'
 
 dependencies {
     implementation project(':spring:boot2-starter')

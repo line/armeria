@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -26,8 +27,8 @@ import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.annotation.Nullable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -237,6 +239,21 @@ class DeferredStreamMessageTest {
         assertThat(d.isOpen()).isFalse();
         assertThat(d.isEmpty()).isFalse();
         assertThat(d.whenComplete()).hasFailedWithThrowableThat().isSameAs(exception);
+    }
+
+    @Test
+    void testCancellation() {
+        final DeferredStreamMessage<String> m = new DeferredStreamMessage<>();
+        @SuppressWarnings("unchecked")
+        final Subscriber<Object> subscriber = mock(Subscriber.class);
+        m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
+        m.cancel();
+
+        final CompletableFuture<Void> completionFuture = m.whenComplete();
+        // completionFuture completes immediately upon cancellation.
+        assertThat(completionFuture.isCompletedExceptionally()).isTrue();
+        assertThatExceptionOfType(ExecutionException.class).isThrownBy(completionFuture::get)
+                .havingCause().isInstanceOf(CancelledSubscriptionException.class);
     }
 
     private static class RecordingSubscriber implements Subscriber<String> {

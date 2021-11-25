@@ -24,9 +24,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;

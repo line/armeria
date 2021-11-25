@@ -93,8 +93,7 @@ class PrometheusExpositionServiceTest {
         });
         // Access log is not written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).then().until(() -> logs.size() == 1);
-        // LoggingService ignores the request.
-        verify(logger, times(3)).isDebugEnabled();
+        verify(logger, times(4)).isDebugEnabled();
         verify(logger, times(2)).debug(anyString(), any(), any());
 
         client.get("/enabled").aggregate().join();
@@ -109,7 +108,7 @@ class PrometheusExpositionServiceTest {
         });
         // Access log is written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).until(() -> logs.size() == 2);
-        verify(logger, times(5)).isDebugEnabled();
+        verify(logger, times(6)).isDebugEnabled();
         verify(logger, times(4)).debug(anyString(), any(), any());
     }
 }

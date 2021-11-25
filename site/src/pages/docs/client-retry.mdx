@@ -36,7 +36,7 @@ an exception is raised.
 
 ## `RetryRule`
 
-You can fluently build your own :api:`RetryRule`.
+You can fluently build your own <type://RetryRule>.
 
 ```java
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -48,7 +48,7 @@ RetryRule.of(RetryRule.builder().onUnProcessed().thenBackoff(myBackoff),
              RetryRule.builder().onStatus(HttpStatus.TOO_MANY_REQUESTS).thenNoRetry())
 ```
 
-Or you can customize the **rule** by implementing :api:`RetryRule`.
+Or you can customize the **rule** by implementing <type://RetryRule>.
 
 ```java
 import com.linecorp.armeria.client.ClientRequestContext;

@@ -50,8 +50,6 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Ascii;
@@ -65,6 +63,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Represents an <a href="https://en.wikipedia.org/wiki/Internet_media_type">Internet Media Type</a>
@@ -473,6 +473,18 @@ public final class MediaType {
     public static final MediaType GZIP = createConstant(APPLICATION_TYPE, "x-gzip");
 
     /**
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7932">Brotli Compression format</a>, a lossless data
+     * compression format.
+     */
+    public static final MediaType BROTLI = createConstant(APPLICATION_TYPE, "brotli");
+
+    /**
+     * <a href="https://datatracker.ietf.org/doc/html/rfc8478">Zstandard Compression format</a>, a lossless data
+     * compression format.
+     */
+    public static final MediaType ZSTD = createConstant(APPLICATION_TYPE, "zstd");
+
+    /**
      * <a href="https://datatracker.ietf.org/doc/html/draft-kelly-json-hal-08#section-3">JSON Hypertext
      * Application Language (HAL) documents</a>.
      */
@@ -679,6 +691,12 @@ public final class MediaType {
      * <a href="https://graphql.org/learn/serving-over-http">GraphQL</a>
      */
     public static final MediaType GRAPHQL = createConstant(APPLICATION_TYPE, "graphql");
+
+    /**
+     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#content-types">GraphQL over JSON</a>
+     * which is the official GraphQL content type.
+     */
+    public static final MediaType GRAPHQL_JSON = createConstant(APPLICATION_TYPE, "graphql+json");
 
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override

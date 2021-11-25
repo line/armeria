@@ -29,12 +29,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.ContextAwareEventLoop;
@@ -48,13 +48,16 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -98,8 +101,6 @@ public final class DefaultServiceRequestContext
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private ContextAwareScheduledExecutorService blockingTaskExecutor;
-    @Nullable
-    private Runnable requestTimeoutHandler;
     private long maxRequestLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
@@ -242,8 +243,8 @@ public final class DefaultServiceRequestContext
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(
-                this, config().server().config().blockingTaskExecutor());
+        final ScheduledExecutorService executor = config().blockingTaskExecutor();
+        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(this, executor);
     }
 
     @Override
@@ -424,6 +425,32 @@ public final class DefaultServiceRequestContext
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return proxiedAddresses;
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of(drainDurationMicros));
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return initiateConnectionShutdown(InitiateConnectionShutdown.of());
+    }
+
+    private CompletableFuture<Void> initiateConnectionShutdown(InitiateConnectionShutdown event) {
+        if (!ch.isActive()) {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        ch.closeFuture().addListener(f -> {
+            if (f.cause() == null) {
+                completableFuture.complete(null);
+            } else {
+                completableFuture.completeExceptionally(f.cause());
+            }
+        });
+        ch.pipeline().fireUserEventTriggered(event);
+        return completableFuture;
     }
 
     @Override
