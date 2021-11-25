@@ -359,7 +359,8 @@ public class StartStopSupportTest {
             }
 
             @Override
-            protected void notificationFailed(EventListener listener, Throwable cause) {
+            protected void notificationFailed(EventListener listener, Exception cause, State state)
+                    throws Exception {
                 recording.add(listener + " " + cause);
             }
         };
@@ -383,7 +384,8 @@ public class StartStopSupportTest {
             }
 
             @Override
-            protected void notificationFailed(EventListener listener, Throwable cause) {
+            protected void notificationFailed(EventListener listener, Exception cause, State state)
+                    throws Exception {
                 recording.add(listener + " " + cause);
             }
         };

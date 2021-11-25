@@ -44,7 +44,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
 
     private static final Logger logger = LoggerFactory.getLogger(StartStopSupport.class);
 
-    enum State {
+    protected enum State {
         STARTING,
         STARTED,
         STOPPING,
@@ -70,7 +70,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
      *                   <li>{@link #doStart(Object)}</li>
      *                   <li>{@link #doStop(Object)}</li>
      *                   <li>{@link #rollbackFailed(Throwable)}</li>
-     *                   <li>{@link #notificationFailed(Object, Throwable)}</li>
+     *                   <li>{@link #notificationFailed(Object, Exception, State)}</li>
      *                   <li>All listener notifications</li>
      *                 </ul>
      *                 .. except {@link #closeFailed(Throwable)} which is invoked at the caller thread.
@@ -394,7 +394,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
                         throw new Error("unknown state: " + state);
                 }
             } catch (Exception cause) {
-                notificationFailed(l, cause);
+                notificationFailed(l, cause, state);
 
                 // if notifyStarting throws an exception, propagate the exception
                 if (state == State.STARTING) {
@@ -469,8 +469,16 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
     /**
      * Invoked when an event listener raises an exception.
      */
+    @Deprecated
     protected void notificationFailed(L listener, Throwable cause) {
         logger.warn("Failed to notify a listener: {}", listener, cause);
+    }
+
+    /**
+     * Invoked when an event listener raises an exception.
+     */
+    protected void notificationFailed(L listener, Exception cause, State state) throws Exception {
+        notificationFailed(listener, cause);
     }
 
     /**
