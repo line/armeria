@@ -674,12 +674,8 @@ public final class Server implements ListenableAsyncCloseable {
         }
 
         @Override
-        protected void notificationFailed(ServerListener listener, Exception cause, State state)
-            throws Exception {
+        protected void notificationFailed(ServerListener listener, Throwable cause) {
             logger.warn("Failed to notify a server listener: {}", listener, cause);
-            if (state == State.STARTING) {
-                throw cause;
-            }
         }
 
         @Override
