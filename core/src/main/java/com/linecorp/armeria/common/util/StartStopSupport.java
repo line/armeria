@@ -218,11 +218,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
 
                         return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
                     } else {
-                        try {
-                            enter(State.STARTED, arg, null, result);
-                        } catch (Exception e) {
-                            // do nothing
-                        }
+                        enter(State.STARTED, arg, null, result);
                         return completedFuture(result);
                     }
                 }, executor).thenCompose(Function.identity()));
@@ -308,13 +304,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
         }
 
         final UnmodifiableFuture<Void> future = UnmodifiableFuture.wrap(
-                stopFuture.whenCompleteAsync((unused1, cause) -> {
-                                                 try {
-                                                     enter(State.STOPPED, null, arg, null);
-                                                 } catch (Exception e) {
-                                                     // do nothing
-                                                 }
-                                             },
+                stopFuture.whenCompleteAsync((unused1, cause) -> enter(State.STOPPED, null, arg, null),
                                              executor));
         this.future = future;
         return future;
@@ -364,8 +354,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
         }
     }
 
-    private void enter(State state, @Nullable T startArg, @Nullable U stopArg, @Nullable V startResult)
-            throws Exception {
+    private void enter(State state, @Nullable T startArg, @Nullable U stopArg, @Nullable V startResult) {
         synchronized (this) {
             assert this.state != state : "transition to the same state: " + state;
             this.state = state;
@@ -374,7 +363,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
     }
 
     private void notifyListeners(State state, @Nullable T startArg, @Nullable U stopArg,
-                                 @Nullable V startResult) throws Exception {
+                                 @Nullable V startResult) {
         for (L l : listeners) {
             try {
                 switch (state) {
@@ -398,7 +387,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
 
                 // if notifyStarting throws an exception, propagate the exception
                 if (state == State.STARTING) {
-                    throw cause;
+                    throw new IllegalStateException(cause);
                 }
             }
         }

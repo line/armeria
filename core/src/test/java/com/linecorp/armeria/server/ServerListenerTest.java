@@ -96,6 +96,8 @@ class ServerListenerTest {
                     }
                 })
                 .build();
-        assertThatThrownBy(() -> server.start().join()).hasCause(ex);
+        assertThatThrownBy(() -> server.start().join())
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .hasRootCause(ex);
     }
 }

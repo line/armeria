@@ -366,7 +366,8 @@ public class StartStopSupportTest {
 
         startStop.addListener(listener);
         assertThatThrownBy(() -> startStop.start(true).join())
-                .hasCause(exception);
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .hasRootCause(exception);
         assertThat(recording).containsExactly(listener + " " + exception);
     }
 
