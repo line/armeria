@@ -22,8 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -35,6 +33,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SplitHttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
