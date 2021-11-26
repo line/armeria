@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -54,6 +55,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+    private boolean allowEmptyEndpoints = true;
 
     /**
      * Creates a new empty {@link DynamicEndpointGroup} that uses
@@ -69,6 +71,23 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+    }
+
+    /**
+     * Creates a new {@link DynamicEndpointGroup} with {@code allowEmptyEndpoints} to allow empty endpoint if necessary.
+     */
+    public DynamicEndpointGroup(boolean allowEmptyEndpoints) {
+        this();
+        this.allowEmptyEndpoints = allowEmptyEndpoints;
+    }
+
+    /**
+     * Creates a new {@link DynamicEndpointGroup} with the specified {@link EndpointSelectionStrategy and
+     * {@code allowEmptyEndpoints} to allow empty endpoint if necessary.
+     */
+    public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints) {
+        this(selectionStrategy);
+        this.allowEmptyEndpoints = allowEmptyEndpoints;
     }
 
     @Override
@@ -141,6 +160,9 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * Removes the specified {@link Endpoint} from current {@link Endpoint} list.
      */
     protected final void removeEndpoint(Endpoint e) {
+        if (!allowEmptyEndpoints && Iterables.size(endpoints) == 1) {
+            return;
+        }
         final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
@@ -157,6 +179,9 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * Sets the specified {@link Endpoint}s as current {@link Endpoint} list.
      */
     protected final void setEndpoints(Iterable<Endpoint> endpoints) {
+        if (!allowEmptyEndpoints && Iterables.isEmpty(endpoints)) {
+            return;
+        }
         final List<Endpoint> oldEndpoints = this.endpoints;
         final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
 
@@ -268,5 +293,13 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             return endpoints;
         }
         return endpoints.stream().limit(maxEndpoints).collect(toImmutableList());
+    }
+
+    public boolean isAllowEmptyEndpoints() {
+        return allowEmptyEndpoints;
+    }
+
+    public static DynamicEndpointGroupBuilder builder() {
+        return new DynamicEndpointGroupBuilder();
     }
 }
