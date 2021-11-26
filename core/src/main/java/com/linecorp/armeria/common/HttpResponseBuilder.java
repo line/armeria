@@ -278,8 +278,8 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     public HttpResponse build() {
         final ResponseHeaders responseHeaders = responseHeadersBuilder.build();
         final HttpHeaders trailers = httpTrailers.build();
-        HttpData content = getContent();
-        final Publisher<? extends HttpData> publisher = getPublisher();
+        HttpData content = content();
+        final Publisher<? extends HttpData> publisher = publisher();
         if (publisher == null) {
             if (content == null) {
                 content = HttpData.empty();

@@ -428,8 +428,8 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
-        final HttpData content = getContent();
-        final Publisher<? extends HttpData> publisher = getPublisher();
+        final HttpData content = content();
+        final Publisher<? extends HttpData> publisher = publisher();
         if (publisher != null) {
             if (httpTrailers == null) {
                 return HttpRequest.of(requestHeaders, publisher);
@@ -458,7 +458,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
         if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
-        final HttpData content = getContent();
+        final HttpData content = content();
         if (content == null || content.isEmpty()) {
             requestHeadersBuilder.remove(CONTENT_LENGTH);
         } else {

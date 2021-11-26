@@ -40,12 +40,12 @@ abstract class AbstractHttpMessageBuilder {
     private Publisher<? extends HttpData> publisher;
 
     @Nullable
-    protected HttpData getContent() {
+    protected final HttpData content() {
         return content;
     }
 
     @Nullable
-    protected Publisher<? extends HttpData> getPublisher() {
+    protected final Publisher<? extends HttpData> publisher() {
         return publisher;
     }
 
