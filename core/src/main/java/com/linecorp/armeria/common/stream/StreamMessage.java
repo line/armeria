@@ -577,12 +577,19 @@ public interface StreamMessage<T> extends Publisher<T> {
      *      if (x % 2 == 0) {
      *          throw new IllegalArgumentException();
      *      }
-     * });
+     * }, Integer.class);
      * }</pre>
      */
-    default StreamMessage<T> peek(Consumer<? super T> action) {
+    default StreamMessage<T> peek(Consumer<? super T> action, Class<? extends T> type) {
         requireNonNull(action, "action");
-        return FuseableStreamMessage.peek(this, action);
+        requireNonNull(type, "type");
+        final Function<T, T> function = obj -> {
+            if (type.isInstance(obj)) {
+                action.accept(obj);
+            }
+            return obj;
+        };
+        return map(function);
     }
 
     /**

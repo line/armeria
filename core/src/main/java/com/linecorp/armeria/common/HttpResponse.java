@@ -827,8 +827,7 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Applies specified {@link Consumer} to the non-informational {@link ResponseHeaders}
-     * emitted by this {@link HttpResponse}.
+     * Applies specified {@link Consumer} to the {@link ResponseHeaders} emitted by this {@link HttpResponse}.
      *
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
@@ -839,14 +838,8 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     default HttpResponse peekHeaders(Consumer<? super ResponseHeaders> action) {
         requireNonNull(action, "action");
-        final StreamMessage<HttpObject> stream = peek(obj -> {
-            if (obj instanceof ResponseHeaders) {
-                final ResponseHeaders headers = (ResponseHeaders) obj;
-                if (!headers.status().isInformational()) {
-                    action.accept(headers);
-                }
-            }
-        });
+        final StreamMessage<HttpObject> stream = peek(obj -> action.accept((ResponseHeaders) obj),
+                                                      ResponseHeaders.class);
         return of(stream);
     }
 

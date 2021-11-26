@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -53,11 +52,6 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     static <T> FuseableStreamMessage<T, T> error(
             StreamMessage<? extends T> source, Function<? super Throwable, ? extends Throwable> errorFunction) {
         return new FuseableStreamMessage<>(source, null, errorFunction);
-    }
-
-    static <T> FuseableStreamMessage<T, T> peek(StreamMessage<? extends T> source,
-                                                Consumer<? super T> action) {
-        return new FuseableStreamMessage<>(source, MapperFunction.of(action), null);
     }
 
     // The `source` might not produce `T` and the emitted objects will be transformed to `U` by the `function`.
@@ -359,17 +353,6 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 } else {
                     return null;
                 }
-            };
-        }
-
-        /**
-         * Creates a new {@link MapperFunction} from the specified {@link Consumer}.
-         */
-        static <T> MapperFunction<T, T> of(Consumer<? super T> action) {
-            requireNonNull(action, "action");
-            return o -> {
-                action.accept(o);
-                return o;
             };
         }
 
