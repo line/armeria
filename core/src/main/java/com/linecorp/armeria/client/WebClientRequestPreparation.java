@@ -230,18 +230,8 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     }
 
     @Override
-    public WebClientRequestPreparation content(HttpData content) {
-        return (WebClientRequestPreparation) super.content(content);
-    }
-
-    @Override
     public WebClientRequestPreparation content(MediaType contentType, HttpData content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
-    }
-
-    @Override
-    public WebClientRequestPreparation content(Publisher<? extends HttpData> content) {
-        return (WebClientRequestPreparation) super.content(content);
     }
 
     @Override

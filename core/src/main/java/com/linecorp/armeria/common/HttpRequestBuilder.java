@@ -123,18 +123,8 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     }
 
     @Override
-    public HttpRequestBuilder content(HttpData content) {
-        return (HttpRequestBuilder) super.content(content);
-    }
-
-    @Override
     public HttpRequestBuilder content(MediaType contentType, HttpData content) {
         return (HttpRequestBuilder) super.content(contentType, content);
-    }
-
-    @Override
-    public HttpRequestBuilder content(Publisher<? extends HttpData> content) {
-        return (HttpRequestBuilder) super.content(content);
     }
 
     @Override

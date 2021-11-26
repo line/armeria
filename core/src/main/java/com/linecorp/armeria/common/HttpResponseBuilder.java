@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map.Entry;
 
@@ -131,7 +130,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder content(String content) {
-        return content(MediaType.PLAIN_TEXT_UTF_8, content);
+        return (HttpResponseBuilder) super.content(content);
     }
 
     /**
@@ -139,9 +138,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder content(MediaType contentType, CharSequence content) {
-        return content(contentType,
-                       HttpData.of(contentType.charset(StandardCharsets.UTF_8),
-                                   content));
+        return (HttpResponseBuilder) super.content(contentType, content);
     }
 
     /**
@@ -149,8 +146,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder content(MediaType contentType, String content) {
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
-                                                content));
+        return (HttpResponseBuilder) super.content(contentType, content);
     }
 
     /**
@@ -160,7 +156,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     @Override
     @FormatMethod
     public HttpResponseBuilder content(@FormatString String format, Object... content) {
-        return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
+        return (HttpResponseBuilder) super.content(format, content);
     }
 
     /**
@@ -171,8 +167,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     @FormatMethod
     public HttpResponseBuilder content(MediaType contentType, @FormatString String format,
                                        Object... content) {
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
-                                                format, content));
+        return (HttpResponseBuilder) super.content(contentType, format, content);
     }
 
     /**
@@ -181,15 +176,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder content(MediaType contentType, byte[] content) {
-        return content(contentType, HttpData.wrap(content));
-    }
-
-    /**
-     * Sets the content for this response.
-     */
-    @Override
-    public HttpResponseBuilder content(HttpData content) {
-        return (HttpResponseBuilder) super.content(content);
+        return (HttpResponseBuilder) super.content(contentType, content);
     }
 
     /**
@@ -197,17 +184,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder content(MediaType contentType, HttpData content) {
-        requireNonNull(contentType, "contentType");
-        responseHeadersBuilder.contentType(contentType);
-        return (HttpResponseBuilder) super.content(content);
-    }
-
-    /**
-     * Sets the {@link Publisher} for this response.
-     */
-    @Override
-    public HttpResponseBuilder content(Publisher<? extends HttpData> content) {
-        return (HttpResponseBuilder) super.content(content);
+        return (HttpResponseBuilder) super.content(contentType, content);
     }
 
     /**
@@ -215,9 +192,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
-        requireNonNull(contentType, "contentType");
-        responseHeadersBuilder.contentType(contentType);
-        return (HttpResponseBuilder) super.content(content);
+        return (HttpResponseBuilder) super.content(contentType, content);
     }
 
     /**
@@ -226,7 +201,6 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder contentJson(Object content) {
-        responseHeadersBuilder.contentType(MediaType.JSON);
         return (HttpResponseBuilder) super.contentJson(content);
     }
 
@@ -276,6 +250,10 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * Builds the response.
      */
     public HttpResponse build() {
+        final MediaType contentType = contentType();
+        if (contentType != null) {
+            responseHeadersBuilder.contentType(contentType);
+        }
         final ResponseHeaders responseHeaders = responseHeadersBuilder.build();
         final HttpHeaders trailers = httpTrailers.build();
         HttpData content = content();

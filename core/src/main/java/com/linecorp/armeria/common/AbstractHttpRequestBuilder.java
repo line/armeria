@@ -22,7 +22,6 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -142,7 +141,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     @Override
     public AbstractHttpRequestBuilder content(String content) {
-        return content(MediaType.PLAIN_TEXT_UTF_8, content);
+        return (AbstractHttpRequestBuilder) super.content(content);
     }
 
     /**
@@ -150,9 +149,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, CharSequence content) {
-        return content(contentType,
-                       HttpData.of(contentType.charset(StandardCharsets.UTF_8),
-                                   content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
     /**
@@ -160,8 +157,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, String content) {
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
-                                                content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
     /**
@@ -171,7 +167,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
     @Override
     @FormatMethod
     public AbstractHttpRequestBuilder content(@FormatString String format, Object... content) {
-        return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
+        return (AbstractHttpRequestBuilder) super.content(format, content);
     }
 
     /**
@@ -182,16 +178,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
     @FormatMethod
     public AbstractHttpRequestBuilder content(MediaType contentType, @FormatString String format,
                                               Object... content) {
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
-                                                format, content));
-    }
-
-    /**
-     * Sets the content for this request.
-     */
-    @Override
-    public AbstractHttpRequestBuilder content(HttpData content) {
-        return (AbstractHttpRequestBuilder) super.content(content);
+        return (AbstractHttpRequestBuilder) super.content(contentType, format, content);
     }
 
     /**
@@ -200,7 +187,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, byte[] content) {
-        return content(contentType, HttpData.wrap(content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
     /**
@@ -208,27 +195,15 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, HttpData content) {
-        requireNonNull(contentType, "contentType");
-        requestHeadersBuilder.contentType(contentType);
-        return (AbstractHttpRequestBuilder) content(content);
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
     /**
      * Sets the {@link Publisher} for this request.
      */
     @Override
-    public AbstractHttpRequestBuilder content(Publisher<? extends HttpData> content) {
-        return (AbstractHttpRequestBuilder) super.content(content);
-    }
-
-    /**
-     * Sets the {@link Publisher} for this request.
-     */
-    @Override
-    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
-        requireNonNull(contentType, "contentType");
-        requestHeadersBuilder.contentType(contentType);
-        return (AbstractHttpRequestBuilder) content(publisher);
+    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
     /**
@@ -237,7 +212,6 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     @Override
     public AbstractHttpRequestBuilder contentJson(Object content) {
-        requestHeadersBuilder.contentType(MediaType.JSON);
         return (AbstractHttpRequestBuilder) super.contentJson(content);
     }
 
@@ -455,6 +429,10 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
 
     private RequestHeaders requestHeaders() {
         requestHeadersBuilder.path(buildPath());
+        final MediaType contentType = contentType();
+        if (contentType != null) {
+            requestHeadersBuilder.contentType(contentType);
+        }
         if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
