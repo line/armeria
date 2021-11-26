@@ -168,7 +168,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
             }
-
+            final Integer internalServicePort = getExposedInternalServicePort(beanFactory);
             final CorsServiceBuilder cors;
             if (!corsProperties.getAllowedOrigins().isEmpty()) {
                 cors = CorsService.builder(corsProperties.getAllowedOrigins());
@@ -214,7 +214,12 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                              // Bind a WebOperationService to "management.server.port"
                              sb.virtualHost(managementPort)
                                .service(route, new WebOperationService(operation, statusMapper));
-                         } else {
+                         }
+                         if (internalServicePort != null) {
+                             sb.virtualHost(internalServicePort)
+                               .service(route, new WebOperationService(operation, statusMapper));
+                         }
+                         if (managementPort == null && internalServicePort == null) {
                              sb.service(route, new WebOperationService(operation, statusMapper));
                          }
                          if (cors != null) {
@@ -237,7 +242,12 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 if (managementPort != null) {
                     sb.virtualHost(managementPort)
                       .route().addRoute(route).defaultServiceName("LinksService").build(linksService);
-                } else {
+                }
+                if (internalServicePort != null) {
+                    sb.virtualHost(internalServicePort)
+                      .route().addRoute(route).defaultServiceName("LinksService").build(linksService);
+                }
+                if (managementPort == null && internalServicePort == null) {
                     sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
                 }
 
@@ -275,6 +285,23 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         }
 
         try {
+            final Port port = (Port) MANAGEMENT_SERVER_PORT_METHOD.invoke(internalServices);
+            if (port == null) {
+                return null;
+            }
+            return port.getPort();
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private static Integer getExposedInternalServicePort(BeanFactory beanFactory) {
+        Object internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
+        if (internalServices == null) {
+            return null;
+        }
+        try {
             final boolean actuatorEnabled = (boolean) ACTUATOR_ENABLED_METHOD.invoke(internalServices);
             if (actuatorEnabled) {
                 final Port internalPort = (Port) INTERNAL_SERVICE_PORT_METHOD.invoke(internalServices);
@@ -282,11 +309,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                     return internalPort.getPort();
                 }
             }
-            final Port port = (Port) MANAGEMENT_SERVER_PORT_METHOD.invoke(internalServices);
-            if (port == null) {
-                return null;
-            }
-            return port.getPort();
+            return null;
         } catch (IllegalAccessException | InvocationTargetException e) {
             return null;
         }

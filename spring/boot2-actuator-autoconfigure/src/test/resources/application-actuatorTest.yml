@@ -12,6 +12,8 @@ armeria:
     protocols: http
 
 management:
+  server:
+    port: 0
   endpoints:
     web:
       exposure:
