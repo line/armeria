@@ -297,7 +297,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     @Nullable
     private static Integer getExposedInternalServicePort(BeanFactory beanFactory) {
-        Object internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
+        final Object internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
         if (internalServices == null) {
             return null;
         }
