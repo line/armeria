@@ -30,6 +30,7 @@ import com.google.errorprone.annotations.FormatString;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
+@SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
 abstract class AbstractHttpMessageBuilder {
 
     @Nullable
