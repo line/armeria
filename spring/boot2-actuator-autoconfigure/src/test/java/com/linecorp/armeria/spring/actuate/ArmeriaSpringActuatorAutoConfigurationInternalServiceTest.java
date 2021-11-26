@@ -173,9 +173,6 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         final HttpResponse response = client.get(url);
 
         final AggregatedHttpResponse httpResponse = response.aggregate().join();
-        if (httpResponse.status().code() != statusCode) {
-            System.out.println("");
-        }
         assertThat(httpResponse.status().code()).isEqualTo(statusCode);
     }
 
