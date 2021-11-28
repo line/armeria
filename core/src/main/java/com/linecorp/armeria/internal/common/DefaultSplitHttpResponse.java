@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -89,19 +88,8 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         }
 
         @Override
-        public void cancel() {
-            if (cancelCalled) {
-                return;
-            }
-            cancelCalled = true;
-            if (!notifyCancellation) {
-                downstream = NoopSubscriber.get();
-            }
+        protected void completeOnSubscriptionCancel() {
             maybeCompleteHeaders(null);
-            final Subscription upstream = this.upstream;
-            if (upstream != null) {
-                upstream.cancel();
-            }
         }
 
         @Override

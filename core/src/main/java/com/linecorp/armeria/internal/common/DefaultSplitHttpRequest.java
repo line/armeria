@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SplitHttpRequest;
-import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -62,19 +61,8 @@ public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements
         }
 
         @Override
-        public void cancel() {
-            if (cancelCalled) {
-                return;
-            }
-            cancelCalled = true;
-            if (!notifyCancellation) {
-                downstream = NoopSubscriber.get();
-            }
+        protected void completeOnSubscriptionCancel() {
             completeTrailers(EMPTY_TRAILERS);
-            final Subscription upstream = this.upstream;
-            if (upstream != null) {
-                upstream.cancel();
-            }
         }
 
         @Override

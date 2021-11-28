@@ -223,6 +223,24 @@ public abstract class AbstractSplitHttpMessage implements SplitHttpMessage, Stre
         protected abstract void request0(long n);
 
         @Override
+        public final void cancel() {
+            if (cancelCalled) {
+                return;
+            }
+            cancelCalled = true;
+            if (!notifyCancellation) {
+                downstream = NoopSubscriber.get();
+            }
+            completeOnSubscriptionCancel();
+            final Subscription upstream = this.upstream;
+            if (upstream != null) {
+                upstream.cancel();
+            }
+        }
+
+        protected abstract void completeOnSubscriptionCancel();
+
+        @Override
         public void onNext(HttpObject httpObject) {
             if (httpObject instanceof HttpHeaders) {
                 final HttpHeaders trailers = (HttpHeaders) httpObject;
