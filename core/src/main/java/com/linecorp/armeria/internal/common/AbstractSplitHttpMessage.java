@@ -42,7 +42,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData>, SplitHttpMessage {
+public abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessage<HttpData> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractSplitHttpMessage.class);
 
