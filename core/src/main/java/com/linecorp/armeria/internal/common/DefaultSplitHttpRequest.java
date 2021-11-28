@@ -16,58 +16,34 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SplitHttpRequest;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.AbstractSplitHttpMessage.BodySubscriber;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
 public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements SplitHttpRequest {
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class, "downstream");
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultSplitHttpRequest, HeadersFuture>
-            trailersFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultSplitHttpRequest.class, HeadersFuture.class, "trailersFuture");
-
     private static final HttpHeaders EMPTY_TRAILERS = HttpHeaders.of();
 
-    private final SplitHttpRequestBodySubscriber bodySubscriber = new SplitHttpRequestBodySubscriber();
+    private final BodySubscriber bodySubscriber = new SplitHttpRequestBodySubscriber();
     private final HttpRequest request;
-//    private final EventExecutor upstreamExecutor;
-
-    @Nullable
-    private volatile HeadersFuture<HttpHeaders> trailersFuture;
-
-    private volatile boolean wroteAny;
 
     public DefaultSplitHttpRequest(HttpRequest request, EventExecutor executor) {
-        super(executor);
+        super(request, executor);
         this.request = requireNonNull(request, "request");
 
         request.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
@@ -99,26 +75,6 @@ public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements
     }
 
     @Override
-    public boolean isOpen() {
-        return request.isOpen();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return !isOpen() && !wroteAny;
-    }
-
-    @Override
-    public long demand() {
-        return request.demand();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenComplete() {
-        return request.whenComplete();
-    }
-
-    @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
@@ -138,114 +94,24 @@ public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements
         }
     }
 
-    @Override
-    public void abort() {
-        request.abort();
-    }
-
-    @Override
-    public void abort(Throwable cause) {
-        request.abort(cause);
-    }
-
     private final class SplitHttpRequestBodySubscriber extends BodySubscriber {
 
         @Override
-        public void onNext(HttpObject httpObject) {
-            if (httpObject instanceof HttpHeaders) {
-                final HttpHeaders trailers = (HttpHeaders) httpObject;
-                completeTrailers(trailers);
-                return;
-            }
-
-            final Subscriber<? super HttpData> downstream = this.downstream;
-            assert downstream != null;
-            assert httpObject instanceof HttpData;
-
-            final EventExecutor executor = this.executor;
-            if (executor.inEventLoop()) {
-                onNext0((HttpData) httpObject);
-            } else {
-                executor.execute(() -> onNext0((HttpData) httpObject));
-            }
+        protected void request0(long n) {
+            final Subscription upstream = this.upstream;
+            upstream.request(n);
         }
 
-        private void onNext0(HttpData httpData) {
-            wroteAny = true;
-            if (!usePooledObject) {
-                httpData = PooledObjects.copyAndClose(httpData);
-            }
-            downstream.onNext(httpData);
-        }
-
-        private void completeTrailers(HttpHeaders trailers) {
-            HeadersFuture<HttpHeaders> trailersFuture = DefaultSplitHttpRequest.this.trailersFuture;
-            if (trailersFuture != null) {
-                trailersFuture.doComplete(trailers);
-                return;
-            }
-
-            trailersFuture = new HeadersFuture<>();
-            if (trailersFutureUpdater.compareAndSet(DefaultSplitHttpRequest.this, null, trailersFuture)) {
-                trailersFuture.doComplete(trailers);
-            } else {
-                DefaultSplitHttpRequest.this.trailersFuture.doComplete(trailers);
-            }
+        @Override
+        public void onComplete() {
+            completeTrailers(EMPTY_TRAILERS);
+            super.onComplete();
         }
 
         @Override
         public void onError(Throwable cause) {
             completeTrailers(EMPTY_TRAILERS);
-            final EventExecutor executor = this.executor;
-            final Subscriber<? super HttpData> downstream = this.downstream;
-            if (executor == null || downstream == null) {
-                this.cause = cause;
-                return;
-            }
-
-            if (executor.inEventLoop()) {
-                onError0(cause, downstream);
-            } else {
-                executor.execute(() -> onError0(cause, downstream));
-            }
-        }
-
-
-
-        @Override
-        public void onComplete() {
-            completeTrailers(EMPTY_TRAILERS);
-            final EventExecutor executor = this.executor;
-            final Subscriber<? super HttpData> downstream = this.downstream;
-            if (executor == null || downstream == null) {
-                completing = true;
-                return;
-            }
-
-            if (executor.inEventLoop()) {
-                onComplete0(downstream);
-            } else {
-                executor.execute(() -> onComplete0(downstream));
-            }
-        }
-
-        @Override
-        public void request(long n) {
-            if (n <= 0) {
-                request.abort(new IllegalArgumentException(
-                        "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
-                return;
-            }
-            if (upstreamExecutor.inEventLoop()) {
-                request0(n);
-            } else {
-                upstreamExecutor.execute(() -> request0(n));
-            }
-        }
-
-        private void request0(long n) {
-            final Subscription upstream = this.upstream;
-            upstream.request(n);
+            super.onError(cause);
         }
 
         @Override
@@ -262,19 +128,6 @@ public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements
             if (upstream != null) {
                 upstream.cancel();
             }
-        }
-    }
-
-    private static final class HeadersFuture<T> extends UnmodifiableFuture<T> {
-
-        @Override
-        protected void doComplete(@Nullable T value) {
-            super.doComplete(value);
-        }
-
-        @Override
-        protected void doCompleteExceptionally(Throwable cause) {
-            super.doCompleteExceptionally(cause);
         }
     }
 }
