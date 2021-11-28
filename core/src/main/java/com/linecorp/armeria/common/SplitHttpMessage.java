@@ -22,7 +22,10 @@ import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
 
-// FIXME: description
+/**
+ * An {@link HttpMessage} which splits a stream of {@link HttpObject}s into HTTP headers and payloads.
+ * {@link #trailers()} might not complete until the entire response body is consumed completely.
+ */
 public interface SplitHttpMessage {
 
     /**
@@ -33,8 +36,8 @@ public interface SplitHttpMessage {
 
     /**
      * Returns a {@link CompletableFuture} completed with a {@linkplain HttpHeaders trailers}.
-     * If an {@link HttpRequest} does not contain trailers, the returned {@link CompletableFuture} will be
-     * completed with an {@linkplain HttpHeaders#of() empty headers}.
+     * If an {@link HttpRequest} or {@link HttpResponse} does not contain trailers,
+     * the returned {@link CompletableFuture} will be completed with an {@linkplain HttpHeaders#of() empty headers}.
      */
     CompletableFuture<HttpHeaders> trailers();
 }

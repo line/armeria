@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
@@ -36,9 +34,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -54,12 +50,9 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
 
     private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
     private final BodySubscriber bodySubscriber = new SplitHttpResponseBodySubscriber();
-    private final HttpResponse response;
 
     public DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor) {
         super(response, executor);
-        this.response = requireNonNull(response, "response");
-
         response.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
     }
 
@@ -69,43 +62,9 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
     }
 
     @Override
-    public final StreamMessage<HttpData> body() {
-        return this;
-    }
-
-    @Override
-    public final CompletableFuture<HttpHeaders> trailers() {
-        HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
-        if (trailersFuture != null) {
-            return trailersFuture;
-        }
-
-        trailersFuture = new HeadersFuture<>();
-        if (trailersFutureUpdater.compareAndSet(this, null, trailersFuture)) {
-            return trailersFuture;
-        } else {
-            return this.trailersFuture;
-        }
-    }
-
-    @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        requireNonNull(subscriber, "subscriber");
-        requireNonNull(executor, "executor");
-        requireNonNull(options, "options");
-
-        if (!downstreamUpdater.compareAndSet(bodySubscriber, null, subscriber)) {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
-            return;
-        }
-
-        if (executor.inEventLoop()) {
-            bodySubscriber.initDownstream(subscriber, executor, options);
-        } else {
-            executor.execute(() -> bodySubscriber.initDownstream(subscriber, executor, options));
-        }
+        subscribe0(subscriber, bodySubscriber, executor, options);
     }
 
     private final class SplitHttpResponseBodySubscriber extends BodySubscriber {
@@ -126,6 +85,22 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
                 pendingRequests = LongMath.saturatedAdd(n, pendingRequests);
             } else {
                 upstream.request(n);
+            }
+        }
+
+        @Override
+        public void cancel() {
+            if (cancelCalled) {
+                return;
+            }
+            cancelCalled = true;
+            if (!notifyCancellation) {
+                downstream = NoopSubscriber.get();
+            }
+            maybeCompleteHeaders(null);
+            final Subscription upstream = this.upstream;
+            if (upstream != null) {
+                upstream.cancel();
             }
         }
 
@@ -155,22 +130,6 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         public void onError(Throwable cause) {
             maybeCompleteHeaders(cause);
             super.onError(cause);
-        }
-
-        @Override
-        public void cancel() {
-            if (cancelCalled) {
-                return;
-            }
-            cancelCalled = true;
-            if (!notifyCancellation) {
-                downstream = NoopSubscriber.get();
-            }
-            maybeCompleteHeaders(null);
-            final Subscription upstream = this.upstream;
-            if (upstream != null) {
-                upstream.cancel();
-            }
         }
 
         private void maybeCompleteHeaders(@Nullable Throwable cause) {

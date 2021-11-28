@@ -31,29 +31,31 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.SplitHttpMessage;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData> {
+public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData>, SplitHttpMessage {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractSplitHttpMessage.class);
 
     @SuppressWarnings("rawtypes")
-    protected static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber>
-            downstreamUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
-                                                   "downstream");
+    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber>
+            downstreamUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
+                                                                       "downstream");
 
     @SuppressWarnings("rawtypes")
     protected static final AtomicReferenceFieldUpdater<AbstractSplitHttpMessage, HeadersFuture>
-            trailersFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(AbstractSplitHttpMessage.class, HeadersFuture.class, "trailersFuture");
+            trailersFutureUpdater = AtomicReferenceFieldUpdater.newUpdater(AbstractSplitHttpMessage.class,
+                                                                           HeadersFuture.class,
+                                                                           "trailersFuture");
 
     private final HttpMessage message;
     protected final EventExecutor upstreamExecutor;
@@ -61,11 +63,31 @@ public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData
     @Nullable
     protected volatile HeadersFuture<HttpHeaders> trailersFuture;
 
-    protected volatile boolean wroteAny;
+    private volatile boolean wroteAny;
 
     protected AbstractSplitHttpMessage(HttpMessage message, EventExecutor executor) {
         this.message = requireNonNull(message, "message");
         upstreamExecutor = requireNonNull(executor, "executor");
+    }
+
+    @Override
+    public final StreamMessage<HttpData> body() {
+        return this;
+    }
+
+    @Override
+    public final CompletableFuture<HttpHeaders> trailers() {
+        HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
+        if (trailersFuture != null) {
+            return trailersFuture;
+        }
+
+        trailersFuture = new HeadersFuture<>();
+        if (trailersFutureUpdater.compareAndSet(this, null, trailersFuture)) {
+            return trailersFuture;
+        } else {
+            return this.trailersFuture;
+        }
     }
 
     @Override
@@ -103,12 +125,32 @@ public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData
         return upstreamExecutor;
     }
 
+    protected final void subscribe0(Subscriber<? super HttpData> subscriber, BodySubscriber bodySubscriber,
+                                    EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(bodySubscriber, "bodySubscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+
+        if (!downstreamUpdater.compareAndSet(bodySubscriber, null, subscriber)) {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+            return;
+        }
+
+        if (executor.inEventLoop()) {
+            bodySubscriber.initDownstream(subscriber, executor, options);
+        } else {
+            executor.execute(() -> bodySubscriber.initDownstream(subscriber, executor, options));
+        }
+    }
+
     protected abstract class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
-        protected boolean completing;
+        private boolean completing;
 
         protected volatile boolean notifyCancellation;
-        protected boolean usePooledObject;
+        private boolean usePooledObject;
 
         @Nullable
         protected volatile Subscriber<? super HttpData> downstream;
@@ -117,10 +159,10 @@ public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData
         protected volatile Subscription upstream;
 
         @Nullable
-        protected volatile EventExecutor executor;
+        private volatile EventExecutor executor;
 
         @Nullable
-        protected volatile Throwable cause;
+        private volatile Throwable cause;
 
         protected volatile boolean cancelCalled;
 
@@ -224,7 +266,7 @@ public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData
             }
         }
 
-        protected void onComplete0(Subscriber<? super HttpData> downstream) {
+        private void onComplete0(Subscriber<? super HttpData> downstream) {
             downstream.onComplete();
         }
 
@@ -244,7 +286,7 @@ public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData
             }
         }
 
-        protected void onError0(Throwable cause, Subscriber<? super HttpData> downstream) {
+        private void onError0(Throwable cause, Subscriber<? super HttpData> downstream) {
             downstream.onError(cause);
             this.downstream = NoopSubscriber.get();
         }
@@ -252,7 +294,7 @@ public abstract class AbstractSplitHttpMessage implements StreamMessage<HttpData
         /**
          * Completes the specified trailers.
          */
-        protected void completeTrailers(HttpHeaders trailers) {
+        protected final void completeTrailers(HttpHeaders trailers) {
             HeadersFuture<HttpHeaders> trailersFuture = AbstractSplitHttpMessage.this.trailersFuture;
             if (trailersFuture != null) {
                 trailersFuture.doComplete(trailers);
