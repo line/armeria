@@ -38,14 +38,13 @@ import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.AbstractSplitHttpMessage.BodySubscriber;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class DefaultSplitHttpRequest implements StreamMessage<HttpData>, SplitHttpRequest {
-
-    private static final Logger logger = LoggerFactory.getLogger(DefaultSplitHttpRequest.class);
+public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements SplitHttpRequest {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater =
@@ -58,9 +57,9 @@ public class DefaultSplitHttpRequest implements StreamMessage<HttpData>, SplitHt
 
     private static final HttpHeaders EMPTY_TRAILERS = HttpHeaders.of();
 
-    private final BodySubscriber bodySubscriber = new BodySubscriber();
+    private final SplitHttpRequestBodySubscriber bodySubscriber = new SplitHttpRequestBodySubscriber();
     private final HttpRequest request;
-    private final EventExecutor upstreamExecutor;
+//    private final EventExecutor upstreamExecutor;
 
     @Nullable
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
@@ -68,8 +67,8 @@ public class DefaultSplitHttpRequest implements StreamMessage<HttpData>, SplitHt
     private volatile boolean wroteAny;
 
     public DefaultSplitHttpRequest(HttpRequest request, EventExecutor executor) {
+        super(executor);
         this.request = requireNonNull(request, "request");
-        upstreamExecutor = requireNonNull(executor, "executor");
 
         request.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
     }
@@ -149,65 +148,7 @@ public class DefaultSplitHttpRequest implements StreamMessage<HttpData>, SplitHt
         request.abort(cause);
     }
 
-    private final class BodySubscriber implements Subscriber<HttpObject>, Subscription {
-
-        private boolean completing;
-
-        @Nullable
-        private volatile Subscription upstream;
-
-        @Nullable
-        volatile Subscriber<? super HttpData> downstream;
-
-        @Nullable
-        private volatile EventExecutor executor;
-
-        @Nullable
-        private volatile Throwable cause;
-
-        private volatile boolean cancelCalled;
-        private volatile boolean notifyCancellation;
-        private boolean usePooledObject;
-
-        private void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
-                                    SubscriptionOption... options) {
-            assert executor.inEventLoop();
-
-            this.executor = executor;
-            for (SubscriptionOption option : options) {
-                if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                    notifyCancellation = true;
-                } else if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                    usePooledObject = true;
-                }
-            }
-
-            try {
-                downstream.onSubscribe(this);
-                final Throwable cause = this.cause;
-                if (cause != null) {
-                    onError0(cause, downstream);
-                } else if (completing) {
-                    onComplete0(downstream);
-                }
-            } catch (Throwable t) {
-                throwIfFatal(t);
-                logger.warn("Subscriber should not throw an exception. subscriber: {}", downstream, t);
-            }
-        }
-
-        @Override
-        public void onSubscribe(Subscription subscription) {
-            requireNonNull(subscription, "subscription");
-            if (upstream != null) {
-                subscription.cancel();
-                return;
-            }
-            upstream = subscription;
-            if (cancelCalled) {
-                subscription.cancel();
-            }
-        }
+    private final class SplitHttpRequestBodySubscriber extends BodySubscriber {
 
         @Override
         public void onNext(HttpObject httpObject) {
@@ -269,10 +210,7 @@ public class DefaultSplitHttpRequest implements StreamMessage<HttpData>, SplitHt
             }
         }
 
-        private void onError0(Throwable cause, Subscriber<? super HttpData> downstream) {
-            downstream.onError(cause);
-            this.downstream = NoopSubscriber.get();
-        }
+
 
         @Override
         public void onComplete() {
@@ -289,10 +227,6 @@ public class DefaultSplitHttpRequest implements StreamMessage<HttpData>, SplitHt
             } else {
                 executor.execute(() -> onComplete0(downstream));
             }
-        }
-
-        private void onComplete0(Subscriber<? super HttpData> downstream) {
-            downstream.onComplete();
         }
 
         @Override

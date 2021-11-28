@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -24,8 +23,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
@@ -43,18 +40,19 @@ import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.AbstractSplitHttpMessage.BodySubscriber;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitHttpResponse {
-
-    private static final Logger logger = LoggerFactory.getLogger(DefaultSplitHttpResponse.class);
+public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implements SplitHttpResponse {
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class, "downstream");
+    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber>
+            downstreamUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
+                                                   "downstream");
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultSplitHttpResponse, HeadersFuture>
@@ -70,17 +68,17 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     }
 
     private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
-    private final BodySubscriber bodySubscriber = new BodySubscriber();
+    private final SplitHttpResponseBodySubscriber bodySubscriber = new SplitHttpResponseBodySubscriber();
     private final HttpResponse response;
-    private final EventExecutor upstreamExecutor;
+//    private final EventExecutor upstreamExecutor;
 
     @Nullable
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
     private volatile boolean wroteAny;
 
     public DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor) {
+        super(executor);
         this.response = requireNonNull(response, "response");
-        upstreamExecutor = requireNonNull(executor, "executor");
 
         response.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
     }
@@ -165,65 +163,14 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         response.abort(cause);
     }
 
-    private final class BodySubscriber implements Subscriber<HttpObject>, Subscription {
+    private final class SplitHttpResponseBodySubscriber extends BodySubscriber {
 
-        private boolean completing;
         // 1 is used for prefetching headers
         private long pendingRequests = 1;
 
-        private volatile boolean notifyCancellation;
-        private boolean usePooledObject;
-
-        @Nullable
-        volatile Subscriber<? super HttpData> downstream;
-        @Nullable
-        private volatile Subscription upstream;
-        @Nullable
-        private volatile EventExecutor executor;
-        @Nullable
-        private volatile Throwable cause;
-
-        private volatile boolean cancelCalled;
-
-        private void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
-                                    SubscriptionOption... options) {
-            assert executor.inEventLoop();
-
-            this.executor = executor;
-            for (SubscriptionOption option : options) {
-                if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                    notifyCancellation = true;
-                } else if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                    usePooledObject = true;
-                }
-            }
-
-            try {
-                downstream.onSubscribe(this);
-                final Throwable cause = this.cause;
-                if (cause != null) {
-                    onError0(cause, downstream);
-                } else if (completing) {
-                    onComplete0(downstream);
-                }
-            } catch (Throwable t) {
-                throwIfFatal(t);
-                logger.warn("Subscriber should not throw an exception. subscriber: {}", downstream, t);
-            }
-        }
-
         @Override
         public void onSubscribe(Subscription subscription) {
-            requireNonNull(subscription, "subscription");
-            if (upstream != null) {
-                subscription.cancel();
-                return;
-            }
-            upstream = subscription;
-            if (cancelCalled) {
-                subscription.cancel();
-                return;
-            }
+            super.onSubscribe(subscription);
             subscription.request(pendingRequests);
         }
 
@@ -342,11 +289,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
             }
         }
 
-        private void onError0(Throwable cause, Subscriber<? super HttpData> downstream) {
-            downstream.onError(cause);
-            this.downstream = NoopSubscriber.get();
-        }
-
         @Override
         public void onComplete() {
             maybeCompleteHeaders(null);
@@ -363,10 +305,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
             } else {
                 executor.execute(() -> onComplete0(downstream));
             }
-        }
-
-        private void onComplete0(Subscriber<? super HttpData> downstream) {
-            downstream.onComplete();
         }
 
         private void maybeCompleteHeaders(@Nullable Throwable cause) {
