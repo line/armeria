@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map.Entry;
 
 import org.reactivestreams.Publisher;
 
@@ -43,6 +44,9 @@ abstract class AbstractHttpMessageBuilder {
     private Publisher<? extends HttpData> publisher;
 
     @Nullable
+    private HttpHeadersBuilder httpTrailers;
+
+    @Nullable
     protected final HttpData content() {
         return content;
     }
@@ -55,6 +59,11 @@ abstract class AbstractHttpMessageBuilder {
     @Nullable
     protected final MediaType contentType() {
         return contentType;
+    }
+
+    @Nullable
+    protected final HttpHeadersBuilder httpTrailers() {
+        return httpTrailers;
     }
 
     protected AbstractHttpMessageBuilder content(String content) {
@@ -117,6 +126,16 @@ abstract class AbstractHttpMessageBuilder {
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException(e.toString(), e);
         }
+        return this;
+    }
+
+    protected AbstractHttpMessageBuilder trailers(
+            Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
+        requireNonNull(trailers, "trailers");
+        if (httpTrailers == null) {
+            httpTrailers = HttpHeaders.builder();
+        }
+        httpTrailers.set(trailers);
         return this;
     }
 }

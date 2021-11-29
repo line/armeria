@@ -49,8 +49,6 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
 
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
     @Nullable
-    private HttpHeadersBuilder httpTrailers;
-    @Nullable
     private QueryParamsBuilder queryParams;
     @Nullable
     private Map<String, String> pathParams;
@@ -250,14 +248,10 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
     /**
      * Sets HTTP trailers for this request.
      */
+    @Override
     public AbstractHttpRequestBuilder trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
-        requireNonNull(trailers, "trailers");
-        if (httpTrailers == null) {
-            httpTrailers = HttpHeaders.builder();
-        }
-        httpTrailers.set(trailers);
-        return this;
+        return (AbstractHttpRequestBuilder) super.trailers(trailers);
     }
 
     /**
@@ -403,6 +397,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
         final Publisher<? extends HttpData> publisher = publisher();
+        final HttpHeadersBuilder httpTrailers = httpTrailers();
         if (publisher != null) {
             if (httpTrailers == null) {
                 return HttpRequest.of(requestHeaders, publisher);

@@ -34,8 +34,6 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
 
     private final ResponseHeadersBuilder responseHeadersBuilder = ResponseHeaders.builder();
 
-    private final HttpHeadersBuilder httpTrailers = HttpHeaders.builder();
-
     HttpResponseBuilder() {}
 
     /**
@@ -242,10 +240,9 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     /**
      * Sets HTTP trailers for this response.
      */
+    @Override
     public HttpResponseBuilder trailers(Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
-        requireNonNull(trailers, "trailers");
-        httpTrailers.set(trailers);
-        return this;
+        return (HttpResponseBuilder) super.trailers(trailers);
     }
 
     /**
@@ -257,14 +254,18 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
             responseHeadersBuilder.contentType(contentType);
         }
         final ResponseHeaders responseHeaders = responseHeadersBuilder.build();
-        final HttpHeaders trailers = httpTrailers.build();
+        final HttpHeadersBuilder trailers = httpTrailers();
         HttpData content = content();
         final Publisher<? extends HttpData> publisher = publisher();
         if (publisher == null) {
             if (content == null) {
                 content = HttpData.empty();
             }
-            return HttpResponse.of(responseHeaders, content, trailers);
+            if (trailers == null) {
+                return HttpResponse.of(responseHeaders, content);
+            } else {
+                return HttpResponse.of(responseHeaders, content, trailers.build());
+            }
         } else {
             return HttpResponse.of(responseHeaders, publisher);
         }
