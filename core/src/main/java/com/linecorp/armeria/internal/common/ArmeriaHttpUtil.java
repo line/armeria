@@ -288,13 +288,13 @@ public final class ArmeriaHttpUtil {
             return path1 + path2;
         }
 
-        if (path2.charAt(0) == '/') {
-            // path1 does not end with '/' and path2 starts with '/'.
+        if (path2.charAt(0) == '/' || path2.charAt(0) == '?') {
+            // path1 does not end with '/' and path2 starts with '/' or '?'
             // Simple concatenation would suffice.
             return path1 + path2;
         }
 
-        // path1 does not end with '/' and path2 does not start with '/'.
+        // path1 does not end with '/' and path2 does not start with '/' or '?'.
         // Need to insert '/' between path1 and path2.
         return path1 + '/' + path2;
     }

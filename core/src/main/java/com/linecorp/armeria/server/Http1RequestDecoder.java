@@ -234,8 +234,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(id, HttpStatus.BAD_REQUEST, Http2Error.PROTOCOL_ERROR, "Decoder failure", null);
-                    decodedReq.close(new ProtocolViolationException(decoderResult.cause()));
+                    final HttpStatus badRequest = HttpStatus.BAD_REQUEST;
+                    fail(id, badRequest, Http2Error.PROTOCOL_ERROR, "Decoder failure", null);
+                    final ProtocolViolationException cause =
+                            new ProtocolViolationException(decoderResult.cause());
+                    decodedReq.close(HttpStatusException.of(badRequest, cause));
                     return;
                 }
 
@@ -252,8 +255,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .contentLength(req.headers())
                                                         .transferred(transferredLength)
                                                         .build();
-                        fail(id, HttpStatus.REQUEST_ENTITY_TOO_LARGE, Http2Error.CANCEL, null, cause);
-                        decodedReq.close(cause);
+                        final HttpStatus entityTooLarge = HttpStatus.REQUEST_ENTITY_TOO_LARGE;
+                        fail(id, entityTooLarge, Http2Error.CANCEL, null, cause);
+                        // Wrap the cause with the returned status to let LoggingService correctly log the
+                        // status.
+                        decodedReq.close(HttpStatusException.of(entityTooLarge, cause));
                         return;
                     }
 
@@ -277,14 +283,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
         } catch (URISyntaxException e) {
-            fail(id, HttpStatus.BAD_REQUEST, Http2Error.CANCEL, "Invalid request path", e);
+            final HttpStatus badRequest = HttpStatus.BAD_REQUEST;
+            fail(id, badRequest, Http2Error.CANCEL, "Invalid request path", e);
             if (req != null) {
-                req.close(e);
+                req.close(HttpStatusException.of(badRequest, e));
             }
         } catch (Throwable t) {
-            fail(id, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR, null, t);
+            final HttpStatus serverError = HttpStatus.INTERNAL_SERVER_ERROR;
+            fail(id, serverError, Http2Error.INTERNAL_ERROR, null, t);
             if (req != null) {
-                req.close(t);
+                req.close(HttpStatusException.of(serverError, t));
             } else {
                 logger.warn("Unexpected exception:", t);
             }
