@@ -577,15 +577,36 @@ public interface StreamMessage<T> extends Publisher<T> {
      *      if (x % 2 == 0) {
      *          throw new IllegalArgumentException();
      *      }
+     * });
+     * }</pre>
+     */
+    default StreamMessage<T> peek(Consumer<? super T> action) {
+        requireNonNull(action, "action");
+        final Function<T, T> function = obj -> {
+            action.accept(obj);
+            return obj;
+        };
+        return map(function);
+    }
+
+    /**
+     * Peeks values emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> ifEvenExistsThenThrow = source.peek(x -> {
+     *      if (x % 2 == 0) {
+     *          throw new IllegalArgumentException();
+     *      }
      * }, Integer.class);
      * }</pre>
      */
-    default StreamMessage<T> peek(Consumer<? super T> action, Class<? extends T> type) {
+    default <U extends T> StreamMessage<T> peek(Consumer<? super U> action, Class<? extends U> type) {
         requireNonNull(action, "action");
         requireNonNull(type, "type");
         final Function<T, T> function = obj -> {
             if (type.isInstance(obj)) {
-                action.accept(obj);
+                action.accept((U) obj);
             }
             return obj;
         };

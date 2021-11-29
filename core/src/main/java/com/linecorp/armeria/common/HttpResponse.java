@@ -832,14 +832,13 @@ public interface HttpResponse extends Response, HttpMessage {
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
      * HttpResponse result = response.peekHeaders(headers -> {
-     *      assert headers.status().equals(HttpStatus.OK);
+     *      assert headers.status() == HttpStatus.OK;
      * });
      * }</pre>
      */
     default HttpResponse peekHeaders(Consumer<? super ResponseHeaders> action) {
         requireNonNull(action, "action");
-        final StreamMessage<HttpObject> stream = peek(obj -> action.accept((ResponseHeaders) obj),
-                                                      ResponseHeaders.class);
+        final StreamMessage<HttpObject> stream = peek(action, ResponseHeaders.class);
         return of(stream);
     }
 
