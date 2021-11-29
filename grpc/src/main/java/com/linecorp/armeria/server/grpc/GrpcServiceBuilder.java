@@ -450,7 +450,7 @@ public final class GrpcServiceBuilder {
     /**
      * Set a custom HTTP status code mapper. This is useful to serve custom HTTP status code when using unframed
      * gRPC service.
-     * @param unframedGrpcStatusFunction The function which maps the {@link Throwable} or grp {@link Status}
+     * @param unframedGrpcStatusFunction The function which maps the {@link Throwable} or gRPC {@link Status}
      *                                   code to an {@link HttpStatus} code.
      */
     @UnstableApi
@@ -722,13 +722,15 @@ public final class GrpcServiceBuilder {
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
             interceptors().add(coroutineContextInterceptor);
         }
-        if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
-            throw new IllegalStateException(
-                    "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
-        }
-        if (!enableUnframedRequests  && unframedGrpcStatusFunction != null) {
-            throw new IllegalStateException(
-                    "'unframedGrpcStatusFunction' can only be set if unframed requests are enabled");
+        if (!enableUnframedRequests) {
+            if (unframedGrpcErrorHandler != null) {
+                throw new IllegalStateException(
+                        "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+            }
+            if (unframedGrpcStatusFunction != null) {
+                throw new IllegalStateException(
+                        "'unframedGrpcStatusFunction' can only be set if unframed requests are enabled");
+            }
         }
         if (!enableHttpJsonTranscoding && httpJsonTranscodingErrorHandler != null) {
             throw new IllegalStateException(

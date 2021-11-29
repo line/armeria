@@ -24,13 +24,13 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.grpc.Status;
 
 /**
- * A mapping function that converts a {@link Throwable} or grpc {@link Status} into an {@link HttpStatus}.
+ * A mapping function that converts a {@link Throwable} or gRPC {@link Status} into an {@link HttpStatus}.
  */
 @FunctionalInterface
 public interface UnframedGrpcStatusFunction {
 
     /**
-     * Return a mapping function which follows the mapping rules defined in upstream Google APIs.
+     * Return the default mapping function which follows the mapping rules defined in upstream Google APIs.
      */
     static UnframedGrpcStatusFunction of() {
         return (ctx, status, response) -> GrpcStatus.grpcStatusToHttpStatus(status);
