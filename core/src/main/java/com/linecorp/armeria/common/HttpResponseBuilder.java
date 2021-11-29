@@ -217,7 +217,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * }</pre>
      */
     public HttpResponseBuilder header(CharSequence name, Object value) {
-        responseHeadersBuilder.setObject(requireNonNull(name, "name"),
+        responseHeadersBuilder.addObject(requireNonNull(name, "name"),
                                          requireNonNull(value, "value"));
         return this;
     }
@@ -235,7 +235,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     public HttpResponseBuilder headers(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         requireNonNull(headers, "headers");
-        responseHeadersBuilder.set(headers);
+        responseHeadersBuilder.add(headers);
         return this;
     }
 
