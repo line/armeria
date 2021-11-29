@@ -22,9 +22,12 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -167,6 +170,36 @@ class ServiceRequestContextTest {
         assertCurrentCtx(null);
     }
 
+    @Test
+    void queryParams() {
+        final QueryParams queryParams = QueryParams.of("param1", "value1",
+                                                       "param1", "value2",
+                                                       "Param1", "Value3",
+                                                       "PARAM1", "VALUE4");
+        final ServiceRequestContext ctx = serviceRequestContextWithPathAndQuery();
+        final QueryParams res = ctx.queryParams();
+
+        assertThat(res).isEqualTo(queryParams);
+    }
+
+    @Test
+    void getQueryParam() {
+        final ServiceRequestContext ctx = serviceRequestContextWithPathAndQuery();
+
+        assertThat(ctx.queryParam("param1")).isEqualTo("value1");
+        assertThat(ctx.queryParam("Param1")).isEqualTo("Value3");
+        assertThat(ctx.queryParam("PARAM1")).isEqualTo("VALUE4");
+    }
+
+    @Test
+    void getAllQueryParams() {
+        final ServiceRequestContext ctx = serviceRequestContextWithPathAndQuery();
+
+        assertThat(ctx.queryParams("param1")).isEqualTo(ImmutableList.of("value1", "value2"));
+        assertThat(ctx.queryParams("Param1")).isEqualTo(ImmutableList.of("Value3"));
+        assertThat(ctx.queryParams("PARAM1")).isEqualTo(ImmutableList.of("VALUE4"));
+    }
+
     private static void assertCurrentCtx(@Nullable RequestContext ctx) {
         final RequestContext current = RequestContext.currentOrNull();
         assertThat(current).isSameAs(ctx);
@@ -174,6 +207,16 @@ class ServiceRequestContextTest {
 
     private static ServiceRequestContext serviceRequestContext() {
         return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+    }
+
+    private static ServiceRequestContext serviceRequestContextWithPathAndQuery() {
+        final String path = "/foo";
+        final QueryParams queryParams = QueryParams.of("param1", "value1",
+                                                       "param1", "value2",
+                                                       "Param1", "Value3",
+                                                       "PARAM1", "VALUE4");
+        final String pathAndQuery = path + '?' + queryParams.toQueryString();
+        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, pathAndQuery));
     }
 
     private static ClientRequestContext clientRequestContext() {

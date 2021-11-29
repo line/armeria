@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
@@ -256,6 +258,28 @@ public interface ServiceRequestContext extends RequestContext {
     @Nullable
     default String pathParam(String name) {
         return pathParams().get(name);
+    }
+
+    /**
+     * Returns the query parameters mapped by the {@link Route} associated with the {@link Service}
+     * that is handling the current {@link Request}.
+     */
+    QueryParams queryParams();
+
+    /**
+     * Returns the values of the specified query parameter.
+     */
+    @Nullable
+    default List<String> queryParams(String name) {
+        return queryParams().getAll(name);
+    }
+
+    /**
+     * Returns the value of the specified query parameter.
+     */
+    @Nullable
+    default String queryParam(String name) {
+        return queryParams().get(name);
     }
 
     /**
