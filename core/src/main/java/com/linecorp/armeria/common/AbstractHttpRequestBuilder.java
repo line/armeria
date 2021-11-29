@@ -222,9 +222,9 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      *            .build();
      * }</pre>
      */
+    @Override
     public AbstractHttpRequestBuilder header(CharSequence name, Object value) {
-        requestHeadersBuilder.setObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
-        return this;
+        return (AbstractHttpRequestBuilder) super.header(name, value);
     }
 
     /**
@@ -238,11 +238,10 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      *
      * @see HttpHeaders
      */
+    @Override
     public AbstractHttpRequestBuilder headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        requireNonNull(headers, "headers");
-        requestHeadersBuilder.set(headers);
-        return this;
+        return (AbstractHttpRequestBuilder) super.headers(headers);
     }
 
     /**
@@ -424,10 +423,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
 
     private RequestHeaders requestHeaders() {
         requestHeadersBuilder.path(buildPath());
-        final MediaType contentType = contentType();
-        if (contentType != null) {
-            requestHeadersBuilder.contentType(contentType);
-        }
+        httpHeaders().build().forEach(entry -> requestHeadersBuilder.set(entry.getKey(), entry.getValue()));
         if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }

@@ -214,10 +214,11 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      *             .build();
      * }</pre>
      */
+    @Override
     public HttpResponseBuilder header(CharSequence name, Object value) {
         responseHeadersBuilder.addObject(requireNonNull(name, "name"),
                                          requireNonNull(value, "value"));
-        return this;
+        return (HttpResponseBuilder) super.header(name, value);
     }
 
     /**
@@ -231,10 +232,9 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * }</pre>
      * @see HttpHeaders
      */
+    @Override
     public HttpResponseBuilder headers(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        requireNonNull(headers, "headers");
-        responseHeadersBuilder.add(headers);
-        return this;
+        return (HttpResponseBuilder) super.headers(headers);
     }
 
     /**
@@ -249,10 +249,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * Builds the response.
      */
     public HttpResponse build() {
-        final MediaType contentType = contentType();
-        if (contentType != null) {
-            responseHeadersBuilder.contentType(contentType);
-        }
+        httpHeaders().build().forEach(entry -> responseHeadersBuilder.set(entry.getKey(), entry.getValue()));
         final ResponseHeaders responseHeaders = responseHeadersBuilder.build();
         final HttpHeadersBuilder trailers = httpTrailers();
         HttpData content = content();

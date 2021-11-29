@@ -34,8 +34,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
 abstract class AbstractHttpMessageBuilder {
 
-    @Nullable
-    private MediaType contentType;
+    private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
 
     @Nullable
     private HttpData content;
@@ -45,6 +44,10 @@ abstract class AbstractHttpMessageBuilder {
 
     @Nullable
     private HttpHeadersBuilder httpTrailers;
+
+    protected final HttpHeadersBuilder httpHeaders() {
+        return httpHeaders;
+    }
 
     @Nullable
     protected final HttpData content() {
@@ -57,13 +60,21 @@ abstract class AbstractHttpMessageBuilder {
     }
 
     @Nullable
-    protected final MediaType contentType() {
-        return contentType;
-    }
-
-    @Nullable
     protected final HttpHeadersBuilder httpTrailers() {
         return httpTrailers;
+    }
+
+    public AbstractHttpMessageBuilder header(CharSequence name, Object value) {
+        httpHeaders.addObject(requireNonNull(name, "name"),
+                              requireNonNull(value, "value"));
+        return this;
+    }
+
+    public AbstractHttpMessageBuilder headers(
+            Iterable<? extends Entry<? extends CharSequence, String>> headers) {
+        requireNonNull(headers, "headers");
+        httpHeaders.add(headers);
+        return this;
     }
 
     protected AbstractHttpMessageBuilder content(String content) {
@@ -104,7 +115,7 @@ abstract class AbstractHttpMessageBuilder {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
         checkState(publisher == null, "publisher has been set already");
-        this.contentType = contentType;
+        httpHeaders.contentType(contentType);
         this.content = content;
         return this;
     }
@@ -113,14 +124,14 @@ abstract class AbstractHttpMessageBuilder {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "publisher");
         checkState(this.content == null, "content has been set already");
-        this.contentType = contentType;
+        httpHeaders.contentType(contentType);
         publisher = content;
         return this;
     }
 
     protected AbstractHttpMessageBuilder contentJson(Object content) {
         requireNonNull(content, "content");
-        contentType = MediaType.JSON;
+        httpHeaders.contentType(MediaType.JSON);
         try {
             this.content = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
         } catch (JsonProcessingException e) {
