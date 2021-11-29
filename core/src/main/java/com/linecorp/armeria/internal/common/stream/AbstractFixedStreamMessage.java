@@ -54,7 +54,13 @@ abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    abstract List<T> drainAll(boolean withPooledObjects);
+    final List<T> drainAll(boolean withPooledObjects) {
+        final List<T> all = drainAll0(withPooledObjects);
+        fulfilled = size();
+        return all;
+    }
+
+    abstract List<T> drainAll0(boolean withPooledObjects);
 
     @Override
     public final void request(long n) {

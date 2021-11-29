@@ -60,7 +60,7 @@ public class RegularFixedStreamMessage<T> extends AbstractFixedStreamMessage<T> 
     }
 
     @Override
-    final List<T> drainAll(boolean withPooledObjects) {
+    final List<T> drainAll0(boolean withPooledObjects) {
         final int length = objs.length;
         final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(length);
         for (T obj : objs) {

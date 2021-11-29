@@ -87,7 +87,7 @@ public class AggregatingStreamMessage<T> extends AbstractFixedStreamMessage<T> i
     }
 
     @Override
-    List<T> drainAll(boolean withPooledObjects) {
+    List<T> drainAll0(boolean withPooledObjects) {
         ensureClosed();
         if (withPooledObjects) {
             for (T obj : objs) {
