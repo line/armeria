@@ -108,8 +108,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
     private static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
 
-    private static final int UPGRADE_REQUEST_MAX_LENGTH = 16384;
-
     private static final byte[] PROXY_V1_MAGIC_BYTES = {
             (byte) 'P', (byte) 'R', (byte) 'O', (byte) 'X', (byte) 'Y'
     };

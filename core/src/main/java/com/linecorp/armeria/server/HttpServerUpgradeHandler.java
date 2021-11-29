@@ -220,6 +220,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
             // Hence, 'sourceCodec' could be lazily removed with the 'LastHttpContent'.
             // https://datatracker.ietf.org/doc/html/rfc7540#section-3.2
             sourceCodec.upgradeFrom(ctx);
+            ctx.fireChannelReadComplete();
             ctx.pipeline().remove(this);
         }
     }
