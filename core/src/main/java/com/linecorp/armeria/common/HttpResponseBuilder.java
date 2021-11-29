@@ -36,6 +36,8 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
 
     private final HttpHeadersBuilder httpTrailers = HttpHeaders.builder();
 
+    HttpResponseBuilder() {}
+
     /**
      * Sets the status for this response.
      */

@@ -402,7 +402,6 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
-        final HttpData content = content();
         final Publisher<? extends HttpData> publisher = publisher();
         if (publisher != null) {
             if (httpTrailers == null) {
@@ -412,6 +411,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
                                       StreamMessage.concat(publisher, StreamMessage.of(httpTrailers.build())));
             }
         }
+        final HttpData content = content();
         if (content == null || content.isEmpty()) {
             if (content != null) {
                 content.close();
@@ -438,7 +438,9 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
         }
         final HttpData content = content();
         if (content == null || content.isEmpty()) {
-            requestHeadersBuilder.remove(CONTENT_LENGTH);
+            if (publisher() == null) {
+                requestHeadersBuilder.remove(CONTENT_LENGTH);
+            }
         } else {
             requestHeadersBuilder.contentLength(content.length());
         }

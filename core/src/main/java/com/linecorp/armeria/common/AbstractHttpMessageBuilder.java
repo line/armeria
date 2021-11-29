@@ -62,12 +62,14 @@ abstract class AbstractHttpMessageBuilder {
     }
 
     protected AbstractHttpMessageBuilder content(MediaType contentType, CharSequence content) {
+        requireNonNull(contentType, "contentType");
         return content(contentType,
                        HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                    content));
     }
 
     protected AbstractHttpMessageBuilder content(MediaType contentType, String content) {
+        requireNonNull(contentType, "contentType");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                                 content));
     }
@@ -80,6 +82,7 @@ abstract class AbstractHttpMessageBuilder {
     @FormatMethod
     protected AbstractHttpMessageBuilder content(MediaType contentType, @FormatString String format,
                                                  Object... content) {
+        requireNonNull(contentType, "contentType");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                                 format, content));
     }
@@ -91,6 +94,7 @@ abstract class AbstractHttpMessageBuilder {
     protected AbstractHttpMessageBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
+        checkState(publisher == null, "publisher has been set already");
         this.contentType = contentType;
         this.content = content;
         return this;
