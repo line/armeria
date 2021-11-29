@@ -269,4 +269,9 @@ final class UpdatableServerConfig implements ServerConfig {
     public Http1HeaderNaming http1HeaderNaming() {
         return delegate.http1HeaderNaming();
     }
+
+    @Override
+    public String toString() {
+        return delegate.toString();
+    }
 }

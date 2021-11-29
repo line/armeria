@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -142,6 +142,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Override
     public void setResponse(HttpResponse response) {
+        // TODO(ikhoon): Dedup
         if (isResponseAborted) {
             // This means that we already tried to close the request, so abort the response immediately.
             if (!response.isComplete()) {

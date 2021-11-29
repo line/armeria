@@ -246,8 +246,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         if (msg instanceof Http2Settings) {
             handleHttp2Settings(ctx, (Http2Settings) msg);
-        } else if (msg instanceof RoutingContext) {
-            // handle
         } else {
             handleRequest(ctx, (DecodedHttpRequest) msg);
         }

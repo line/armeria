@@ -61,10 +61,10 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
     }
 
     /**
-     * Determines an {@link ExchangeType} for this {@link HttpService} from the given {@link  RequestHeaders}
-     * and {@link Route}. By default, bidirectional streaming is set.
+     * Determines an {@link ExchangeType} for this {@link HttpService} from the given {@link RequestHeaders}
+     * and {@link Route}. By default, {@link ExchangeType#BIDI_STREAMING} is set.
      *
-     * <p>Note that a {@link HttpRequest} will be aggregated before serving the {@link HttpService} if
+     * <p>Note that an {@link HttpRequest} will be aggregated before serving the {@link HttpService} if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
      */
     default ExchangeType exchangeType(RequestHeaders headers, Route route) {

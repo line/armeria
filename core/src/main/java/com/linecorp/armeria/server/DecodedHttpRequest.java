@@ -38,9 +38,9 @@ interface DecodedHttpRequest extends HttpRequest {
             final ServiceConfig config = routed.value();
             final HttpService service = config.service();
             if (service.exchangeType(headers, routed.route()).isRequestStreaming()) {
-                return new DefaultDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                     inboundTrafficController,
-                                                     config.maxRequestLength(), routingCtx, routed);
+                return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
+                                                       inboundTrafficController,
+                                                       config.maxRequestLength(), routingCtx, routed);
             } else {
                 return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
                                                          config.maxRequestLength(), routingCtx, routed);
@@ -62,7 +62,7 @@ interface DecodedHttpRequest extends HttpRequest {
     RoutingContext routingContext();
 
     /**
-     * Returns the {@link ServerConfig} mapped by {@link Routed}. {@code null} if a request path is invalid
+     * Returns the {@link ServiceConfig} mapped by {@link Routed}. {@code null} if a request path is invalid
      * or an {@code OPTION * HTTP/1.1} request.
      */
     @Nullable

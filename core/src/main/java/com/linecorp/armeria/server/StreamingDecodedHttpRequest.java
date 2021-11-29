@@ -29,7 +29,7 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
 
-final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequestWriter {
+final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequestWriter {
 
     private final EventLoop eventLoop;
     private final int id;
@@ -47,10 +47,10 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     private HttpResponse response;
     private boolean isResponseAborted;
 
-    DefaultDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
-                              boolean keepAlive, InboundTrafficController inboundTrafficController,
-                              long maxRequestLength, RoutingContext routingCtx,
-                              Routed<ServiceConfig> routed) {
+    StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
+                                boolean keepAlive, InboundTrafficController inboundTrafficController,
+                                long maxRequestLength, RoutingContext routingCtx,
+                                Routed<ServiceConfig> routed) {
         super(headers);
 
         this.eventLoop = eventLoop;
