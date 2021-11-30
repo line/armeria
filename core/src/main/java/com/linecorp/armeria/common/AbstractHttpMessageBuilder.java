@@ -45,73 +45,73 @@ abstract class AbstractHttpMessageBuilder {
     @Nullable
     private HttpHeadersBuilder httpTrailers;
 
-    protected final HttpHeadersBuilder httpHeaders() {
+    final HttpHeadersBuilder httpHeaders() {
         return httpHeaders;
     }
 
     @Nullable
-    protected final HttpData content() {
+    final HttpData content() {
         return content;
     }
 
     @Nullable
-    protected final Publisher<? extends HttpData> publisher() {
+    final Publisher<? extends HttpData> publisher() {
         return publisher;
     }
 
     @Nullable
-    protected final HttpHeadersBuilder httpTrailers() {
+    final HttpHeadersBuilder httpTrailers() {
         return httpTrailers;
     }
 
-    public AbstractHttpMessageBuilder header(CharSequence name, Object value) {
+    AbstractHttpMessageBuilder header(CharSequence name, Object value) {
         httpHeaders.addObject(requireNonNull(name, "name"),
                               requireNonNull(value, "value"));
         return this;
     }
 
-    public AbstractHttpMessageBuilder headers(
+    AbstractHttpMessageBuilder headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         requireNonNull(headers, "headers");
         httpHeaders.add(headers);
         return this;
     }
 
-    protected AbstractHttpMessageBuilder content(String content) {
+    AbstractHttpMessageBuilder content(String content) {
         return content(MediaType.PLAIN_TEXT_UTF_8, content);
     }
 
-    protected AbstractHttpMessageBuilder content(MediaType contentType, CharSequence content) {
+    AbstractHttpMessageBuilder content(MediaType contentType, CharSequence content) {
         requireNonNull(contentType, "contentType");
         return content(contentType,
                        HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                    content));
     }
 
-    protected AbstractHttpMessageBuilder content(MediaType contentType, String content) {
+    AbstractHttpMessageBuilder content(MediaType contentType, String content) {
         requireNonNull(contentType, "contentType");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                                 content));
     }
 
     @FormatMethod
-    protected AbstractHttpMessageBuilder content(@FormatString String format, Object... content) {
+    AbstractHttpMessageBuilder content(@FormatString String format, Object... content) {
         return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
     }
 
     @FormatMethod
-    protected AbstractHttpMessageBuilder content(MediaType contentType, @FormatString String format,
-                                                 Object... content) {
+    AbstractHttpMessageBuilder content(MediaType contentType, @FormatString String format,
+                                       Object... content) {
         requireNonNull(contentType, "contentType");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                                 format, content));
     }
 
-    protected AbstractHttpMessageBuilder content(MediaType contentType, byte[] content) {
+    AbstractHttpMessageBuilder content(MediaType contentType, byte[] content) {
         return content(contentType, HttpData.wrap(content));
     }
 
-    protected AbstractHttpMessageBuilder content(MediaType contentType, HttpData content) {
+    AbstractHttpMessageBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
         checkState(publisher == null, "publisher has been set already");
@@ -120,7 +120,7 @@ abstract class AbstractHttpMessageBuilder {
         return this;
     }
 
-    protected AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
+    AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "publisher");
         checkState(this.content == null, "content has been set already");
@@ -129,7 +129,7 @@ abstract class AbstractHttpMessageBuilder {
         return this;
     }
 
-    protected AbstractHttpMessageBuilder contentJson(Object content) {
+    AbstractHttpMessageBuilder contentJson(Object content) {
         requireNonNull(content, "content");
         httpHeaders.contentType(MediaType.JSON);
         try {
@@ -140,7 +140,7 @@ abstract class AbstractHttpMessageBuilder {
         return this;
     }
 
-    protected AbstractHttpMessageBuilder trailers(
+    AbstractHttpMessageBuilder trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
         requireNonNull(trailers, "trailers");
         if (httpTrailers == null) {
