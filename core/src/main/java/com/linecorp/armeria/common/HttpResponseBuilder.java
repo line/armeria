@@ -251,7 +251,6 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * Builds the response.
      */
     public HttpResponse build() {
-        httpHeaders().build().forEach(entry -> responseHeadersBuilder.set(entry.getKey(), entry.getValue()));
         final ResponseHeaders responseHeaders = responseHeadersBuilder.build();
         final HttpHeadersBuilder trailers = httpTrailers();
         HttpData content = content();
@@ -273,5 +272,10 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
                                        StreamMessage.concat(publisher, StreamMessage.of(trailers.build())));
             }
         }
+    }
+
+    @Override
+    HttpHeadersBuilder headersBuilder() {
+        return responseHeadersBuilder;
     }
 }

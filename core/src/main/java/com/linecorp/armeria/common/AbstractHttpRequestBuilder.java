@@ -421,9 +421,13 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
         return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers.build());
     }
 
+    @Override
+    HttpHeadersBuilder headersBuilder() {
+        return requestHeadersBuilder;
+    }
+
     private RequestHeaders requestHeaders() {
         requestHeadersBuilder.path(buildPath());
-        httpHeaders().build().forEach(entry -> requestHeadersBuilder.set(entry.getKey(), entry.getValue()));
         if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
