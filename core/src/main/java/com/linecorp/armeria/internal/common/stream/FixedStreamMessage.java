@@ -94,6 +94,11 @@ public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscri
     }
 
     @Override
+    public boolean isComplete() {
+        return completed || completionFuture.isDone();
+    }
+
+    @Override
     public CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }
@@ -179,6 +184,7 @@ public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscri
 
     private void collect(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
                          SubscriptionOption[] options, boolean directExecution) {
+        completed = true;
         final boolean withPooledObjects = containsWithPooledObjects(options);
         collectingFuture.complete(drainAll(withPooledObjects));
         if (directExecution) {

@@ -215,7 +215,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         goAwayHandler.onStreamClosed(channel, stream);
 
         final DecodedHttpRequest req = requests.remove(stream.id());
-        if (req != null) {
+        if (req != null && !req.isComplete()) {
             // Ignored if the stream has already been closed.
             req.close(ClosedStreamException.get());
         }
