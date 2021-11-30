@@ -146,7 +146,7 @@ abstract class AbstractHttpMessageBuilder {
         if (httpTrailers == null) {
             httpTrailers = HttpHeaders.builder();
         }
-        httpTrailers.set(trailers);
+        httpTrailers.add(trailers);
         return this;
     }
 }
