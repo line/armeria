@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 /**
  * An {@link HttpRequest} which splits a stream of {@link HttpObject}s into HTTP headers and payloads.
- * {@link #headers()} returns a {@link RequestHeaders}.
  */
 public interface SplitHttpRequest extends SplitHttpMessage {
 

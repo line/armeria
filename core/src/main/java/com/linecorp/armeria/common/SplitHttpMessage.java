@@ -23,8 +23,8 @@ import com.google.errorprone.annotations.CheckReturnValue;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
- * An {@link HttpMessage} which splits a stream of {@link HttpObject}s into HTTP headers and payloads.
- * {@link #trailers()} might not complete until the entire response body is consumed completely.
+ * An {@link HttpMessage} which splits a stream of {@link HttpObject}s into payloads and HTTP trailers.
+ * {@link #trailers()} might not complete until the entire payload is consumed completely.
  */
 public interface SplitHttpMessage {
 

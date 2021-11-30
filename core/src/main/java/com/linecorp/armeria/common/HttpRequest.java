@@ -520,7 +520,7 @@ public interface HttpRequest extends Request, HttpMessage {
     /**
      * Returns a new {@link SplitHttpRequest} which splits a stream of {@link HttpObject}s into
      * {@link HttpData}s and an HTTP trailers.
-     * {@link SplitHttpRequest#trailers()} might not complete until the entire response body is consumed
+     * {@link SplitHttpRequest#trailers()} might not complete until the entire request body is consumed
      * completely.
      */
     @CheckReturnValue
@@ -530,9 +530,8 @@ public interface HttpRequest extends Request, HttpMessage {
 
     /**
      * Returns a new {@link SplitHttpRequest} which splits a stream of {@link HttpObject}s into
-     * {@link HttpHeaders} and {@link HttpData}.
-     * {@link SplitHttpRequest#headers()} returns a {@link RequestHeaders}.
-     * {@link SplitHttpRequest#trailers()} might not complete until the entire response body is consumed
+     * {@link HttpData}s and an HTTP trailers.
+     * {@link SplitHttpRequest#trailers()} might not complete until the entire request body is consumed
      * completely.
      */
     @CheckReturnValue
