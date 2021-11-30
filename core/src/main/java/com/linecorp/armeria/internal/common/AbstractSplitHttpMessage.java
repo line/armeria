@@ -171,8 +171,8 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
         protected volatile boolean cancelCalled;
 
-        protected BodySubscriber(long pendingRequests) {
-            this.pendingRequests = pendingRequests;
+        protected BodySubscriber(int prefetch) {
+            pendingRequests = prefetch;
         }
 
         protected void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
