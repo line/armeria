@@ -102,7 +102,6 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 
@@ -117,7 +116,6 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 
@@ -131,7 +129,6 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 
@@ -146,7 +143,6 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 
@@ -161,7 +157,6 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 
@@ -179,7 +174,6 @@ class HttpResponseBuilderTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 
@@ -193,7 +187,6 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
         // language=JSON
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("{\"id\":15,\"name\":\"Armeria\"}");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.JSON);
     }
 
@@ -258,7 +251,6 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.headers().get("header-1")).isEqualTo("test-value1");
         assertThat(aggregatedRes.headers().get("header-2")).isEqualTo("test-value2");
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
-        assertThat(aggregatedRes.contentType()).isNotNull();
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(aggregatedRes.trailers().contains("trailer-name")).isTrue();
         assertThat(aggregatedRes.trailers().get("trailer-name")).isEqualTo("trailer-value");
