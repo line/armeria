@@ -66,7 +66,7 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
     private final class SplitHttpResponseBodySubscriber extends BodySubscriber {
 
         private SplitHttpResponseBodySubscriber() {
-            super(1);
+            super(1, null);
         }
 
         @Override

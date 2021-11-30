@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiConsumer;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpMessage;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
@@ -152,6 +154,9 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         // 1 is used for prefetching headers
         private long pendingRequests;
 
+        @Nullable
+        private final BiConsumer<ResponseHeaders, Subscription> onResponseHeaders;
+
         private boolean completing;
 
         protected volatile boolean notifyCancellation;
@@ -171,8 +176,10 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
         protected volatile boolean cancelCalled;
 
-        protected BodySubscriber(int prefetch) {
+        protected BodySubscriber(int prefetch,
+                                 @Nullable BiConsumer<ResponseHeaders, Subscription> onResponseHeaders) {
             pendingRequests = prefetch;
+            this.onResponseHeaders = onResponseHeaders;
         }
 
         protected void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
