@@ -212,6 +212,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
             upstream = subscription;
             if (cancelCalled) {
                 subscription.cancel();
+                return;
             }
             if (pendingRequests > 0) {
                 subscription.request(pendingRequests);
