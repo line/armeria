@@ -307,7 +307,8 @@ public class ArmeriaSettings {
          *     </tr>
          *     <tr>
          *       <td>{@code actuator}</td>
-         *       <td>To bind WebOperationService.</td>
+         *       <td>To bind {@code WebOperationService}. Note that this option is only valid when
+         *           {@code "armeria-spring-boot2-actuator-autoconfigure"} is activated.</td>
          *     </tr>
          *   </tbody>
          * </table>

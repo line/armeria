@@ -25,7 +25,9 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -200,7 +202,11 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             } else {
                 cors = null;
             }
-
+            final List<Integer> exposedPorts = Stream.of(Optional.ofNullable(managementPort),
+                                                         Optional.ofNullable(internalServicePort))
+                                                     .filter(Optional::isPresent)
+                                                     .map(Optional::get)
+                                                     .collect(toImmutableList());
             endpoints.stream()
                      .flatMap(endpoint -> endpoint.getOperations().stream())
                      .forEach(operation -> {
@@ -210,17 +216,13 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                    path,
                                                    predicate.getConsumes(),
                                                    predicate.getProduces());
-                         if (managementPort != null) {
-                             // Bind a WebOperationService to "management.server.port"
-                             sb.virtualHost(managementPort)
-                               .service(route, new WebOperationService(operation, statusMapper));
-                         }
-                         if (internalServicePort != null) {
-                             sb.virtualHost(internalServicePort)
-                               .service(route, new WebOperationService(operation, statusMapper));
-                         }
-                         if (managementPort == null && internalServicePort == null) {
-                             sb.service(route, new WebOperationService(operation, statusMapper));
+                         final WebOperationService webOperationService =
+                                 new WebOperationService(operation, statusMapper);
+                         if (exposedPorts.isEmpty()) {
+                             sb.service(route, webOperationService);
+                         } else {
+                             exposedPorts.forEach(port -> sb.virtualHost(port)
+                                                            .service(route, webOperationService));
                          }
                          if (cors != null) {
                              cors.route(path);
@@ -239,18 +241,12 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.ofJson(ACTUATOR_MEDIA_TYPE, ImmutableMap.of("_links", links));
                 };
-                if (managementPort != null) {
-                    sb.virtualHost(managementPort)
-                      .route().addRoute(route).defaultServiceName("LinksService").build(linksService);
-                }
-                if (internalServicePort != null) {
-                    sb.virtualHost(internalServicePort)
-                      .route().addRoute(route).defaultServiceName("LinksService").build(linksService);
-                }
-                if (managementPort == null && internalServicePort == null) {
+                if (exposedPorts.isEmpty()) {
                     sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
+                } else {
+                    exposedPorts.forEach(port -> sb.virtualHost(port).route().addRoute(route)
+                                                   .defaultServiceName("LinksService").build(linksService));
                 }
-
                 if (cors != null) {
                     cors.route(endpointMapping.getPath());
                 }

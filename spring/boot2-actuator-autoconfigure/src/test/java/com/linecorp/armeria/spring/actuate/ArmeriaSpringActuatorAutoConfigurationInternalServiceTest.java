@@ -97,7 +97,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
                       internalServiceStatus = 404;
                   }
                   assertActuatorStatus(port, actuatorStatus);
-                  assertInternalServiceStatus(port, internalServiceStatus, settings);
+                  assertInternalServiceStatus(port, internalServiceStatus, settings, false);
               });
     }
 
@@ -146,26 +146,73 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
                           internalServiceStatus = 404;
                       }
                       assertActuatorStatus(port, actuatorStatus);
-                      assertInternalServiceStatus(port, internalServiceStatus, settings);
+                      assertInternalServiceStatus(port, internalServiceStatus, settings, false);
+                  });
+        }
+    }
+
+    @Nested
+    @SpringBootTest(classes = AllInternalServicesTest.TestConfiguration.class)
+    @ActiveProfiles({ "local", "allInternalServices" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class AllInternalServicesTest {
+        @SpringBootApplication
+        static class TestConfiguration {}
+
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        InternalServices internalServices;
+
+        @Test
+        void exposeAllInternalServicesToInternalServicePort() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.ALL);
+            assertThat(internalServices.managementServerPort()).isNull();
+
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int actuatorStatus;
+                      final int internalServiceStatus;
+                      if (internalServicePort.getPort() == port) {
+                          actuatorStatus = 200;
+                          internalServiceStatus = 200;
+                      } else {
+                          actuatorStatus = 404;
+                          internalServiceStatus = 404;
+                      }
+                      assertActuatorStatus(port, actuatorStatus);
+                      assertInternalServiceStatus(port, internalServiceStatus, settings, true);
                   });
         }
     }
 
     private static void assertActuatorStatus(int port, int actuatorStatus) {
-        //assertStatus(port, "/actuator", actuatorStatus);
+        assertStatus(port, "/actuator", actuatorStatus);
         assertStatus(port, "/actuator/health", actuatorStatus);
         assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, actuatorStatus);
         assertStatus(port, "/actuator/prometheus", actuatorStatus);
     }
 
     private static void assertInternalServiceStatus(int port, int internalServiceStatus,
-                                                    ArmeriaSettings settings) {
+                                                    ArmeriaSettings settings,
+                                                    boolean docsServiceIncludedToInternalService) {
         assertStatus(port, settings.getHealthCheckPath(), internalServiceStatus);
         assertStatus(port, settings.getMetricsPath(), internalServiceStatus);
 
         // DocService was not included to internal services.
         // Therefore, all ports could access DocService.
-        assertStatus(port, settings.getDocsPath(), 200);
+        assertStatus(port, settings.getDocsPath(), docsServiceIncludedToInternalService ?
+                                                   internalServiceStatus : 200);
     }
 
     private static void assertStatus(int port, String url, int statusCode) {

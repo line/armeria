@@ -55,6 +55,6 @@ public enum InternalServiceId {
      * Returns the default service IDs that need to secure from the external network.
      */
     public static List<InternalServiceId> defaultServiceIds() {
-        return ImmutableList.of(DOCS, HEALTH, METRICS, ACTUATOR);
+        return ImmutableList.of(DOCS, HEALTH, METRICS);
     }
 }
