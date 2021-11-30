@@ -131,7 +131,7 @@ abstract class AbstractHttpMessageBuilder {
         try {
             this.content = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(e.toString(), e);
+            throw new IllegalArgumentException("failed to serialize " + content, e);
         }
         return this;
     }
