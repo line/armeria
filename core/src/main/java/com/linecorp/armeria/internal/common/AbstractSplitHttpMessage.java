@@ -328,7 +328,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         }
     }
 
-    protected static final class HeadersFuture<T> extends UnmodifiableFuture<T> {
+    static final class HeadersFuture<T> extends UnmodifiableFuture<T> {
 
         @Override
         protected void doComplete(@Nullable T value) {
