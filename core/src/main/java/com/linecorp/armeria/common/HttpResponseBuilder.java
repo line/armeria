@@ -218,8 +218,6 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      */
     @Override
     public HttpResponseBuilder header(CharSequence name, Object value) {
-        responseHeadersBuilder.addObject(requireNonNull(name, "name"),
-                                         requireNonNull(value, "value"));
         return (HttpResponseBuilder) super.header(name, value);
     }
 
