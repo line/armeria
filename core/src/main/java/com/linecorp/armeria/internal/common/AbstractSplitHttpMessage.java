@@ -57,7 +57,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
                                                                            HeadersFuture.class,
                                                                            "trailersFuture");
 
-    private final HttpMessage message;
+    private final HttpMessage upstream;
     protected final EventExecutor upstreamExecutor;
 
     @Nullable
@@ -65,8 +65,8 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
     private volatile boolean wroteAny;
 
-    protected AbstractSplitHttpMessage(HttpMessage message, EventExecutor executor) {
-        this.message = requireNonNull(message, "message");
+    protected AbstractSplitHttpMessage(HttpMessage upstream, EventExecutor executor) {
+        this.upstream = requireNonNull(upstream, "upstream");
         upstreamExecutor = requireNonNull(executor, "executor");
     }
 
@@ -92,7 +92,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
     @Override
     public final boolean isOpen() {
-        return message.isOpen();
+        return upstream.isOpen();
     }
 
     @Override
@@ -102,22 +102,22 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
     @Override
     public final long demand() {
-        return message.demand();
+        return upstream.demand();
     }
 
     @Override
     public final CompletableFuture<Void> whenComplete() {
-        return message.whenComplete();
+        return upstream.whenComplete();
     }
 
     @Override
     public final void abort() {
-        message.abort();
+        upstream.abort();
     }
 
     @Override
     public final void abort(Throwable cause) {
-        message.abort(cause);
+        upstream.abort(cause);
     }
 
     @Override
@@ -209,7 +209,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         @Override
         public void request(long n) {
             if (n <= 0) {
-                message.abort(new IllegalArgumentException(
+                AbstractSplitHttpMessage.this.upstream.abort(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
                 return;
             }
