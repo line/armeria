@@ -27,6 +27,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMessage;
@@ -147,6 +149,9 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
     protected abstract class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
+        // 1 is used for prefetching headers
+        private long pendingRequests;
+
         private boolean completing;
 
         protected volatile boolean notifyCancellation;
@@ -165,6 +170,10 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         private volatile Throwable cause;
 
         protected volatile boolean cancelCalled;
+
+        protected BodySubscriber(long pendingRequests) {
+            this.pendingRequests = pendingRequests;
+        }
 
         protected void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
                                       SubscriptionOption... options) {
@@ -204,6 +213,9 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
             if (cancelCalled) {
                 subscription.cancel();
             }
+            if (pendingRequests > 0) {
+                subscription.request(pendingRequests);
+            }
         }
 
         @Override
@@ -220,7 +232,14 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
             }
         }
 
-        protected abstract void request0(long n);
+        private void request0(long n) {
+            final Subscription upstream = this.upstream;
+            if (upstream == null) {
+                pendingRequests = LongMath.saturatedAdd(n, pendingRequests);
+            } else {
+                upstream.request(n);
+            }
+        }
 
         @Override
         public final void cancel() {

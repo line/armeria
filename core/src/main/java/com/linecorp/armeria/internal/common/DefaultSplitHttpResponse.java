@@ -19,9 +19,6 @@ package com.linecorp.armeria.internal.common;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-
-import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -68,23 +65,8 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
 
     private final class SplitHttpResponseBodySubscriber extends BodySubscriber {
 
-        // 1 is used for prefetching headers
-        private long pendingRequests = 1;
-
-        @Override
-        public void onSubscribe(Subscription subscription) {
-            super.onSubscribe(subscription);
-            subscription.request(pendingRequests);
-        }
-
-        @Override
-        protected void request0(long n) {
-            final Subscription upstream = this.upstream;
-            if (upstream == null) {
-                pendingRequests = LongMath.saturatedAdd(n, pendingRequests);
-            } else {
-                upstream.request(n);
-            }
+        private SplitHttpResponseBodySubscriber() {
+            super(1);
         }
 
         @Override

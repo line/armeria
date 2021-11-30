@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.common;
 
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -54,10 +53,8 @@ public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements
 
     private final class SplitHttpRequestBodySubscriber extends BodySubscriber {
 
-        @Override
-        protected void request0(long n) {
-            final Subscription upstream = this.upstream;
-            upstream.request(n);
+        private SplitHttpRequestBodySubscriber() {
+            super(0);
         }
 
         @Override
