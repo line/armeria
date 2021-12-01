@@ -593,8 +593,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Peeks values emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
      *
      * <p>For example:<pre>{@code
-     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
-     * StreamMessage<Integer> ifEvenExistsThenThrow = source.peek(x -> {
+     * StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2);
+     * StreamMessage<Number> ifEvenExistsThenThrow = source.peek(x -> {
      *      if (x % 2 == 0) {
      *          throw new IllegalArgumentException();
      *      }
@@ -606,6 +606,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(type, "type");
         final Function<T, T> function = obj -> {
             if (type.isInstance(obj)) {
+                //noinspection unchecked
                 action.accept((U) obj);
             }
             return obj;

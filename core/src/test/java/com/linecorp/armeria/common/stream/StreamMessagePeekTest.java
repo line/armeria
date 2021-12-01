@@ -41,15 +41,15 @@ class StreamMessagePeekTest {
 
     @Test
     void peekWithType() {
-        final StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+        final StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2);
         final Consumer<Integer> ifEvenExistsThenThrow = x -> {
             if (x % 2 == 0) {
                 throw new IllegalArgumentException();
             }
         };
-        final StreamMessage<Integer> peeked = source.peek(ifEvenExistsThenThrow, Integer.class);
+        final StreamMessage<Number> peeked = source.peek(ifEvenExistsThenThrow, Integer.class);
         StepVerifier.create(peeked)
-                    .expectNext(1)
+                    .expectNext(0.1, 1, 0.2)
                     .expectError(IllegalArgumentException.class)
                     .verifyThenAssertThat();
     }
