@@ -173,29 +173,21 @@ class ServiceRequestContextTest {
 
     @Test
     void queryParams() {
+        final String path = "/foo";
         final QueryParams queryParams = QueryParams.of("param1", "value1",
                                                        "param1", "value2",
                                                        "Param1", "Value3",
                                                        "PARAM1", "VALUE4");
-        final ServiceRequestContext ctx = serviceRequestContextWithPathAndQuery();
-        final QueryParams res = ctx.queryParams();
+        final String pathAndQuery = path + '?' + queryParams.toQueryString();
+        final ServiceRequestContext ctx =  ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET,
+                                                                                   pathAndQuery));
 
-        assertThat(res).isEqualTo(queryParams);
-    }
-
-    @Test
-    void getQueryParam() {
-        final ServiceRequestContext ctx = serviceRequestContextWithPathAndQuery();
+        assertThat(ctx.queryParams()).isEqualTo(queryParams);
 
         assertThat(ctx.queryParam("param1")).isEqualTo("value1");
         assertThat(ctx.queryParam("Param1")).isEqualTo("Value3");
         assertThat(ctx.queryParam("PARAM1")).isEqualTo("VALUE4");
         assertThat(ctx.queryParam("Not exist")).isNull();
-    }
-
-    @Test
-    void getAllQueryParams() {
-        final ServiceRequestContext ctx = serviceRequestContextWithPathAndQuery();
 
         assertThat(ctx.queryParams("param1")).isEqualTo(ImmutableList.of("value1", "value2"));
         assertThat(ctx.queryParams("Param1")).isEqualTo(ImmutableList.of("Value3"));
@@ -210,16 +202,6 @@ class ServiceRequestContextTest {
 
     private static ServiceRequestContext serviceRequestContext() {
         return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-    }
-
-    private static ServiceRequestContext serviceRequestContextWithPathAndQuery() {
-        final String path = "/foo";
-        final QueryParams queryParams = QueryParams.of("param1", "value1",
-                                                       "param1", "value2",
-                                                       "Param1", "Value3",
-                                                       "PARAM1", "VALUE4");
-        final String pathAndQuery = path + '?' + queryParams.toQueryString();
-        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, pathAndQuery));
     }
 
     private static ClientRequestContext clientRequestContext() {
