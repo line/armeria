@@ -16,11 +16,10 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 
-import org.reactivestreams.Subscriber;
-
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
@@ -30,7 +29,6 @@ import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -44,34 +42,33 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         EMPTY_TRAILERS.doComplete(HttpHeaders.of());
     }
 
-    private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
-    private final BodySubscriber bodySubscriber = new SplitHttpResponseBodySubscriber();
+    private final SplitHttpResponseBodySubscriber bodySubscriber;
 
     public DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor) {
-        super(response, executor);
-        response.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
+        this(response, executor, new SplitHttpResponseBodySubscriber(response, executor));
+    }
+
+    private DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor,
+                                     SplitHttpResponseBodySubscriber bodySubscriber) {
+        super(response, executor, bodySubscriber);
+        this.bodySubscriber = requireNonNull(bodySubscriber, "bodySubscriber");
     }
 
     @Override
     public final CompletableFuture<ResponseHeaders> headers() {
-        return headersFuture;
+        return bodySubscriber.headersFuture();
     }
 
-    @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        subscribe0(subscriber, bodySubscriber, executor, options);
-    }
+    private static final class SplitHttpResponseBodySubscriber extends BodySubscriber {
 
-    private final class SplitHttpResponseBodySubscriber extends BodySubscriber {
+        private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
 
-        private SplitHttpResponseBodySubscriber() {
-            super(1, null);
+        SplitHttpResponseBodySubscriber(HttpResponse response, EventExecutor executor) {
+            super(1, response, executor);
         }
 
-        @Override
-        protected void completeOnSubscriptionCancel() {
-            maybeCompleteHeaders(null);
+        CompletableFuture<ResponseHeaders> headersFuture() {
+            return headersFuture;
         }
 
         @Override
@@ -102,7 +99,8 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
             super.onError(cause);
         }
 
-        private void maybeCompleteHeaders(@Nullable Throwable cause) {
+        @Override
+        protected void maybeCompleteHeaders(@Nullable Throwable cause) {
             if (!headersFuture.isDone()) {
                 if (cause != null && !(cause instanceof CancelledSubscriptionException) &&
                     !(cause instanceof AbortedStreamException)) {
@@ -111,10 +109,7 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
                     headersFuture.doComplete(HEADERS_WITH_UNKNOWN_STATUS);
                 }
             }
-
-            if (trailersFuture == null) {
-                trailersFutureUpdater.compareAndSet(DefaultSplitHttpResponse.this, null, EMPTY_TRAILERS);
-            }
+            super.maybeCompleteHeaders(cause);
         }
     }
 }

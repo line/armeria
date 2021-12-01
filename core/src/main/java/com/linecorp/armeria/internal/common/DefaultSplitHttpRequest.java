@@ -16,14 +16,10 @@
 
 package com.linecorp.armeria.internal.common;
 
-import org.reactivestreams.Subscriber;
-
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SplitHttpRequest;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -31,35 +27,22 @@ public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements
 
     private static final HttpHeaders EMPTY_TRAILERS = HttpHeaders.of();
 
-    private final BodySubscriber bodySubscriber = new SplitHttpRequestBodySubscriber();
-    private final HttpRequest request;
+    private final RequestHeaders headers;
 
     public DefaultSplitHttpRequest(HttpRequest request, EventExecutor executor) {
-        super(request, executor);
-        this.request = request;
-        request.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
+        super(request, executor, new SplitHttpRequestBodySubscriber(request, executor));
+        headers = request.headers();
     }
 
     @Override
     public RequestHeaders headers() {
-        return request.headers();
+        return headers;
     }
 
-    @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        subscribe0(subscriber, bodySubscriber, executor, options);
-    }
+    private static final class SplitHttpRequestBodySubscriber extends BodySubscriber {
 
-    private final class SplitHttpRequestBodySubscriber extends BodySubscriber {
-
-        private SplitHttpRequestBodySubscriber() {
-            super(0, null);
-        }
-
-        @Override
-        protected void completeOnSubscriptionCancel() {
-            completeTrailers(EMPTY_TRAILERS);
+        private SplitHttpRequestBodySubscriber(HttpRequest request, EventExecutor executor) {
+            super(0, request, executor);
         }
 
         @Override
