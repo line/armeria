@@ -17,8 +17,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -36,7 +34,6 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
                                                                            HeadersFuture.class,
                                                                            "trailersFuture");
 
-    private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
     private static final HttpHeaders EMPTY_TRAILERS;
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS_FUTURE;
 
