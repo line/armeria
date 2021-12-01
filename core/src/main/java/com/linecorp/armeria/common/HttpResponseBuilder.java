@@ -245,6 +245,11 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
         return (HttpResponseBuilder) super.trailers(trailers);
     }
 
+    @Override
+    HttpHeadersBuilder headersBuilder() {
+        return responseHeadersBuilder;
+    }
+
     /**
      * Builds the response.
      */
@@ -270,10 +275,5 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
                                        StreamMessage.concat(publisher, StreamMessage.of(trailers.build())));
             }
         }
-    }
-
-    @Override
-    HttpHeadersBuilder headersBuilder() {
-        return responseHeadersBuilder;
     }
 }

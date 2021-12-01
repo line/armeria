@@ -422,7 +422,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
     }
 
     @Override
-    HttpHeadersBuilder headersBuilder() {
+    final HttpHeadersBuilder headersBuilder() {
         return requestHeadersBuilder;
     }
 

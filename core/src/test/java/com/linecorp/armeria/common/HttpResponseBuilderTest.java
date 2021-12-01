@@ -23,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 class HttpResponseBuilderTest {
@@ -240,6 +242,9 @@ class HttpResponseBuilderTest {
                                                                      "test-value1",
                                                                      "header-2",
                                                                      "test-value2"))
+                                             .header(HttpHeaderNames.ACCEPT_ENCODING, "gzip")
+                                             .header(HttpHeaderNames.ACCEPT_ENCODING, "deflate")
+                                             .header(HttpHeaderNames.ACCEPT_ENCODING, "gzip")
                                              .content("Armeriaはいろんな使い方がアルメリア")
                                              .trailers(HttpHeaders.of("trailer-name",
                                                                       "trailer-value"))
@@ -250,6 +255,8 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.headers().contains("header-2")).isTrue();
         assertThat(aggregatedRes.headers().get("header-1")).isEqualTo("test-value1");
         assertThat(aggregatedRes.headers().get("header-2")).isEqualTo("test-value2");
+        assertThat(aggregatedRes.headers().getAll(HttpHeaderNames.ACCEPT_ENCODING))
+                .isEqualTo(ImmutableList.of("gzip", "deflate", "gzip"));
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(aggregatedRes.trailers().contains("trailer-name")).isTrue();
