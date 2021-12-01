@@ -99,8 +99,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
     private final String advertisedEncodingsHeader;
-
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
+    @Nullable
+    private final GrpcHealthCheckService grpcHealthCheckService;
 
     private int maxInboundMessageSizeBytes;
     private boolean lookupMethodFromAttribute;
@@ -118,7 +119,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
                       int maxInboundMessageSizeBytes,
-                      boolean lookupMethodFromAttribute) {
+                      boolean lookupMethodFromAttribute,
+                      @Nullable GrpcHealthCheckService grpcHealthCheckService) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
@@ -158,6 +160,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return new SimpleImmutableEntry<>(format, builder.build());
                 })
                 .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+        this.grpcHealthCheckService = grpcHealthCheckService;
     }
 
     @Override
@@ -301,6 +304,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                                Function.identity(),
                                                (a, b) -> a));
             protoReflectionServiceInterceptor.setServer(newDummyServer(grpcServices));
+        }
+
+        if (grpcHealthCheckService != null) {
+            grpcHealthCheckService.serviceAdded(cfg);
         }
     }
 

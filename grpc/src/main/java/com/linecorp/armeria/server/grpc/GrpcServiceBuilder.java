@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -147,6 +148,9 @@ public final class GrpcServiceBuilder {
     private boolean unsafeWrapRequestBuffers;
 
     private boolean useClientTimeoutHeader = true;
+
+    @Nullable
+    private GrpcHealthCheckService grpcHealthCheckService;
 
     GrpcServiceBuilder() {}
 
@@ -635,6 +639,26 @@ public final class GrpcServiceBuilder {
         return this;
     }
 
+    /**
+     * Adds a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     */
+    public GrpcServiceBuilder addGrpcHealthCheckService(GrpcHealthCheckService grpcHealthCheckService) {
+        requireNonNull(grpcHealthCheckService, "grpcHealthCheckService");
+        this.grpcHealthCheckService = grpcHealthCheckService;
+        return this;
+    }
+
+    /**
+     * Sets a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     * The gPRC health check service manages only the health checker that determines
+     * the healthiness of the {@link Server}.
+     */
+    public GrpcServiceBuilder enableGrpcHealthCheckService() {
+        grpcHealthCheckService = GrpcHealthCheckService.builder()
+                                                       .build();
+        return this;
+    }
+
     @VisibleForTesting
     static <T extends Throwable> void addExceptionMapping(
             LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings,
@@ -713,9 +737,11 @@ public final class GrpcServiceBuilder {
                     "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
                     "is enabled");
         }
+        if (grpcHealthCheckService != null) {
+            registryBuilder.addService(grpcHealthCheckService.bindService());
+        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
-
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
@@ -753,7 +779,8 @@ public final class GrpcServiceBuilder {
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes,
-                enableUnframedRequests || enableHttpJsonTranscoding);
+                enableUnframedRequests || enableHttpJsonTranscoding,
+                grpcHealthCheckService);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,

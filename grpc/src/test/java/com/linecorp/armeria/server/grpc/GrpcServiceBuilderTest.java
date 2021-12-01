@@ -20,6 +20,7 @@ import static com.linecorp.armeria.server.grpc.GrpcServiceBuilder.toGrpcStatusFu
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -242,6 +243,20 @@ class GrpcServiceBuilderTest {
             assertThat(s.services().stream().map(it -> it.getServiceDescriptor().getName()))
                     .containsExactlyInAnyOrderElementsOf(serviceNames);
         }
+    }
+
+    @Test
+    void addGrpcHealthCheckService() {
+        final GrpcService grpcService =
+                GrpcService.builder()
+                           .addGrpcHealthCheckService(new GrpcHealthCheckService(
+                                   Collections.emptySet(),
+                                   Collections.emptyMap(),
+                                   Collections.emptyList()
+                           ))
+                           .build();
+        assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
+                .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
