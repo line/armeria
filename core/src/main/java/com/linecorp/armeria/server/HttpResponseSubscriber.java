@@ -174,7 +174,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                         state = State.NEEDS_DATA_OR_TRAILERS;
                     }
                     if (endOfStream) {
-                        setDone(true);
+                        setDone(false);
                     }
                     merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
                     logBuilder().responseHeaders(merged);

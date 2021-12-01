@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -37,7 +36,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 public class AggregatingStreamMessage<T> extends AbstractFixedStreamMessage<T> implements StreamWriter<T> {
 
     private final List<T> objs;
-    private boolean closed;
+    private volatile boolean closed;
 
     public AggregatingStreamMessage(int initialCapacity) {
         objs = new ArrayList<>(initialCapacity);
@@ -49,12 +48,22 @@ public class AggregatingStreamMessage<T> extends AbstractFixedStreamMessage<T> i
     }
 
     @Override
+    public boolean isEmpty() {
+        return objs.isEmpty();
+    }
+
+    @Override
     public boolean tryWrite(T o) {
+        if (closed) {
+            StreamMessageUtil.closeOrAbort(o);
+            return false;
+        }
         return objs.add(o);
     }
 
     @Override
     public CompletableFuture<Void> whenConsumed() {
+        // Since all objects are buffered, back pressure is not supported.
         return UnmodifiableFuture.completedFuture(null);
     }
 
@@ -70,25 +79,18 @@ public class AggregatingStreamMessage<T> extends AbstractFixedStreamMessage<T> i
         abort(cause);
     }
 
-    private void ensureClosed() {
-        checkState(closed, "stream is not closed yet.");
-    }
-
     @Override
     T get(int index) {
-        ensureClosed();
         return objs.get(index);
     }
 
     @Override
     int size() {
-        ensureClosed();
         return objs.size();
     }
 
     @Override
     List<T> drainAll0(boolean withPooledObjects) {
-        ensureClosed();
         if (withPooledObjects) {
             for (T obj : objs) {
                 PooledObjects.touch(obj);

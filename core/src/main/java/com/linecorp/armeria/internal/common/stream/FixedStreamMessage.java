@@ -109,25 +109,27 @@ public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscri
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
+        if (isOpen()) {
+            abortSubscriber(executor, subscriber, "a fixed stream is not closed yet");
+            return;
+        }
+
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
-            if (executor.inEventLoop()) {
-                abortLateSubscriber(subscriber);
-            } else {
-                executor.execute(() -> abortLateSubscriber(subscriber));
+            abortSubscriber(executor, subscriber, "subscribed by other subscriber already");
+            return;
+        }
+
+        for (SubscriptionOption option : options) {
+            if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
+                withPooledObjects = true;
+            } else if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
+                notifyCancellation = true;
             }
+        }
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber, executor);
         } else {
-            for (SubscriptionOption option : options) {
-                if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                    withPooledObjects = true;
-                } else if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                    notifyCancellation = true;
-                }
-            }
-            if (executor.inEventLoop()) {
-                subscribe0(subscriber, executor);
-            } else {
-                executor.execute(() -> subscribe0(subscriber, executor));
-            }
+            executor.execute(() -> subscribe0(subscriber, executor));
         }
     }
 
@@ -153,9 +155,17 @@ public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscri
         }
     }
 
-    private void abortLateSubscriber(Subscriber<? super T> subscriber) {
+    private void abortSubscriber(EventExecutor executor, Subscriber<? super T> subscriber, String message) {
+        if (executor.inEventLoop()) {
+            abortSubscriber0(subscriber, message);
+        } else {
+            executor.execute(() -> abortSubscriber0(subscriber, message));
+        }
+    }
+
+    private void abortSubscriber0(Subscriber<? super T> subscriber, String message) {
         subscriber.onSubscribe(NoopSubscription.get());
-        subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        subscriber.onError(new IllegalStateException(message));
     }
 
     @Override

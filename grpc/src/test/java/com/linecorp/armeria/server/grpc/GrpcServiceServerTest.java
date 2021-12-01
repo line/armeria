@@ -1273,7 +1273,7 @@ class GrpcServiceServerTest {
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         final RpcResponse rpcRes = (RpcResponse) log.responseContent();
-        assertThat(rpcReq).isNull();
+        assertThat(rpcReq).isNotNull();
         assertThat((Object) rpcRes).isNotNull();
 
         assertThat(rpcRes.cause()).isNotNull();
