@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Collections;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -189,6 +190,7 @@ class ServiceRequestContextTest {
         assertThat(ctx.queryParam("param1")).isEqualTo("value1");
         assertThat(ctx.queryParam("Param1")).isEqualTo("Value3");
         assertThat(ctx.queryParam("PARAM1")).isEqualTo("VALUE4");
+        assertThat(ctx.queryParam("Not exist")).isNull();
     }
 
     @Test
@@ -198,6 +200,7 @@ class ServiceRequestContextTest {
         assertThat(ctx.queryParams("param1")).isEqualTo(ImmutableList.of("value1", "value2"));
         assertThat(ctx.queryParams("Param1")).isEqualTo(ImmutableList.of("Value3"));
         assertThat(ctx.queryParams("PARAM1")).isEqualTo(ImmutableList.of("VALUE4"));
+        assertThat(ctx.queryParams("Not exist")).isEqualTo(Collections.emptyList());
     }
 
     private static void assertCurrentCtx(@Nullable RequestContext ctx) {

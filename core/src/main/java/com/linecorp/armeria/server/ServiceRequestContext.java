@@ -261,21 +261,28 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the query parameters mapped by the {@link Route} associated with the {@link Service}
-     * that is handling the current {@link Request}.
+     * Returns the decoded {@linkplain QueryParams query part} of the current {@link Request} URI,
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     QueryParams queryParams();
 
     /**
-     * Returns the values of the specified query parameter.
+     * Returns all values for the parameter with the specified name. The returned {@link List} can't be
+     * modified.
+     *
+     * @param name the parameter name
+     * @return a {@link List} of parameter values or an empty {@link List} if there is no such parameter.
      */
-    @Nullable
     default List<String> queryParams(String name) {
         return queryParams().getAll(name);
     }
 
     /**
-     * Returns the value of the specified query parameter.
+     * Returns the value of a parameter with the specified {@code name}. If there are more than one value for
+     * the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the first parameter value if found, or {@code null} if there is no such parameter
      */
     @Nullable
     default String queryParam(String name) {
