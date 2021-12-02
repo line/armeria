@@ -382,7 +382,6 @@ amot.no
 amscompute.com
 amsterdam
 amsterdam.museum
-amsw.nl
 amusement.aero
 an.it
 analytics
@@ -8346,7 +8345,6 @@ virtual-user.de
 virtual.museum
 virtualserver.io
 virtualuser.de
-virtueeldomein.nl
 virtuel.museum
 visa
 vision
