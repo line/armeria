@@ -83,11 +83,13 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void testEncodingMultipleCookies() {
-        final Cookie cookie1 = Cookie.of("cookie1", "value1");
-        final Cookie cookie2 = Cookie.of("cookie2", "value2");
-        final Cookie cookie3 = Cookie.of("cookie1", "value3");
+        final Cookie cookie1 = Cookie.ofSecure("cookie1", "value1");
+        final Cookie cookie2 = Cookie.ofSecure("cookie2", "value2");
+        final Cookie cookie3 = Cookie.ofSecure("cookie1", "value3");
         final List<String> encodedCookies = Cookie.toSetCookieHeaders(cookie1, cookie2, cookie3);
-        assertThat(encodedCookies).containsExactly("cookie1=value1", "cookie2=value2", "cookie1=value3");
+        assertThat(encodedCookies).containsExactly("cookie1=value1; Secure; HTTPOnly; SameSite=Strict",
+                                                   "cookie2=value2; Secure; HTTPOnly; SameSite=Strict",
+                                                   "cookie1=value3; Secure; HTTPOnly; SameSite=Strict");
     }
 
     @Test
@@ -108,7 +110,7 @@ public class ServerCookieEncoderTest {
 
         for (char c : illegalChars) {
             try {
-                Cookie.of("foo" + c + "bar", "value").toSetCookieHeader();
+                Cookie.ofSecure("foo" + c + "bar", "value").toSetCookieHeader();
             } catch (IllegalArgumentException e) {
                 exceptions++;
             }
@@ -134,7 +136,7 @@ public class ServerCookieEncoderTest {
 
         for (char c : illegalChars) {
             try {
-                Cookie.of("name", "value" + c).toSetCookieHeader();
+                Cookie.ofSecure("name", "value" + c).toSetCookieHeader();
             } catch (IllegalArgumentException e) {
                 exceptions++;
             }
@@ -145,17 +147,19 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void illegalCharInWrappedValueAppearsInException() {
-        assertThatThrownBy(() -> Cookie.of("name", "\"value,\"").toSetCookieHeader())
+        assertThatThrownBy(() -> Cookie.ofSecure("name", "\"value,\"").toSetCookieHeader())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Cookie value contains an invalid char: ,");
     }
 
     @Test
     public void testEncodingMultipleCookiesLax() {
-        final Cookie cookie1 = Cookie.of("cookie1", "value1");
-        final Cookie cookie2 = Cookie.of("cookie2", "value2");
-        final Cookie cookie3 = Cookie.of("cookie1", "value3");
+        final Cookie cookie1 = Cookie.ofSecure("cookie1", "value1");
+        final Cookie cookie2 = Cookie.ofSecure("cookie2", "value2");
+        final Cookie cookie3 = Cookie.ofSecure("cookie1", "value3");
         final List<String> encodedCookies = Cookie.toSetCookieHeaders(cookie1, cookie2, cookie3);
-        assertThat(encodedCookies).containsExactly("cookie1=value1", "cookie2=value2", "cookie1=value3");
+        assertThat(encodedCookies).containsExactly("cookie1=value1; Secure; HTTPOnly; SameSite=Strict",
+                                                   "cookie2=value2; Secure; HTTPOnly; SameSite=Strict",
+                                                   "cookie1=value3; Secure; HTTPOnly; SameSite=Strict");
     }
 }

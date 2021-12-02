@@ -33,9 +33,9 @@ class AcceptOriginCookiePolicyTest {
     void accept() {
         final CookieBuilder builder = Cookie.secureBuilder("name", "value");
 
-        assertThat(policy.accept(URI.create("foo.com"), Cookie.of("name", "value"))).isFalse();
+        assertThat(policy.accept(URI.create("foo.com"), Cookie.ofSecure("name", "value"))).isFalse();
         assertThat(policy.accept(URI.create("foo.com"), builder.domain("foo.com").build())).isFalse();
-        assertThat(policy.accept(URI.create("http://foo.com"), Cookie.of("name", "value"))).isFalse();
+        assertThat(policy.accept(URI.create("http://foo.com"), Cookie.ofSecure("name", "value"))).isFalse();
         assertThat(policy.accept(URI.create("http://foo.com"), builder.domain("foo.com").build())).isTrue();
 
         final URI google = URI.create("http://google.com");

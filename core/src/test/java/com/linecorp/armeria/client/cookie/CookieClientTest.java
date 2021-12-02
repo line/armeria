@@ -93,8 +93,10 @@ class CookieClientTest {
                                   .join().contentUtf8();
 
             final Cookies cookies = Cookie.fromCookieHeader(cookie);
-            assertThat(cookies).hasSize(2).contains(Cookie.of("some-cookie", "foo"),
-                                                    Cookie.of("some-cookie2", "bar"));
+            assertThat(cookies).hasSize(2)
+                               // Set false to "secure" attribute to use HTTP.
+                               .contains(Cookie.secureBuilder("some-cookie", "foo").secure(false).build(),
+                                         Cookie.secureBuilder("some-cookie2", "bar").secure(false).build());
 
             cookie = client.get("http://bar.com:" + port + "/get-cookie").aggregate()
                            .join().contentUtf8();

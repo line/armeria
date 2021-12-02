@@ -33,8 +33,8 @@ class DefaultCookieTest {
 
     @Test
     void mutation() {
-        final Cookie cookie = Cookie.of("a", "b").withMutations(mutator -> mutator.name("c").value("d"));
-        assertThat(cookie).isEqualTo(Cookie.of("c", "d"));
+        final Cookie cookie = Cookie.ofSecure("a", "b").withMutations(mutator -> mutator.name("c").value("d"));
+        assertThat(cookie).isEqualTo(Cookie.ofSecure("c", "d"));
     }
 
     @Test

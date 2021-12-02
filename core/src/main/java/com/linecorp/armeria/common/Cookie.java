@@ -58,9 +58,23 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @param name the name of the {@link Cookie}
      * @param value the value of the {@link Cookie}
+     *
+     * @deprecated Use {@link #ofSecure(String, String)} instead to create a secure {@link Cookie}.
      */
+    @Deprecated
     static Cookie of(String name, String value) {
         return builder(name, value).build();
+    }
+
+    /**
+     * Returns newly created Cookie with secure settings. {@code "Secure"}, {@code "HttpOnly"},
+     * and {@code "SameSite=Strict"} are enabled.
+     *
+     * @param name the name of the {@link Cookie}
+     * @param value the value of the {@link Cookie}
+     */
+    static Cookie ofSecure(String name, String value) {
+        return secureBuilder(name, value).build();
     }
 
     /**
