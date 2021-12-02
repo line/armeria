@@ -33,4 +33,60 @@ class AsyncMapStreamMessageTest {
                     .expectNext(2, 3)
                     .verifyComplete();
     }
+
+    @Test
+    void mapAsyncFutureCompletesWithException() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1);
+
+        final CompletableFuture<Integer> errorFuture = new CompletableFuture<>();
+        final StreamMessage<Integer> willError = streamMessage.mapAsync(
+                x -> errorFuture
+        );
+
+        final Throwable exception = new RuntimeException();
+        errorFuture.completeExceptionally(exception);
+
+        StepVerifier.create(willError)
+                    .expectErrorMatches(error -> error == exception)
+                    .verify();
+    }
+
+    @Test
+    void mapAsyncFunctionThrowsException() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(0);
+        final StreamMessage<Integer> willError = streamMessage.mapAsync(
+                x -> {
+                    final int divided = 2 / x;
+                    return CompletableFuture.completedFuture(divided);
+                }
+        );
+
+        StepVerifier.create(willError)
+                    .expectError(ArithmeticException.class)
+                    .verify();
+    }
+
+    @Test
+    void mapAsyncFutureIsNull() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1);
+        final StreamMessage<Integer> mapsToNull = streamMessage.mapAsync(
+                x -> null
+        );
+
+        StepVerifier.create(mapsToNull)
+                    .expectError(NullPointerException.class)
+                    .verify();
+    }
+
+    @Test
+    void mapAsyncFutureCompletesWithNull() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1);
+        final StreamMessage<Integer> mapsToNull = streamMessage.mapAsync(
+                x -> CompletableFuture.completedFuture(null)
+        );
+
+        StepVerifier.create(mapsToNull)
+                    .expectError(NullPointerException.class)
+                    .verify();
+    }
 }
