@@ -93,6 +93,7 @@ import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
+import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -126,7 +127,7 @@ import io.grpc.reflection.v1alpha.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -393,6 +394,8 @@ class GrpcServiceServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(1);
             sb.maxRequestLength(0);
+            sb.idleTimeoutMillis(0);
+            sb.requestTimeoutMillis(0);
 
             sb.service(
                     GrpcService.builder()
@@ -828,7 +831,7 @@ class GrpcServiceServerTest {
         });
     }
 
-    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     @ParameterizedTest
     void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
             throws Exception {
@@ -868,7 +871,7 @@ class GrpcServiceServerTest {
         final RpcResponse rpcResponse = (RpcResponse) log.responseContent();
         final StatusException cause = (StatusException) rpcResponse.cause();
         assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
-        if (protocol.isMultiplex())  {
+        if (protocol.isMultiplex()) {
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedStreamException.class);
         } else {
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedSessionException.class);
@@ -995,7 +998,7 @@ class GrpcServiceServerTest {
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
-                new byte[] { TRAILERS_FRAME_HEADER },
+                new byte[]{ TRAILERS_FRAME_HEADER },
                 Ints.toByteArray(serializedStatusHeader.length),
                 serializedStatusHeader);
         assertThat(response.content().array()).containsExactly(
@@ -1023,10 +1026,8 @@ class GrpcServiceServerTest {
                 Base64.getEncoder().encode(body));
         final AggregatedHttpResponse response = httpResponse.mapData(data -> {
             final ByteBuf buf = data.byteBuf();
-            final ByteBuf decoded = Unpooled.wrappedBuffer(
-                    Base64.getDecoder().decode(buf.nioBuffer()));
-            buf.release();
-            return HttpData.wrap(decoded);
+            final Base64Decoder decoder = new Base64Decoder(UnpooledByteBufAllocator.DEFAULT);
+            return HttpData.wrap(decoder.decode(buf));
         }).aggregate().join();
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
@@ -1231,8 +1232,8 @@ class GrpcServiceServerTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    UnitTestServiceGrpc.newBlockingStub(channel),
-                    UnitTestServiceGrpc.newBlockingStub(blockingChannel))
+                                 UnitTestServiceGrpc.newBlockingStub(channel),
+                                 UnitTestServiceGrpc.newBlockingStub(blockingChannel))
                          .map(Arguments::of);
         }
     }
@@ -1241,8 +1242,8 @@ class GrpcServiceServerTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    UnitTestServiceGrpc.newStub(channel),
-                    UnitTestServiceGrpc.newStub(blockingChannel))
+                                 UnitTestServiceGrpc.newStub(channel),
+                                 UnitTestServiceGrpc.newStub(blockingChannel))
                          .map(Arguments::of);
         }
     }

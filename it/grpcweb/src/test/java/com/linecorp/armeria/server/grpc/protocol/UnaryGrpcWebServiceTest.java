@@ -75,7 +75,9 @@ class UnaryGrpcWebServiceTest {
     @ArgumentsSource(UnaryGrpcProtoWebSerializationFormats.class)
     void grpcProtoWebClient(SerializationFormat serializationFormat) throws Exception {
         final String serverUri = String.format("http://127.0.0.1:%d", serverBinding.localAddress().getPort());
-        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(serverUri), serializationFormat);
+        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.builder(serverUri)
+                                                                    .responseTimeoutMillis(0)
+                                                                    .build(), serializationFormat);
         final HelloRequest request = HelloRequest.newBuilder().setName("Armeria").build();
         final byte[] responseBytes = client.execute("/GreeterService/SayHello",
                                                     request.toByteArray()).join();
@@ -87,7 +89,7 @@ class UnaryGrpcWebServiceTest {
         @Override
         public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
             return UnaryGrpcSerializationFormats.values().stream()
-                                                .filter(UnaryGrpcSerializationFormats::isGrpcWeb)
+                                                .filter(UnaryGrpcSerializationFormats::isGrpcWebText)
                                                 .map(Arguments::of);
         }
     }

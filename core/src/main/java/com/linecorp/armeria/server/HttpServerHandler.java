@@ -432,9 +432,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             assert responseEncoder != null;
             // TODO(ikhoon): Use AggregatedHttpResponse for non-streaming response for
             //               ExchangeType.UNARY and ExchangeType.REQUEST_STREAMING.
-            final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
-            res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
+            if (service.exchangeType(headers, routed.route()).isResponseStreaming()) {
+                final HttpResponseSubscriber resSubscriber =
+                        new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
+                res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
+            } else {
+                final AggregatedHttpResponseHandler resHandler =
+                        new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req);
+                res.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle(resHandler);
+            }
         }
     }
 
