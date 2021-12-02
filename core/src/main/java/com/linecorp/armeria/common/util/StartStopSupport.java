@@ -385,9 +385,9 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
             } catch (Exception cause) {
                 notificationFailed(l, cause);
 
-                // if notifyStarting throws an exception, propagate the exception
+                // Propagate the exception if notifyStarting throws an exception.
                 if (state == State.STARTING) {
-                    throw new IllegalStateException(cause);
+                    throw new IllegalStateException("Failed to start the server: " + cause, cause);
                 }
             }
         }
