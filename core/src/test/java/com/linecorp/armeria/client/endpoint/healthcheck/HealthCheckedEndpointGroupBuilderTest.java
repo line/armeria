@@ -39,11 +39,7 @@ public class HealthCheckedEndpointGroupBuilderTest {
     void defaultHealthCheckStrategy() {
         final HealthCheckedEndpointGroup group1 = new HealthCheckedEndpointGroupBuilder(delegate, PATH).build();
         final HealthCheckedEndpointGroup group2 = new HealthCheckedEndpointGroupBuilder(delegate, PATH).build();
-
-        assertThat(group1.healthCheckStrategy).isInstanceOf(AllHealthCheckStrategy.class);
-        assertThat(group2.healthCheckStrategy).isInstanceOf(AllHealthCheckStrategy.class);
-
-        assertThat(group1.healthCheckStrategy).isNotEqualTo(group2.healthCheckStrategy);
+        assertThat(group1.healthCheckStrategy).isSameAs(HealthCheckStrategy.all());
     }
 
     @Test
@@ -77,13 +73,13 @@ public class HealthCheckedEndpointGroupBuilderTest {
                 .hasMessage("Maximum endpoint ratio is already set.");
 
         assertThat(allHealthCheckBuilder1.build().healthCheckStrategy)
-                .isInstanceOf(AllHealthCheckStrategy.class);
+                .isSameAs(HealthCheckStrategy.all());
 
         // all health check by default
         final HealthCheckedEndpointGroupBuilder allHealthCheckBuilder2 =
                 new HealthCheckedEndpointGroupBuilder(delegate, PATH);
 
         assertThat(allHealthCheckBuilder2.build().healthCheckStrategy)
-                .isInstanceOf(AllHealthCheckStrategy.class);
+                .isSameAs(HealthCheckStrategy.all());
     }
 }
