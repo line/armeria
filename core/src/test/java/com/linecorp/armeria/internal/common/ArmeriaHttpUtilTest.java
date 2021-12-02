@@ -35,8 +35,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 
@@ -89,21 +92,36 @@ class ArmeriaHttpUtilTest {
         assertThat(concatPaths("/a/", "?foo=bar")).isEqualTo("/a/?foo=bar");
     }
 
-    @Test
-    void testDecodePath() throws Exception {
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void testDecodePath(boolean isPathParam) throws Exception {
+        final Function<String, String> decodeFunc;
+        if (isPathParam) {
+            decodeFunc = ArmeriaHttpUtil::decodePathParam;
+        } else {
+            decodeFunc = ArmeriaHttpUtil::decodePath;
+        }
+
         // Fast path
         final String pathThatDoesNotNeedDecode = "/foo_bar_baz";
-        assertThat(decodePath(pathThatDoesNotNeedDecode)).isSameAs(pathThatDoesNotNeedDecode);
+        assertThat(decodeFunc.apply(pathThatDoesNotNeedDecode)).isSameAs(pathThatDoesNotNeedDecode);
 
         // Slow path
-        assertThat(decodePath("/foo%20bar\u007fbaz")).isEqualTo("/foo bar\u007fbaz");
-        assertThat(decodePath("/%C2%A2")).isEqualTo("/¢"); // Valid UTF-8 sequence
-        assertThat(decodePath("/%20\u0080")).isEqualTo("/ �"); // Unallowed character
-        assertThat(decodePath("/%")).isEqualTo("/�"); // No digit
-        assertThat(decodePath("/%1")).isEqualTo("/�"); // Only a single digit
-        assertThat(decodePath("/%G0")).isEqualTo("/�"); // First digit is not hex.
-        assertThat(decodePath("/%0G")).isEqualTo("/�"); // Second digit is not hex.
-        assertThat(decodePath("/%C3%28")).isEqualTo("/�("); // Invalid UTF-8 sequence
+        assertThat(decodeFunc.apply("/foo%20bar\u007fbaz")).isEqualTo("/foo bar\u007fbaz");
+        assertThat(decodeFunc.apply("/%C2%A2")).isEqualTo("/¢"); // Valid UTF-8 sequence
+        assertThat(decodeFunc.apply("/%20\u0080")).isEqualTo("/ �"); // Unallowed character
+        assertThat(decodeFunc.apply("/%")).isEqualTo("/�"); // No digit
+        assertThat(decodeFunc.apply("/%1")).isEqualTo("/�"); // Only a single digit
+        assertThat(decodeFunc.apply("/%G0")).isEqualTo("/�"); // First digit is not hex.
+        assertThat(decodeFunc.apply("/%0G")).isEqualTo("/�"); // Second digit is not hex.
+        assertThat(decodeFunc.apply("/%C3%28")).isEqualTo("/�("); // Invalid UTF-8 sequence
+
+        // %2F (/) must be decoded only for path parameters.
+        if (isPathParam) {
+            assertThat(decodeFunc.apply("/%2F")).isEqualTo("//");
+        } else {
+            assertThat(decodeFunc.apply("/%2F")).isEqualTo("/%2F");
+        }
     }
 
     @Test

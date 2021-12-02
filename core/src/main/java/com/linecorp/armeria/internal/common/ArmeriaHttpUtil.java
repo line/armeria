@@ -304,11 +304,37 @@ public final class ArmeriaHttpUtil {
      */
     public static String decodePath(String path) {
         if (path.indexOf('%') < 0) {
-            // No need to decoded; not percent-encoded
+            // No need to decode because it's not percent-encoded
             return path;
         }
 
+        // Decode percent-encoded characters, but don't decode %2F into /, so that a user can choose
+        // to use it as a non-separator.
+        //
+        // For example, for the path pattern `/orgs/{org_name}/agents/{agent_name}`:
+        // - orgs/mi6/agents/ethan-hunt
+        //   - org_name: mi6
+        //   - agent_name: ethan-hunt
+        // - orgs/mi%2F6/agents/ethan-hunt
+        //   - org_name: mi/6
+        //   - agent_name: ethan-hunt
+        return slowDecodePath(path, false);
+    }
+
+    /**
+     * Decodes a single percent-encoded path parameter.
+     */
+    public static String decodePathParam(String pathParam) {
+        if (pathParam.indexOf('%') < 0) {
+            // No need to decode because it's not percent-encoded
+            return pathParam;
+        }
+
         // Decode percent-encoded characters.
+        return slowDecodePath(pathParam, true);
+    }
+
+    private static String slowDecodePath(String path, boolean decodeSlash) {
         // An invalid character is replaced with 0xFF, which will be replaced into '�' by UTF-8 decoder.
         final int len = path.length();
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
@@ -335,7 +361,14 @@ public final class ArmeriaHttpUtil {
                     // The first or second digit is not hexadecimal.
                     buf[dstLen++] = (byte) 0xFF;
                 } else {
-                    buf[dstLen++] = (byte) ((digit1 << 4) | digit2);
+                    final byte decoded = (byte) ((digit1 << 4) | digit2);
+                    if (decodeSlash || decoded != 0x2F) {
+                        buf[dstLen++] = decoded;
+                    } else {
+                        buf[dstLen++] = '%';
+                        buf[dstLen++] = '2';
+                        buf[dstLen++] = (byte) path.charAt(i); // f or F - preserve the case.
+                    }
                 }
             }
 
