@@ -1,0 +1,26 @@
+---
+date: 2021-12-02
+---
+
+## 🛠️ Bug fixes
+
+- <type://Server> now aborts the startup process if <type://ServerListener#serverStarting(Server)>
+  raises an exception. #3935 #3947
+- You no longer see an <type://EmptyEndpointGroupException> when the entire <typeplural://Endpoint>
+  are replaced in a <type://HealthCheckedEndpointGroup>. #3927
+- You no longer see an `IllegalStateException` in your gRPC calls when an <type://EndpointGroup> is
+  empty. #3951
+
+## 🔒 Security fixes
+
+- (High) [CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')](https://github.com/line/armeria/security/advisories/GHSA-8fp4-rp6c-5gcv)
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'r3mariano',
+  'trustin'
+]} />
