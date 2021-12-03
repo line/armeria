@@ -17,14 +17,12 @@
 package com.linecorp.armeria.server.grpc;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
+import org.jctools.maps.NonBlockingIdentityHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +30,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
@@ -92,8 +91,8 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> healthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
-    private final ConcurrentHashMap<String, IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus>>
-            watchers = new ConcurrentHashMap<>();
+    private final NonBlockingIdentityHashMap<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>>
+            watchers = new NonBlockingIdentityHashMap<>();
     @Nullable
     private Server server;
 
@@ -141,21 +140,9 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                                                                 .setStatus(checkServingStatus(service))
                                                                 .build();
         responseObserver.onNext(response);
-        if (watchers.containsKey(service)) {
-            watchers.get(service).put(responseObserver, response.getStatus());
-        } else {
-            final IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus> mp =
-                    new IdentityHashMap<>();
-            mp.put(responseObserver, response.getStatus());
-            watchers.put(service, mp);
-        }
+        watchers.put(responseObserver, Maps.immutableEntry(service, response.getStatus()));
         ((ServerCallStreamObserver<HealthCheckResponse>) responseObserver).setOnCancelHandler(() -> {
-            if (watchers.containsKey(request.getService())) {
-                watchers.get(service).remove(responseObserver);
-                if (watchers.get(service).isEmpty()) {
-                    watchers.remove(service);
-                }
-            }
+            watchers.remove(responseObserver);
         });
     }
 
@@ -240,37 +227,17 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     private HealthCheckUpdateListener provideInternalHealthUpdateListener() {
         return isHealthy -> {
-            Map<String, IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus>> updatedWatchers =
-                    new HashMap<>();
-            for (Entry<String, IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus>> entry
-                    : watchers.entrySet()) {
-                for (Entry<StreamObserver<HealthCheckResponse>, ServingStatus>
-                        responseObserverWithPreviousStatus : entry.getValue().entrySet()) {
-                    final ServingStatus previousStatus = responseObserverWithPreviousStatus.getValue();
-                    final String serviceName = entry.getKey();
-                    final ServingStatus currentStatus = checkServingStatus(serviceName);
-                    if (currentStatus != previousStatus) {
-                        final StreamObserver<HealthCheckResponse> responseObserver =
-                                responseObserverWithPreviousStatus.getKey();
-                        responseObserver.onNext(HealthCheckResponse.newBuilder()
-                                                                   .setStatus(currentStatus)
-                                                                   .build());
-                        if (updatedWatchers.containsKey(serviceName)) {
-                            updatedWatchers.get(serviceName).put(responseObserver, currentStatus);
-                        } else {
-                            final IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus> mp =
-                                    new IdentityHashMap<>();
-                            mp.put(responseObserver, currentStatus);
-                            updatedWatchers.put(serviceName, mp);
-                        }
-                    }
-                }
-            }
-            for (Entry<String, IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus>> entry
-                    : updatedWatchers.entrySet()) {
-                for (Entry<StreamObserver<HealthCheckResponse>, ServingStatus>
-                        updated : entry.getValue().entrySet()) {
-                    watchers.get(entry.getKey()).put(updated.getKey(), updated.getValue());
+            for (Entry<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>> entry :
+                    watchers.entrySet()) {
+                final ServingStatus previousStatus = entry.getValue().getValue();
+                final String serviceName = entry.getValue().getKey();
+                final ServingStatus currentStatus = checkServingStatus(serviceName);
+                if (currentStatus != previousStatus) {
+                    final StreamObserver<HealthCheckResponse> responseObserver = entry.getKey();
+                    responseObserver.onNext(HealthCheckResponse.newBuilder()
+                                                               .setStatus(currentStatus)
+                                                               .build());
+                    entry.setValue(Maps.immutableEntry(serviceName, currentStatus));
                 }
             }
         };
