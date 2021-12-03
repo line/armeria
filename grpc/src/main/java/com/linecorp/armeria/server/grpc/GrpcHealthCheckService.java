@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -42,10 +43,8 @@ import com.linecorp.armeria.server.healthcheck.ListenableHealthChecker;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
 
 import io.grpc.Status;
-import io.grpc.StatusException;
 import io.grpc.health.v1.HealthCheckRequest;
 import io.grpc.health.v1.HealthCheckResponse;
-import io.grpc.health.v1.HealthCheckResponse.Builder;
 import io.grpc.health.v1.HealthCheckResponse.ServingStatus;
 import io.grpc.health.v1.HealthGrpc.HealthImplBase;
 import io.grpc.stub.ServerCallStreamObserver;
@@ -118,29 +117,29 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     @Override
     public void check(HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
-        String service = request.getService();
-        final Builder builder = HealthCheckResponse.newBuilder();
-        try {
-            builder.setStatus(checkServingStatus(service));
-        } catch (StatusException ex) {
-            responseObserver.onError(ex);
+        final String service = request.getService();
+        final ServingStatus status = checkServingStatus(service);
+        if (status == ServingStatus.SERVICE_UNKNOWN) {
+            responseObserver.onError(Status.NOT_FOUND
+                                             .withDescription(String.format(
+                                                     "The service name(=%s) is not registered in this service",
+                                                     service))
+                                             .asRuntimeException());
             return;
         }
-        responseObserver.onNext(builder.build());
+        responseObserver.onNext(HealthCheckResponse.newBuilder()
+                                                   .setStatus(status)
+                                                   .build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void watch(HealthCheckRequest request,
                       StreamObserver<HealthCheckResponse> responseObserver) {
-        String service = request.getService();
-        final Builder builder = HealthCheckResponse.newBuilder();
-        try {
-            builder.setStatus(checkServingStatus(service));
-        } catch (StatusException ex) {
-            builder.setStatus(ServingStatus.SERVICE_UNKNOWN);
-        }
-        HealthCheckResponse response = builder.build();
+        final String service = request.getService();
+        final HealthCheckResponse response = HealthCheckResponse.newBuilder()
+                                                                .setStatus(checkServingStatus(service))
+                                                                .build();
         responseObserver.onNext(response);
         if (watchers.containsKey(service)) {
             watchers.get(service).put(responseObserver, response.getStatus());
@@ -184,34 +183,29 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     }
 
     @VisibleForTesting
-    ServingStatus checkServingStatus(String serverName) throws StatusException {
-        if (serverName.isEmpty()) {
-            if (isHealthy()) {
-                boolean isHealthyForAllGrpcService = true;
-                for (HealthChecker healthChecker : grpcServiceHealthCheckers.values()) {
-                    if (!healthChecker.isHealthy()) {
-                        isHealthyForAllGrpcService = false;
-                    }
-                }
-                if (isHealthyForAllGrpcService) {
-                    return ServingStatus.SERVING;
-                } else {
-                    return ServingStatus.NOT_SERVING;
-                }
-            } else {
-                return ServingStatus.NOT_SERVING;
+    ServingStatus checkServingStatus(@Nullable String serverName) {
+        if (!isHealthy()) {
+            return ServingStatus.NOT_SERVING;
+        }
+        if (Strings.isNullOrEmpty(serverName)) {
+            if (grpcServiceHealthCheckers.isEmpty()) {
+                return ServingStatus.SERVING;
             }
-        } else if (grpcServiceHealthCheckers.containsKey(serverName)) {
-            if (grpcServiceHealthCheckers.get(serverName).isHealthy()) {
+            if (grpcServiceHealthCheckers.values().stream().allMatch(HealthChecker::isHealthy)) {
                 return ServingStatus.SERVING;
             } else {
                 return ServingStatus.NOT_SERVING;
             }
         } else {
-            throw Status.NOT_FOUND
-                    .withDescription(String.format("The service name(=%s) is not registered in this service",
-                                                   serverName))
-                    .asException();
+            if (grpcServiceHealthCheckers.containsKey(serverName)) {
+                if (grpcServiceHealthCheckers.get(serverName).isHealthy()) {
+                    return ServingStatus.SERVING;
+                } else {
+                    return ServingStatus.NOT_SERVING;
+                }
+            } else {
+                return ServingStatus.SERVICE_UNKNOWN;
+            }
         }
     }
 

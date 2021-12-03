@@ -48,7 +48,6 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Status;
-import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.health.v1.HealthCheckRequest;
 import io.grpc.health.v1.HealthCheckResponse;
@@ -137,15 +136,9 @@ class GrpcHealthCheckServiceTest {
     void checkServingStatus(GrpcHealthCheckService grpcHealthCheckService,
                             String serviceName,
                             boolean serverIsHealthy,
-                            ServingStatus expected,
-                            boolean exceptionThrown) throws Exception {
+                            ServingStatus expected) throws Exception {
         grpcHealthCheckService.changeServerStatus(serverIsHealthy);
-        if (exceptionThrown) {
-            assertThrows(StatusException.class,
-                         () -> grpcHealthCheckService.checkServingStatus(serviceName));
-        } else {
-            assertThat(grpcHealthCheckService.checkServingStatus(serviceName)).isEqualTo(expected);
-        }
+        assertThat(grpcHealthCheckService.checkServingStatus(serviceName)).isEqualTo(expected);
     }
 
     private static Stream<Arguments> checkServingStatusArguments() {
@@ -159,8 +152,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              true,
-                             ServingStatus.SERVING,
-                             false),
+                             ServingStatus.SERVING),
                 // request: empty server name
                 // condition: server is unhealthy, health checker is not given.
                 // response: NOT_SERVING
@@ -170,30 +162,27 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              false,
-                             ServingStatus.NOT_SERVING,
-                             false),
+                             ServingStatus.NOT_SERVING),
                 // request: com.linecorp.armeria.server.grpc.TestService (not registered)
                 // condition: server is healthy, health checker is not given.
-                // response: throws StatusException
+                // response: SERVICE_UNKNOWN
                 Arguments.of(new GrpcHealthCheckService(
                                      Collections.emptySet(),
                                      Collections.emptyMap(),
                                      Collections.emptyList()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              true,
-                             null,
-                             true),
+                             ServingStatus.SERVICE_UNKNOWN),
                 // request: com.linecorp.armeria.server.grpc.TestService (not registered)
                 // condition: server is unhealthy, health checker is not given.
-                // response: throws StatusException
+                // response: SERVICE_UNKNOWN
                 Arguments.of(new GrpcHealthCheckService(
                                      Collections.emptySet(),
                                      Collections.emptyMap(),
                                      Collections.emptyList()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              false,
-                             null,
-                             true),
+                             ServingStatus.NOT_SERVING),
                 // request: com.linecorp.armeria.server.grpc.TestService (registered)
                 // condition:
                 //    - server is healthy,
@@ -209,14 +198,13 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              true,
-                             ServingStatus.SERVING,
-                             false),
+                             ServingStatus.SERVING),
                 // request: com.linecorp.armeria.server.grpc.TestService (registered)
                 // condition:
                 //    - server is unhealthy,
                 //    - health checker is not given.
                 //    - grpc service health checker is specified
-                // response: SERVING
+                // response: NOT_SERVING
                 Arguments.of(new GrpcHealthCheckService(
                                      Collections.emptySet(),
                                      ImmutableMap.of(
@@ -226,8 +214,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              false,
-                             ServingStatus.SERVING,
-                             false),
+                             ServingStatus.NOT_SERVING),
                 // request: empty server name
                 // condition:
                 //    - server is healthy,
@@ -243,8 +230,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              true,
-                             ServingStatus.SERVING,
-                             false),
+                             ServingStatus.SERVING),
                 // request: empty server name
                 // condition:
                 //    - server is healthy,
@@ -260,8 +246,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              true,
-                             ServingStatus.NOT_SERVING,
-                             false),
+                             ServingStatus.NOT_SERVING),
                 // request: empty server name
                 // condition:
                 //    - server is healthy,
@@ -279,8 +264,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              true,
-                             ServingStatus.SERVING,
-                             false),
+                             ServingStatus.SERVING),
                 // request: empty server name
                 // condition:
                 //    - server is healthy,
@@ -298,8 +282,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              true,
-                             ServingStatus.NOT_SERVING,
-                             false),
+                             ServingStatus.NOT_SERVING),
                 // request: empty server name
                 // condition:
                 //    - server is healthy,
@@ -321,8 +304,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              true,
-                             ServingStatus.SERVING,
-                             false),
+                             ServingStatus.SERVING),
                 // request: empty server name
                 // condition:
                 //    - server is healthy,
@@ -344,8 +326,7 @@ class GrpcHealthCheckServiceTest {
                                      Collections.emptyList()),
                              "",
                              true,
-                             ServingStatus.NOT_SERVING,
-                             false)
+                             ServingStatus.NOT_SERVING)
         );
     }
 
