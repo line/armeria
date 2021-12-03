@@ -12,15 +12,14 @@ interface TutorialStepProps extends StepsProps {
 }
 
 const TutorialSteps: React.FC<TutorialStepProps> = (props) => {
-
   const {
     allMdx: { nodes: tutorialNodes },
   } = useStaticQuery(graphql`
     query {
       allMdx(
         filter: {
-          fileAbsolutePath: { glob:  "**/src/pages/tutorials/**" }
-          frontmatter: { type: { eq: "step" }}
+          fileAbsolutePath: { glob: "**/src/pages/tutorials/**" }
+          frontmatter: { type: { eq: "step" } }
         }
         sort: { fields: [frontmatter___order], order: ASC }
       ) {
