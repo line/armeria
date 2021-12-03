@@ -91,7 +91,10 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Nullable
         private volatile Subscription upstream;
+        private volatile boolean isCompleting;
         private volatile boolean canceled;
+
+        private int pendingRequests;
 
         AsyncMapSubscriber(Subscriber<? super U> downstream,
                            Function<Object, CompletableFuture<U>> function,
@@ -125,6 +128,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 final CompletableFuture<U> future = function.apply(item);
                 requireNonNull(future, "function.apply() returned null");
 
+                pendingRequests++;
                 future.handle((res, cause) -> {
                     if (executor.inEventLoop()) {
                         publishDownstream(res, cause);
@@ -147,6 +151,10 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 }
 
                 return;
+            }
+
+            if (--pendingRequests == 0 && isCompleting) {
+                downstream.onComplete();
             }
 
             try {
@@ -177,7 +185,15 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onComplete() {
-            downstream.onComplete();
+            if (canceled) {
+                return;
+            }
+
+            if (pendingRequests > 0) {
+                isCompleting = true;
+            } else {
+                downstream.onComplete();
+            }
         }
 
         @Override

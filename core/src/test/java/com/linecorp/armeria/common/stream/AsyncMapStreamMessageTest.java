@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
@@ -88,5 +89,30 @@ class AsyncMapStreamMessageTest {
         StepVerifier.create(mapsToNull)
                     .expectError(NullPointerException.class)
                     .verify();
+    }
+
+    @Test
+    void mapAsyncDoesntCompleteIfFutureDoesntComplete() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1);
+        final StreamMessage<Integer> willNotComplete = streamMessage.mapAsync(
+                x -> new CompletableFuture<>()
+        );
+
+        StepVerifier.create(willNotComplete).expectNextCount(0).verifyTimeout(Duration.ofMillis(100));
+    }
+
+    @Test
+    void mapAsyncCompletesWhenFutureCompletes() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1);
+
+        final CompletableFuture<Integer> future = new CompletableFuture<>();
+        final StreamMessage<Integer> willNotComplete = streamMessage.mapAsync(
+                x -> future
+        );
+
+        StepVerifier.create(willNotComplete)
+                    .thenRequest(1)
+                    .then(() -> future.complete(1))
+                    .verifyComplete();
     }
 }
