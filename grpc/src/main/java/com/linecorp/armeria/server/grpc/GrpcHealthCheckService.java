@@ -52,7 +52,7 @@ import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 /**
- * An implementation of {@link HealthImplBase} that determines a healthiness of a {@link Server}
+ * An implementation of {@code HealthImplBase} that determines a healthiness of a {@link Server}
  * and a healthiness of each gPRC service.
  * <p>
  * This class is implemented based on GRPC Health Checking Protocol.
@@ -65,35 +65,9 @@ import io.grpc.stub.StreamObserver;
  * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
  * @see GrpcHealthCheckServiceBuilder
  */
-public class GrpcHealthCheckService extends HealthImplBase {
+public final class GrpcHealthCheckService extends HealthImplBase {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcHealthCheckService.class);
-
-    private final SettableHealthChecker serverHealth;
-    private final Set<ListenableHealthChecker> healthCheckers;
-    private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
-    private final ConcurrentHashMap<String, IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus>>
-            watchers = new ConcurrentHashMap<>();
-    @Nullable
-    private Server server;
-
-    public GrpcHealthCheckService(
-            Set<ListenableHealthChecker> healthCheckers,
-            Map<String, ListenableHealthChecker> grpcServiceHealthCheckers,
-            List<HealthCheckUpdateListener> updateListeners
-    ) {
-        serverHealth = new SettableHealthChecker(false);
-        if (!updateListeners.isEmpty()) {
-            addServerHealthUpdateListener(ImmutableList.copyOf(updateListeners));
-        }
-        this.healthCheckers = ImmutableSet.<ListenableHealthChecker>builder()
-                                          .add(serverHealth)
-                                          .addAll(healthCheckers)
-                                          .build();
-        this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
-        setInternalHealthUpdateListener(this.healthCheckers);
-        setInternalHealthUpdateListener(this.grpcServiceHealthCheckers.values());
-    }
 
     /**
      * Returns a newly created {@link GrpcHealthCheckService} with the specified {@link ListenableHealthChecker}s.
@@ -114,6 +88,32 @@ public class GrpcHealthCheckService extends HealthImplBase {
      */
     public static GrpcHealthCheckServiceBuilder builder() {
         return new GrpcHealthCheckServiceBuilder();
+    }
+
+    private final SettableHealthChecker serverHealth;
+    private final Set<ListenableHealthChecker> healthCheckers;
+    private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
+    private final ConcurrentHashMap<String, IdentityHashMap<StreamObserver<HealthCheckResponse>, ServingStatus>>
+            watchers = new ConcurrentHashMap<>();
+    @Nullable
+    private Server server;
+
+    GrpcHealthCheckService(
+            Set<ListenableHealthChecker> healthCheckers,
+            Map<String, ListenableHealthChecker> grpcServiceHealthCheckers,
+            List<HealthCheckUpdateListener> updateListeners
+    ) {
+        serverHealth = new SettableHealthChecker(false);
+        if (!updateListeners.isEmpty()) {
+            addServerHealthUpdateListener(ImmutableList.copyOf(updateListeners));
+        }
+        this.healthCheckers = ImmutableSet.<ListenableHealthChecker>builder()
+                                          .add(serverHealth)
+                                          .addAll(healthCheckers)
+                                          .build();
+        this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
+        setInternalHealthUpdateListener(this.healthCheckers);
+        setInternalHealthUpdateListener(this.grpcServiceHealthCheckers.values());
     }
 
     @Override
