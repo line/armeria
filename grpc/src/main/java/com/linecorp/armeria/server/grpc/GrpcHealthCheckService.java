@@ -52,8 +52,8 @@ import io.grpc.stub.StreamObserver;
 /**
  * An implementation of {@code HealthImplBase} that determines a healthiness of a {@link Server}
  * and a healthiness of each gPRC service.
- * <p>
- * This class is implemented based on GRPC Health Checking Protocol.
+ *
+ * <p>This class is implemented based on GRPC Health Checking Protocol.
  * You can set a service name (an empty service name indicates a status of a server) to a request and check
  * the status of the gRPC service from the response by registering it to grpcServiceHealthCheckers.
  * Note: The suggested format of service name is package_names.ServiceName
@@ -68,14 +68,16 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private static final Logger logger = LoggerFactory.getLogger(GrpcHealthCheckService.class);
 
     /**
-     * Returns a newly created {@link GrpcHealthCheckService} with the specified {@link ListenableHealthChecker}s.
+     * Returns a newly created {@link GrpcHealthCheckService}
+     * with the specified {@link ListenableHealthChecker}s.
      */
     public static GrpcHealthCheckService of(ListenableHealthChecker... healthCheckers) {
         return builder().checkers(healthCheckers).build();
     }
 
     /**
-     * Returns a newly created {@link GrpcHealthCheckService} with the specified {@link ListenableHealthChecker}s.
+     * Returns a newly created {@link GrpcHealthCheckService}
+     * with the specified {@link ListenableHealthChecker}s.
      */
     public static GrpcHealthCheckService of(Iterable<? extends ListenableHealthChecker> healthCheckers) {
         return builder().checkers(healthCheckers).build();
@@ -227,8 +229,8 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     private HealthCheckUpdateListener provideInternalHealthUpdateListener() {
         return isHealthy -> {
-            for (Entry<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>> entry :
-                    watchers.entrySet()) {
+            for (Entry<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>> entry
+                    : watchers.entrySet()) {
                 final ServingStatus previousStatus = entry.getValue().getValue();
                 final String serviceName = entry.getValue().getKey();
                 final ServingStatus currentStatus = checkServingStatus(serviceName);

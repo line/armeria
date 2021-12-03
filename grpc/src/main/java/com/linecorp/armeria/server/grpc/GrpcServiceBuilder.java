@@ -567,6 +567,26 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Adds a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     */
+    public GrpcServiceBuilder addGrpcHealthCheckService(GrpcHealthCheckService grpcHealthCheckService) {
+        requireNonNull(grpcHealthCheckService, "grpcHealthCheckService");
+        this.grpcHealthCheckService = grpcHealthCheckService;
+        return this;
+    }
+
+    /**
+     * Sets a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     * The gPRC health check service manages only the health checker that determines
+     * the healthiness of the {@link Server}.
+     */
+    public GrpcServiceBuilder enableGrpcHealthCheckService() {
+        grpcHealthCheckService = GrpcHealthCheckService.builder()
+                                                       .build();
+        return this;
+    }
+
+    /**
      * Sets the specified {@link GrpcStatusFunction} that maps a {@link Throwable} to a gRPC {@link Status}.
      *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
@@ -636,26 +656,6 @@ public final class GrpcServiceBuilder {
         }
 
         addExceptionMapping(exceptionMappings, exceptionType, statusFunction);
-        return this;
-    }
-
-    /**
-     * Adds a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
-     */
-    public GrpcServiceBuilder addGrpcHealthCheckService(GrpcHealthCheckService grpcHealthCheckService) {
-        requireNonNull(grpcHealthCheckService, "grpcHealthCheckService");
-        this.grpcHealthCheckService = grpcHealthCheckService;
-        return this;
-    }
-
-    /**
-     * Sets a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
-     * The gPRC health check service manages only the health checker that determines
-     * the healthiness of the {@link Server}.
-     */
-    public GrpcServiceBuilder enableGrpcHealthCheckService() {
-        grpcHealthCheckService = GrpcHealthCheckService.builder()
-                                                       .build();
         return this;
     }
 
