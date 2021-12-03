@@ -70,7 +70,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        source.subscribe(new AsyncMapSubscriber<>(subscriber, function), executor, options);
+        source.subscribe(new AsyncMapSubscriber<>(subscriber, function, executor), executor, options);
     }
 
     @Override
@@ -87,17 +87,22 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
     private static final class AsyncMapSubscriber<U> implements Subscriber<Object>, Subscription {
         private final Subscriber<? super U> downstream;
         private final Function<Object, CompletableFuture<U>> function;
+        private final EventExecutor executor;
 
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
 
         AsyncMapSubscriber(Subscriber<? super U> downstream,
-                           Function<Object, CompletableFuture<U>> function) {
+                           Function<Object, CompletableFuture<U>> function,
+                           EventExecutor executor) {
             requireNonNull(downstream, "downstream");
             requireNonNull(function, "function");
+            requireNonNull(executor, "executor");
+
             this.downstream = downstream;
             this.function = function;
+            this.executor = executor;
         }
 
         @Override
@@ -119,21 +124,39 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             try {
                 final CompletableFuture<U> future = function.apply(item);
                 requireNonNull(future, "function.apply() returned null");
-                future.whenComplete((res, cause) -> {
-                    try {
-                        if (cause != null) {
-                            upstream.cancel();
-                            downstream.onError(cause);
-                        } else {
-                            requireNonNull(res, "function.apply()'s future completed with null");
-                            downstream.onNext(res);
-                        }
-                    } catch (Throwable ex) {
-                        StreamMessageUtil.closeOrAbort(item, ex);
-                        upstream.cancel();
-                        onError(ex);
+
+                future.handle((res, cause) -> {
+                    if (executor.inEventLoop()) {
+                        publishDownstream(res, cause);
+                    } else {
+                        executor.execute(() -> publishDownstream(res, cause));
                     }
+                    return null;
                 });
+            } catch (Throwable ex) {
+                StreamMessageUtil.closeOrAbort(item, ex);
+                upstream.cancel();
+                onError(ex);
+            }
+        }
+
+        private void publishDownstream(@Nullable U item, @Nullable Throwable cause) {
+            if (canceled) {
+                if (item != null) {
+                    StreamMessageUtil.closeOrAbort(item);
+                }
+
+                return;
+            }
+
+            try {
+                if (cause != null) {
+                    upstream.cancel();
+                    downstream.onError(cause);
+                } else {
+                    requireNonNull(item, "function.apply()'s future completed with null");
+                    downstream.onNext(item);
+                }
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
                 upstream.cancel();
