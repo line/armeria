@@ -557,7 +557,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * StreamMessage transformed = streamMessage.mapAsync(x -> CompletableFuture.completedFuture(x + 1));
      * }</pre>
      */
-    default <U> StreamMessage<U> mapAsync(Function<? super T, ? extends CompletableFuture<U>> function) {
+    default <U> StreamMessage<U> mapAsync(
+            Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(function, "function");
         return new AsyncMapStreamMessage<>(this, function);
     }

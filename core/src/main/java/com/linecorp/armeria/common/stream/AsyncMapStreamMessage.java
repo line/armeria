@@ -35,7 +35,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
 
     @SuppressWarnings("unchecked")
     AsyncMapStreamMessage(StreamMessage<? extends T> source,
-                                 Function<? super T, ? extends CompletableFuture<U>> function) {
+                          Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
