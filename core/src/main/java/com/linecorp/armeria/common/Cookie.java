@@ -67,7 +67,7 @@ public interface Cookie extends Comparable<Cookie> {
     }
 
     /**
-     * Returns a newly created Cookie with secure settings. {@code "Secure"}, {@code "HttpOnly"},
+     * Returns a newly created {@link Cookie} with secure settings. {@code "Secure"}, {@code "HttpOnly"},
      * and {@code "SameSite=Strict"} are enabled.
      *
      * @param name the name of the {@link Cookie}
