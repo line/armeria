@@ -6,29 +6,7 @@ Visit [armeria-examples](https://github.com/line/armeria-examples) to find a ful
 
 </Tip>
 
-First, You need the `armeria-graphql` dependency:
-
-<RequiredDependencies
-  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
-  dependencies={[
-    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-graphql' },
-  ]}
-/>
-
-<Tip>
-
-Please note that this is entirely based on [graphql-java](https://www.graphql-java.com/).
-
-</Tip>
-
-- [GraphQL Java](https://www.graphql-java.com/) is the Java (server) implementation for GraphQL.
-- This documentation shows how to serve a service made from GraphQL Java over HTTP.
-- The main steps for creating a GraphQL service are:
-
-## Defining schema
-
-A schema which defines each field that can be queried or mutated and what types those fields are.
-This schema defines one top level field (in the type Query): which returns the details of a User.
+Let's assume we have the following [GraphQL Schema](https://graphql.org/learn/schema/):
 
 ```graphql
 type Query {
@@ -41,12 +19,10 @@ type User {
 }
 ```
 
-Armeria provides a way to write an HTTP service using the GraphQL like this.
-
-## Loading data
-
-A [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) fetches data for one field while the query is executed.
-The `UserDataFetcher` retrieves a user with a specific ID from a static map. This is made just for testing.
+The schema describes that if a client requests a `User` data using the `ID` field, the GraphQL server will
+return the `User` data. The GraphQL engine uses a [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html)
+to resolve the ID and fetch the corresponding object. For the sake of simplicity, let's implement
+`UserDataFetcher` that stores `User`s in a `Map`:
 
 ```java
 import graphql.schema.DataFetcher;
@@ -66,8 +42,15 @@ class UserDataFetcher implements DataFetcher<User> {
 }
 ```
 
-## Building `GraphqlService`
-Once you've finished the implementation of the service, you need to build a <type://GraphqlService> using
+<Tip>
+
+Please note that this is entirely based on [graphql-java](https://www.graphql-java.com/).
+
+</Tip>
+
+## `GraphqlService`
+
+Once you've finished the implementation of the [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html), you need to build a <type://GraphqlService> using
 a <type://GraphqlServiceBuilder> and add it to the <type://ServerBuilder>:
 
 ```java
@@ -88,11 +71,7 @@ Server server = sb.build();
 server.start();
 ```
 
-<Tip>
-
-When writing <type://GraphqlService>, register the [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) that was written just before.
-
-</Tip>
+Here [RuntimeWiring](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/idl/RuntimeWiring.html) is a specification of [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html)s, [TypeResolver](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/TypeResolver.html)s, and custom [scalar](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/GraphQLScalarType.html)s that are needed to wire together a functional [GraphQLSchema](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/GraphQLSchema.html).
 
 ## Blocking service implementation
 
