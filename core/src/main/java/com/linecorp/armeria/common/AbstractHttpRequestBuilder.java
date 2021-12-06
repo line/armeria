@@ -205,7 +205,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
     }
 
     /**
-     * Sets the content for this request. The {@code content} that is converted into JSON
+     * Sets the content for this request. The {@code content} is converted into JSON format
      * using the default {@link ObjectMapper}.
      */
     @Override
