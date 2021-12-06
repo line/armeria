@@ -38,18 +38,19 @@ const TutorialSteps: React.FC<TutorialStepProps> = (props) => {
     }
   `);
 
-  let tutorialType = location.pathname.substr(0, location.pathname.lastIndexOf("/"))
-                                      .replace('/tutorials/','');
+  const tutorialType = window.location.pathname
+    .substr(0, window.location.pathname.lastIndexOf('/'))
+    .replace('/tutorials/', '');
 
   const tutorialSteps = Object.entries(tutorialNodes).map(
     ([key, tutorialNode]) => {
-      if(tutorialNode.parent.relativeDirectory === tutorialType) {
+      if (tutorialNode.parent.relativeDirectory === tutorialType) {
         return (
-            <Step
-                key={key}
-                title={`Step ${tutorialNode.frontmatter.order}`}
-                description={tutorialNode.frontmatter.menuTitle}
-            />
+          <Step
+            key={key}
+            title={`Step ${tutorialNode.frontmatter.order}`}
+            description={tutorialNode.frontmatter.menuTitle}
+          />
         );
       }
     },
