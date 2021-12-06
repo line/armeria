@@ -160,7 +160,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             try {
                 if (cause != null) {
                     upstream.cancel();
-                    downstream.onError(cause);
+                    onError(cause);
                 } else {
                     requireNonNull(item, "function.apply()'s future completed with null");
                     downstream.onNext(item);
