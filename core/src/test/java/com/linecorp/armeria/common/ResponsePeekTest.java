@@ -90,8 +90,8 @@ class ResponsePeekTest {
                 })
                 .peekHeaders(headers -> peekCount.incrementAndGet())
                 .aggregate().join())
-                .isInstanceOfSatisfying(CompletionException.class, t ->
-                        assertThat(t.getCause()).isInstanceOf(IllegalStateException.class));
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalStateException.class);
         assertThat(peekCount).hasValue(0);
     }
 }

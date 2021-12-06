@@ -593,12 +593,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Peeks values emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
      *
      * <p>For example:<pre>{@code
-     * StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2);
-     * StreamMessage<Number> ifEvenExistsThenThrow = source.peek(x -> {
-     *      if (x % 2 == 0) {
-     *          throw new IllegalArgumentException();
-     *      }
-     * }, Integer.class);
+     * StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2, 0.3, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * List<Number> peeked = source.peek(x -> collected.add(x), Integer.class).collect().join();
+     *
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert peeked.equals(List.of(0.1, 1, 0.2, 2, 0.3, 3));
      * }</pre>
      */
     default <U extends T> StreamMessage<T> peek(Consumer<? super U> action, Class<? extends U> type) {

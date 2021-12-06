@@ -16,9 +16,16 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import reactor.test.StepVerifier;
 
@@ -36,21 +43,17 @@ class StreamMessagePeekTest {
         StepVerifier.create(peeked)
                     .expectNext(1)
                     .expectError(IllegalArgumentException.class)
-                    .verifyThenAssertThat();
+                    .verify();
     }
 
     @Test
     void peekWithType() {
-        final StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2);
-        final Consumer<Integer> ifEvenExistsThenThrow = x -> {
-            if (x % 2 == 0) {
-                throw new IllegalArgumentException();
-            }
-        };
-        final StreamMessage<Number> peeked = source.peek(ifEvenExistsThenThrow, Integer.class);
+        final StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2, 0.3, 3);
+        final List<Integer> collected = new ArrayList<>();
+        final StreamMessage<Number> peeked = source.peek(collected::add, Integer.class);
         StepVerifier.create(peeked)
-                    .expectNext(0.1, 1, 0.2)
-                    .expectError(IllegalArgumentException.class)
-                    .verifyThenAssertThat();
+                    .expectNext(0.1, 1, 0.2, 2, 0.3, 3)
+                    .verifyComplete();
+        await().untilAsserted(() -> assertThat(collected).isEqualTo(ImmutableList.of(1, 2, 3)));
     }
 }
