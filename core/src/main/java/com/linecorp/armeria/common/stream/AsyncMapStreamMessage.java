@@ -30,8 +30,8 @@ import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
-    private final StreamMessage<Object> source;
-    private final Function<Object, CompletableFuture<U>> function;
+    private final StreamMessage<T> source;
+    private final Function<T, CompletableFuture<U>> function;
 
     @SuppressWarnings("unchecked")
     AsyncMapStreamMessage(StreamMessage<? extends T> source,
@@ -39,8 +39,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
-        this.source = (StreamMessage<Object>) source;
-        this.function = (Function<Object, CompletableFuture<U>>) function;
+        this.source = (StreamMessage<T>) source;
+        this.function = (Function<T, CompletableFuture<U>>) function;
     }
 
     @Override
@@ -84,9 +84,9 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         source.abort(cause);
     }
 
-    private static final class AsyncMapSubscriber<U> implements Subscriber<Object>, Subscription {
+    private static final class AsyncMapSubscriber<T, U> implements Subscriber<T>, Subscription {
         private final Subscriber<? super U> downstream;
-        private final Function<Object, CompletableFuture<U>> function;
+        private final Function<T, CompletableFuture<U>> function;
         private final EventExecutor executor;
 
         @Nullable
@@ -97,7 +97,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         private boolean isCompleting;
 
         AsyncMapSubscriber(Subscriber<? super U> downstream,
-                           Function<Object, CompletableFuture<U>> function,
+                           Function<T, CompletableFuture<U>> function,
                            EventExecutor executor) {
             requireNonNull(downstream, "downstream");
             requireNonNull(function, "function");
@@ -116,7 +116,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         @Override
-        public void onNext(Object item) {
+        public void onNext(T item) {
             requireNonNull(item, "item");
 
             if (canceled) {
