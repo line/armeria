@@ -134,7 +134,7 @@ public final class GrpcClientOptions {
 
     /**
      * Sets the {@link ClientInterceptor}s to the gRPC client stub.
-     * The last interceptor will have its ClientInterceptor.interceptCall called first.
+     * The last interceptor will have its {@code ClientInterceptor.interceptCall()} called first.
      */
     public static final ClientOption<List<ClientInterceptor>>
             INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS",
