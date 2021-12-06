@@ -113,6 +113,7 @@ class AsyncMapStreamMessageTest {
         StepVerifier.create(willNotComplete)
                     .thenRequest(1)
                     .then(() -> future.complete(1))
+                    .expectNext(1)
                     .verifyComplete();
     }
 }

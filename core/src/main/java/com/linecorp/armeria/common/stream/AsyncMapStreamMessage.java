@@ -153,10 +153,6 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (--pendingRequests == 0 && isCompleting) {
-                downstream.onComplete();
-            }
-
             try {
                 if (cause != null) {
                     upstream.cancel();
@@ -164,6 +160,10 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 } else {
                     requireNonNull(item, "function.apply()'s future completed with null");
                     downstream.onNext(item);
+
+                    if (--pendingRequests == 0 && isCompleting) {
+                        downstream.onComplete();
+                    }
                 }
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
