@@ -116,7 +116,7 @@ abstract class AbstractHttpMessageBuilder {
         return this;
     }
 
-    AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
+    AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "publisher");
         checkState(this.content == null, "content has been set already");
