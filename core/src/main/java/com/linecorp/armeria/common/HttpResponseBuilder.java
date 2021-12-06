@@ -59,72 +59,63 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * Sets 200 OK to the status of this response.
      */
     public HttpResponseBuilder ok() {
-        status(HttpStatus.OK);
-        return this;
+        return status(HttpStatus.OK);
     }
 
     /**
      * Sets 201 Created to the status of this response.
      */
     public HttpResponseBuilder created() {
-        status(HttpStatus.CREATED);
-        return this;
+        return status(HttpStatus.CREATED);
     }
 
     /**
      * Sets 301 Moved Permanently to the status of this response.
      */
     public HttpResponseBuilder movedPermanently() {
-        status(HttpStatus.MOVED_PERMANENTLY);
-        return this;
+        return status(HttpStatus.MOVED_PERMANENTLY);
     }
 
     /**
      * Sets 400 Bad Request to the status of this response.
      */
     public HttpResponseBuilder badRequest() {
-        status(HttpStatus.BAD_REQUEST);
-        return this;
+        return status(HttpStatus.BAD_REQUEST);
     }
 
     /**
      * Sets 401 Unauthorized to the status of this response.
      */
     public HttpResponseBuilder unauthorized() {
-        status(HttpStatus.UNAUTHORIZED);
-        return this;
+        return status(HttpStatus.UNAUTHORIZED);
     }
 
     /**
      * Sets 403 Forbidden to the status of this response.
      */
     public HttpResponseBuilder forbidden() {
-        status(HttpStatus.FORBIDDEN);
-        return this;
+        return status(HttpStatus.FORBIDDEN);
     }
 
     /**
      * Sets 404 Not Found to the status of this response.
      */
     public HttpResponseBuilder notFound() {
-        status(HttpStatus.NOT_FOUND);
-        return this;
+        return status(HttpStatus.NOT_FOUND);
     }
 
     /**
      * Sets 500 Internal Server Error to the status of this response.
      */
     public HttpResponseBuilder internalServerError() {
-        status(HttpStatus.INTERNAL_SERVER_ERROR);
-        return this;
+        return status(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
      * Sets 502 Bad Gateway to the status of this response.
      */
     public HttpResponseBuilder badGateway() {
-        status(HttpStatus.BAD_GATEWAY);
-        return this;
+        return status(HttpStatus.BAD_GATEWAY);
     }
 
     /**

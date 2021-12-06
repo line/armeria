@@ -79,6 +79,7 @@ abstract class AbstractHttpMessageBuilder {
 
     AbstractHttpMessageBuilder content(MediaType contentType, CharSequence content) {
         requireNonNull(contentType, "contentType");
+        requireNonNull(content, "content");
         return content(contentType,
                        HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                    content));
@@ -86,6 +87,7 @@ abstract class AbstractHttpMessageBuilder {
 
     AbstractHttpMessageBuilder content(MediaType contentType, String content) {
         requireNonNull(contentType, "contentType");
+        requireNonNull(content, "content");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                                 content));
     }
@@ -99,11 +101,14 @@ abstract class AbstractHttpMessageBuilder {
     AbstractHttpMessageBuilder content(MediaType contentType, @FormatString String format,
                                        Object... content) {
         requireNonNull(contentType, "contentType");
+        requireNonNull(format, "format");
+        requireNonNull(content, "content");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                                 format, content));
     }
 
     AbstractHttpMessageBuilder content(MediaType contentType, byte[] content) {
+        requireNonNull(content, "content");
         return content(contentType, HttpData.wrap(content));
     }
 
@@ -118,22 +123,22 @@ abstract class AbstractHttpMessageBuilder {
 
     AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         requireNonNull(contentType, "contentType");
-        requireNonNull(content, "publisher");
+        requireNonNull(publisher, "publisher");
         checkState(this.content == null, "content has been set already");
         headersBuilder().contentType(contentType);
-        publisher = content;
+        this.publisher = publisher;
         return this;
     }
 
     AbstractHttpMessageBuilder contentJson(Object content) {
         requireNonNull(content, "content");
+        checkState(publisher == null, "publisher has been set already");
         headersBuilder().contentType(MediaType.JSON);
         try {
-            this.content = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
+            return content(MediaType.JSON, HttpData.wrap(JacksonUtil.writeValueAsBytes(content)));
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("failed to serialize " + content, e);
         }
-        return this;
     }
 
     AbstractHttpMessageBuilder trailers(
