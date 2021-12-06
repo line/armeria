@@ -256,7 +256,7 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.headers().get("header-1")).isEqualTo("test-value1");
         assertThat(aggregatedRes.headers().get("header-2")).isEqualTo("test-value2");
         assertThat(aggregatedRes.headers().getAll(HttpHeaderNames.ACCEPT_ENCODING))
-                .isEqualTo(ImmutableList.of("gzip", "deflate", "gzip"));
+                .containsExactly("gzip", "deflate", "gzip");
         assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
         assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(aggregatedRes.trailers().contains("trailer-name")).isTrue();
