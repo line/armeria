@@ -91,10 +91,10 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Nullable
         private volatile Subscription upstream;
-        private volatile boolean isCompleting;
         private volatile boolean canceled;
 
         private int pendingRequests;
+        private boolean isCompleting;
 
         AsyncMapSubscriber(Subscriber<? super U> downstream,
                            Function<Object, CompletableFuture<U>> function,
