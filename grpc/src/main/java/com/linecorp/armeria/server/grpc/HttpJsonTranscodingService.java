@@ -119,7 +119,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
      * would be returned. Otherwise, the {@code delegate} would be returned.
      */
     static GrpcService of(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                          UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
+                          UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction) {
         requireNonNull(delegate, "delegate");
         requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
 
@@ -185,7 +185,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return delegate;
         }
         return new HttpJsonTranscodingService(delegate, routeAndSpecs, unframedGrpcErrorHandler,
-                                              unframedGrpcStatusFunction);
+                                              unframedGrpcStatusMappingFunction);
     }
 
     @Nullable
@@ -376,8 +376,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     private HttpJsonTranscodingService(GrpcService delegate,
                                        Map<Route, TranscodingSpec> routeAndSpecs,
                                        UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                       UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
-        super(delegate, unframedGrpcErrorHandler, unframedGrpcStatusFunction);
+                                       UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction) {
+        super(delegate, unframedGrpcErrorHandler, unframedGrpcStatusMappingFunction);
         this.routeAndSpecs = routeAndSpecs;
         routes = ImmutableSet.<Route>builder()
                              .addAll(delegate.routes())

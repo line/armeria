@@ -64,8 +64,8 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
      */
     UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
                         UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                        UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
-        super(delegate, unframedGrpcErrorHandler, unframedGrpcStatusFunction);
+                        UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction) {
+        super(delegate, unframedGrpcErrorHandler, unframedGrpcStatusMappingFunction);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         methodsByName = registry.methods();
     }

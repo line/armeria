@@ -128,7 +128,7 @@ public final class GrpcServiceBuilder {
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
     @Nullable
-    private UnframedGrpcStatusFunction unframedGrpcStatusFunction;
+    private UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction;
 
     @Nullable
     private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
@@ -450,14 +450,14 @@ public final class GrpcServiceBuilder {
     /**
      * Set a custom HTTP status code mapper. This is useful to serve custom HTTP status code when using unframed
      * gRPC service.
-     * @param unframedGrpcStatusFunction The function which maps the {@link Throwable} or gRPC {@link Status}
+     * @param unframedGrpcStatusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status}
      *                                   code to an {@link HttpStatus} code.
      */
     @UnstableApi
     public GrpcServiceBuilder unframedGrpcStatusMapping(
-            UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
-        requireNonNull(unframedGrpcStatusFunction, "unframedGrpcStatusFunction");
-        this.unframedGrpcStatusFunction = unframedGrpcStatusFunction;
+            UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction) {
+        requireNonNull(unframedGrpcStatusMappingFunction, "unframedGrpcStatusFunction");
+        this.unframedGrpcStatusMappingFunction = unframedGrpcStatusMappingFunction;
         return this;
     }
 
@@ -727,7 +727,7 @@ public final class GrpcServiceBuilder {
                 throw new IllegalStateException(
                         "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
             }
-            if (unframedGrpcStatusFunction != null) {
+            if (unframedGrpcStatusMappingFunction != null) {
                 throw new IllegalStateException(
                         "'unframedGrpcStatusFunction' can only be set if unframed requests are enabled");
             }
@@ -781,18 +781,18 @@ public final class GrpcServiceBuilder {
         if (enableUnframedRequests) {
             final UnframedGrpcErrorHandler unframedGrpcErrorHandler = firstNonNull(
                     this.unframedGrpcErrorHandler, UnframedGrpcErrorHandler.of());
-            final UnframedGrpcStatusFunction unframedGrpcStatusFunction = firstNonNull(
-                    this.unframedGrpcStatusFunction, UnframedGrpcStatusFunction.of());
+            final UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction = firstNonNull(
+                    this.unframedGrpcStatusMappingFunction, UnframedGrpcStatusMappingFunction.of());
             grpcService = new UnframedGrpcService(grpcService, handlerRegistry, unframedGrpcErrorHandler,
-                                                  unframedGrpcStatusFunction);
+                                                  unframedGrpcStatusMappingFunction);
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
                     grpcService,
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson(),
-                    unframedGrpcStatusFunction != null ? unframedGrpcStatusFunction
-                                                       : UnframedGrpcStatusFunction.of());
+                    unframedGrpcStatusMappingFunction != null ? unframedGrpcStatusMappingFunction
+                                                              : UnframedGrpcStatusMappingFunction.of());
         }
         return grpcService;
     }

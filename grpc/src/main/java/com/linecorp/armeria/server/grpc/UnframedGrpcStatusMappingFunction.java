@@ -27,12 +27,12 @@ import io.grpc.Status;
  * A mapping function that converts a {@link Throwable} or gRPC {@link Status} into an {@link HttpStatus}.
  */
 @FunctionalInterface
-public interface UnframedGrpcStatusFunction {
+public interface UnframedGrpcStatusMappingFunction {
 
     /**
      * Return the default mapping function which follows the mapping rules defined in upstream Google APIs.
      */
-    static UnframedGrpcStatusFunction of() {
+    static UnframedGrpcStatusMappingFunction of() {
         return (ctx, status, response) -> GrpcStatus.grpcStatusToHttpStatus(status);
     }
 
@@ -46,7 +46,7 @@ public interface UnframedGrpcStatusFunction {
      * If {@link #apply(ServiceRequestContext, Status, Throwable)} returns {@code null}, the {@code other}
      * will be returned as default.
      */
-    default UnframedGrpcStatusFunction orElse(UnframedGrpcStatusFunction other) {
+    default UnframedGrpcStatusMappingFunction orElse(UnframedGrpcStatusMappingFunction other) {
         return (ctx, status, cause) -> {
             final HttpStatus httpStatus = apply(ctx, status, cause);
             if (httpStatus != null) {

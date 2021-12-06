@@ -127,7 +127,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
         UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
-                                              UnframedGrpcStatusFunction.of());
+                                              UnframedGrpcStatusMappingFunction.of());
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -137,7 +137,7 @@ class UnframedGrpcServiceTest {
         doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
                 .emptyCall(any(), any());
-        final UnframedGrpcStatusFunction statusFunction = (ctx, status, cause) -> {
+        final UnframedGrpcStatusMappingFunction statusFunction = (ctx, status, cause) -> {
             if (status.getCode() == Code.UNKNOWN) {
                 // not INTERNAL_SERVER_ERROR
                 return HttpStatus.UNKNOWN;
@@ -146,7 +146,7 @@ class UnframedGrpcServiceTest {
         };
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(
                 spyTestService,
-                statusFunction.orElse(UnframedGrpcStatusFunction.of()));
+                statusFunction.orElse(UnframedGrpcStatusMappingFunction.of()));
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.UNKNOWN);
@@ -155,11 +155,11 @@ class UnframedGrpcServiceTest {
     }
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
-        return buildUnframedGrpcService(bindableService, UnframedGrpcStatusFunction.of());
+        return buildUnframedGrpcService(bindableService, UnframedGrpcStatusMappingFunction.of());
     }
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService,
-                                                                UnframedGrpcStatusFunction statusFunction) {
+                                                                UnframedGrpcStatusMappingFunction statusFunction) {
         return (UnframedGrpcService) GrpcService.builder()
                                                 .addService(bindableService)
                                                 .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)

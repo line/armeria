@@ -64,18 +64,18 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
     private final GrpcService delegate;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
-    private final UnframedGrpcStatusFunction unframedGrpcStatusFunction;
+    private final UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
     AbstractUnframedGrpcService(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
+                                UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction) {
         super(delegate);
         this.delegate = delegate;
         this.unframedGrpcErrorHandler = requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
-        this.unframedGrpcStatusFunction = requireNonNull(unframedGrpcStatusFunction,
-                                                         "unframedGrpcStatusFunction");
+        this.unframedGrpcStatusMappingFunction = requireNonNull(unframedGrpcStatusMappingFunction,
+                                                                "unframedGrpcStatusFunction");
     }
 
     @Override
@@ -140,7 +140,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                             res.completeExceptionally(t);
                         } else {
                             deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                              unframedGrpcStatusFunction);
+                                              unframedGrpcStatusMappingFunction);
                         }
                     }
                     return null;
@@ -153,7 +153,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             AggregatedHttpResponse grpcResponse,
             CompletableFuture<HttpResponse> res,
             UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-            UnframedGrpcStatusFunction unframedGrpcStatusFunction) {
+            UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -166,7 +166,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         if (grpcStatus.getCode() != Code.OK) {
             PooledObjects.close(grpcResponse.content());
             res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse,
-                                                         unframedGrpcStatusFunction));
+                                                         unframedGrpcStatusMappingFunction));
             return;
         }
 

@@ -125,5 +125,5 @@ public interface UnframedGrpcErrorHandler {
      * @return the {@link HttpResponse}.
      */
     HttpResponse handle(ServiceRequestContext ctx, Status status, AggregatedHttpResponse response,
-                        UnframedGrpcStatusFunction statusFunction);
+                        UnframedGrpcStatusMappingFunction statusFunction);
 }
