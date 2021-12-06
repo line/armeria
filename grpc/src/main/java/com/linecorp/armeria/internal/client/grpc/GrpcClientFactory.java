@@ -50,6 +50,8 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.Channel;
+import io.grpc.ClientInterceptor;
+import io.grpc.ClientInterceptors;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.stub.AbstractStub;
@@ -133,15 +135,15 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             jsonMarshaller = null;
         }
 
-        final ArmeriaChannel channel = new ArmeriaChannel(
+        final List<ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
+        final Channel channel = ClientInterceptors.intercept(new ArmeriaChannel(
                 newParams,
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
                 serializationFormat,
                 jsonMarshaller,
-                simpleMethodNames);
-
+                simpleMethodNames), interceptors);
         final Object clientStub = clientStubFactory.newClientStub(clientType, channel);
         requireNonNull(clientStub, "clientStubFactory.newClientStub() returned null");
         checkState(clientType.isAssignableFrom(clientStub.getClass()),
@@ -167,7 +169,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         boolean foundRetryingClient = false;
         final HttpClient noopClient = (ctx, req) -> null;
-        for (Function<? super HttpClient, ? extends HttpClient> decorator: decorators) {
+        for (Function<? super HttpClient, ? extends HttpClient> decorator : decorators) {
             final HttpClient decorated = decorator.apply(noopClient);
             if (decorated instanceof RetryingClient) {
                 foundRetryingClient = true;
