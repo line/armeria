@@ -101,8 +101,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
               });
     }
 
-    @Nested
-    @SpringBootTest(classes = ActuatorTest.TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "actuatorTest" })
     @DirtiesContext
     @AutoConfigureMetrics
@@ -110,9 +109,6 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(10)
     static class ActuatorTest {
-        @SpringBootApplication
-        static class TestConfiguration {}
-
         @LocalManagementPort
         private Integer actuatorPort;
         @Inject
@@ -151,8 +147,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @Nested
-    @SpringBootTest(classes = AllInternalServicesTest.TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "allInternalServices" })
     @DirtiesContext
     @AutoConfigureMetrics
@@ -160,9 +155,6 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(10)
     static class AllInternalServicesTest {
-        @SpringBootApplication
-        static class TestConfiguration {}
-
         @Inject
         private Server server;
         @Inject
