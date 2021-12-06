@@ -198,7 +198,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     }
 
     /**
-     * Sets the content for this response. The {@code content} that is converted into JSON
+     * Sets the content for this response. The {@code content} is converted into JSON format
      * using the default {@link ObjectMapper}.
      */
     @Override
