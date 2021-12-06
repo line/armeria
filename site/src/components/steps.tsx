@@ -42,19 +42,19 @@ const TutorialSteps: React.FC<TutorialStepProps> = (props) => {
     .substr(0, window.location.pathname.lastIndexOf('/'))
     .replace('/tutorials/', '');
 
-  const tutorialSteps = Object.entries(tutorialNodes).map(
-    ([key, tutorialNode]) => {
-      if (tutorialNode.parent.relativeDirectory === tutorialType) {
-        return (
-          <Step
-            key={key}
-            title={`Step ${tutorialNode.frontmatter.order}`}
-            description={tutorialNode.frontmatter.menuTitle}
-          />
-        );
-      }
-    },
-  );
+  const tutorialSteps = Object.entries(
+    tutorialNodes.filter(
+      (tutorialNode) => tutorialNode.parent.relativeDirectory === tutorialType,
+    ),
+  ).map(([key, tutorialNode]) => {
+    return (
+      <Step
+        key={key}
+        title={`Step ${tutorialNode.frontmatter.order}`}
+        description={tutorialNode.frontmatter.menuTitle}
+      />
+    );
+  });
 
   return (
     <AntdSteps
