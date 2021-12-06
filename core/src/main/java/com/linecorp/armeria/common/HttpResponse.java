@@ -829,7 +829,6 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Applies specified {@link Consumer} to the non-informational {@link ResponseHeaders}
      * emitted by this {@link HttpResponse}.
-     * This method is a shortcut for {@code peek(action, ResponseHeaders.class)}.
      *
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
