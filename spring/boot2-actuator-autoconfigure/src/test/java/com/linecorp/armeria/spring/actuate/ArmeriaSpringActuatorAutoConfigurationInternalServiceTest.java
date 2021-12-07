@@ -67,7 +67,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @Inject
     private ArmeriaSettings settings;
     @Inject
-    InternalServices internalServices;
+    private InternalServices internalServices;
 
     @Test
     void exposeInternalServicesToManagementServerPort() throws Exception {
@@ -115,7 +115,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         @Inject
         private ArmeriaSettings settings;
         @Inject
-        InternalServices internalServices;
+        private InternalServices internalServices;
 
         @Test
         void exposeActuatorServiceToInternalServicePort() throws Exception {
@@ -159,7 +159,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         @Inject
         private ArmeriaSettings settings;
         @Inject
-        InternalServices internalServices;
+        private InternalServices internalServices;
 
         @Test
         void exposeAllInternalServicesToInternalServicePort() throws Exception {
@@ -167,6 +167,50 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
             assertThat(internalServicePort).isNotNull();
             assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
             assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.ALL);
+            assertThat(internalServices.managementServerPort()).isNull();
+
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int actuatorStatus;
+                      final int internalServiceStatus;
+                      if (internalServicePort.getPort() == port) {
+                          actuatorStatus = 200;
+                          internalServiceStatus = 200;
+                      } else {
+                          actuatorStatus = 404;
+                          internalServiceStatus = 404;
+                      }
+                      assertActuatorStatus(port, actuatorStatus);
+                      assertInternalServiceStatus(port, internalServiceStatus, settings, true);
+                  });
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "defaultInternalServices" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class DefaultInternalServicesTest {
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeDefaultInternalServicesToInternalServicePort() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.DOCS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.METRICS,
+                                                                                    InternalServiceId.ACTUATOR);
             assertThat(internalServices.managementServerPort()).isNull();
 
             server.activePorts().values().stream()
