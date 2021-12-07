@@ -195,7 +195,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+            initialEndpointsFuture.complete(endpoints);
         }
     }
 
