@@ -73,19 +73,4 @@ class DynamicEndpointGroupTest {
         assertThat(endpointGroup.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 1111),
                                                               Endpoint.of("127.0.0.1", 3333).withWeight(500));
     }
-
-    @Test
-    void notifyLatestValue() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
-        final Endpoint fooEndpoint = Endpoint.of("foo");
-        endpointGroup.addEndpoint(fooEndpoint);
-        final AtomicReference<List<Endpoint>> latestEndpoints = new AtomicReference<>();
-        // Should notify the latest endpoints set before.
-        endpointGroup.addListener(latestEndpoints::set, true);
-        assertThat(latestEndpoints.get()).containsExactly(fooEndpoint);
-
-        final Endpoint barEndpoint = Endpoint.of("bar");
-        endpointGroup.addEndpoint(barEndpoint);
-        assertThat(latestEndpoints.get()).contains(fooEndpoint, barEndpoint);
-    }
 }
