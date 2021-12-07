@@ -37,7 +37,6 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.spring.ArmeriaSettings.InternalServiceProperties;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -121,19 +120,13 @@ public final class InternalServices {
             }
         }
 
-        final InternalServiceProperties internalPort = settings.getInternalServices();
+        final Port internalPort = settings.getInternalServices();
         if (internalPort != null && internalPort.getPort() == 0) {
             internalPort.setPort(SocketUtils.findAvailableTcpPort());
         }
-        boolean actuatorEnabled = false;
-        if (internalPort != null && internalPort.getInclude() != null) {
-            actuatorEnabled = internalPort.getInclude().contains(InternalServiceId.ACTUATOR) ||
-                              internalPort.getInclude().contains(InternalServiceId.ALL);
-        }
         return new InternalServices(docService, expositionService,
                                     healthCheckService, internalPort,
-                                    maybeNewPort(managementServerPort, SessionProtocol.HTTP),
-                                    actuatorEnabled);
+                                    maybeNewPort(managementServerPort, SessionProtocol.HTTP));
     }
 
     @Nullable
@@ -148,21 +141,17 @@ public final class InternalServices {
     @Nullable
     private final Port managementServerPort;
 
-    private final boolean actuatorEnabled;
-
     private InternalServices(
             @Nullable DocService docService,
             @Nullable HttpService metricsExpositionService,
             @Nullable HealthCheckService healthCheckService,
             @Nullable Port internalServicePort,
-            @Nullable Port managementServerPort,
-            boolean actuatorEnabled) {
+            @Nullable Port managementServerPort) {
         this.healthCheckService = healthCheckService;
         this.metricsExpositionService = metricsExpositionService;
         this.docService = docService;
         this.internalServicePort = internalServicePort;
         this.managementServerPort = managementServerPort;
-        this.actuatorEnabled = actuatorEnabled;
     }
 
     /**
@@ -206,13 +195,6 @@ public final class InternalServices {
         return managementServerPort;
     }
 
-    /**
-     * Return true if {@link InternalServiceId#ACTUATOR} is specified in the properties of internal services.
-     */
-    public boolean actuatorEnabled() {
-        return actuatorEnabled;
-    }
-
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
@@ -221,7 +203,6 @@ public final class InternalServices {
                           .add("healthCheckService", healthCheckService)
                           .add("internalServicePort", internalServicePort)
                           .add("managementServerPort", managementServerPort)
-                          .add("actuatorEnabled", actuatorEnabled)
                           .toString();
     }
 }

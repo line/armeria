@@ -80,7 +80,9 @@ import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.ArmeriaSettings.InternalServiceProperties;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
+import com.linecorp.armeria.spring.InternalServiceId;
 
 /**
  * A {@link Configuration} to enable actuator endpoints on an Armeria server. Corresponds to
@@ -104,10 +106,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     private static final Class<?> INTERNAL_SERVICES_CLASS;
     @Nullable
     private static final Method MANAGEMENT_SERVER_PORT_METHOD;
-    @Nullable
-    private static final Method INTERNAL_SERVICE_PORT_METHOD;
-    @Nullable
-    private static final Method ACTUATOR_ENABLED_METHOD;
 
     static {
         Class<?> internalServicesClass = null;
@@ -119,9 +117,16 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         }
         INTERNAL_SERVICES_CLASS = internalServicesClass;
 
-        MANAGEMENT_SERVER_PORT_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "managementServerPort");
-        INTERNAL_SERVICE_PORT_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "internalServicePort");
-        ACTUATOR_ENABLED_METHOD = getInvokedMethod(INTERNAL_SERVICES_CLASS, "actuatorEnabled");
+        Method managementServerPortMethod = null;
+        if (INTERNAL_SERVICES_CLASS != null) {
+            try {
+                managementServerPortMethod = INTERNAL_SERVICES_CLASS.getMethod("managementServerPort");
+            } catch (NoSuchMethodException ignored) {
+                // Should never reach here.
+                throw new Error();
+            }
+        }
+        MANAGEMENT_SERVER_PORT_METHOD = managementServerPortMethod;
     }
 
     @Bean
@@ -161,7 +166,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             CorsEndpointProperties corsProperties,
             ConfigurableEnvironment environment,
             ManagementServerProperties serverProperties,
-            BeanFactory beanFactory) {
+            BeanFactory beanFactory,
+            ArmeriaSettings armeriaSettings) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
@@ -170,7 +176,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
             }
-            final Integer internalServicePort = getExposedInternalServicePort(beanFactory);
+            final Integer internalServicePort = getExposedInternalServicePort(beanFactory, armeriaSettings);
             final CorsServiceBuilder cors;
             if (!corsProperties.getAllowedOrigins().isEmpty()) {
                 cors = CorsService.builder(corsProperties.getAllowedOrigins());
@@ -292,23 +298,22 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     @Nullable
-    private static Integer getExposedInternalServicePort(BeanFactory beanFactory) {
+    private static Integer getExposedInternalServicePort(BeanFactory beanFactory,
+                                                         ArmeriaSettings armeriaSettings) {
         final Object internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
         if (internalServices == null) {
             return null;
         }
-        try {
-            final boolean actuatorEnabled = (boolean) ACTUATOR_ENABLED_METHOD.invoke(internalServices);
-            if (actuatorEnabled) {
-                final Port internalPort = (Port) INTERNAL_SERVICE_PORT_METHOD.invoke(internalServices);
-                if (internalPort != null) {
-                    return internalPort.getPort();
-                }
-            }
-            return null;
-        } catch (IllegalAccessException | InvocationTargetException e) {
+        final InternalServiceProperties internalServiceProperties = armeriaSettings.getInternalServices();
+        boolean actuatorEnabled = false;
+        if (internalServiceProperties != null && internalServiceProperties.getInclude() != null) {
+            actuatorEnabled = internalServiceProperties.getInclude().contains(InternalServiceId.ACTUATOR) ||
+                              internalServiceProperties.getInclude().contains(InternalServiceId.ALL);
+        }
+        if (!actuatorEnabled) {
             return null;
         }
+        return internalServiceProperties.getPort();
     }
 
     @Nullable
@@ -347,18 +352,5 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static Set<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
         return Streams.stream(mediaTypes).map(MediaType::parse).collect(toImmutableSet());
-    }
-
-    @Nullable
-    private static Method getInvokedMethod(@Nullable Class<?> internalServiceClass, String methodName) {
-        if (internalServiceClass == null) {
-            return null;
-        }
-        try {
-            return internalServiceClass.getMethod(methodName);
-        } catch (NoSuchMethodException e) {
-            // Should never reach here.
-            throw new Error();
-        }
     }
 }
