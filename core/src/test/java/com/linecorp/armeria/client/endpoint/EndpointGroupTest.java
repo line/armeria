@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,25 @@ class EndpointGroupTest {
         final EndpointGroup group = EndpointGroup.of(FOO, BAR);
         final EndpointGroup composite = EndpointGroup.of(group);
         assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR);
+    }
+
+    @Test
+    void shouldNotifyListenerWithLatestValue() {
+        final Endpoint endpoint = Endpoint.of("foo");
+        final AtomicReference<List<Endpoint>> listener = new AtomicReference<>();
+        endpoint.addListener(listener::set, true);
+        assertThat(listener.get()).containsExactly(endpoint);
+        listener.set(null);
+
+        final EndpointGroup staticEndpointGroup = EndpointGroup.of(endpoint);
+        staticEndpointGroup.addListener(listener::set, true);
+        assertThat(listener.get()).containsExactly(endpoint);
+        listener.set(null);
+
+        final DynamicEndpointGroup dynamicEndpointGroup = new DynamicEndpointGroup();
+        dynamicEndpointGroup.addEndpoint(endpoint);
+        staticEndpointGroup.addListener(listener::set, true);
+        assertThat(listener.get()).containsExactly(endpoint);
     }
 
     @Nested
