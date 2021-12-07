@@ -25,7 +25,7 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -208,10 +208,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             } else {
                 cors = null;
             }
-            final List<Integer> exposedPorts = Stream.of(Optional.ofNullable(managementPort),
-                                                         Optional.ofNullable(internalServicePort))
-                                                     .filter(Optional::isPresent)
-                                                     .map(Optional::get)
+            final List<Integer> exposedPorts = Stream.of(managementPort, internalServicePort)
+                                                     .filter(Objects::nonNull)
                                                      .collect(toImmutableList());
             endpoints.stream()
                      .flatMap(endpoint -> endpoint.getOperations().stream())
