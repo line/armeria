@@ -40,7 +40,7 @@ import io.prometheus.client.exporter.common.TextFormat;
 
 /**
  * Exposes Prometheus metrics in <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">text
- * format 0.0.4</a>.
+ * format 0.0.4 or OpenMetrics format</a>.
  */
 public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
 
