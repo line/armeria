@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Steps as AntdSteps, StepsProps } from 'antd';
 import { graphql, useStaticQuery } from 'gatsby';
 import styles from './steps.module.less';
@@ -38,9 +38,15 @@ const TutorialSteps: React.FC<TutorialStepProps> = (props) => {
     }
   `);
 
-  const tutorialType = window.location.pathname
-    .substr(0, window.location.pathname.lastIndexOf('/'))
-    .replace('/tutorials/', '');
+  const [tutorialType, setTutorialType] = useState('');
+
+  useEffect(() => {
+    setTutorialType(
+      window.location.pathname
+        .substr(0, window.location.pathname.lastIndexOf('/'))
+        .replace('/tutorials/', ''),
+    );
+  }, []);
 
   const tutorialSteps = Object.entries(
     tutorialNodes.filter(
