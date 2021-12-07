@@ -17,9 +17,12 @@
 package com.linecorp.armeria.common.stream;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.Lists;
 
 import reactor.test.StepVerifier;
 
@@ -115,5 +118,24 @@ class AsyncMapStreamMessageTest {
                     .then(() -> future.complete(1))
                     .expectNext(1)
                     .verifyComplete();
+    }
+
+    @Test
+    void mapAsyncPreservesOrder() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(0, 1, 2);
+        final CompletableFuture<Integer> finishFirst = CompletableFuture.completedFuture(2);
+        final CompletableFuture<Integer> finishLast = new CompletableFuture<>();
+        final CompletableFuture<Integer> finishSecond = new CompletableFuture<>();
+
+        final List<CompletableFuture<Integer>> futures = Lists.newArrayList(finishLast, finishFirst,
+                                                                            finishSecond);
+        final StreamMessage<Integer> shouldPreserveOrder = streamMessage.mapAsync(futures::get);
+
+        StepVerifier.create(shouldPreserveOrder)
+                .thenRequest(3)
+                .then(() -> finishSecond.complete(3))
+                .then(() -> finishLast.complete(1))
+                .expectNext(1, 2, 3)
+                .verifyComplete();
     }
 }
