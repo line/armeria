@@ -41,6 +41,7 @@ import MethodPage from '../MethodPage';
 import StructPage from '../StructPage';
 
 import {
+  packageName,
   simpleName,
   Specification,
   SpecificationData,
@@ -191,7 +192,14 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   onClick={() => handleServiceCollapse(service.name)}
                 >
                   <ListItemText>
-                    <Typography variant="subtitle1">
+                    <Typography display="inline" variant="body2">
+                      <code>
+                        {specification.hasUniqueServiceNames()
+                          ? ''
+                          : `${packageName(service.name)}.`}
+                      </code>
+                    </Typography>
+                    <Typography display="inline" variant="subtitle1">
                       <code>{simpleName(service.name)}</code>
                     </Typography>
                   </ListItemText>
@@ -257,7 +265,11 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>{simpleName(enm.name)}</code>
+                  <code>
+                    {specification.hasUniqueEnumNames()
+                      ? simpleName(enm.name)
+                      : enm.name}
+                  </code>
                 </ListItemText>
               </ListItem>
             ))}
@@ -286,7 +298,11 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>{simpleName(struct.name)}</code>
+                  <code>
+                    {specification.hasUniqueStructNames()
+                      ? simpleName(struct.name)
+                      : struct.name}
+                  </code>
                 </ListItemText>
               </ListItem>
             ))}
@@ -315,7 +331,11 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>{simpleName(struct.name)}</code>
+                  <code>
+                    {specification.hasUniqueStructNames()
+                      ? simpleName(struct.name)
+                      : struct.name}
+                  </code>
                 </ListItemText>
               </ListItem>
             ))}
