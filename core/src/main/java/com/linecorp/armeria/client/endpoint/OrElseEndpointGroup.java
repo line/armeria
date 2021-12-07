@@ -24,13 +24,10 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
-final class OrElseEndpointGroup
-        extends AbstractListenable<List<Endpoint>>
-        implements EndpointGroup, ListenableAsyncCloseable {
+final class OrElseEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
 
     private final EndpointGroup first;
     private final EndpointGroup second;
@@ -51,7 +48,7 @@ final class OrElseEndpointGroup
                              if (cause != null) {
                                  initialEndpointsFuture.completeExceptionally(cause);
                              } else {
-                                initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+                                 initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
                              }
                              return null;
                          });

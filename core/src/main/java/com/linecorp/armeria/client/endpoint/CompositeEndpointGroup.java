@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -36,9 +35,7 @@ import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 /**
  * An {@link EndpointGroup} that merges the result of any number of other {@link EndpointGroup}s.
  */
-final class CompositeEndpointGroup
-        extends AbstractListenable<List<Endpoint>>
-        implements EndpointGroup, ListenableAsyncCloseable {
+final class CompositeEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
 
     private final List<EndpointGroup> endpointGroups;
 

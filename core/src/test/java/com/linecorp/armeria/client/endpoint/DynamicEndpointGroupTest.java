@@ -17,7 +17,9 @@ package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -97,5 +99,20 @@ class DynamicEndpointGroupTest {
                 .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 3333),
                                            Endpoint.of("127.0.0.1", 1111),
                                            Endpoint.of("127.0.0.1", 2222));
+    }
+
+    @Test
+    void notifyLatestValue() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final Endpoint fooEndpoint = Endpoint.of("foo");
+        endpointGroup.addEndpoint(fooEndpoint);
+        final AtomicReference<List<Endpoint>> latestEndpoints = new AtomicReference<>();
+        // Should notify the latest endpoints set before.
+        endpointGroup.addListener(latestEndpoints::set, true);
+        assertThat(latestEndpoints.get()).containsExactly(fooEndpoint);
+
+        final Endpoint barEndpoint = Endpoint.of("bar");
+        endpointGroup.addEndpoint(barEndpoint);
+        assertThat(latestEndpoints.get()).contains(fooEndpoint, barEndpoint);
     }
 }

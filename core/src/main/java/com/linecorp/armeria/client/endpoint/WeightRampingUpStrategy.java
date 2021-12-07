@@ -140,7 +140,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             endpointGroup.addListener(newEndpoints -> {
                 // Use the executor so the order of endpoints change is guaranteed.
                 executor.execute(() -> updateEndpoints(newEndpoints));
-            });
+            }, true);
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }

@@ -133,14 +133,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
 
         clientOptions.factory().whenClosed().thenRun(this::closeAsync);
-        delegate.addListener(this::setCandidates);
-
-        // Make sure setCandidates() is called at least once. The callback of 'delegate.addListener()' might
-        // not be called if endpoints are resolved already.
-        final List<Endpoint> endpoints = delegate.endpoints();
-        if (!endpoints.isEmpty()) {
-            setCandidates(endpoints);
-        }
+        delegate.addListener(this::setCandidates, true);
     }
 
     private void setCandidates(List<Endpoint> candidates) {
