@@ -43,7 +43,7 @@ public enum InternalServiceId {
      */
     METRICS,
     /**
-     * The ID to bind "WebOperationService" into internal service.
+     * The ID to bind {@code WebOperationService} into internal service.
      */
     ACTUATOR,
     /**
