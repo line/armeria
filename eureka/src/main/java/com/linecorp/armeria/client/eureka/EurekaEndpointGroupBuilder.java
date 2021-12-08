@@ -54,6 +54,9 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
+
+import io.netty.util.AttributeKey;
 
 /**
  * Builds a {@link EurekaEndpointGroup}.
@@ -80,6 +83,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
 
     @Nullable
     private List<String> regions;
+
+    private boolean instanceMetadataAsAttrs = true;
 
     /**
      * Creates a new instance.
@@ -233,6 +238,16 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     /**
+     * Sets whether to store {@link InstanceInfo#getMetadata()} as {@link Endpoint#attr(AttributeKey)}.
+     * Use {@link EurekaEndpointGroup#INSTANCE_INFO} {@link AttributeKey} to get the {@link InstanceInfo}
+     * itself.
+     */
+    public EurekaEndpointGroupBuilder instanceMetadataAsAttrs(boolean instanceMetadataAsAttrs) {
+        this.instanceMetadataAsAttrs = instanceMetadataAsAttrs;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link EurekaEndpointGroup} based on the properties set so far. Note that
      * if {@link RetryingClient} was not set using {@link #decorator(DecoratingHttpClientFunction)},
      * {@link RetryingClient} is applied automatically using
@@ -251,7 +266,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
             client = (WebClient) factory.newClient(params);
         }
         return new EurekaEndpointGroup(selectionStrategy, client, registryFetchIntervalMillis, appName,
-                                       instanceId, vipAddress, secureVipAddress, regions);
+                                       instanceId, vipAddress, secureVipAddress, regions,
+                                       instanceMetadataAsAttrs);
     }
 
     // Override the return type of the chaining methods in the superclass.

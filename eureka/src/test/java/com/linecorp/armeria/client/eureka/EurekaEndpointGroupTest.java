@@ -37,6 +37,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -94,12 +96,32 @@ class EurekaEndpointGroupTest {
         final EurekaEndpointGroup eurekaEndpointGroup = EurekaEndpointGroup.builder(eurekaServer.httpUri())
                                                                            .appName(APP_WITH_METADATA)
                                                                            .build();
-
         final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
         eurekaEndpointGroup.addListener(endpointsCaptor::complete);
 
         final List<Endpoint> endpoints = endpointsCaptor.join();
-        assertThat(endpoints.get(0).metadata().attr(AttributeKey.valueOf("appKey0")).get())
+        final AttributeKey<String> key = AttributeKey.valueOf("appKey0");
+        assertThat(endpoints.get(0).attr(key))
                 .isEqualTo("0");
+
+        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(EurekaEndpointGroup.INSTANCE_INFO);
+        assertThat(instanceInfo).isNotNull();
+    }
+
+    @Test
+    void notStoreMetadata() {
+        final EurekaEndpointGroup eurekaEndpointGroup = EurekaEndpointGroup.builder(eurekaServer.httpUri())
+                                                                           .appName(APP_WITH_METADATA)
+                                                                           .instanceMetadataAsAttrs(false)
+                                                                           .build();
+        final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
+        eurekaEndpointGroup.addListener(endpointsCaptor::complete);
+
+        final List<Endpoint> endpoints = endpointsCaptor.join();
+        final AttributeKey<String> key = AttributeKey.valueOf("appKey0");
+        assertThat(endpoints.get(0).attr(key)).isNull();
+
+        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(EurekaEndpointGroup.INSTANCE_INFO);
+        assertThat(instanceInfo).isNull();
     }
 }

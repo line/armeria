@@ -21,6 +21,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.net.InetAddress;
 import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,8 +33,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.AttributeKey;
-import io.netty.util.AttributeMap;
-import io.netty.util.DefaultAttributeMap;
 
 class EndpointTest {
 
@@ -451,29 +453,30 @@ class EndpointTest {
     }
 
     @Test
-    void emptyMeteta() {
+    void setAndGetAttr() {
         final Endpoint endpointA = Endpoint.parse("a");
         final Endpoint endpointB = Endpoint.parse("b");
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
-        endpointA.metadata().attr(foo).set("bar");
-        assertThat(endpointA.metadata().attr(foo).get())
+        assertThat(endpointA.setAttr(foo, "bar")).isNull();
+        assertThat(endpointA.attr(foo))
                 .isEqualTo("bar");
-        assertThat(endpointB.metadata().attr(foo).get())
+        assertThat(endpointB.attr(foo))
                 .isNull();
     }
 
     @Test
-    void withMetadata() {
+    void setAttrs() {
         final Endpoint endpoint = Endpoint.parse("a");
-        final AttributeMap metadata = new DefaultAttributeMap();
-        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
-        metadata.attr(foo).set("bar");
-        final Endpoint endpointWithMetadata = endpoint.withMetadata(metadata);
 
-        assertThat(endpointWithMetadata.metadata().attr(foo).get())
-                .isEqualTo("bar");
-        assertThat(endpoint.metadata().attr(foo).get())
-                .isNull();
+        List<Entry<AttributeKey<String>, String>> attrs = new ArrayList<>();
+        attrs.add(new AbstractMap.SimpleImmutableEntry<>(AttributeKey.valueOf("key1"), "value1"));
+        attrs.add(new AbstractMap.SimpleImmutableEntry<>(AttributeKey.valueOf("key2"), "value2"));
+        endpoint.setAttrs(attrs);
+
+        assertThat(endpoint.attr(AttributeKey.<String>valueOf("key1")))
+                .isEqualTo("value1");
+        assertThat(endpoint.attr(AttributeKey.<String>valueOf("key2")))
+                .isEqualTo("value2");
     }
 }

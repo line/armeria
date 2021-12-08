@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.eureka.Application;
 import com.linecorp.armeria.internal.common.eureka.Applications;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
@@ -63,8 +64,6 @@ import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
-import io.netty.util.AttributeMap;
-import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -87,6 +86,13 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private static final String VIPS = "/vips/";
     private static final String SVIPS = "/svips/";
     private static final String INSTANCES = "/instances/";
+
+    /**
+     * The {@link AttributeKey} for eureka {@link InstanceInfo}.
+     * Use {@link Endpoint#attr(AttributeKey)} to retrieve the value.
+     */
+    @UnstableApi
+    public static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf("instanceInfo");
 
     /**
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
@@ -167,7 +173,8 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     EurekaEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                         WebClient webClient, long registryFetchIntervalMillis, @Nullable String appName,
                         @Nullable String instanceId, @Nullable String vipAddress,
-                        @Nullable String secureVipAddress, @Nullable List<String> regions) {
+                        @Nullable String secureVipAddress, @Nullable List<String> regions,
+                        boolean instanceMetadataAsAttrs) {
         super(selectionStrategy);
         this.webClient = webClient;
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
@@ -176,7 +183,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         headersBuilder.method(HttpMethod.GET);
         headersBuilder.accept(MediaType.JSON_UTF_8);
         responseConverter = responseConverter(headersBuilder, appName, instanceId,
-                                              vipAddress, secureVipAddress, regions);
+                                              vipAddress, secureVipAddress, regions, instanceMetadataAsAttrs);
         requestHeaders = headersBuilder.build();
 
         webClient.options().factory().whenClosed().thenRun(this::closeAsync);
@@ -237,7 +244,8 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
     private static Function<byte[], List<Endpoint>> responseConverter(
             RequestHeadersBuilder builder, @Nullable String appName, @Nullable String instanceId,
-            @Nullable String vipAddress, @Nullable String secureVipAddress, @Nullable List<String> regions) {
+            @Nullable String vipAddress, @Nullable String secureVipAddress, @Nullable List<String> regions,
+            boolean instanceMetadataAsAttrs) {
         if (regions != null) {
             final Predicate<InstanceInfo> filter;
             final String path;
@@ -268,51 +276,54 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
             regions.forEach(joiner::add);
             final QueryParams queryParams = QueryParams.of("regions", joiner.toString());
             builder.path(path + '?' + queryParams.toQueryString());
-            return new ApplicationsConverter(filter, secureVip);
+            return new ApplicationsConverter(filter, secureVip, instanceMetadataAsAttrs);
         }
 
         if (vipAddress != null) {
             builder.path(VIPS + vipAddress);
-            return new ApplicationsConverter();
+            return new ApplicationsConverter(instanceMetadataAsAttrs);
         }
 
         if (secureVipAddress != null) {
             builder.path(SVIPS + secureVipAddress);
-            return new ApplicationsConverter(allInstances, true);
+            return new ApplicationsConverter(allInstances, true, instanceMetadataAsAttrs);
         }
 
         if (appName == null && instanceId == null) {
             builder.path(APPS);
-            return new ApplicationsConverter();
+            return new ApplicationsConverter(instanceMetadataAsAttrs);
         }
 
         if (appName != null && instanceId != null) {
             builder.path(APPS + '/' + appName + '/' + instanceId);
-            return new InstanceInfoConverter();
+            return new InstanceInfoConverter(instanceMetadataAsAttrs);
         }
 
         if (appName != null) {
             builder.path(APPS + '/' + appName);
-            return new ApplicationConverter();
+            return new ApplicationConverter(instanceMetadataAsAttrs);
         }
 
         // instanceId is not null at this point.
         builder.path(INSTANCES + instanceId);
-        return new InstanceInfoConverter();
+        return new InstanceInfoConverter(instanceMetadataAsAttrs);
     }
 
     private static class ApplicationsConverter implements Function<byte[], List<Endpoint>> {
 
         private final Predicate<InstanceInfo> filter;
         private final boolean secureVip;
+        private final boolean instanceMetadataAsAttrs;
 
-        ApplicationsConverter() {
-            this(allInstances, false);
+        ApplicationsConverter(boolean instanceMetadataAsAttrs) {
+            this(allInstances, false, instanceMetadataAsAttrs);
         }
 
-        ApplicationsConverter(Predicate<InstanceInfo> filter, boolean secureVip) {
+        ApplicationsConverter(Predicate<InstanceInfo> filter, boolean secureVip,
+                              boolean instanceMetadataAsAttrs) {
             this.filter = filter;
             this.secureVip = secureVip;
+            this.instanceMetadataAsAttrs = instanceMetadataAsAttrs;
         }
 
         @Override
@@ -321,7 +332,8 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 final Set<Application> applications =
                         mapper.readValue(content, Applications.class).applications();
                 return applications.stream()
-                                   .map(application -> endpoints(application, filter, secureVip))
+                                   .map(application -> endpoints(application, filter, secureVip,
+                                                                 instanceMetadataAsAttrs))
                                    .flatMap(List::stream)
                                    .collect(toImmutableList());
             } catch (IOException e) {
@@ -331,51 +343,59 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     private static List<Endpoint> endpoints(Application application, Predicate<InstanceInfo> filter,
-                                            boolean secureVip) {
+                                            boolean secureVip, boolean instanceMetadataAsAttrs) {
         final Set<InstanceInfo> instances = application.instances();
         return instances.stream()
                         .filter(filter)
                         .filter(instanceInfo -> instanceInfo.getStatus() == InstanceStatus.UP)
-                        .map(instanceInfo -> endpoint(instanceInfo, secureVip))
+                        .map(instanceInfo -> endpoint(instanceInfo, secureVip, instanceMetadataAsAttrs))
                         .collect(toImmutableList());
     }
 
     private static class ApplicationConverter implements Function<byte[], List<Endpoint>> {
-
         private final Predicate<InstanceInfo> filter;
+        private final boolean instanceMetadataAsAttrs;
 
-        ApplicationConverter() {
-            this(allInstances);
+        ApplicationConverter(boolean instanceMetadataAsAttrs) {
+            this(allInstances, instanceMetadataAsAttrs);
         }
 
-        ApplicationConverter(Predicate<InstanceInfo> filter) {
+        ApplicationConverter(Predicate<InstanceInfo> filter, boolean instanceMetadataAsAttrs) {
             this.filter = filter;
+            this.instanceMetadataAsAttrs = instanceMetadataAsAttrs;
         }
 
         @Override
         public List<Endpoint> apply(byte[] content) {
             try {
                 final Application application = mapper.readValue(content, Application.class);
-                return endpoints(application, filter, false);
+                return endpoints(application, filter, false, instanceMetadataAsAttrs);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
-    private static class InstanceInfoConverter implements Function<byte[], List<Endpoint>> {
+    private static final class InstanceInfoConverter implements Function<byte[], List<Endpoint>> {
+        private final boolean instanceMetadataAsAttrs;
+
+        private InstanceInfoConverter(boolean instanceMetadataAsAttrs) {
+            this.instanceMetadataAsAttrs = instanceMetadataAsAttrs;
+        }
 
         @Override
         public List<Endpoint> apply(byte[] content) {
             try {
-                return ImmutableList.of(endpoint(mapper.readValue(content, InstanceInfo.class), false));
+                return ImmutableList.of(endpoint(mapper.readValue(content, InstanceInfo.class), false,
+                                                 instanceMetadataAsAttrs));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
-    private static Endpoint endpoint(InstanceInfo instanceInfo, boolean secureVip) {
+    private static Endpoint endpoint(InstanceInfo instanceInfo, boolean secureVip,
+                                     boolean instanceMetadataAsAttrs) {
         final String hostname = instanceInfo.getHostName();
         final PortWrapper portWrapper = instanceInfo.getPort();
         final int port;
@@ -391,23 +411,19 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         if (ipAddr != null && hostname != ipAddr) {
             endpoint = endpoint.withIpAddr(ipAddr);
         }
-        endpoint = endpoint.withMetadata(metadata(instanceInfo));
+        if (instanceMetadataAsAttrs) {
+            addInstanceMetadata(endpoint, instanceInfo);
+        }
+
         return endpoint;
     }
 
-    private static AttributeMap metadata(InstanceInfo instanceInfo) {
-        final AttributeMap metadata = new DefaultAttributeMap();
-
-        if (instanceInfo.getHealthCheckUrl() != null) {
-            metadata.attr(AttributeKey.valueOf("healthCheckUrl")).set(instanceInfo.getHealthCheckUrl());
-        }
-
+    private static void addInstanceMetadata(Endpoint endpoint, InstanceInfo instanceInfo) {
+        endpoint.setAttr(AttributeKey.valueOf("instanceInfo"), instanceInfo);
         instanceInfo.getMetadata().forEach((key, value) -> {
             if (!"@class".equals(key)) {
-                metadata.attr(AttributeKey.valueOf(key)).set(value);
+                endpoint.setAttr(AttributeKey.valueOf(key), value);
             }
         });
-
-        return metadata;
     }
 }

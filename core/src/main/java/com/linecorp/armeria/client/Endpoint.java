@@ -27,9 +27,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -49,6 +51,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
+import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.NetUtil;
@@ -80,6 +83,9 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             Caffeine.newBuilder()
                     .maximumSize(8192) // TODO(ikhoon): Add a flag if there is a demand for it.
                     .build();
+
+    private static final AtomicReferenceFieldUpdater<Endpoint, AttributeMap> attributesUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(Endpoint.class, AttributeMap.class, "attributes");
 
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
@@ -136,8 +142,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     private static Endpoint create(String host, int port, boolean validateHost) {
         if (NetUtil.isValidIpV4Address(host)) {
-            return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY,
-                                new DefaultAttributeMap());
+            return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY, null);
         }
 
         if (NetUtil.isValidIpV6Address(host)) {
@@ -148,15 +153,13 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             } else {
                 ipV6Addr = host;
             }
-            return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY,
-                                new DefaultAttributeMap());
+            return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY, null);
         }
 
         if (validateHost) {
             host = InternetDomainName.from(host).toString();
         }
-        return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY,
-                            new DefaultAttributeMap());
+        return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY, null);
     }
 
     private static String removeUserInfo(String authority) {
@@ -184,7 +187,12 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final HostType hostType;
     private final String authority;
     private final String strVal;
-    private final AttributeMap metadata;
+
+    /**
+     * update by {@link #attributesUpdater}.
+     */
+    @Nullable
+    private volatile AttributeMap attributes;
 
     @Nullable
     private CompletableFuture<Endpoint> selectFuture;
@@ -193,7 +201,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private int hashCode;
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType,
-                     AttributeMap metadata) {
+                     @Nullable AttributeMap attributes) {
         this.host = host;
         this.ipAddr = ipAddr;
         this.port = port;
@@ -210,7 +218,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         authority = generateAuthority(host, port, hostType);
         // Pre-generate toString() value.
         strVal = generateToString(authority, ipAddr, weight, hostType);
-        this.metadata = metadata;
+        this.attributes = attributes;
     }
 
     private static String generateAuthority(String host, int port, HostType hostType) {
@@ -374,7 +382,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (this.port == port) {
             return this;
         }
-        return new Endpoint(host, ipAddr, port, weight, hostType, metadata);
+        return new Endpoint(host, ipAddr, port, weight, hostType, attributes);
     }
 
     /**
@@ -389,7 +397,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (port == 0) {
             return this;
         }
-        return new Endpoint(host, ipAddr, 0, weight, hostType, metadata);
+        return new Endpoint(host, ipAddr, 0, weight, hostType, attributes);
     }
 
     /**
@@ -408,7 +416,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
 
-        return new Endpoint(host, ipAddr, defaultPort, weight, hostType, metadata);
+        return new Endpoint(host, ipAddr, defaultPort, weight, hostType, attributes);
     }
 
     /**
@@ -425,7 +433,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public Endpoint withoutDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
         if (port == defaultPort) {
-            return new Endpoint(host, ipAddr, 0, weight, hostType, metadata);
+            return new Endpoint(host, ipAddr, 0, weight, hostType, attributes);
         }
         return this;
     }
@@ -476,12 +484,12 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (isIpAddrOnly()) {
             return new Endpoint(ipAddr, ipAddr, port, weight,
                                 ipFamily == StandardProtocolFamily.INET ? HostType.IPv4_ONLY
-                                                                        : HostType.IPv6_ONLY, metadata);
+                                                                        : HostType.IPv6_ONLY, attributes);
         }
 
         return new Endpoint(host(), ipAddr, port, weight,
                             ipFamily == StandardProtocolFamily.INET ? HostType.HOSTNAME_AND_IPv4
-                                                                    : HostType.HOSTNAME_AND_IPv6, metadata);
+                                                                    : HostType.HOSTNAME_AND_IPv6, attributes);
     }
 
     /**
@@ -511,7 +519,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             throw new IllegalStateException("can't clear the IP address if host name is an IP address: " +
                                             this);
         }
-        return new Endpoint(host(), null, port, weight, HostType.HOSTNAME_ONLY, metadata);
+        return new Endpoint(host(), null, port, weight, HostType.HOSTNAME_ONLY, attributes);
     }
 
     /**
@@ -526,22 +534,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (this.weight == weight) {
             return this;
         }
-        return new Endpoint(host(), ipAddr(), port, weight, hostType, metadata);
-    }
-
-    /**
-     * Returns a new host endpoint with the specified metadata.
-     *
-     * @return the new endpoint with the specified metadata. {@code this} if this endpoint has the same
-     *      metadata.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
-     */
-    public Endpoint withMetadata(AttributeMap metadata) {
-        if (this.metadata == metadata) {
-            return this;
-        }
-        return new Endpoint(host(), ipAddr(), port, weight, hostType, metadata);
+        return new Endpoint(host(), ipAddr(), port, weight, hostType, attributes);
     }
 
     /**
@@ -561,10 +554,47 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * return the metadata of this endpoint.
+     * Returns the attribute value associated with the given {@link AttributeKey} of this endpoint, or
+     * {@code null} if there's no value set by {@link #setAttr(AttributeKey, Object)} or
+     * {@link #setAttrs(Iterable)}.
      */
-    public AttributeMap metadata() {
-        return metadata;
+    @Nullable
+    public <T> T attr(AttributeKey<T> key) {
+        @Nullable
+        final AttributeMap attributeMap = this.attributes;
+        if (attributeMap != null) {
+            return attributeMap.attr(key).get();
+        }
+        return null;
+    }
+
+    /**
+     * Associates the specified value with the given {@link AttributeKey} in this endpoint.
+     *
+     * @return the old value that has been replaced.
+     *
+     */
+    @Nullable
+    public <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
+        return attributes().attr(key).getAndSet(value);
+    }
+
+    /**
+     * Associates a collection of {@link AttributeKey} with value to this endpoint.
+     */
+    public <T> void setAttrs(Iterable<? extends Entry<AttributeKey<T>, T>> attributes) {
+        final AttributeMap attributeMap = attributes();
+        attributes.forEach(entry -> attributeMap.attr(entry.getKey()).set(entry.getValue()));
+    }
+
+    private AttributeMap attributes() {
+        @Nullable
+        final AttributeMap attributeMap = this.attributes;
+        if (attributeMap != null) {
+            return attributeMap;
+        }
+        attributesUpdater.compareAndSet(this, null, new DefaultAttributeMap());
+        return requireNonNull(this.attributes);
     }
 
     /**
