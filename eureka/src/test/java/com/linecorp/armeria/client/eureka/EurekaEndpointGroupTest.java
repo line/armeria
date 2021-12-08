@@ -29,6 +29,7 @@ import com.netflix.appinfo.InstanceInfo.InstanceStatus;
 import com.netflix.discovery.converters.wrappers.CodecWrappers;
 import com.netflix.discovery.converters.wrappers.CodecWrappers.JacksonJson;
 import com.netflix.discovery.converters.wrappers.EncoderWrapper;
+import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
 import com.netflix.discovery.util.InstanceInfoGenerator;
 
@@ -39,9 +40,12 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.util.AttributeKey;
+
 class EurekaEndpointGroupTest {
 
     private static final EncoderWrapper encoder = CodecWrappers.getEncoder(JacksonJson.class);
+    private static final String APP_WITH_METADATA = "with-metadata";
 
     @RegisterExtension
     static final ServerExtension eurekaServer = new ServerExtension() {
@@ -61,6 +65,15 @@ class EurekaEndpointGroupTest {
                 encoder.encode(apps, bos);
                 return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bos.toByteArray());
             });
+            sb.service("/apps/" + APP_WITH_METADATA, (ctx, req) -> {
+
+                final Application app = InstanceInfoGenerator.newBuilder(1, APP_WITH_METADATA)
+                                                             .withMetaData(true).build().toApplications()
+                                                             .getRegisteredApplications(APP_WITH_METADATA);
+                final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                encoder.encode(app, bos);
+                return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bos.toByteArray());
+            });
         }
     };
 
@@ -74,5 +87,19 @@ class EurekaEndpointGroupTest {
 
         // Created 6 instances but 1 is down, so 5 instances.
         assertThat(endpointsCaptor.join()).hasSize(5);
+    }
+
+    @Test
+    void instanceWithMetadata() {
+        final EurekaEndpointGroup eurekaEndpointGroup = EurekaEndpointGroup.builder(eurekaServer.httpUri())
+                                                                           .appName(APP_WITH_METADATA)
+                                                                           .build();
+
+        final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
+        eurekaEndpointGroup.addListener(endpointsCaptor::complete);
+
+        List<Endpoint> endpoints = endpointsCaptor.join();
+        assertThat(endpoints.get(0).metadata().attr(AttributeKey.valueOf("appKey0")).get())
+                .isEqualTo("0");
     }
 }

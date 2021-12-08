@@ -28,6 +28,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
+import io.netty.util.AttributeKey;
+import io.netty.util.AttributeMap;
+import io.netty.util.DefaultAttributeMap;
+
 class EndpointTest {
 
     @Test
@@ -118,7 +122,7 @@ class EndpointTest {
             "192.168.0.1, 192.168.0.1, INET"
     })
     void hostWithIpAddr(String specifiedIpAddr, String normalizedIpAddr,
-                         StandardProtocolFamily expectedIpFamily) {
+                        StandardProtocolFamily expectedIpFamily) {
         final Endpoint foo = Endpoint.of("foo.com");
         assertThat(foo.withIpAddr(specifiedIpAddr).authority()).isEqualTo("foo.com");
         assertThat(foo.withIpAddr(specifiedIpAddr).ipAddr()).isEqualTo(normalizedIpAddr);
@@ -444,5 +448,32 @@ class EndpointTest {
         assertThat(endpointWithIpv6.hasIpAddr()).isTrue();
         assertThat(endpointWithIpv6.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(endpointWithIpv6.ipAddr()).isEqualTo("0:0:0:0:0:0:0:1");
+    }
+
+    @Test
+    void emptyMeteta() {
+        final Endpoint endpointA = Endpoint.parse("a");
+        final Endpoint endpointB = Endpoint.parse("b");
+
+        AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        endpointA.metadata().attr(foo).set("bar");
+        assertThat(endpointA.metadata().attr(foo).get())
+                .isEqualTo("bar");
+        assertThat(endpointB.metadata().attr(foo).get())
+                .isNull();
+    }
+
+    @Test
+    void withMetadata() {
+        final Endpoint endpoint = Endpoint.parse("a");
+        AttributeMap metadata = new DefaultAttributeMap();
+        AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        metadata.attr(foo).set("bar");
+        final Endpoint endpointWithMetadata = endpoint.withMetadata(metadata);
+
+        assertThat(endpointWithMetadata.metadata().attr(foo).get())
+                .isEqualTo("bar");
+        assertThat(endpoint.metadata().attr(foo).get())
+                .isNull();
     }
 }

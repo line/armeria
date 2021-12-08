@@ -62,6 +62,9 @@ import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.AttributeKey;
+import io.netty.util.AttributeMap;
+import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -388,6 +391,24 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         if (ipAddr != null && hostname != ipAddr) {
             endpoint = endpoint.withIpAddr(ipAddr);
         }
+        endpoint = endpoint.withMetadata(metadata(instanceInfo));
         return endpoint;
+    }
+
+    private static AttributeMap metadata(InstanceInfo instanceInfo) {
+        final AttributeMap metadata = new DefaultAttributeMap();
+
+        if (instanceInfo.getHealthCheckUrl() != null) {
+            metadata.attr(AttributeKey.valueOf("healthCheckUrl")).set(instanceInfo.getHealthCheckUrl());
+        }
+
+        instanceInfo.getMetadata().forEach((key, value) -> {
+            if (!"@class".equals(key)) {
+                metadata.attr(AttributeKey.valueOf(key)).set(value);
+            }
+        });
+
+        return metadata;
+
     }
 }
