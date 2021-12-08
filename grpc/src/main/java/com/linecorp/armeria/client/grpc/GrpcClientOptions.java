@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -136,7 +135,7 @@ public final class GrpcClientOptions {
      * Sets the {@link ClientInterceptor}s to the gRPC client stub.
      * The specified interceptor(s) is/are executed in reverse order
      */
-    public static final ClientOption<List<? extends ClientInterceptor>>
+    public static final ClientOption<Iterable<? extends ClientInterceptor>>
             INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS", ImmutableList.of());
 
     private GrpcClientOptions() {}

@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientDecoration;
@@ -143,9 +144,10 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 serializationFormat,
                 jsonMarshaller,
                 simpleMethodNames);
-        final List<? extends ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
-        if (!interceptors.isEmpty()) {
-            channel = ClientInterceptors.intercept(channel, interceptors);
+        final Iterable<? extends ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
+        if (!Iterables.isEmpty(interceptors)) {
+            channel = ClientInterceptors.intercept(channel, Iterables.toArray(interceptors,
+                                                                              ClientInterceptor.class));
         }
         final Object clientStub = clientStubFactory.newClientStub(clientType, channel);
         requireNonNull(clientStub, "clientStubFactory.newClientStub() returned null");
