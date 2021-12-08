@@ -53,7 +53,8 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
 
     /**
      * Returns the latest value notified before.
-     * {@code null} if the value has not been initialized yet or the implementation cannot cache it.
+     * {@code null} if the value has not been initialized yet or the implementation of this class cannot
+     * cache it.
      */
     @Nullable
     protected T latestValue() {
