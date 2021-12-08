@@ -91,8 +91,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
      * The {@link AttributeKey} that store eureka {@link InstanceInfo}.
      * Use {@link Endpoint#attr(AttributeKey)} to retrieve the value.
      */
-    @UnstableApi
-    public static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf("instanceInfo");
+    private static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf("instanceInfo");
 
     /**
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified

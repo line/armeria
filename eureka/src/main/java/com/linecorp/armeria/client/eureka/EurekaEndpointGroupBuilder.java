@@ -239,8 +239,6 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
 
     /**
      * Sets whether to store {@link InstanceInfo#getMetadata()} as {@link Endpoint#attr(AttributeKey)}.
-     * Use {@link EurekaEndpointGroup#INSTANCE_INFO} {@link AttributeKey} to get the {@link InstanceInfo}
-     * itself.
      */
     public EurekaEndpointGroupBuilder instanceMetadataAsAttrs(boolean instanceMetadataAsAttrs) {
         this.instanceMetadataAsAttrs = instanceMetadataAsAttrs;

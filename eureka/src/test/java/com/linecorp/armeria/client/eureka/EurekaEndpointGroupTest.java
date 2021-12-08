@@ -48,6 +48,7 @@ class EurekaEndpointGroupTest {
 
     private static final EncoderWrapper encoder = CodecWrappers.getEncoder(JacksonJson.class);
     private static final String APP_WITH_METADATA = "with-metadata";
+    private static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf("instanceInfo");
 
     @RegisterExtension
     static final ServerExtension eurekaServer = new ServerExtension() {
@@ -104,7 +105,7 @@ class EurekaEndpointGroupTest {
         assertThat(endpoints.get(0).attr(key))
                 .isEqualTo("0");
 
-        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(EurekaEndpointGroup.INSTANCE_INFO);
+        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(INSTANCE_INFO);
         assertThat(instanceInfo).isNotNull();
     }
 
@@ -121,7 +122,7 @@ class EurekaEndpointGroupTest {
         final AttributeKey<String> key = AttributeKey.valueOf("appKey0");
         assertThat(endpoints.get(0).attr(key)).isNull();
 
-        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(EurekaEndpointGroup.INSTANCE_INFO);
+        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(INSTANCE_INFO);
         assertThat(instanceInfo).isNull();
     }
 }

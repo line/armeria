@@ -469,7 +469,7 @@ class EndpointTest {
     void setAttrs() {
         final Endpoint endpoint = Endpoint.parse("a");
 
-        List<Entry<AttributeKey<String>, String>> attrs = new ArrayList<>();
+        final List<Entry<AttributeKey<String>, String>> attrs = new ArrayList<>();
         attrs.add(new AbstractMap.SimpleImmutableEntry<>(AttributeKey.valueOf("key1"), "value1"));
         attrs.add(new AbstractMap.SimpleImmutableEntry<>(AttributeKey.valueOf("key2"), "value2"));
         endpoint.setAttrs(attrs);
