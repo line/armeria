@@ -88,7 +88,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private static final String INSTANCES = "/instances/";
 
     /**
-     * The {@link AttributeKey} for eureka {@link InstanceInfo}.
+     * The {@link AttributeKey} that store eureka {@link InstanceInfo}.
      * Use {@link Endpoint#attr(AttributeKey)} to retrieve the value.
      */
     @UnstableApi
@@ -419,7 +419,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     private static void addInstanceMetadata(Endpoint endpoint, InstanceInfo instanceInfo) {
-        endpoint.setAttr(AttributeKey.valueOf("instanceInfo"), instanceInfo);
+        endpoint.setAttr(INSTANCE_INFO, instanceInfo);
         instanceInfo.getMetadata().forEach((key, value) -> {
             if (!"@class".equals(key)) {
                 endpoint.setAttr(AttributeKey.valueOf(key), value);
