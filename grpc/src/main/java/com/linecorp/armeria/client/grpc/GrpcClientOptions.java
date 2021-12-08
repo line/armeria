@@ -134,11 +134,10 @@ public final class GrpcClientOptions {
 
     /**
      * Sets the {@link ClientInterceptor}s to the gRPC client stub.
-     * The last interceptor will have its {@code ClientInterceptor.interceptCall()} called first.
+     * The specified interceptor(s) is/are executed in reverse order
      */
-    public static final ClientOption<List<ClientInterceptor>>
-            INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS",
-                                               ImmutableList.of());
+    public static final ClientOption<List<? extends ClientInterceptor>>
+            INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS", ImmutableList.of());
 
     private GrpcClientOptions() {}
 }

@@ -24,8 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -55,8 +53,6 @@ import io.grpc.ServiceDescriptor;
 import io.grpc.stub.StreamObserver;
 
 class CustomGrpcClientFactoryTest {
-
-    private static final Logger logger = LoggerFactory.getLogger(CustomGrpcClientFactoryTest.class);
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension(true) {
@@ -127,8 +123,9 @@ class CustomGrpcClientFactoryTest {
                 return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
                     @Override
                     public void start(Listener<O> responseListener, Metadata headers) {
-                        logger.info("first");
                         invoked1.getAndIncrement();
+                        assertThat(invoked1).hasValue(1);
+                        assertThat(invoked2).hasValue(0);
                         super.start(responseListener, headers);
                     }
                 };
@@ -141,8 +138,9 @@ class CustomGrpcClientFactoryTest {
                 return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
                     @Override
                     public void start(Listener<O> responseListener, Metadata headers) {
-                        logger.info("second");
                         invoked2.getAndIncrement();
+                        assertThat(invoked1).hasValue(1);
+                        assertThat(invoked2).hasValue(1);
                         super.start(responseListener, headers);
                     }
                 };
@@ -155,8 +153,9 @@ class CustomGrpcClientFactoryTest {
                 return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
                     @Override
                     public void start(Listener<O> responseListener, Metadata headers) {
-                        logger.info("third");
                         invoked1.getAndIncrement();
+                        assertThat(invoked1).hasValue(2);
+                        assertThat(invoked2).hasValue(1);
                         super.start(responseListener, headers);
                     }
                 };

@@ -143,7 +143,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 serializationFormat,
                 jsonMarshaller,
                 simpleMethodNames);
-        final List<ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
+        final List<? extends ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
         if (!interceptors.isEmpty()) {
             channel = ClientInterceptors.intercept(channel, interceptors);
         }
