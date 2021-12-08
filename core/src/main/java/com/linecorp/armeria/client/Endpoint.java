@@ -532,7 +532,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns a new host endpoint with the specified metadata.
      *
-     * @return the new endpoint with the specified metadata. {@code this} if this endpoint has the same metadata.
+     * @return the new endpoint with the specified metadata. {@code this} if this endpoint has the same
+     *      metadata.
      *
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
@@ -560,7 +561,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * return the metadata of this endpoint
+     * return the metadata of this endpoint.
      */
     public AttributeMap metadata() {
         return metadata;

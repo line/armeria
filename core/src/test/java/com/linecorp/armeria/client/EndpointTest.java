@@ -455,7 +455,7 @@ class EndpointTest {
         final Endpoint endpointA = Endpoint.parse("a");
         final Endpoint endpointB = Endpoint.parse("b");
 
-        AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         endpointA.metadata().attr(foo).set("bar");
         assertThat(endpointA.metadata().attr(foo).get())
                 .isEqualTo("bar");
@@ -466,8 +466,8 @@ class EndpointTest {
     @Test
     void withMetadata() {
         final Endpoint endpoint = Endpoint.parse("a");
-        AttributeMap metadata = new DefaultAttributeMap();
-        AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        final AttributeMap metadata = new DefaultAttributeMap();
+        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         metadata.attr(foo).set("bar");
         final Endpoint endpointWithMetadata = endpoint.withMetadata(metadata);
 

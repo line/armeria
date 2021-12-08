@@ -409,6 +409,5 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         });
 
         return metadata;
-
     }
 }

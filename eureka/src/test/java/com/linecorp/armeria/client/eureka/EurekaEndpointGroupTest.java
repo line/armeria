@@ -98,7 +98,7 @@ class EurekaEndpointGroupTest {
         final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
         eurekaEndpointGroup.addListener(endpointsCaptor::complete);
 
-        List<Endpoint> endpoints = endpointsCaptor.join();
+        final List<Endpoint> endpoints = endpointsCaptor.join();
         assertThat(endpoints.get(0).metadata().attr(AttributeKey.valueOf("appKey0")).get())
                 .isEqualTo("0");
     }
