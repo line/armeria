@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 
@@ -34,11 +33,6 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessage<HttpData> {
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber>
-            downstreamUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
-                                                                       "downstream");
 
     private final HttpMessage upstream;
     private final EventExecutor upstreamExecutor;
@@ -104,7 +98,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        if (!downstreamUpdater.compareAndSet(bodySubscriber, null, subscriber)) {
+        if (!BodySubscriber.downstreamUpdater().compareAndSet(bodySubscriber, null, subscriber)) {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
             return;

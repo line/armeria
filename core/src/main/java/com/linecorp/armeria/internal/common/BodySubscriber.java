@@ -50,6 +50,11 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
                                                                            HeadersFuture.class,
                                                                            "trailersFuture");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber>
+            downstreamUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
+                                                                       "downstream");
+
     private static final HttpHeaders EMPTY_TRAILERS;
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS_FUTURE;
 
@@ -76,7 +81,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
     private volatile boolean wroteAny;
 
     @Nullable
-    protected volatile Subscriber<? super HttpData> downstream;
+    private volatile Subscriber<? super HttpData> downstream;
 
     @Nullable
     protected volatile Subscription upstream;
@@ -93,6 +98,11 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         pendingRequests = prefetch;
         this.upstreamMessage = requireNonNull(upstreamMessage, "upstreamMessage");
         this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater() {
+        return downstreamUpdater;
     }
 
     public CompletableFuture<HttpHeaders> trailersFuture() {
