@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.reactivestreams.Subscription;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
@@ -78,6 +80,8 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
                 final HttpStatus status = headers.status();
                 if (status.isInformational()) {
                     // Ignore informational headers
+                    final Subscription upstream = upstream();
+                    assert upstream != null;
                     upstream.request(1);
                 } else {
                     headersFuture.doComplete(headers);

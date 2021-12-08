@@ -84,7 +84,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
     private volatile Subscriber<? super HttpData> downstream;
 
     @Nullable
-    protected volatile Subscription upstream;
+    private volatile Subscription upstream;
 
     @Nullable
     private volatile EventExecutor executor;
@@ -121,6 +121,11 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     public boolean wroteAny() {
         return wroteAny;
+    }
+
+    @Nullable
+    public final Subscription upstream() {
+        return upstream;
     }
 
     protected void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
