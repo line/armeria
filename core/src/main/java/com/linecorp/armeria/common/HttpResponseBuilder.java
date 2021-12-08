@@ -198,7 +198,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     }
 
     /**
-     * Sets a header for this response. For example:
+     * Adds a header to this response. For example:
      * <pre>{@code
      * HttpResponse.builder()
      *             .ok()
@@ -213,7 +213,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     }
 
     /**
-     * Sets multiple headers for this response. For example:
+     * Adds multiple headers to this response. For example:
      * <pre>{@code
      * HttpResponse.builder()
      *             .ok()
@@ -229,7 +229,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     }
 
     /**
-     * Sets HTTP trailers for this response.
+     * Adds HTTP trailers to this response.
      */
     @Override
     public HttpResponseBuilder trailers(Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
