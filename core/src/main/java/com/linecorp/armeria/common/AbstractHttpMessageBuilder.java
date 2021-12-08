@@ -124,7 +124,7 @@ abstract class AbstractHttpMessageBuilder {
     AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         requireNonNull(contentType, "contentType");
         requireNonNull(publisher, "publisher");
-        checkState(this.content == null, "content has been set already");
+        checkState(content == null, "content has been set already");
         headersBuilder().contentType(contentType);
         this.publisher = publisher;
         return this;
@@ -133,7 +133,6 @@ abstract class AbstractHttpMessageBuilder {
     AbstractHttpMessageBuilder contentJson(Object content) {
         requireNonNull(content, "content");
         checkState(publisher == null, "publisher has been set already");
-        headersBuilder().contentType(MediaType.JSON);
         try {
             return content(MediaType.JSON, HttpData.wrap(JacksonUtil.writeValueAsBytes(content)));
         } catch (JsonProcessingException e) {

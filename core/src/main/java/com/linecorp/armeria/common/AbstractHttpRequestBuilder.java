@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
@@ -35,9 +36,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
-import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
-import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
-import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -396,29 +394,24 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
         final Publisher<? extends HttpData> publisher = publisher();
-        final HttpHeadersBuilder httpTrailers = httpTrailers();
+        final HttpHeadersBuilder httpTrailersBuilder = httpTrailers();
         if (publisher != null) {
-            if (httpTrailers == null) {
+            if (httpTrailersBuilder == null) {
                 return HttpRequest.of(requestHeaders, publisher);
             } else {
                 return HttpRequest.of(requestHeaders,
-                                      StreamMessage.concat(publisher, StreamMessage.of(httpTrailers.build())));
+                                      StreamMessage.concat(publisher,
+                                                           StreamMessage.of(httpTrailersBuilder.build())));
             }
         }
-        final HttpData content = content();
-        if (content == null || content.isEmpty()) {
-            if (content != null) {
-                content.close();
-            }
-            if (httpTrailers == null) {
-                return new EmptyFixedHttpRequest(requestHeaders);
-            }
-            return new OneElementFixedHttpRequest(requestHeaders, httpTrailers.build());
+        final HttpData content = firstNonNull(content(), HttpData.empty());
+        final HttpHeaders httpTrailers;
+        if (httpTrailersBuilder != null) {
+            httpTrailers = httpTrailersBuilder.build();
+        } else {
+            httpTrailers = HttpHeaders.of();
         }
-        if (httpTrailers == null) {
-            return new OneElementFixedHttpRequest(requestHeaders, content);
-        }
-        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers.build());
+        return HttpRequest.of(requestHeaders, content, httpTrailers);
     }
 
     @Override
@@ -433,7 +426,9 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
         }
         final HttpData content = content();
         if (content == null || content.isEmpty()) {
-            requestHeadersBuilder.remove(CONTENT_LENGTH);
+            if (publisher() == null) {
+                requestHeadersBuilder.remove(CONTENT_LENGTH);
+            }
         } else {
             requestHeadersBuilder.contentLength(content.length());
         }
