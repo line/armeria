@@ -45,7 +45,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
     private static final Logger logger = LoggerFactory.getLogger(BodySubscriber.class);
 
     @SuppressWarnings("rawtypes")
-    protected static final AtomicReferenceFieldUpdater<BodySubscriber, HeadersFuture>
+    private static final AtomicReferenceFieldUpdater<BodySubscriber, HeadersFuture>
             trailersFutureUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class,
                                                                            HeadersFuture.class,
                                                                            "trailersFuture");
