@@ -41,7 +41,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
                                                                        "downstream");
 
     private final HttpMessage upstream;
-    protected final EventExecutor upstreamExecutor;
+    private final EventExecutor upstreamExecutor;
     private final BodySubscriber bodySubscriber;
 
     protected AbstractSplitHttpMessage(HttpMessage upstream, EventExecutor executor,
