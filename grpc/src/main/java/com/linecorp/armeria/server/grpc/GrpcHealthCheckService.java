@@ -67,6 +67,21 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcHealthCheckService.class);
 
+    private static final HealthCheckResponse SERVING_RESPONSE =
+            HealthCheckResponse.newBuilder()
+                               .setStatus(ServingStatus.SERVING)
+                               .build();
+
+    private static final HealthCheckResponse NOT_SERVING_RESPONSE =
+            HealthCheckResponse.newBuilder()
+                               .setStatus(ServingStatus.NOT_SERVING)
+                               .build();
+
+    private static final HealthCheckResponse SERVICE_UNKNOWN_RESPONSE =
+            HealthCheckResponse.newBuilder()
+                               .setStatus(ServingStatus.SERVICE_UNKNOWN)
+                               .build();
+
     /**
      * Returns a newly created {@link GrpcHealthCheckService}
      * with the specified {@link ListenableHealthChecker}s.
@@ -81,6 +96,18 @@ public final class GrpcHealthCheckService extends HealthImplBase {
      */
     public static GrpcHealthCheckService of(Iterable<? extends ListenableHealthChecker> healthCheckers) {
         return builder().checkers(healthCheckers).build();
+    }
+
+    private static HealthCheckResponse getHealthCheckResponse(ServingStatus status) {
+        if (status == ServingStatus.SERVING) {
+            return SERVING_RESPONSE;
+        } else if (status == ServingStatus.NOT_SERVING) {
+            return NOT_SERVING_RESPONSE;
+        } else if (status == ServingStatus.SERVICE_UNKNOWN) {
+            return SERVICE_UNKNOWN_RESPONSE;
+        } else {
+            throw new IllegalArgumentException("Invalid status:" + status);
+        }
     }
 
     /**
@@ -128,19 +155,15 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                                              .asRuntimeException());
             return;
         }
-        responseObserver.onNext(HealthCheckResponse.newBuilder()
-                                                   .setStatus(status)
-                                                   .build());
+        responseObserver.onNext(getHealthCheckResponse(status));
         responseObserver.onCompleted();
     }
 
     @Override
-    public void watch(HealthCheckRequest request,
-                      StreamObserver<HealthCheckResponse> responseObserver) {
+    public void watch(HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
         final String service = request.getService();
-        final HealthCheckResponse response = HealthCheckResponse.newBuilder()
-                                                                .setStatus(checkServingStatus(service))
-                                                                .build();
+        final ServingStatus status = checkServingStatus(service);
+        final HealthCheckResponse response = getHealthCheckResponse(status);
         responseObserver.onNext(response);
         watchers.put(responseObserver, Maps.immutableEntry(service, response.getStatus()));
         ((ServerCallStreamObserver<HealthCheckResponse>) responseObserver).setOnCancelHandler(() -> {
@@ -216,10 +239,11 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     }
 
     private void setInternalHealthUpdateListener(Collection<ListenableHealthChecker> listenableHealthCheckers) {
+        final HealthCheckUpdateListener healthCheckUpdateListener = provideInternalHealthUpdateListener();
         listenableHealthCheckers.forEach(lhc -> {
             lhc.addListener(healthChecker -> {
                 try {
-                    provideInternalHealthUpdateListener().healthUpdated(healthChecker.isHealthy());
+                    healthCheckUpdateListener.healthUpdated(healthChecker.isHealthy());
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated():", t);
                 }
