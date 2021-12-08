@@ -88,20 +88,18 @@ class HealthCheckedEndpointGroupIntegrationTest {
             endpointGroup.whenReady().join();
             endpointGroup.newMeterBinder("foo").bindTo(registry);
 
-            await().untilAsserted(() -> {
-                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
-                        Endpoint.of("127.0.0.1", portOne),
-                        Endpoint.of("127.0.0.1", portTwo));
+            assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                    Endpoint.of("127.0.0.1", portOne),
+                    Endpoint.of("127.0.0.1", portTwo));
 
-                assertThat(MoreMeters.measureAll(registry))
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=foo,state=healthy}", 2.0)
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=foo,state=unhealthy}",
-                                       0.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 1.0);
-            });
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=foo,state=healthy}", 2.0)
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=foo,state=unhealthy}",
+                                   0.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 1.0);
 
             serverTwo.stop().get();
             await().untilAsserted(() -> {
@@ -131,27 +129,23 @@ class HealthCheckedEndpointGroupIntegrationTest {
 
         try (HealthCheckedEndpointGroup groupFoo = build(
                 HealthCheckedEndpointGroup.builder(Endpoint.of("127.0.0.1", portOne),
-                        HEALTH_CHECK_PATH),
-                protocol);
+                                                   HEALTH_CHECK_PATH), protocol);
              HealthCheckedEndpointGroup groupBar = build(
                      HealthCheckedEndpointGroup.builder(Endpoint.of("localhost", portTwo),
-                             HEALTH_CHECK_PATH),
-                     protocol)) {
+                                                        HEALTH_CHECK_PATH), protocol)) {
             groupFoo.whenReady().join();
             groupBar.whenReady().join();
 
             groupFoo.newMeterBinder("foo").bindTo(registry);
             groupBar.newMeterBinder("bar").bindTo(registry);
 
-            await().untilAsserted(() -> {
-                assertThat(MoreMeters.measureAll(registry))
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=foo,state=healthy}", 1.0)
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=bar,state=healthy}", 1.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=localhost:" + portTwo + ",ip=,name=bar}", 1.0);
-            });
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=foo,state=healthy}", 1.0)
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=bar,state=healthy}", 1.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=localhost:" + portTwo + ",ip=,name=bar}", 1.0);
         }
     }
 
@@ -163,11 +157,10 @@ class HealthCheckedEndpointGroupIntegrationTest {
 
         try (HealthCheckedEndpointGroup endpointGroup = build(
                 HealthCheckedEndpointGroup.builder(Endpoint.of("127.0.0.1", 1),
-                        HEALTH_CHECK_PATH).port(portOne),
+                                                   HEALTH_CHECK_PATH).port(portOne),
                 protocol)) {
-            await().untilAsserted(() -> {
-                assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", 1));
-            });
+            endpointGroup.whenReady().join();
+            assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", 1));
         }
     }
 
@@ -185,21 +178,20 @@ class HealthCheckedEndpointGroupIntegrationTest {
                         HEALTH_CHECK_PATH),
                 protocol)) {
 
+            endpointGroup.whenReady().join();
             endpointGroup.newMeterBinder("bar").bindTo(registry);
 
-            await().untilAsserted(() -> {
-                assertThat(endpointGroup.endpoints())
-                        .containsOnly(Endpoint.of("127.0.0.1", portOne));
+            assertThat(endpointGroup.endpoints())
+                    .containsOnly(Endpoint.of("127.0.0.1", portOne));
 
-                assertThat(MoreMeters.measureAll(registry))
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=bar,state=healthy}", 1.0)
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=bar,state=unhealthy}",
-                                       1.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=bar}", 1.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=bar}", 0.0);
-            });
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=bar,state=healthy}", 1.0)
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=bar,state=unhealthy}",
+                                   1.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=bar}", 1.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=bar}", 0.0);
         }
     }
 
@@ -217,20 +209,19 @@ class HealthCheckedEndpointGroupIntegrationTest {
                         HEALTH_CHECK_PATH),
                 protocol)) {
 
+            endpointGroup.whenReady().join();
             endpointGroup.newMeterBinder("baz").bindTo(registry);
 
-            await().untilAsserted(() -> {
-                assertThat(endpointGroup.endpoints())
-                        .containsOnly(Endpoint.of("127.0.0.1", portOne));
+            assertThat(endpointGroup.endpoints())
+                    .containsOnly(Endpoint.of("127.0.0.1", portOne));
 
-                assertThat(MoreMeters.measureAll(registry))
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=baz,state=healthy}", 3.0)
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=baz,state=unhealthy}",
-                                       0.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=baz}", 1.0);
-            });
-            serverOne.stop();
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=baz,state=healthy}", 3.0)
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=baz,state=unhealthy}",
+                                   0.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=baz}", 1.0);
+            serverOne.stop().join();
             await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).isEmpty());
         }
     }
@@ -254,19 +245,18 @@ class HealthCheckedEndpointGroupIntegrationTest {
                         HEALTH_CHECK_PATH),
                 protocol)) {
 
+            endpointGroup.whenReady().join();
             endpointGroup.newMeterBinder("qux").bindTo(registry);
 
-            await().untilAsserted(() -> {
-                assertThat(endpointGroup.endpoints())
-                        .containsOnly(Endpoint.of("foo", port).withIpAddr("127.0.0.1"));
+            assertThat(endpointGroup.endpoints())
+                    .containsOnly(Endpoint.of("foo", port).withIpAddr("127.0.0.1"));
 
-                assertThat(MoreMeters.measureAll(registry))
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=qux,state=healthy}", 1.0)
-                        .containsEntry("armeria.client.endpoint.group.count#value{name=qux,state=unhealthy}",
-                                       0.0)
-                        .containsEntry("armeria.client.endpoint.group.healthy#value" +
-                                       "{authority=foo:" + port + ",ip=127.0.0.1,name=qux}", 1.0);
-            });
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=qux,state=healthy}", 1.0)
+                    .containsEntry("armeria.client.endpoint.group.count#value{name=qux,state=unhealthy}",
+                                   0.0)
+                    .containsEntry("armeria.client.endpoint.group.healthy#value" +
+                                   "{authority=foo:" + port + ",ip=127.0.0.1,name=qux}", 1.0);
         }
     }
 
