@@ -433,9 +433,7 @@ public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuil
         }
         final HttpData content = content();
         if (content == null || content.isEmpty()) {
-            if (publisher() == null) {
-                requestHeadersBuilder.remove(CONTENT_LENGTH);
-            }
+            requestHeadersBuilder.remove(CONTENT_LENGTH);
         } else {
             requestHeadersBuilder.contentLength(content.length());
         }
