@@ -133,7 +133,7 @@ public final class GrpcClientOptions {
 
     /**
      * Sets the {@link ClientInterceptor}s to the gRPC client stub.
-     * The specified interceptor(s) is/are executed in reverse order
+     * The specified interceptor(s) is/are executed in reverse order.
      */
     public static final ClientOption<Iterable<? extends ClientInterceptor>>
             INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS", ImmutableList.of());
