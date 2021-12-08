@@ -124,6 +124,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             watchers = new NonBlockingIdentityHashMap<>();
     @Nullable
     private Server server;
+    private boolean updating = false;
 
     GrpcHealthCheckService(
             Set<ListenableHealthChecker> healthCheckers,
@@ -253,18 +254,26 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     private HealthCheckUpdateListener provideInternalHealthUpdateListener() {
         return isHealthy -> {
-            for (Entry<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>> entry
-                    : watchers.entrySet()) {
-                final ServingStatus previousStatus = entry.getValue().getValue();
-                final String serviceName = entry.getValue().getKey();
-                final ServingStatus currentStatus = checkServingStatus(serviceName);
-                if (currentStatus != previousStatus) {
-                    final StreamObserver<HealthCheckResponse> responseObserver = entry.getKey();
-                    responseObserver.onNext(HealthCheckResponse.newBuilder()
-                                                               .setStatus(currentStatus)
-                                                               .build());
-                    entry.setValue(Maps.immutableEntry(serviceName, currentStatus));
+            if (updating) {
+                return;
+            }
+            updating = true;
+            try {
+                for (Entry<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>> entry
+                        : watchers.entrySet()) {
+                    final ServingStatus previousStatus = entry.getValue().getValue();
+                    final String serviceName = entry.getValue().getKey();
+                    final ServingStatus currentStatus = checkServingStatus(serviceName);
+                    if (currentStatus != previousStatus) {
+                        final StreamObserver<HealthCheckResponse> responseObserver = entry.getKey();
+                        responseObserver.onNext(HealthCheckResponse.newBuilder()
+                                                                   .setStatus(currentStatus)
+                                                                   .build());
+                        entry.setValue(Maps.immutableEntry(serviceName, currentStatus));
+                    }
                 }
+            } finally {
+                updating = false;
             }
         };
     }
