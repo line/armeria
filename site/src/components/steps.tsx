@@ -46,7 +46,7 @@ const TutorialSteps: React.FC<TutorialStepProps> = (props) => {
         .substr(0, window.location.pathname.lastIndexOf('/'))
         .replace('/tutorials/', ''),
     );
-  }, []);
+  });
 
   const tutorialSteps = Object.entries(
     tutorialNodes.filter(
