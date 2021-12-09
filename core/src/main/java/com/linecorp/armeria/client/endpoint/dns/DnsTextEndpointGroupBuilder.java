@@ -45,7 +45,7 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
      * Returns a newly created {@link DnsTextEndpointGroup}.
      */
     public DnsTextEndpointGroup build() {
-        return new DnsTextEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
+        return new DnsTextEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(), negativeTtl(),
                                         queryTimeoutMillis(), serverAddressStreamProvider(), backoff(),
                                         hostname(), mapping);
     }
@@ -90,5 +90,10 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     @Override
     public DnsTextEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         return (DnsTextEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder negativeTtl(int ttl) {
+        return (DnsTextEndpointGroupBuilder) super.negativeTtl(ttl);
     }
 }

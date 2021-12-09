@@ -38,7 +38,7 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsServiceEndpointGroup}.
      */
     public DnsServiceEndpointGroup build() {
-        return new DnsServiceEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
+        return new DnsServiceEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(), negativeTtl(),
                                            queryTimeoutMillis(), serverAddressStreamProvider(), backoff(),
                                            hostname());
     }
@@ -83,5 +83,10 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsServiceEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         return (DnsServiceEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
+    }
+
+    @Override
+    public DnsServiceEndpointGroupBuilder negativeTtl(int ttl) {
+        return (DnsServiceEndpointGroupBuilder) super.negativeTtl(ttl);
     }
 }
