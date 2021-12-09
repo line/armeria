@@ -59,6 +59,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     private final EventLoop eventLoop;
     private final int minTtl;
     private final int maxTtl;
+    private final int negativeTtl;
     private final Backoff backoff;
     private final List<DnsQuestion> questions;
     private final DefaultDnsNameResolver resolver;
@@ -72,7 +73,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     int attemptsSoFar;
 
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                     EventLoop eventLoop, int minTtl, int maxTtl, long queryTimeoutMillis,
+                     EventLoop eventLoop, int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                      DnsServerAddressStreamProvider serverAddressStreamProvider,
                      Backoff backoff, Iterable<DnsQuestion> questions,
                      Consumer<DnsNameResolverBuilder> resolverConfigurator) {
@@ -82,6 +83,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         this.eventLoop = eventLoop;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
+        this.negativeTtl = negativeTtl;
         this.backoff = backoff;
         this.questions = ImmutableList.copyOf(questions);
         assert !this.questions.isEmpty();
@@ -94,6 +96,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop)
                 .channelType(TransportType.datagramChannelType(eventLoop.parent()))
                 .ttl(minTtl, maxTtl)
+                .negativeTtl(negativeTtl)
                 .traceEnabled(true)
                 .nameServerProvider(serverAddressStreamProvider);
         if (queryTimeoutMillis == 0) {

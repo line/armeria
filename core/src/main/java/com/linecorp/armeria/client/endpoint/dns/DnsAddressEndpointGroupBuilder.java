@@ -65,7 +65,7 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsAddressEndpointGroup}.
      */
     public DnsAddressEndpointGroup build() {
-        return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
+        return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(), negativeTtl(),
                                            queryTimeoutMillis(), serverAddressStreamProvider(), backoff(),
                                            resolvedAddressTypes, hostname(), port);
     }
@@ -80,6 +80,11 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsAddressEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
         return (DnsAddressEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    }
+
+    @Override
+    public DnsEndpointGroupBuilder negativeTtl(int ttl) {
+        return (DnsAddressEndpointGroupBuilder) super.negativeTtl(ttl);
     }
 
     @Override

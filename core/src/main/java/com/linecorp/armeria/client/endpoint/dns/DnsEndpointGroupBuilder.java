@@ -43,6 +43,7 @@ abstract class DnsEndpointGroupBuilder {
     private final String hostname;
     @Nullable
     private EventLoop eventLoop;
+    private int negativeTtl = 0;
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
     private long queryTimeoutMillis = 5000; // 5 seconds
@@ -89,6 +90,8 @@ abstract class DnsEndpointGroupBuilder {
         return maxTtl;
     }
 
+    final int negativeTtl() { return negativeTtl; }
+
     /**
      * Sets the minimum and maximum TTL of the DNS records (in seconds). If the TTL of the DNS record returned
      * by the DNS server is less than the minimum TTL or greater than the maximum TTL, the TTL from the DNS
@@ -101,6 +104,12 @@ abstract class DnsEndpointGroupBuilder {
                       "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
+        return this;
+    }
+
+    public DnsEndpointGroupBuilder negativeTtl(int ttl) {
+        checkArgument(ttl > 0, "negativeTtl: %s must be > 0", ttl);
+        this.negativeTtl = ttl;
         return this;
     }
 
