@@ -30,6 +30,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
@@ -85,7 +86,13 @@ class PrometheusExpositionServiceTest {
         verify(logger, times(2)).isDebugEnabled();
         verify(logger, times(2)).debug(anyString(), any(), any());
 
-        client.get("/disabled").aggregate().join();
+        final String exportedContent = client.get("/disabled").aggregate().join().contentUtf8();
+        System.err.println(exportedContent);
+        assertThat(exportedContent).contains("armeria_build_info{");
+        // The last line must end with a line feed character.
+        // see https://prometheus.io/docs/instrumenting/exposition_formats/
+        assertThat(exportedContent).endsWith("\n");
+
         // prometheus requests are not collected.
         await().untilAsserted(() -> {
             final Map<String, Double> measurements = measureAll(registry);
@@ -116,27 +123,30 @@ class PrometheusExpositionServiceTest {
         verify(logger, times(4)).debug(anyString(), any(), any());
     }
 
-    @Test
-    void prometheusRequestsPrometheusFormat() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
-        final HttpRequest request = HttpRequest.builder()
-                .get("/enabled")
-                .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_004)
-                .build();
-        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
-                .isEqualTo(TextFormat.CONTENT_TYPE_004);
-    }
+    @Nested
+    class FormatTest {
+        @Test
+        void prometheusRequestsPrometheusFormat() throws InterruptedException {
+            final WebClient client = WebClient.of(server.httpUri());
+            final HttpRequest request = HttpRequest.builder()
+                    .get("/enabled")
+                    .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_004)
+                    .build();
+            final AggregatedHttpResponse response = client.execute(request).aggregate().join();
+            assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
+                    .isEqualTo(TextFormat.CONTENT_TYPE_004);
+        }
 
-    @Test
-    void prometheusRequestsOpenMetricsFormat() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
-        final HttpRequest request = HttpRequest.builder()
-                .get("/enabled")
-                .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_OPENMETRICS_100)
-                .build();
-        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
-                .isEqualTo(TextFormat.CONTENT_TYPE_OPENMETRICS_100);
+        @Test
+        void prometheusRequestsOpenMetricsFormat() throws InterruptedException {
+            final WebClient client = WebClient.of(server.httpUri());
+            final HttpRequest request = HttpRequest.builder()
+                    .get("/enabled")
+                    .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_OPENMETRICS_100)
+                    .build();
+            final AggregatedHttpResponse response = client.execute(request).aggregate().join();
+            assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
+                    .isEqualTo(TextFormat.CONTENT_TYPE_OPENMETRICS_100);
+        }
     }
 }

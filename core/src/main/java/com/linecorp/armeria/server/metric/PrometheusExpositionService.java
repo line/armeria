@@ -18,13 +18,13 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -35,6 +35,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
 
@@ -86,11 +88,18 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final String accept = req.headers().get(HttpHeaderNames.ACCEPT);
         final String format = TextFormat.chooseContentType(accept);
-        final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
+        final ByteBuf buffer = ctx.alloc().buffer();
+        boolean success = false;
+        try (ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(buffer);
+             OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
             TextFormat.writeFormat(format, writer, collectorRegistry.metricFamilySamples());
+            success = true;
+        } finally {
+            if (!success) {
+                buffer.release();
+            }
         }
-        return HttpResponse.of(HttpStatus.OK, MediaType.parse(format), stream.toByteArray());
+        return HttpResponse.of(HttpStatus.OK, MediaType.parse(format), HttpData.wrap(buffer));
     }
 
     @Override

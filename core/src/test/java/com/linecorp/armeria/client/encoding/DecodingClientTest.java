@@ -206,4 +206,23 @@ class DecodingClientTest {
         response = client.execute(header).aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("gzip");
     }
+
+    @Test
+    void shouldAllowDuplicatedEncodings() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(DecodingClient.builder()
+                                          .autoFillAcceptEncoding(false)
+                                          .newDecorator())
+                                          .build();
+
+        // Request can have duplicated content encoding
+        final HttpRequest request = HttpRequest.builder()
+                                               .get("/encoding-test")
+                                               .header(HttpHeaderNames.ACCEPT_ENCODING, "gzip,gzip")
+                                               .build();
+
+        // Response has correct encoding
+        final AggregatedHttpResponse response = client.execute(request).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+    }
 }
