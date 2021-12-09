@@ -91,7 +91,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
         final ByteBuf buffer = ctx.alloc().buffer();
         boolean success = false;
         try (ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(buffer);
-             OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
+            OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
             TextFormat.writeFormat(format, writer, collectorRegistry.metricFamilySamples());
             success = true;
         } finally {
