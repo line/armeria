@@ -242,8 +242,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public void addListener(Consumer<? super List<Endpoint>> listener, boolean notifyLatestEndpoints) {
-        // Endpoint will notify only once when a listener is attached.
-        listener.accept(endpoints);
+        if (notifyLatestEndpoints) {
+            // Endpoint will notify only once when a listener is attached.
+            listener.accept(endpoints);
+        }
     }
 
     @Override

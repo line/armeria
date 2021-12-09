@@ -60,8 +60,10 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
     @Override
     public void addListener(Consumer<? super List<Endpoint>> listener, boolean notifyLatestEndpoints) {
-        // StaticEndpointGroup will notify only once when a listener is attached.
-        listener.accept(endpoints);
+        if (notifyLatestEndpoints) {
+            // StaticEndpointGroup will notify only once when a listener is attached.
+            listener.accept(endpoints);
+        }
     }
 
     @Override

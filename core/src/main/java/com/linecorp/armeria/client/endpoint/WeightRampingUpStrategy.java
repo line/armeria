@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -133,14 +134,20 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
             this.executor = executor;
-            final List<Endpoint> initialEndpoints =
-                    new ArrayList<>(deduplicateEndpoints(endpointGroup.endpoints()).values());
-            endpointSelector = new WeightedRandomDistributionEndpointSelector(initialEndpoints);
-            endpointsFinishedRampingUp.addAll(initialEndpoints);
+
+            final AtomicBoolean initialized = new AtomicBoolean();
             endpointGroup.addListener(newEndpoints -> {
-                // Use the executor so the order of endpoints change is guaranteed.
-                executor.execute(() -> updateEndpoints(newEndpoints));
+                final List<Endpoint> dedupEndpoints =
+                        new ArrayList<>(deduplicateEndpoints(newEndpoints).values());
+                if (initialized.compareAndSet(false, true)) {
+                    endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
+                    endpointsFinishedRampingUp.addAll(dedupEndpoints);
+                } else {
+                    // Use the executor so the order of endpoints change is guaranteed.
+                    executor.execute(() -> updateEndpoints(newEndpoints));
+                }
             }, true);
+
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }
@@ -254,7 +261,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             final Map<Endpoint, Endpoint> newEndpointsMap = deduplicateEndpoints(newEndpoints);
 
             final List<Endpoint> replacedEndpoints = new ArrayList<>();
-            for (final Iterator<Endpoint> i = endpointsFinishedRampingUp.iterator(); i.hasNext();) {
+            for (final Iterator<Endpoint> i = endpointsFinishedRampingUp.iterator(); i.hasNext(); ) {
                 final Endpoint endpointFinishedRampingUp = i.next();
                 final Endpoint newEndpoint = newEndpointsMap.remove(endpointFinishedRampingUp);
                 if (newEndpoint == null) {
@@ -282,7 +289,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             }
 
             for (final Iterator<EndpointsRampingUpEntry> i = endpointsRampingUp.iterator();
-                 i.hasNext();) {
+                 i.hasNext(); ) {
                 final EndpointsRampingUpEntry endpointsRampingUpEntry = i.next();
 
                 final Set<EndpointAndStep> endpointAndSteps = endpointsRampingUpEntry.endpointAndSteps();
@@ -307,7 +314,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private void filterOldEndpoints(Set<EndpointAndStep> endpointAndSteps,
                                         Map<Endpoint, Endpoint> newEndpointsMap) {
             final List<EndpointAndStep> replacedEndpoints = new ArrayList<>();
-            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
+            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext(); ) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final Endpoint rampingUpEndpoint = endpointAndStep.endpoint();
                 final Endpoint newEndpoint = newEndpointsMap.remove(rampingUpEndpoint);
@@ -364,7 +371,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         private void updateWeightAndStep(Set<EndpointAndStep> endpointAndSteps) {
-            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
+            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext(); ) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final int step = endpointAndStep.incrementAndGetStep();
                 final Endpoint endpoint = endpointAndStep.endpoint();
