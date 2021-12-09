@@ -58,7 +58,7 @@ public final class GrpcHealthCheckServiceBuilder {
     /**
      * Adds the pair of the service name and the {@link ListenableHealthChecker} that determine
      * the healthiness of the specified gRPC service.
-     * The specified health checker is also used for determining the healthiness of the {@link Server}.
+     * The specified health checker is not used for determining the healthiness of the {@link Server}.
      *
      * <p>Note: The suggested format of service name is `package_names.ServiceName`.
      * For example, If the proto package that defines `HelloService` belongs to `com.example`,

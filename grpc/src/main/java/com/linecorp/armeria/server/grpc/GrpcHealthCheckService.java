@@ -202,13 +202,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             return ServingStatus.NOT_SERVING;
         }
         if (Strings.isNullOrEmpty(serviceName)) {
-            if (grpcServiceHealthCheckers.isEmpty()) {
-                return ServingStatus.SERVING;
-            }
-            if (grpcServiceHealthCheckers.values().stream().allMatch(HealthChecker::isHealthy)) {
-                return ServingStatus.SERVING;
-            }
-            return ServingStatus.NOT_SERVING;
+            return ServingStatus.SERVING;
         }
         final ListenableHealthChecker listenableHealthChecker = grpcServiceHealthCheckers.get(serviceName);
         if (listenableHealthChecker == null) {

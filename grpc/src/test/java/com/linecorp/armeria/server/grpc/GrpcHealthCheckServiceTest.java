@@ -235,7 +235,7 @@ class GrpcHealthCheckServiceTest {
                 //    - server is healthy,
                 //    - health checker is not given.
                 //    - grpc service health checker (unhealthy) is specified
-                // response: NOT_SERVING
+                // response: SERVING
                 Arguments.of(new GrpcHealthCheckService(
                                      ImmutableSet.of(),
                                      ImmutableMap.of(
@@ -245,7 +245,7 @@ class GrpcHealthCheckServiceTest {
                                      ImmutableList.of()),
                              "",
                              true,
-                             ServingStatus.NOT_SERVING),
+                             ServingStatus.SERVING),
                 // request: empty server name
                 // condition:
                 //    - server is healthy,
@@ -309,7 +309,7 @@ class GrpcHealthCheckServiceTest {
                 //    - server is healthy,
                 //    - health checkers is set.
                 //    - grpc service health checkers (include unhealthy service) are specified
-                // response: NOT_SERVING
+                // response: SERVING
                 Arguments.of(new GrpcHealthCheckService(
                                      ImmutableSet.of(
                                              new SettableHealthChecker(true),
@@ -325,7 +325,7 @@ class GrpcHealthCheckServiceTest {
                                      ImmutableList.of()),
                              "",
                              true,
-                             ServingStatus.NOT_SERVING)
+                             ServingStatus.SERVING)
         );
     }
 
