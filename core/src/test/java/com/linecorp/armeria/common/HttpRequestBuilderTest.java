@@ -78,10 +78,15 @@ class HttpRequestBuilderTest {
     }
 
     @Test
-    void shouldNotAllowEmptyPath() {
-        assertThatThrownBy(() -> HttpRequest.builder().path(""))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("empty");
+    void shouldAllowEmptyPath() {
+        final HttpRequest request = HttpRequest.builder().get("").build();
+        assertThat(request.path()).isEqualTo("");
+    }
+
+    @Test
+    void buildEmptyPathWithQueryParams() {
+        final HttpRequest request = HttpRequest.builder().get("").queryParam("foo", "bar").build();
+        assertThat(request.path()).isEqualTo("?foo=bar");
     }
 
     @Test

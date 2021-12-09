@@ -67,7 +67,7 @@ class RetryingRpcClientTest {
                     CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
 
     private static final RetryRuleWithContent<RpcResponse> retryOnException =
-            RetryRuleWithContent.<RpcResponse>builder().onException().thenBackoff(Backoff.withoutDelay());
+            RetryRuleWithContent.onException(Backoff.withoutDelay());
 
     private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
     private final DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);

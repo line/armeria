@@ -194,6 +194,9 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
         final ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
                 id, streamId, serviceConfig, status, message, cause);
+        // Update the closed ID to prevent the HttpResponseSubscriber from
+        // writing additional headers or messages.
+        updateClosedId(id);
 
         return future.addListener(ChannelFutureListener.CLOSE);
     }

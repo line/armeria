@@ -76,10 +76,7 @@ class PartialHealthCheckStrategyBuilderTest {
         builder.maxEndpointRatio(MAX_RATIO);
 
         final PartialHealthCheckStrategy actualStrategy = builder.build();
-        actualStrategy.updateCandidates(createCandidates(10));
-        assertThat(actualStrategy.getSelectedEndpoints()).hasSize(7);
-
-        actualStrategy.updateCandidates(createCandidates(20));
-        assertThat(actualStrategy.getSelectedEndpoints()).hasSize(14);
+        assertThat(actualStrategy.select(createCandidates(10))).hasSize(7);
+        assertThat(actualStrategy.select(createCandidates(20))).hasSize(14);
     }
 }
