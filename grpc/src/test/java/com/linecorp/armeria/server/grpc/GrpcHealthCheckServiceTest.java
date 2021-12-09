@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -147,9 +146,9 @@ class GrpcHealthCheckServiceTest {
                 // condition: server is healthy, health checker is not given.
                 // response: SERVING
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
-                                     Collections.emptyMap(),
-                                     Collections.emptyList()),
+                                     ImmutableSet.of(),
+                                     ImmutableMap.of(),
+                                     ImmutableList.of()),
                              "",
                              true,
                              ServingStatus.SERVING),
@@ -157,9 +156,9 @@ class GrpcHealthCheckServiceTest {
                 // condition: server is unhealthy, health checker is not given.
                 // response: NOT_SERVING
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
-                                     Collections.emptyMap(),
-                                     Collections.emptyList()),
+                                     ImmutableSet.of(),
+                                     ImmutableMap.of(),
+                                     ImmutableList.of()),
                              "",
                              false,
                              ServingStatus.NOT_SERVING),
@@ -167,9 +166,9 @@ class GrpcHealthCheckServiceTest {
                 // condition: server is healthy, health checker is not given.
                 // response: SERVICE_UNKNOWN
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
-                                     Collections.emptyMap(),
-                                     Collections.emptyList()),
+                                     ImmutableSet.of(),
+                                     ImmutableMap.of(),
+                                     ImmutableList.of()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              true,
                              ServingStatus.SERVICE_UNKNOWN),
@@ -177,9 +176,9 @@ class GrpcHealthCheckServiceTest {
                 // condition: server is unhealthy, health checker is not given.
                 // response: SERVICE_UNKNOWN
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
-                                     Collections.emptyMap(),
-                                     Collections.emptyList()),
+                                     ImmutableSet.of(),
+                                     ImmutableMap.of(),
+                                     ImmutableList.of()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              false,
                              ServingStatus.NOT_SERVING),
@@ -190,12 +189,12 @@ class GrpcHealthCheckServiceTest {
                 //    - grpc service health checker is specified
                 // response: SERVING
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
+                                     ImmutableSet.of(),
                                      ImmutableMap.of(
                                              "com.linecorp.armeria.server.grpc.TestService",
                                              new SettableHealthChecker(true)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              true,
                              ServingStatus.SERVING),
@@ -206,12 +205,12 @@ class GrpcHealthCheckServiceTest {
                 //    - grpc service health checker is specified
                 // response: NOT_SERVING
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
+                                     ImmutableSet.of(),
                                      ImmutableMap.of(
                                              "com.linecorp.armeria.server.grpc.TestService",
                                              new SettableHealthChecker(true)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "com.linecorp.armeria.server.grpc.TestService",
                              false,
                              ServingStatus.NOT_SERVING),
@@ -222,12 +221,12 @@ class GrpcHealthCheckServiceTest {
                 //    - grpc service health checker is specified
                 // response: SERVING
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
+                                     ImmutableSet.of(),
                                      ImmutableMap.of(
                                              "com.linecorp.armeria.server.grpc.TestService",
                                              new SettableHealthChecker(true)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "",
                              true,
                              ServingStatus.SERVING),
@@ -238,12 +237,12 @@ class GrpcHealthCheckServiceTest {
                 //    - grpc service health checker (unhealthy) is specified
                 // response: NOT_SERVING
                 Arguments.of(new GrpcHealthCheckService(
-                                     Collections.emptySet(),
+                                     ImmutableSet.of(),
                                      ImmutableMap.of(
                                              "com.linecorp.armeria.server.grpc.TestService",
                                              new SettableHealthChecker(false)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "",
                              true,
                              ServingStatus.NOT_SERVING),
@@ -261,7 +260,7 @@ class GrpcHealthCheckServiceTest {
                                              "com.linecorp.armeria.server.grpc.TestService",
                                              new SettableHealthChecker(true)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "",
                              true,
                              ServingStatus.SERVING),
@@ -279,7 +278,7 @@ class GrpcHealthCheckServiceTest {
                                              "com.linecorp.armeria.server.grpc.TestService",
                                              new SettableHealthChecker(true)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "",
                              true,
                              ServingStatus.NOT_SERVING),
@@ -301,7 +300,7 @@ class GrpcHealthCheckServiceTest {
                                              "com.linecorp.armeria.server.grpc.TestService2",
                                              new SettableHealthChecker(true)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "",
                              true,
                              ServingStatus.SERVING),
@@ -323,7 +322,7 @@ class GrpcHealthCheckServiceTest {
                                              "com.linecorp.armeria.server.grpc.TestService2",
                                              new SettableHealthChecker(false)
                                      ),
-                                     Collections.emptyList()),
+                                     ImmutableList.of()),
                              "",
                              true,
                              ServingStatus.NOT_SERVING)
