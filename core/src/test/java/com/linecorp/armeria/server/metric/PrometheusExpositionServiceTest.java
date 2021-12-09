@@ -87,7 +87,6 @@ class PrometheusExpositionServiceTest {
         verify(logger, times(2)).debug(anyString(), any(), any());
 
         final String exportedContent = client.get("/disabled").aggregate().join().contentUtf8();
-        System.err.println(exportedContent);
         assertThat(exportedContent).contains("armeria_build_info{");
         // The last line must end with a line feed character.
         // see https://prometheus.io/docs/instrumenting/exposition_formats/
