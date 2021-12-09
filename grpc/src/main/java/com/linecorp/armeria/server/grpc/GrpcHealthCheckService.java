@@ -98,6 +98,13 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         return builder().checkers(healthCheckers).build();
     }
 
+    /**
+     * Returns a new builder which builds a new {@link GrpcHealthCheckService}.
+     */
+    public static GrpcHealthCheckServiceBuilder builder() {
+        return new GrpcHealthCheckServiceBuilder();
+    }
+
     private static HealthCheckResponse getHealthCheckResponse(ServingStatus status) {
         if (status == ServingStatus.SERVING) {
             return SERVING_RESPONSE;
@@ -110,13 +117,6 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         }
     }
 
-    /**
-     * Returns a new builder which builds a new {@link GrpcHealthCheckService}.
-     */
-    public static GrpcHealthCheckServiceBuilder builder() {
-        return new GrpcHealthCheckServiceBuilder();
-    }
-
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> healthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
@@ -124,7 +124,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             watchers = new NonBlockingIdentityHashMap<>();
     @Nullable
     private Server server;
-    private boolean updating = false;
+    private boolean updating;
 
     GrpcHealthCheckService(
             Set<ListenableHealthChecker> healthCheckers,
@@ -266,9 +266,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                     final ServingStatus currentStatus = checkServingStatus(serviceName);
                     if (currentStatus != previousStatus) {
                         final StreamObserver<HealthCheckResponse> responseObserver = entry.getKey();
-                        responseObserver.onNext(HealthCheckResponse.newBuilder()
-                                                                   .setStatus(currentStatus)
-                                                                   .build());
+                        responseObserver.onNext(getHealthCheckResponse(currentStatus));
                         entry.setValue(Maps.immutableEntry(serviceName, currentStatus));
                     }
                 }
