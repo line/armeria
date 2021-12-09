@@ -22,9 +22,12 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -165,6 +168,30 @@ class ServiceRequestContextTest {
             assertThatThrownBy(sctx2::push).isInstanceOf(IllegalStateException.class);
         }
         assertCurrentCtx(null);
+    }
+
+    @Test
+    void queryParams() {
+        final String path = "/foo";
+        final QueryParams queryParams = QueryParams.of("param1", "value1",
+                                                       "param1", "value2",
+                                                       "Param1", "Value3",
+                                                       "PARAM1", "VALUE4");
+        final String pathAndQuery = path + '?' + queryParams.toQueryString();
+        final ServiceRequestContext ctx =  ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET,
+                                                                                   pathAndQuery));
+
+        assertThat(ctx.queryParams()).isEqualTo(queryParams);
+
+        assertThat(ctx.queryParam("param1")).isEqualTo("value1");
+        assertThat(ctx.queryParam("Param1")).isEqualTo("Value3");
+        assertThat(ctx.queryParam("PARAM1")).isEqualTo("VALUE4");
+        assertThat(ctx.queryParam("Not exist")).isNull();
+
+        assertThat(ctx.queryParams("param1")).isEqualTo(ImmutableList.of("value1", "value2"));
+        assertThat(ctx.queryParams("Param1")).isEqualTo(ImmutableList.of("Value3"));
+        assertThat(ctx.queryParams("PARAM1")).isEqualTo(ImmutableList.of("VALUE4"));
+        assertThat(ctx.queryParams("Not exist")).isEmpty();
     }
 
     private static void assertCurrentCtx(@Nullable RequestContext ctx) {

@@ -298,7 +298,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         // NB: this.minClosedId can be overwritten more than once when 3+ pipelined requests are received
         //     and they are handled by different threads simultaneously.
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
-        minClosedId = Math.min(minClosedId, id);
+        updateClosedId(id);
 
         if (minClosedId <= maxIdWithPendingWrites) {
             final ClosedSessionException cause =
@@ -331,6 +331,10 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     protected final boolean isWritable(int id) {
         return id < minClosedId;
+    }
+
+    protected final void updateClosedId(int id) {
+        minClosedId = Math.min(minClosedId, id);
     }
 
     protected abstract boolean isPing(int id);

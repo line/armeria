@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -249,7 +248,7 @@ class HealthCheckedEndpointGroupTest {
                      new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    new InfinityUpdateHealthCheckStrategy())) {
+                                                    HealthCheckStrategy.all())) {
 
             assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
 
@@ -275,7 +274,7 @@ class HealthCheckedEndpointGroupTest {
                      new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    new InfinityUpdateHealthCheckStrategy())) {
+                                                    HealthCheckStrategy.all())) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -304,7 +303,7 @@ class HealthCheckedEndpointGroupTest {
                      new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    new InfinityUpdateHealthCheckStrategy())) {
+                                                    HealthCheckStrategy.all())) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -421,6 +420,7 @@ class HealthCheckedEndpointGroupTest {
                                                               .version("1.0")
                                                               .build())
                                                .build()) {
+            oauth1aAuthorized.whenReady().join();
             assertThat(oauth1aAuthorized.endpoints()).usingElementComparator(new EndpointComparator())
                                                      .containsOnly(server.httpEndpoint());
         }
@@ -429,6 +429,7 @@ class HealthCheckedEndpointGroupTest {
                      HealthCheckedEndpointGroup.builder(server.httpEndpoint(), "/oauth2")
                                                .useGet(true)
                                                .build()) {
+            oauth2Unauthorized.whenReady().join();
             assertThat(oauth2Unauthorized.endpoints()).isEmpty();
         }
 
@@ -444,42 +445,16 @@ class HealthCheckedEndpointGroupTest {
         server.stop();
     }
 
-    private static final class MockEndpointGroup extends DynamicEndpointGroup {
+    static final class MockEndpointGroup extends DynamicEndpointGroup {
         void set(Endpoint... endpoints) {
             setEndpoints(ImmutableList.copyOf(endpoints));
-        }
-    }
-
-    private static final class InfinityUpdateHealthCheckStrategy implements HealthCheckStrategy {
-        private List<Endpoint> candidates;
-        private List<Endpoint> selectedCandidates;
-
-        InfinityUpdateHealthCheckStrategy() {
-            candidates = new ArrayList<>();
-            selectedCandidates = ImmutableList.copyOf(candidates);
-        }
-
-        @Override
-        public void updateCandidates(List<Endpoint> candidates) {
-            this.candidates = candidates;
-            selectedCandidates = ImmutableList.copyOf(candidates);
-        }
-
-        @Override
-        public List<Endpoint> getSelectedEndpoints() {
-            return selectedCandidates;
-        }
-
-        @Override
-        public boolean updateHealth(Endpoint endpoint, double health) {
-            return true;
         }
     }
 
     /**
      * A Comparator which includes the weight of an endpoint to compare.
      */
-    private static class EndpointComparator implements Comparator<Endpoint>, Serializable {
+    static class EndpointComparator implements Comparator<Endpoint>, Serializable {
         private static final long serialVersionUID = 6866869171110624149L;
 
         @Override
