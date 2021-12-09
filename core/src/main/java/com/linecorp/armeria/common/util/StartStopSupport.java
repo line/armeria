@@ -384,6 +384,11 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
                 }
             } catch (Exception cause) {
                 notificationFailed(l, cause);
+
+                // Propagate the exception if notifyStarting throws an exception.
+                if (state == State.STARTING) {
+                    throw new IllegalStateException("Failed to start: " + cause, cause);
+                }
             }
         }
     }
@@ -407,6 +412,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
 
     /**
      * Invoked when the startup procedure begins.
+     * Note that the startup procedure will be aborted if an exception is thrown.
      *
      * @param listener the listener
      * @param arg      the argument passed from {@link #start(Object, boolean)},

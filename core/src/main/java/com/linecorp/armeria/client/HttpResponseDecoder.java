@@ -94,11 +94,6 @@ abstract class HttpResponseDecoder {
     }
 
     @Nullable
-    final HttpResponseWrapper getResponse(int id, boolean remove) {
-        return remove ? removeResponse(id) : getResponse(id);
-    }
-
-    @Nullable
     final HttpResponseWrapper removeResponse(int id) {
         if (closing) {
             // `unfinishedResponses` will be removed by `failUnfinishedResponses()`
@@ -124,6 +119,10 @@ abstract class HttpResponseDecoder {
 
         unfinishedResponses++;
         return true;
+    }
+
+    final void decrementUnfinishedResponses() {
+        unfinishedResponses--;
     }
 
     final void failUnfinishedResponses(Throwable cause) {
