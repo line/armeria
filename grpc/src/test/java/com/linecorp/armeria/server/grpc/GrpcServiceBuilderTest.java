@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +28,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -251,9 +252,9 @@ class GrpcServiceBuilderTest {
         final GrpcService grpcService =
                 GrpcService.builder()
                            .grpcHealthCheckService(new GrpcHealthCheckService(
-                                   Collections.emptySet(),
-                                   Collections.emptyMap(),
-                                   Collections.emptyList()
+                                   ImmutableSet.of(),
+                                   ImmutableMap.of(),
+                                   ImmutableList.of()
                            ))
                            .build();
         assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
@@ -264,7 +265,7 @@ class GrpcServiceBuilderTest {
     void enableDefaultGrpcHealthCheckService() {
         final GrpcService grpcService =
                 GrpcService.builder()
-                           .enableDefaultGrpcHealthCheckService(true)
+                           .enableGrpcHealthCheckService(true)
                            .build();
         assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
                 .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
@@ -275,11 +276,11 @@ class GrpcServiceBuilderTest {
         assertThrows(IllegalStateException.class,
                      () -> GrpcService.builder()
                                       .grpcHealthCheckService(new GrpcHealthCheckService(
-                                              Collections.emptySet(),
-                                              Collections.emptyMap(),
-                                              Collections.emptyList()
+                                              ImmutableSet.of(),
+                                              ImmutableMap.of(),
+                                              ImmutableList.of()
                                       ))
-                                      .enableDefaultGrpcHealthCheckService(true)
+                                      .enableGrpcHealthCheckService(true)
                                       .build());
     }
 
