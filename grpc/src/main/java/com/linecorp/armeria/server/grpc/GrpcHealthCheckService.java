@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 
@@ -133,15 +132,16 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     ) {
         serverHealth = new SettableHealthChecker(false);
         if (!updateListeners.isEmpty()) {
-            addServerHealthUpdateListener(ImmutableList.copyOf(updateListeners));
+            addServerHealthUpdateListener(updateListeners);
         }
         this.healthCheckers = ImmutableSet.<ListenableHealthChecker>builder()
                                           .add(serverHealth)
                                           .addAll(healthCheckers)
                                           .build();
         this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
-        setInternalHealthUpdateListener(this.healthCheckers);
-        setInternalHealthUpdateListener(this.grpcServiceHealthCheckers.values());
+        final HealthCheckUpdateListener healthCheckUpdateListener = provideInternalHealthUpdateListener();
+        setInternalHealthUpdateListener(healthCheckUpdateListener, this.healthCheckers);
+        setInternalHealthUpdateListener(healthCheckUpdateListener, this.grpcServiceHealthCheckers.values());
     }
 
     @Override
@@ -151,7 +151,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         if (status == ServingStatus.SERVICE_UNKNOWN) {
             responseObserver.onError(Status.NOT_FOUND
                                              .withDescription(String.format(
-                                                     "The service name(=%s) is not registered in this service",
+                                                     "The service name(%s) is not registered in this service",
                                                      service))
                                              .asRuntimeException());
             return;
@@ -191,35 +191,33 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             @Override
             public void serverStopping(Server server) {
                 serverHealth.setHealthy(false);
+                watchers.keySet().forEach(StreamObserver::onCompleted);
             }
         });
     }
 
     @VisibleForTesting
-    ServingStatus checkServingStatus(@Nullable String serverName) {
+    ServingStatus checkServingStatus(@Nullable String serviceName) {
         if (!isHealthy()) {
             return ServingStatus.NOT_SERVING;
         }
-        if (Strings.isNullOrEmpty(serverName)) {
+        if (Strings.isNullOrEmpty(serviceName)) {
             if (grpcServiceHealthCheckers.isEmpty()) {
                 return ServingStatus.SERVING;
             }
             if (grpcServiceHealthCheckers.values().stream().allMatch(HealthChecker::isHealthy)) {
                 return ServingStatus.SERVING;
-            } else {
-                return ServingStatus.NOT_SERVING;
             }
-        } else {
-            if (grpcServiceHealthCheckers.containsKey(serverName)) {
-                if (grpcServiceHealthCheckers.get(serverName).isHealthy()) {
-                    return ServingStatus.SERVING;
-                } else {
-                    return ServingStatus.NOT_SERVING;
-                }
-            } else {
-                return ServingStatus.SERVICE_UNKNOWN;
-            }
+            return ServingStatus.NOT_SERVING;
         }
+        final ListenableHealthChecker listenableHealthChecker = grpcServiceHealthCheckers.get(serviceName);
+        if (listenableHealthChecker == null) {
+            return ServingStatus.SERVICE_UNKNOWN;
+        }
+        if (listenableHealthChecker.isHealthy()) {
+            return ServingStatus.SERVING;
+        }
+        return ServingStatus.NOT_SERVING;
     }
 
     @VisibleForTesting
@@ -227,7 +225,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         serverHealth.setHealthy(isHealthy);
     }
 
-    private void addServerHealthUpdateListener(ImmutableList<HealthCheckUpdateListener> updateListeners) {
+    private void addServerHealthUpdateListener(List<HealthCheckUpdateListener> updateListeners) {
         serverHealth.addListener(healthChecker -> {
             updateListeners.forEach(updateListener -> {
                 try {
@@ -239,8 +237,9 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         });
     }
 
-    private void setInternalHealthUpdateListener(Collection<ListenableHealthChecker> listenableHealthCheckers) {
-        final HealthCheckUpdateListener healthCheckUpdateListener = provideInternalHealthUpdateListener();
+    private void setInternalHealthUpdateListener(
+            HealthCheckUpdateListener healthCheckUpdateListener,
+            Collection<ListenableHealthChecker> listenableHealthCheckers) {
         listenableHealthCheckers.forEach(lhc -> {
             lhc.addListener(healthChecker -> {
                 try {

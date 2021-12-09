@@ -105,7 +105,7 @@ class GrpcHealthCheckServiceTest {
                                   .build()));
         assertThat(exception.getStatus().getCode()).isEqualTo(Status.NOT_FOUND.getCode());
         assertThat(exception.getMessage()).isEqualTo(
-                "NOT_FOUND: The service name(=com.linecorp.armeria.grpc.testing.NotFoundTestService) is not registered in this service");
+                "NOT_FOUND: The service name(com.linecorp.armeria.grpc.testing.NotFoundTestService) is not registered in this service");
     }
 
     @Test
