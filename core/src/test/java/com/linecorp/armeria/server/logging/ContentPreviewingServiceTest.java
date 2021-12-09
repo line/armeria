@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -31,6 +32,8 @@ import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -54,10 +57,12 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.internal.logging.ContentPreviewingUtil;
 import com.linecorp.armeria.server.HttpService;
@@ -122,6 +127,17 @@ class ContentPreviewingServiceTest {
                          ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
                                                  .previewSanitizer(CONTENT_SANITIZER)
                                                  .newDecorator());
+
+            sb.service("/deferred", httpService);
+            sb.decorator("/deferred", ContentPreviewingService.newDecorator(100));
+            sb.decorator("/deferred", ((delegate, ctx, req) -> HttpResponse.from(
+                    completedFuture(null).handleAsync((ignored, cause) -> {
+                        try {
+                            return delegate.serve(ctx, req);
+                        } catch (Exception e) {
+                            return Exceptions.throwUnsafely(e);
+                        }
+                    }, ctx.eventLoop()))));
 
             sb.decoratorUnder("/", (delegate, ctx, req) -> {
                 contextCaptor.set(ctx);
@@ -265,6 +281,23 @@ class ContentPreviewingServiceTest {
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("dummy content sanitizer");
         assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
+    void deferredContentPreview(SessionProtocol protocol) {
+        final WebClient client = WebClient.of(server.uri(protocol));
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/deferred",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        final AggregatedHttpResponse res = client.execute(headers, HttpData.ofUtf8("Armeria"))
+                                                 .aggregate()
+                                                 .join();
+        assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
+
+        final RequestContext ctx = contextCaptor.get();
+        final RequestLog log = ctx.log().whenComplete().join();
+        assertThat(log.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(log.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
     private static ContentPreviewer contentPreviewer() {

@@ -14,14 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.graphql.protocol;
+package com.linecorp.armeria.common.graphql.protocol;
 
 import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultGraphqlRequest implements GraphqlRequest {
@@ -31,17 +30,13 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
     private final String operationName;
     private final Map<String, Object> variables;
     private final Map<String, Object> extensions;
-    @Nullable
-    private final MediaType produceType;
 
     DefaultGraphqlRequest(String query, @Nullable String operationName,
-                          Map<String, Object> variables, Map<String, Object> extensions,
-                          @Nullable MediaType produceType) {
+                          Map<String, Object> variables, Map<String, Object> extensions) {
         this.query = query;
         this.operationName = operationName;
         this.variables = variables;
         this.extensions = extensions;
-        this.produceType = produceType;
     }
 
     @Override
@@ -65,11 +60,6 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
     }
 
     @Override
-    public MediaType produceType() {
-        return produceType;
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -81,13 +71,12 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
         final DefaultGraphqlRequest that = (DefaultGraphqlRequest) o;
 
         return query.equals(that.query) && Objects.equals(operationName, that.operationName) &&
-               variables.equals(that.variables) && extensions.equals(that.extensions) &&
-               Objects.equals(produceType, that.produceType);
+               variables.equals(that.variables) && extensions.equals(that.extensions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(query, operationName, variables, extensions, produceType);
+        return Objects.hash(query, operationName, variables, extensions);
     }
 
     @Override
@@ -97,7 +86,6 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
                           .add("operationName", operationName)
                           .add("variables", variables)
                           .add("extensions", extensions)
-                          .add("produceType", produceType)
                           .toString();
     }
 }

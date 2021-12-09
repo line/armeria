@@ -382,7 +382,6 @@ amot.no
 amscompute.com
 amsterdam
 amsterdam.museum
-amsw.nl
 amusement.aero
 an.it
 analytics
@@ -788,6 +787,7 @@ bestbuy
 bet
 bet.ar
 beta.bounty-full.com
+beta.tailscale.net
 betainabox.com
 better-than.tv
 bf
@@ -1542,6 +1542,7 @@ com.cm
 com.cn
 com.co
 com.cu
+com.cv
 com.cw
 com.cy
 com.de
@@ -2100,6 +2101,7 @@ edu.ci
 edu.cn
 edu.co
 edu.cu
+edu.cv
 edu.cw
 edu.dm
 edu.do
@@ -2235,9 +2237,6 @@ elburg.museum
 elementor.cloud
 elementor.cool
 elk.pl
-elluciancrmadvance.com
-elluciancrmadvise.com
-elluciancrmrecruit.com
 elvendrell.museum
 elverum.no
 email
@@ -2476,6 +2475,7 @@ flakstad.no
 flanders.museum
 flap.id
 flatanger.no
+fldrv.com
 flekkefjord.no
 flesberg.no
 flickr
@@ -2749,7 +2749,6 @@ gaular.no
 gausdal.no
 gay
 gb
-gb.com
 gb.net
 gbiz
 gc.ca
@@ -3663,6 +3662,7 @@ int.az
 int.bo
 int.ci
 int.co
+int.cv
 int.eu.org
 int.is
 int.la
@@ -5772,6 +5772,7 @@ nom.tm
 nom.ve
 nom.za
 nombre.bo
+nome.cv
 nome.pt
 nomi.ishikawa.jp
 nonoichi.ishikawa.jp
@@ -5989,6 +5990,7 @@ oncilla.mythic-beasts.com
 ondigitalocean.app
 one
 onfabrica.com
+onflashdrive.app
 ong
 ong.br
 onga.fukuoka.jp
@@ -6071,6 +6073,7 @@ org.ci
 org.cn
 org.co
 org.cu
+org.cv
 org.cw
 org.cy
 org.dm
@@ -7299,6 +7302,7 @@ sicily.it
 siellak.no
 siena.it
 sigdal.no
+siiites.com
 siljan.no
 silk
 silk.museum
@@ -8001,6 +8005,7 @@ try-snowplow.com
 trycloudflare.com
 trysil.no
 ts.it
+ts.net
 tselinograd.su
 tsk.tr
 tsu.mie.jp
@@ -8340,7 +8345,6 @@ virtual-user.de
 virtual.museum
 virtualserver.io
 virtualuser.de
-virtueeldomein.nl
 virtuel.museum
 visa
 vision
@@ -8574,7 +8578,6 @@ xn--3bst00m
 xn--3ds443g
 xn--3e0b707e
 xn--3hcrj9c
-xn--3oq18vl8pn36a
 xn--3pxu8k
 xn--41a.xn--p1acf
 xn--42c2d9a

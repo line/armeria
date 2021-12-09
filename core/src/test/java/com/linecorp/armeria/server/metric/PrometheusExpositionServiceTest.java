@@ -81,7 +81,12 @@ class PrometheusExpositionServiceTest {
         verify(logger, times(2)).isDebugEnabled();
         verify(logger, times(2)).debug(anyString(), any(), any());
 
-        client.get("/disabled").aggregate().join();
+        final String exportedContent = client.get("/disabled").aggregate().join().contentUtf8();
+        assertThat(exportedContent).contains("armeria_build_info{");
+        // The last line must end with a line feed character.
+        // see https://prometheus.io/docs/instrumenting/exposition_formats/
+        assertThat(exportedContent).endsWith("\n");
+
         // prometheus requests are not collected.
         await().untilAsserted(() -> {
             final Map<String, Double> measurements = measureAll(registry);

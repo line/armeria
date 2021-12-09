@@ -124,11 +124,6 @@ public final class ArmeriaHttpUtil {
     public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.UTF_8;
 
     /**
-     * The old {@code "keep-alive"} header which has been superceded by {@code "connection"}.
-     */
-    public static final AsciiString HEADER_NAME_KEEP_ALIVE = AsciiString.cached("keep-alive");
-
-    /**
      * The old {@code "proxy-connection"} header which has been superceded by {@code "connection"}.
      */
     public static final AsciiString HEADER_NAME_PROXY_CONNECTION = AsciiString.cached("proxy-connection");
@@ -150,7 +145,7 @@ public final class ArmeriaHttpUtil {
 
     static {
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HEADER_NAME_KEEP_ALIVE, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.KEEP_ALIVE, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HEADER_NAME_PROXY_CONNECTION, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.UPGRADE, EMPTY_STRING);
@@ -293,13 +288,13 @@ public final class ArmeriaHttpUtil {
             return path1 + path2;
         }
 
-        if (path2.charAt(0) == '/') {
-            // path1 does not end with '/' and path2 starts with '/'.
+        if (path2.charAt(0) == '/' || path2.charAt(0) == '?') {
+            // path1 does not end with '/' and path2 starts with '/' or '?'
             // Simple concatenation would suffice.
             return path1 + path2;
         }
 
-        // path1 does not end with '/' and path2 does not start with '/'.
+        // path1 does not end with '/' and path2 does not start with '/' or '?'.
         // Need to insert '/' between path1 and path2.
         return path1 + '/' + path2;
     }
@@ -309,11 +304,37 @@ public final class ArmeriaHttpUtil {
      */
     public static String decodePath(String path) {
         if (path.indexOf('%') < 0) {
-            // No need to decoded; not percent-encoded
+            // No need to decode because it's not percent-encoded
             return path;
         }
 
+        // Decode percent-encoded characters, but don't decode %2F into /, so that a user can choose
+        // to use it as a non-separator.
+        //
+        // For example, for the path pattern `/orgs/{org_name}/agents/{agent_name}`:
+        // - orgs/mi6/agents/ethan-hunt
+        //   - org_name: mi6
+        //   - agent_name: ethan-hunt
+        // - orgs/mi%2F6/agents/ethan-hunt
+        //   - org_name: mi/6
+        //   - agent_name: ethan-hunt
+        return slowDecodePath(path, false);
+    }
+
+    /**
+     * Decodes a single percent-encoded path parameter.
+     */
+    public static String decodePathParam(String pathParam) {
+        if (pathParam.indexOf('%') < 0) {
+            // No need to decode because it's not percent-encoded
+            return pathParam;
+        }
+
         // Decode percent-encoded characters.
+        return slowDecodePath(pathParam, true);
+    }
+
+    private static String slowDecodePath(String path, boolean decodeSlash) {
         // An invalid character is replaced with 0xFF, which will be replaced into '�' by UTF-8 decoder.
         final int len = path.length();
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
@@ -340,7 +361,14 @@ public final class ArmeriaHttpUtil {
                     // The first or second digit is not hexadecimal.
                     buf[dstLen++] = (byte) 0xFF;
                 } else {
-                    buf[dstLen++] = (byte) ((digit1 << 4) | digit2);
+                    final byte decoded = (byte) ((digit1 << 4) | digit2);
+                    if (decodeSlash || decoded != 0x2F) {
+                        buf[dstLen++] = decoded;
+                    } else {
+                        buf[dstLen++] = '%';
+                        buf[dstLen++] = '2';
+                        buf[dstLen++] = (byte) path.charAt(i); // f or F - preserve the case.
+                    }
                 }
             }
 
@@ -827,8 +855,9 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ServerHeaders(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        toNettyHttp1Server(inputHeaders, outputHeaders, false);
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            Http1HeaderNaming http1HeaderNaming) {
+        toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, false);
         HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
@@ -839,13 +868,14 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders The object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ServerTrailers(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        toNettyHttp1Server(inputHeaders, outputHeaders, true);
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            Http1HeaderNaming http1HeaderNaming) {
+        toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, true);
     }
 
     private static void toNettyHttp1Server(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            boolean isTrailer) {
+            Http1HeaderNaming http1HeaderNaming, boolean isTrailer) {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
@@ -856,7 +886,7 @@ public final class ArmeriaHttpUtil {
             if (isTrailer && isTrailerDisallowed(name)) {
                 continue;
             }
-            outputHeaders.add(name, value);
+            outputHeaders.add(http1HeaderNaming.convert(name), value);
         }
     }
 

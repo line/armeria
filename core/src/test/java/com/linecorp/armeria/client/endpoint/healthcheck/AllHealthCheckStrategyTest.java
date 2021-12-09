@@ -22,15 +22,11 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 
 public class AllHealthCheckStrategyTest {
-
-    private HealthCheckStrategy strategy;
-    private List<Endpoint> candidates;
 
     private static List<Endpoint> createCandidates(int size) {
         final Random random = new Random();
@@ -40,69 +36,9 @@ public class AllHealthCheckStrategyTest {
                         .collect(Collectors.toList());
     }
 
-    @BeforeEach
-    void beforeEach() {
-        strategy = new AllHealthCheckStrategy();
-
-        candidates = createCandidates(10);
-    }
-
     @Test
-    void getCandidatesWhenBeforeFirstUpdateCandidates() {
-        assertThat(strategy.getSelectedEndpoints()).isEmpty();
-    }
-
-    @Test
-    void updateAndGetCandidates() {
-        strategy.updateCandidates(candidates);
-        List<Endpoint> actCandidates = strategy.getSelectedEndpoints();
-        assertCandidates(actCandidates, candidates);
-
-        final List<Endpoint> anotherCandidates = createCandidates(15);
-        anotherCandidates.addAll(candidates);
-
-        strategy.updateCandidates(anotherCandidates);
-        actCandidates = strategy.getSelectedEndpoints();
-        assertCandidates(actCandidates, anotherCandidates);
-    }
-
-    @Test
-    void updateHealthWhenEndpointHealthyAndUnhealthy() {
-        strategy.updateCandidates(candidates);
-
-        final Endpoint candidate = candidates.get(0);
-        boolean actUpdateRes = strategy.updateHealth(candidate, 0);
-        List<Endpoint> actCandidates = strategy.getSelectedEndpoints();
-
-        assertThat(actUpdateRes).isFalse();
-        assertCandidates(actCandidates, candidates);
-
-        actUpdateRes = strategy.updateHealth(candidate, 1);
-        actCandidates = strategy.getSelectedEndpoints();
-
-        assertThat(actUpdateRes).isFalse();
-        assertCandidates(actCandidates, candidates);
-    }
-
-    @Test
-    void updateHealthByDisappearedCandidate() {
-        strategy.updateCandidates(candidates);
-        final Endpoint disappearedCandidate = Endpoint.of("dummy");
-
-        boolean actUpdateRes = strategy.updateHealth(disappearedCandidate, 0);
-        assertThat(actUpdateRes).isTrue();
-        assertCandidates(strategy.getSelectedEndpoints(), candidates);
-
-        actUpdateRes = strategy.updateHealth(disappearedCandidate, 1);
-        assertThat(actUpdateRes).isTrue();
-        assertCandidates(strategy.getSelectedEndpoints(), candidates);
-    }
-
-    private static void assertCandidates(List<Endpoint> act, List<Endpoint> exp) {
-        assertThat(act).hasSize(exp.size());
-
-        for (Endpoint expCandidate : exp) {
-            assertThat(act.contains(expCandidate)).isTrue();
-        }
+    void shouldReturnAllCandidates() {
+        final List<Endpoint> candidates = createCandidates(10);
+        assertThat(HealthCheckStrategy.all().select(candidates)).isEqualTo(candidates);
     }
 }

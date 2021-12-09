@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -69,7 +70,8 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<List<MetricCollectingServiceConfigurator>> metricCollectingServiceConfigurators,
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
-            Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers) {
+            Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
+            BeanFactory beanFactory) {
 
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
@@ -92,7 +94,8 @@ public abstract class AbstractArmeriaAutoConfiguration {
                                            meterRegistry.orElse(Metrics.globalRegistry),
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
-                                           metricCollectingServiceConfigurators.orElse(ImmutableList.of()));
+                                           metricCollectingServiceConfigurators.orElse(ImmutableList.of()),
+                                           beanFactory);
 
         return serverBuilder.build();
     }
