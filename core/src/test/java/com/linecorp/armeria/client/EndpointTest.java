@@ -23,6 +23,7 @@ import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -455,28 +456,53 @@ class EndpointTest {
     @Test
     void setAndGetAttr() {
         final Endpoint endpointA = Endpoint.parse("a");
-        final Endpoint endpointB = Endpoint.parse("b");
 
-        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
-        assertThat(endpointA.setAttr(foo, "bar")).isNull();
-        assertThat(endpointA.attr(foo))
-                .isEqualTo("bar");
-        assertThat(endpointB.attr(foo))
-                .isNull();
+        final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
+        final AttributeKey<String> key2 = AttributeKey.valueOf("value2");
+        final Endpoint endpointB = endpointA.withAttr(key1, "value1")
+                                            .withAttr(key2, "value2")
+                                            .withAttr(key1, "value1-1");
+
+        assertThat(endpointB).isNotSameAs(endpointA);
+        assertThat(endpointA.attr(key1)).isNull();
+        assertThat(endpointB.attr(key1)).isEqualTo("value1-1");
+        assertThat(endpointB.attr(key2)).isEqualTo("value2");
+
+        // key with same value
+        assertThat(endpointB.withAttr(key2, "value2")).isSameAs(endpointB);
+        assertThat(endpointB.withAttr(AttributeKey.valueOf("key3"), null)).isSameAs(endpointB);
+
+        // value remove
+        Endpoint endpointC = endpointB.withAttr(AttributeKey.valueOf("key1"), null);
+        assertThat(endpointC).isNotSameAs(endpointB);
+        assertThat(endpointC.attr(key1)).isNull();
     }
 
     @Test
-    void setAttrs() {
+    void attrs() {
         final Endpoint endpoint = Endpoint.parse("a");
+        assertThat(endpoint.attrs()).isExhausted();
 
-        final List<Entry<AttributeKey<String>, String>> attrs = new ArrayList<>();
-        attrs.add(new AbstractMap.SimpleImmutableEntry<>(AttributeKey.valueOf("key1"), "value1"));
-        attrs.add(new AbstractMap.SimpleImmutableEntry<>(AttributeKey.valueOf("key2"), "value2"));
-        endpoint.setAttrs(attrs);
+        final List<Entry<AttributeKey<?>, String>> attrs = new ArrayList<>();
+        final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
+        final AttributeKey<String> key2 = AttributeKey.valueOf("key2");
 
-        assertThat(endpoint.attr(AttributeKey.<String>valueOf("key1")))
+        attrs.add(new AbstractMap.SimpleImmutableEntry<>(key1, "value1"));
+        attrs.add(new AbstractMap.SimpleImmutableEntry<>(key2, "value2"));
+        Endpoint newEndpoint = endpoint.withAttrs(attrs);
+
+        assertThat(newEndpoint.attr(key1))
                 .isEqualTo("value1");
-        assertThat(endpoint.attr(AttributeKey.<String>valueOf("key2")))
+        assertThat(newEndpoint.attr(key2))
                 .isEqualTo("value2");
+        assertThat(newEndpoint.attrs())
+                .toIterable()
+                .anyMatch(entry -> entry.getKey().equals(key1) && "value1".equals(entry.getValue()))
+                .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
+                .hasSize(2);
+
+        // empty
+        assertThat(newEndpoint.withAttrs(Collections.emptyList())).isSameAs(newEndpoint);
+
     }
 }

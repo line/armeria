@@ -25,7 +25,9 @@ import java.net.InetAddress;
 import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -43,6 +45,7 @@ import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.DefaultAttributeMap;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -53,7 +56,6 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
-import io.netty.util.DefaultAttributeMap;
 import io.netty.util.NetUtil;
 
 /**
@@ -83,9 +85,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             Caffeine.newBuilder()
                     .maximumSize(8192) // TODO(ikhoon): Add a flag if there is a demand for it.
                     .build();
-
-    private static final AtomicReferenceFieldUpdater<Endpoint, AttributeMap> attributesUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(Endpoint.class, AttributeMap.class, "attributes");
 
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
@@ -188,11 +187,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final String authority;
     private final String strVal;
 
-    /**
-     * update by {@link #attributesUpdater}.
-     */
     @Nullable
-    private volatile AttributeMap attributes;
+    private final DefaultAttributeMap attributes;
 
     @Nullable
     private CompletableFuture<Endpoint> selectFuture;
@@ -201,7 +197,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private int hashCode;
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType,
-                     @Nullable AttributeMap attributes) {
+                     @Nullable DefaultAttributeMap attributes) {
         this.host = host;
         this.ipAddr = ipAddr;
         this.port = port;
@@ -555,46 +551,82 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     /**
      * Returns the attribute value associated with the given {@link AttributeKey} of this endpoint, or
-     * {@code null} if there's no value set by {@link #setAttr(AttributeKey, Object)} or
-     * {@link #setAttrs(Iterable)}.
+     * {@code null} if there's no value associated with this key.
      */
     @Nullable
     public <T> T attr(AttributeKey<T> key) {
-        @Nullable
-        final AttributeMap attributeMap = this.attributes;
-        if (attributeMap != null) {
-            return attributeMap.attr(key).get();
+        if (this.attributes == null) {
+            return null;
         }
-        return null;
+        return this.attributes.attr(key);
     }
 
     /**
-     * Associates the specified value with the given {@link AttributeKey} in this endpoint.
+     * Returns a new host endpoint with the specified {@link AttributeKey} and value.
      *
-     * @return the old value that has been replaced.
+     * @return the new endpoint with the specified {@link AttributeKey} and value. {@code this} if this
+     * endpoint has the same value with the specified {@link AttributeKey}.
      *
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
-    @Nullable
-    public <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
-        return attributes().attr(key).getAndSet(value);
+    public <T> Endpoint withAttr(AttributeKey<T> key, @Nullable T value) {
+        if (value == null && attributes == null) {
+            return this;
+        }
+        if (attributes != null && Objects.equals(attributes.attr(key), value)) {
+            return this;
+        }
+        DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
+        if (this.attributes != null) {
+            copyAttributes(newAttributes, this.attributes.attrs());
+        }
+        newAttributes.setAttr(key, value);
+        return withAttributes(newAttributes);
     }
 
     /**
-     * Associates a collection of {@link AttributeKey} with value to this endpoint.
+     * Returns a new host endpoint with the additional attributes. All attributes of this endpoint is copied to
+     * the new endpoint.
+     *
+     * @return the new endpoint with the additional attributes. {@code this} if given
+     * attributes is empty.
+     *
+     * @throws IllegalStateException if this endpoint is not a host but a group
      */
-    public <T> void setAttrs(Iterable<? extends Entry<AttributeKey<T>, T>> attributes) {
-        final AttributeMap attributeMap = attributes();
-        attributes.forEach(entry -> attributeMap.attr(entry.getKey()).set(entry.getValue()));
+    public Endpoint withAttrs(Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
+        Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
+        if (!newAttrIterator.hasNext()) {
+            return this;
+        }
+        DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
+        if (this.attributes != null) {
+            copyAttributes(newAttributes, this.attributes.attrs());
+        }
+        copyAttributes(newAttributes, attributes.iterator());
+        return withAttributes(newAttributes);
     }
 
-    private AttributeMap attributes() {
-        @Nullable
-        final AttributeMap attributeMap = this.attributes;
-        if (attributeMap != null) {
-            return attributeMap;
+    /**
+     * Returns an iterator of all attributes of this endpoint, or an empty iterator if this endpoint does not
+     * have any attributes.
+     */
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        if (attributes == null) {
+            return Collections.emptyIterator();
         }
-        attributesUpdater.compareAndSet(this, null, new DefaultAttributeMap());
-        return requireNonNull(this.attributes);
+        return attributes.attrs();
+    }
+
+    private Endpoint withAttributes(DefaultAttributeMap newAttributes) {
+        return new Endpoint(host, ipAddr, port, weight, hostType, newAttributes);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void copyAttributes(DefaultAttributeMap attributeMap,
+                                       Iterator<? extends Entry<AttributeKey<?>, ?>> attrs) {
+        attrs.forEachRemaining(attr -> {
+            attributeMap.setAttr((AttributeKey<? super Object>) attr.getKey(), attr.getValue());
+        });
     }
 
     /**

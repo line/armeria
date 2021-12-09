@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-final class DefaultAttributeMap {
+public final class DefaultAttributeMap {
 
     // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
     // - Add rootAttributeMap and related methods to retrieve values from the rootAttributeMap.
@@ -71,22 +71,22 @@ final class DefaultAttributeMap {
     @Nullable
     private final RequestContext rootAttributeMap;
 
-    DefaultAttributeMap(@Nullable RequestContext rootAttributeMap) {
+    public DefaultAttributeMap(@Nullable RequestContext rootAttributeMap) {
         this.rootAttributeMap = rootAttributeMap;
     }
 
     @Nullable
-    <T> T ownAttr(AttributeKey<T> key) {
+    public <T> T ownAttr(AttributeKey<T> key) {
         return attr(key, true);
     }
 
     @Nullable
-    <T> T attr(AttributeKey<T> key) {
+    public <T> T attr(AttributeKey<T> key) {
         return attr(key, false);
     }
 
     @Nullable
-    private <T> T attr(AttributeKey<T> key, boolean ownAttr) {
+    public <T> T attr(AttributeKey<T> key, boolean ownAttr) {
         requireNonNull(key, "key");
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
@@ -107,7 +107,7 @@ final class DefaultAttributeMap {
 
         synchronized (head) {
             DefaultAttribute<?> curr = head;
-            for (;;) {
+            for (; ; ) {
                 final DefaultAttribute<?> next = curr.next;
                 if (next == null) {
                     if (!ownAttr && rootAttributeMap != null) {
@@ -132,7 +132,7 @@ final class DefaultAttributeMap {
 
     @Nullable
     @SuppressWarnings("unchecked")
-    <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
+    public <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
         return (T) setAttr(key, value, SetAttrMode.OLD_VALUE);
     }
 
@@ -161,7 +161,7 @@ final class DefaultAttributeMap {
 
         synchronized (head) {
             DefaultAttribute<?> curr = head;
-            for (;;) {
+            for (; ; ) {
                 final DefaultAttribute<?> next = curr.next;
                 if (next != null && next.key == key) {
                     @SuppressWarnings("unchecked")
@@ -221,7 +221,7 @@ final class DefaultAttributeMap {
         return attributes;
     }
 
-    Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             if (rootAttributeMap == null) {
@@ -351,7 +351,8 @@ final class DefaultAttributeMap {
 
         @Nullable
         private DefaultAttribute<?> findNext(@Nullable DefaultAttribute<?> next) {
-            loop: for (;;) {
+            loop:
+            for (; ; ) {
                 if (next == null) {
                     for (idx++; idx < attributes.length(); idx++) {
                         final DefaultAttribute<?> head = attributes.get(idx);
@@ -436,7 +437,7 @@ final class DefaultAttributeMap {
                 this.next = childIt.next();
             } else {
                 // Skip the attribute in rootIt if it's in the child.
-                for (;;) {
+                for (; ; ) {
                     if (rootIt.hasNext()) {
                         final Entry<AttributeKey<?>, Object> tempNext = rootIt.next();
                         if (ownAttr(tempNext.getKey()) == null) {

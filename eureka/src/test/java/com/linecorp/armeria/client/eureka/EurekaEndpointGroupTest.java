@@ -105,8 +105,7 @@ class EurekaEndpointGroupTest {
         assertThat(endpoints.get(0).attr(key))
                 .isEqualTo("0");
 
-        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(INSTANCE_INFO);
-        assertThat(instanceInfo).isNotNull();
+        assertThat(endpoints.get(0).attr(INSTANCE_INFO)).isNotNull();
     }
 
     @Test

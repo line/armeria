@@ -20,7 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
@@ -410,18 +413,20 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
             endpoint = endpoint.withIpAddr(ipAddr);
         }
         if (instanceMetadataAsAttrs) {
-            addInstanceMetadata(endpoint, instanceInfo);
+            endpoint = withInstanceMetadata(endpoint, instanceInfo);
         }
 
         return endpoint;
     }
 
-    private static void addInstanceMetadata(Endpoint endpoint, InstanceInfo instanceInfo) {
-        endpoint.setAttr(INSTANCE_INFO, instanceInfo);
+    private static Endpoint withInstanceMetadata(Endpoint endpoint, InstanceInfo instanceInfo) {
+        List<Map.Entry<AttributeKey<?>, ?>> attrs = new ArrayList<>();
+        attrs.add(new SimpleImmutableEntry<>(INSTANCE_INFO, instanceInfo));
         instanceInfo.getMetadata().forEach((key, value) -> {
             if (!"@class".equals(key)) {
-                endpoint.setAttr(AttributeKey.valueOf(key), value);
+                attrs.add(new SimpleImmutableEntry<>(AttributeKey.valueOf(key), value));
             }
         });
+        return endpoint.withAttrs(attrs);
     }
 }
