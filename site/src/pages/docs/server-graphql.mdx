@@ -56,6 +56,7 @@ a <type://GraphqlServiceBuilder> and add it to the <type://ServerBuilder>:
 ```java
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.graphql.GraphqlService;
 
 ServerBuilder sb = Server.builder();
 ...
@@ -71,13 +72,13 @@ Server server = sb.build();
 server.start();
 ```
 
-Here [RuntimeWiring](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/idl/RuntimeWiring.html) is a specification of [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html)s, [TypeResolver](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/TypeResolver.html)s, and custom [scalar](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/GraphQLScalarType.html)s that are needed to wire together a functional [GraphQLSchema](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/GraphQLSchema.html).
+We used [RuntimeWiring](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/idl/RuntimeWiring.html) to wire the type with DataFetcher. Please see [...](https://www.graphql-java.com/documentation/master/schema/#creating-a-schema-using-the-sdl) to find more wiring examples.
 
 ## Blocking service implementation
 
 Armeria does not run service logic in a separate thread pool by default. If your service implementation
-requires blocking, either run the individual blocking logic in a thread pool, set
-<type://GraphqlServiceBuilder#useBlockingTaskExecutor(boolean)> so the above happens automatically for
+requires blocking, either run the individual blocking logic in a thread pool, or set
+<type://GraphqlServiceBuilder#useBlockingTaskExecutor(boolean)> to `true` so the service runs in
 all service methods and lifecycle callbacks.
 
 ```java
@@ -96,6 +97,6 @@ sb.service("/graphql",
 
 <Tip>
 
-Another way is to wrap the [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) in an [AsyncDataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/AsyncDataFetcher.html).
+You can wrap a [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) using [AsyncDataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/AsyncDataFetcher.html) to run it asynchronously.
 
 </Tip>
