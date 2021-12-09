@@ -149,6 +149,8 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
+    private boolean enableDefaultHealthCheckService;
+
     @Nullable
     private GrpcHealthCheckService grpcHealthCheckService;
 
@@ -567,22 +569,31 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     * Sets a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     *
+     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
      */
-    public GrpcServiceBuilder addGrpcHealthCheckService(GrpcHealthCheckService grpcHealthCheckService) {
+    public GrpcServiceBuilder grpcHealthCheckService(GrpcHealthCheckService grpcHealthCheckService) {
         requireNonNull(grpcHealthCheckService, "grpcHealthCheckService");
+        if (enableDefaultHealthCheckService) {
+            throw new IllegalStateException("default gRPC health check service is enabled already.");
+        }
         this.grpcHealthCheckService = grpcHealthCheckService;
         return this;
     }
 
     /**
-     * Sets a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     * Sets a default {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
      * The gPRC health check service manages only the health checker that determines
      * the healthiness of the {@link Server}.
+     *
+     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
      */
-    public GrpcServiceBuilder enableGrpcHealthCheckService() {
-        grpcHealthCheckService = GrpcHealthCheckService.builder()
-                                                       .build();
+    public GrpcServiceBuilder enableDefaultGrpcHealthCheckService(boolean enableDefaultHealthCheckService) {
+        if (grpcHealthCheckService != null && enableDefaultHealthCheckService) {
+            throw new IllegalStateException("gRPC health check service is set already.");
+        }
+        this.enableDefaultHealthCheckService = enableDefaultHealthCheckService;
         return this;
     }
 
@@ -736,6 +747,10 @@ public final class GrpcServiceBuilder {
             throw new IllegalStateException(
                     "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
                     "is enabled");
+        }
+        if (enableDefaultHealthCheckService) {
+            grpcHealthCheckService = GrpcHealthCheckService.builder()
+                                                           .build();
         }
         if (grpcHealthCheckService != null) {
             registryBuilder.addService(grpcHealthCheckService.bindService());

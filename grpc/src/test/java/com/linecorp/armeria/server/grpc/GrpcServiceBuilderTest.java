@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.linecorp.armeria.server.grpc.GrpcServiceBuilder.toGrpcStatusFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -246,10 +247,10 @@ class GrpcServiceBuilderTest {
     }
 
     @Test
-    void addGrpcHealthCheckService() {
+    void setGrpcHealthCheckService() {
         final GrpcService grpcService =
                 GrpcService.builder()
-                           .addGrpcHealthCheckService(new GrpcHealthCheckService(
+                           .grpcHealthCheckService(new GrpcHealthCheckService(
                                    Collections.emptySet(),
                                    Collections.emptyMap(),
                                    Collections.emptyList()
@@ -257,6 +258,29 @@ class GrpcServiceBuilderTest {
                            .build();
         assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
                 .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
+    }
+
+    @Test
+    void enableDefaultGrpcHealthCheckService() {
+        final GrpcService grpcService =
+                GrpcService.builder()
+                           .enableDefaultGrpcHealthCheckService(true)
+                           .build();
+        assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
+                .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
+    }
+
+    @Test
+    void illegalStateOfGrpcHealthCheckService() {
+        assertThrows(IllegalStateException.class,
+                     () -> GrpcService.builder()
+                                      .grpcHealthCheckService(new GrpcHealthCheckService(
+                                              Collections.emptySet(),
+                                              Collections.emptyMap(),
+                                              Collections.emptyList()
+                                      ))
+                                      .enableDefaultGrpcHealthCheckService(true)
+                                      .build());
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
