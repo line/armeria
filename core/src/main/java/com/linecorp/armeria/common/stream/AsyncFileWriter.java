@@ -155,7 +155,7 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
                 byteBuf.release();
                 subscription.cancel();
                 final IOException cause = new IOException(
-                        "Unexpected exception while writing data to '" + path + "' + : result " + result);
+                        "Unexpected exception while writing data to '" + path + "'. result: " + result);
                 maybeCloseFileChannel(cause, false);
             }
         });
