@@ -124,7 +124,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
     }
 
     @Nullable
-    public final Subscription upstream() {
+    final Subscription upstream() {
         return upstream;
     }
 
