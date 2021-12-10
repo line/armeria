@@ -105,7 +105,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         return downstreamUpdater;
     }
 
-    public CompletableFuture<HttpHeaders> trailersFuture() {
+    final CompletableFuture<HttpHeaders> trailersFuture() {
         HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         if (trailersFuture != null) {
             return trailersFuture;
