@@ -202,7 +202,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         if (!notifyCancellation) {
             downstream = NoopSubscriber.get();
         }
-        completeTrailers(EMPTY_TRAILERS);
+        completeTrailers(HttpHeaders.of());
         final Subscription upstream = this.upstream;
         if (upstream != null) {
             upstream.cancel();
@@ -239,6 +239,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     @Override
     public void onComplete() {
+        maybeCompleteHeaders(null);
         final EventExecutor executor = this.executor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
@@ -259,6 +260,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     @Override
     public void onError(Throwable cause) {
+        maybeCompleteHeaders(cause);
         final EventExecutor executor = this.executor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
