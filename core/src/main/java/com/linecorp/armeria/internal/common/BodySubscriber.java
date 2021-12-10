@@ -119,7 +119,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         }
     }
 
-    public boolean wroteAny() {
+    final boolean wroteAny() {
         return wroteAny;
     }
 
