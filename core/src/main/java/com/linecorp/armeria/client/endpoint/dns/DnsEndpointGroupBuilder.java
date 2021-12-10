@@ -109,6 +109,9 @@ abstract class DnsEndpointGroupBuilder {
         return this;
     }
 
+    /**
+*   * Sets the TTL for caching negative DNS responses.
+*   */
     public DnsEndpointGroupBuilder negativeTtl(int ttl) {
         checkArgument(ttl > 0, "negativeTtl: %s must be > 0", ttl);
         this.negativeTtl = ttl;
