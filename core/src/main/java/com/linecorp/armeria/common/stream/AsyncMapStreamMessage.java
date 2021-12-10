@@ -96,8 +96,14 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         private volatile boolean canceled;
 
         private long requestedByDownstream;
-        private int pendingRequests;
-        private boolean isCompleting;
+        private State state;
+
+        enum State {
+            WAITING,
+            REQUESTED,
+            PROCESSING,
+            COMPLETING
+        }
 
         AsyncMapSubscriber(Subscriber<? super U> downstream,
                            Function<T, CompletableFuture<U>> function,
@@ -109,6 +115,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             this.downstream = downstream;
             this.function = function;
             this.executor = executor;
+            state = State.WAITING;
         }
 
         @Override
@@ -131,7 +138,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 final CompletableFuture<U> future = function.apply(item);
                 requireNonNull(future, "function.apply() returned null");
 
-                pendingRequests++;
+                state = State.PROCESSING;
                 future.handle((res, cause) -> {
                     if (executor.inEventLoop()) {
                         publishDownstream(res, cause);
@@ -164,15 +171,17 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                     requireNonNull(item, "function.apply()'s future completed with null");
                     downstream.onNext(item);
 
-                    pendingRequests--;
-                    if (isCompleting) {
-                        if (pendingRequests == 0) {
-                            downstream.onComplete();
-                        }
-                    } else if (requestedByDownstream > 0) {
+                    if (state == State.COMPLETING) {
+                        downstream.onComplete();
+                        return;
+                    }
+
+                    state = State.WAITING;
+                    if (requestedByDownstream > 0) {
                         if (requestedByDownstream != Long.MAX_VALUE) {
                             requestedByDownstream--;
                         }
+                        state = State.REQUESTED;
                         upstream.request(1);
                     }
                 }
@@ -200,8 +209,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (pendingRequests > 0) {
-                isCompleting = true;
+            if (state == State.PROCESSING) {
+                state = State.COMPLETING;
             } else {
                 downstream.onComplete();
             }
@@ -230,11 +239,12 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         private void handleRequest(long n) {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
 
-            if (pendingRequests == 0) {
+            if (state == State.WAITING) {
                 if (requestedByDownstream != Long.MAX_VALUE) {
                     requestedByDownstream--;
                 }
 
+                state = State.REQUESTED;
                 upstream.request(1);
             }
         }
