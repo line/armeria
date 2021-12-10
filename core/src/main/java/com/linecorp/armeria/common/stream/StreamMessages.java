@@ -46,9 +46,9 @@ public final class StreamMessages {
      * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
-     * @param publisher the source of {@link HttpData} to be written
-     * @param destination the {@link Path} to write to
-     * @param options the {@link OpenOption} specifying how the file is opened
+     * @param publisher the source of {@link HttpData} to be written.
+     * @param destination the {@link Path} to write to.
+     * @param options the {@link OpenOption} specifying how the file is opened.
      * @return a {@link CompletableFuture} that completes successfully when the {@link StreamMessage} is fully
      *         written to the {@link Path} or exceptionally an error occurred while writing the
      *         {@link StreamMessage}.
@@ -83,11 +83,11 @@ public final class StreamMessages {
      * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
-     * @param publisher the source of {@link HttpData} to be written
-     * @param destination the {@link Path} to write to
-     * @param eventExecutor the {@link EventExecutor} to subscribe to the given publisher
+     * @param publisher the source of {@link HttpData} to be written.
+     * @param destination the {@link Path} to write to.
+     * @param eventExecutor the {@link EventExecutor} to subscribe to the given publisher.
      * @param blockingTaskExecutor the {@link ExecutorService} to which blocking tasks are submitted to handle
-     *                             file I/O events and write operations
+     *                             file I/O events and write operations.
      * @param options the {@link OpenOption} specifying how the file is opened
      * @return a {@link CompletableFuture} that completes successfully when the {@link StreamMessage} is fully
      *         written to the {@link Path} or exceptionally an error occurred while writing the
