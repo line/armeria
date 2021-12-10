@@ -300,7 +300,13 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     protected void maybeCompleteHeaders(@Nullable Throwable cause) {
         if (trailersFuture == null) {
-            trailersFutureUpdater.compareAndSet(this, null, EMPTY_TRAILERS_FUTURE);
+            if (trailersFutureUpdater.compareAndSet(this, null, EMPTY_TRAILERS_FUTURE)) {
+                return;
+            }
         }
+        
+        final HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
+        assert trailersFuture != null;
+        trailersFuture.doComplete(HttpHeaders.of());
     }
 }
