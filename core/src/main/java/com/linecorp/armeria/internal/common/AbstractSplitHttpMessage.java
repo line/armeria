@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 
@@ -28,10 +29,16 @@ import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.SplitHttpMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessage<HttpData> {
+
+    private static final AtomicIntegerFieldUpdater<AbstractSplitHttpMessage> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractSplitHttpMessage.class, "subscribed");
+
+    private volatile int subscribed;
 
     private final HttpMessage upstream;
     private final EventExecutor upstreamExecutor;
@@ -96,6 +103,12 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
+
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
+            return;
+        }
 
         if (executor.inEventLoop()) {
             bodySubscriber.initDownstream(subscriber, executor, options);

@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -50,11 +49,6 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
             trailersFutureUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class,
                                                                            HeadersFuture.class,
                                                                            "trailersFuture");
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber>
-            downstreamUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
-                                                                       "downstream");
 
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS_FUTURE;
 
@@ -126,11 +120,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
                                   SubscriptionOption... options) {
         assert executor.inEventLoop();
 
-        if (!downstreamUpdater.compareAndSet(this, null, downstream)) {
-            downstream.onSubscribe(NoopSubscription.get());
-            downstream.onError(new IllegalStateException("subscribed by other subscriber already"));
-            return;
-        }
+        this.downstream = downstream;
         this.executor = executor;
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
