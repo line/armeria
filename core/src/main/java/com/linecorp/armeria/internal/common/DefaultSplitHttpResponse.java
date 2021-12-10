@@ -53,7 +53,7 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
     private DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor,
                                      SplitHttpResponseBodySubscriber bodySubscriber) {
         super(response, executor, bodySubscriber);
-        this.bodySubscriber = requireNonNull(bodySubscriber, "bodySubscriber");
+        this.bodySubscriber = bodySubscriber;
     }
 
     @Override
