@@ -27,11 +27,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * Builds a new {@link HttpResponse}.
  */
+@UnstableApi
 public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
 
     private final ResponseHeadersBuilder responseHeadersBuilder = ResponseHeaders.builder();

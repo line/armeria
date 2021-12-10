@@ -620,6 +620,7 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Returns a new {@link HttpResponseBuilder}.
      */
+    @UnstableApi
     static HttpResponseBuilder builder() {
         return new HttpResponseBuilder();
     }
