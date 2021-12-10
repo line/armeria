@@ -50,11 +50,6 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
                                                                            HeadersFuture.class,
                                                                            "trailersFuture");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<BodySubscriber, Subscriber>
-            downstreamUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
-                                                                       "downstream");
-
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS_FUTURE;
 
     static {
@@ -98,11 +93,6 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
     }
 
-    @SuppressWarnings("rawtypes")
-    public static AtomicReferenceFieldUpdater<BodySubscriber, Subscriber> downstreamUpdater() {
-        return downstreamUpdater;
-    }
-
     final CompletableFuture<HttpHeaders> trailersFuture() {
         HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         if (trailersFuture != null) {
@@ -130,6 +120,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
                                   SubscriptionOption... options) {
         assert executor.inEventLoop();
 
+        this.downstream = downstream;
         this.executor = executor;
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.NOTIFY_CANCELLATION) {

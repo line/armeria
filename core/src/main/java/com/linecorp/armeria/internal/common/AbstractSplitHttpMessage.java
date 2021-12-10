@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.SplitHttpMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -97,12 +96,6 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-
-        if (!BodySubscriber.downstreamUpdater().compareAndSet(bodySubscriber, null, subscriber)) {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
-            return;
-        }
 
         if (executor.inEventLoop()) {
             bodySubscriber.initDownstream(subscriber, executor, options);
