@@ -182,7 +182,7 @@ final class ClientCookieDecoder {
         } else if (length == 7) {
             parse7(builder, header, keyStart, valueStart, valueEnd);
         } else if (length == 8) {
-            parse8(builder, header, keyStart);
+            parse8(builder, header, keyStart, valueStart, valueEnd);
         }
     }
 
@@ -230,9 +230,14 @@ final class ClientCookieDecoder {
     }
 
     private static void parse8(CookieBuilder builder, String header,
-                               int nameStart) {
+                               int nameStart, int valueStart, int valueEnd) {
         if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
             builder.httpOnly(true);
+        } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
+            final String sameSite = computeValue(header, valueStart, valueEnd);
+            if (sameSite != null) {
+                builder.sameSite(sameSite);
+            }
         }
     }
 
