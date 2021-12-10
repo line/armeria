@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -63,6 +64,7 @@ import io.grpc.stub.StreamObserver;
  * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
  * @see GrpcHealthCheckServiceBuilder
  */
+@UnstableApi
 public final class GrpcHealthCheckService extends HealthImplBase {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcHealthCheckService.class);

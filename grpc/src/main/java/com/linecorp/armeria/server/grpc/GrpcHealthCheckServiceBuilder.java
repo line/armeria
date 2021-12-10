@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.healthcheck.HealthCheckUpdateListener;
 import com.linecorp.armeria.server.healthcheck.ListenableHealthChecker;
@@ -29,6 +30,7 @@ import com.linecorp.armeria.server.healthcheck.ListenableHealthChecker;
 /**
  * Builds a {@link GrpcHealthCheckService}.
  */
+@UnstableApi
 public final class GrpcHealthCheckServiceBuilder {
 
     private final ImmutableSet.Builder<ListenableHealthChecker> healthCheckers = ImmutableSet.builder();
