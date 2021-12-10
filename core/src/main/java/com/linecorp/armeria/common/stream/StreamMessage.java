@@ -591,6 +591,7 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Peeks values emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
+     * Only values which are an instance of the specified {@code type} are peeked.
      *
      * <p>For example:<pre>{@code
      * StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2, 0.3, 3);

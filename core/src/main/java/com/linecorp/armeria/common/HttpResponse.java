@@ -827,7 +827,7 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Applies specified {@link Consumer} to the non-informational {@link ResponseHeaders}
+     * Applies the specified {@link Consumer} to the non-informational {@link ResponseHeaders}
      * emitted by this {@link HttpResponse}.
      *
      * <p>For example:<pre>{@code
