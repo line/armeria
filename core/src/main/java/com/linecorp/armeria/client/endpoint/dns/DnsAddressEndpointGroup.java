@@ -89,8 +89,8 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
                             Backoff backoff, @Nullable ResolvedAddressTypes resolvedAddressTypes,
                             String hostname, int port) {
 
-        super(selectionStrategy, eventLoop, minTtl, maxTtl, negativeTtl, queryTimeoutMillis, serverAddressStreamProvider,
-              backoff, newQuestions(hostname, resolvedAddressTypes),
+        super(selectionStrategy, eventLoop, minTtl, maxTtl, negativeTtl, queryTimeoutMillis,
+              serverAddressStreamProvider, backoff, newQuestions(hostname, resolvedAddressTypes),
               resolverBuilder -> {
                   if (resolvedAddressTypes != null) {
                       resolverBuilder.resolvedAddressTypes(resolvedAddressTypes);

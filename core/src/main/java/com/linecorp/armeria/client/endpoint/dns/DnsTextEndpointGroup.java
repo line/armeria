@@ -78,9 +78,9 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
                          int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                          DnsServerAddressStreamProvider serverAddressStreamProvider,
                          Backoff backoff, String hostname, Function<byte[], @Nullable Endpoint> mapping) {
-        super(selectionStrategy, eventLoop, minTtl, maxTtl, negativeTtl, queryTimeoutMillis, serverAddressStreamProvider,
-              backoff, ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
-              unused -> {});
+        super(selectionStrategy, eventLoop, minTtl, maxTtl, negativeTtl, queryTimeoutMillis,
+              serverAddressStreamProvider, backoff,
+              ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)), unused -> {});
         this.mapping = mapping;
         start();
     }
