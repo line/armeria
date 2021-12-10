@@ -55,13 +55,11 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
             downstreamUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class, Subscriber.class,
                                                                        "downstream");
 
-    private static final HttpHeaders EMPTY_TRAILERS;
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS_FUTURE;
 
     static {
-        EMPTY_TRAILERS = HttpHeaders.of();
         EMPTY_TRAILERS_FUTURE = new HeadersFuture<>();
-        EMPTY_TRAILERS_FUTURE.doComplete(EMPTY_TRAILERS);
+        EMPTY_TRAILERS_FUTURE.doComplete(HttpHeaders.of());
     }
 
     private final HttpMessage upstreamMessage;
@@ -204,7 +202,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         if (!notifyCancellation) {
             downstream = NoopSubscriber.get();
         }
-        completeTrailers(EMPTY_TRAILERS);
+        completeTrailers(HttpHeaders.of());
         final Subscription upstream = this.upstream;
         if (upstream != null) {
             upstream.cancel();
@@ -241,6 +239,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     @Override
     public void onComplete() {
+        maybeCompleteHeaders(null);
         final EventExecutor executor = this.executor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
@@ -261,6 +260,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     @Override
     public void onError(Throwable cause) {
+        maybeCompleteHeaders(cause);
         final EventExecutor executor = this.executor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
@@ -283,7 +283,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
     /**
      * Completes the specified trailers.
      */
-    protected final void completeTrailers(HttpHeaders trailers) {
+    private void completeTrailers(HttpHeaders trailers) {
         HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         if (trailersFuture != null) {
             trailersFuture.doComplete(trailers);
@@ -300,7 +300,13 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     protected void maybeCompleteHeaders(@Nullable Throwable cause) {
         if (trailersFuture == null) {
-            trailersFutureUpdater.compareAndSet(this, null, EMPTY_TRAILERS_FUTURE);
+            if (trailersFutureUpdater.compareAndSet(this, null, EMPTY_TRAILERS_FUTURE)) {
+                return;
+            }
         }
+
+        final HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
+        assert trailersFuture != null;
+        trailersFuture.doComplete(HttpHeaders.of());
     }
 }

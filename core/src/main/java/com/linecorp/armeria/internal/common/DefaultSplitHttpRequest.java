@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SplitHttpRequest;
@@ -25,36 +24,15 @@ import io.netty.util.concurrent.EventExecutor;
 
 public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements SplitHttpRequest {
 
-    private static final HttpHeaders EMPTY_TRAILERS = HttpHeaders.of();
-
     private final RequestHeaders headers;
 
     public DefaultSplitHttpRequest(HttpRequest request, EventExecutor executor) {
-        super(request, executor, new SplitHttpRequestBodySubscriber(request, executor));
+        super(request, executor, new BodySubscriber(0, request, executor));
         headers = request.headers();
     }
 
     @Override
     public RequestHeaders headers() {
         return headers;
-    }
-
-    private static final class SplitHttpRequestBodySubscriber extends BodySubscriber {
-
-        private SplitHttpRequestBodySubscriber(HttpRequest request, EventExecutor executor) {
-            super(0, request, executor);
-        }
-
-        @Override
-        public void onComplete() {
-            completeTrailers(EMPTY_TRAILERS);
-            super.onComplete();
-        }
-
-        @Override
-        public void onError(Throwable cause) {
-            completeTrailers(EMPTY_TRAILERS);
-            super.onError(cause);
-        }
     }
 }

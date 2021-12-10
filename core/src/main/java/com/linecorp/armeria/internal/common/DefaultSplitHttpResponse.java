@@ -92,18 +92,6 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         }
 
         @Override
-        public void onComplete() {
-            maybeCompleteHeaders(null);
-            super.onComplete();
-        }
-
-        @Override
-        public void onError(Throwable cause) {
-            maybeCompleteHeaders(cause);
-            super.onError(cause);
-        }
-
-        @Override
         protected void maybeCompleteHeaders(@Nullable Throwable cause) {
             if (!headersFuture.isDone()) {
                 if (cause != null && !(cause instanceof CancelledSubscriptionException) &&
