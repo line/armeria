@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscription;
