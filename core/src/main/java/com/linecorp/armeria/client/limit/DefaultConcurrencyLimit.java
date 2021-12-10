@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     private final Predicate<? super ClientRequestContext> predicate;
-    private final int maxConcurrency;
+    private final SettableLimit maxConcurrency;
     private final int maxPendingAcquisitions;
     private final long timeoutMillis;
 
@@ -50,8 +50,18 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final AtomicLong numPendingAcquisitions = new AtomicLong();
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
+    /**
+     *
+     * @deprecated Use {@link #DefaultConcurrencyLimit(Predicate, SettableLimit, int, long)} instead.
+     */
+    @Deprecated
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
                             int maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
+        this(predicate, new SettableLimit(maxConcurrency), maxPendingAcquisitions, timeoutMillis);
+    }
+
+    DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
+                            SettableLimit maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
         this.predicate = predicate;
         this.maxConcurrency = maxConcurrency;
         this.maxPendingAcquisitions = maxPendingAcquisitions;
@@ -65,7 +75,17 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     @VisibleForTesting
     int availablePermits() {
-        return maxConcurrency - acquiredPermits.get();
+        int availablePermitCount = maxConcurrency() - acquiredPermits.get();
+        return Math.max(availablePermitCount, 0);
+    }
+
+    @VisibleForTesting
+    int maxConcurrency() {
+        int maxConcurrency = this.maxConcurrency.get();
+        if (maxConcurrency <= 0) {
+            return Integer.MAX_VALUE;
+        }
+        return maxConcurrency;
     }
 
     @Override
@@ -78,7 +98,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             // Because we don't do checking acquiredPermits and adding the queue at the same time,
             // this doesn't strictly guarantee FIFO.
             // However, the reversal happens within a reasonable window so it should be fine.
-            if (acquiredPermits.incrementAndGet() <= maxConcurrency) {
+            if (acquiredPermits.incrementAndGet() <= maxConcurrency()) {
                 return CompletableFuture.completedFuture(new Permit());
             }
             acquiredPermits.decrementAndGet();
@@ -103,7 +123,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     void drain() {
         while (!pendingAcquisitions.isEmpty()) {
             final int currentAcquiredPermits = acquiredPermits.get();
-            if (currentAcquiredPermits >= maxConcurrency) {
+            if (currentAcquiredPermits >= maxConcurrency()) {
                 break;
             }
 

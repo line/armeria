@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.limit.ConcurrencyLimit.SettableLimit;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -38,7 +39,8 @@ class ConcurrencyLimitTest {
 
     @Test
     void testConcurrencyLimit() throws InterruptedException {
-        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 2, 1, 100000);
+        final DefaultConcurrencyLimit limit =
+                new DefaultConcurrencyLimit(ctx -> true, SettableLimit.of(2), 1, 100000);
         assertThat(limit.availablePermits()).isEqualTo(2);
 
         final SafeCloseable acquired1 = limit.acquire(ctx).join();
@@ -71,8 +73,66 @@ class ConcurrencyLimitTest {
     }
 
     @Test
+    void testConcurrencyLimit_SettableLimit() throws InterruptedException {
+        final SettableLimit maxConcurrency = new SettableLimit(3);
+        final DefaultConcurrencyLimit limit =
+                new DefaultConcurrencyLimit(ctx -> true, maxConcurrency, 1, 100000);
+        assertThat(limit.maxConcurrency()).isEqualTo(3);
+        assertThat(limit.availablePermits()).isEqualTo(3);
+
+        maxConcurrency.set(0);
+        assertThat(limit.maxConcurrency()).isEqualTo(Integer.MAX_VALUE);
+
+        maxConcurrency.set(-1);
+        assertThat(limit.maxConcurrency()).isEqualTo(Integer.MAX_VALUE);
+
+        maxConcurrency.set(2);
+        assertThat(limit.maxConcurrency()).isEqualTo(2);
+        assertThat(limit.availablePermits()).isEqualTo(2);
+
+        final SafeCloseable acquired1 = limit.acquire(ctx).join();
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(1);
+
+        maxConcurrency.set(1);
+        assertThat(limit.maxConcurrency()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+        maxConcurrency.set(2);
+        assertThat(limit.maxConcurrency()).isEqualTo(2);
+
+        final SafeCloseable acquired2 = limit.acquire(ctx).join();
+        assertThat(limit.acquiredPermits()).isEqualTo(2);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+
+        maxConcurrency.set(1);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+        maxConcurrency.set(2);
+
+        final CompletableFuture<SafeCloseable> acquired3Future = limit.acquire(ctx);
+        Thread.sleep(200);
+        assertThat(acquired3Future.isDone()).isFalse();
+        // Parameters are still the same.
+        assertThat(limit.acquiredPermits()).isEqualTo(2);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+
+        assertThatThrownBy(() -> limit.acquire(ctx).join())
+                .hasCauseInstanceOf(TooManyPendingAcquisitionsException.class);
+
+        acquired1.close();
+        // acquired3Future is done now.
+        acquired3Future.join();
+        assertThat(limit.acquiredPermits()).isEqualTo(2);
+        assertThat(limit.availablePermits()).isEqualTo(0);
+
+        acquired2.close();
+        assertThat(limit.acquiredPermits()).isEqualTo(1);
+        assertThat(limit.availablePermits()).isEqualTo(1);
+    }
+
+    @Test
     void concurrencyLimitTimeout() throws InterruptedException {
-        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 1, 1, 500);
+        final DefaultConcurrencyLimit limit =
+                new DefaultConcurrencyLimit(ctx -> true, SettableLimit.of(1), 1, 500);
         assertThat(limit.availablePermits()).isEqualTo(1);
 
         final SafeCloseable acquired1 = limit.acquire(ctx).join();
@@ -93,7 +153,8 @@ class ConcurrencyLimitTest {
 
     @Test
     void acquireCallbackIsExecutedWithTheMatchingContext() throws InterruptedException {
-        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 1, 3, 10000);
+        final DefaultConcurrencyLimit limit =
+                new DefaultConcurrencyLimit(ctx -> true, SettableLimit.of(1), 3, 10000);
         assertThat(limit.availablePermits()).isEqualTo(1);
 
         final SafeCloseable acquired1 = limit.acquire(ctx).join();

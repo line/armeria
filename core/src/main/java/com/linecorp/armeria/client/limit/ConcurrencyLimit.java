@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Integer.MAX_VALUE;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -55,6 +57,50 @@ public interface ConcurrencyLimit {
     }
 
     /**
+     * Returns a newly-created {@link ConcurrencyLimit} with the specified {@code maxConcurrency}.
+     *
+     * <pre>
+     *     ConcurrencyLimit.of(new DynamicLimit());
+     *
+     *     class DynamicLimit extends SettableLimit {
+     *         public DynamicLimit() {
+     *             super(defaultValue);
+     *             dogma.watcher().watch((rev, value) -> {
+     *                 set(Integer.parse(value));
+     *             });
+     *         }
+     *     }
+     * </pre>
+     *
+     * @param maxConcurrency the settable maximum number of concurrent active requests.
+     */
+    static ConcurrencyLimit of(SettableLimit maxConcurrency) {
+        return builder(maxConcurrency).build();
+    }
+
+    /**
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
+     *
+     * <pre>
+     *     ConcurrencyLimit.builder(new DynamicLimit());
+     *
+     *     class DynamicLimit extends SettableLimit {
+     *         public DynamicLimit() {
+     *             super(defaultValue);
+     *             dogma.watcher().watch((rev, value) -> {
+     *                 set(Integer.parse(value));
+     *             });
+     *         }
+     *     }
+     * </pre>
+     *
+     * @param maxConcurrency the settable maximum number of concurrent active requests.
+     */
+    static ConcurrencyLimitBuilder builder(SettableLimit maxConcurrency) {
+        return new ConcurrencyLimitBuilder(maxConcurrency);
+    }
+
+    /**
      * Acquires a {@link SafeCloseable} that allows you to execute a job under the limit.
      * The {@link SafeCloseable} must be closed after the job is done:
      *
@@ -73,4 +119,25 @@ public interface ConcurrencyLimit {
      * }</pre>
      */
     CompletableFuture<SafeCloseable> acquire(ClientRequestContext ctx);
+
+    class SettableLimit implements Supplier<Integer> {
+        private final AtomicInteger limit;
+
+        public static SettableLimit of(int initialLimit) {
+            return new SettableLimit(initialLimit);
+        }
+
+        public SettableLimit(int initialLimit) {
+            limit = new AtomicInteger(initialLimit);
+        }
+
+        @Override
+        public final Integer get() {
+            return limit.get();
+        }
+
+        public final void set(int limit) {
+            this.limit.set(limit);
+        }
+    }
 }
