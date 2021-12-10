@@ -24,6 +24,8 @@ import java.util.function.Function;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
@@ -216,19 +218,21 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            executor.execute(() -> {
-                final boolean shouldRequest = requestedByDownstream == 0;
+            if (executor.inEventLoop()) {
+                handleRequest(n);
+            } else {
+                executor.execute(() -> handleRequest(n));
+            }
+        }
 
-                if (requestedByDownstream + n < 0) {
-                    requestedByDownstream = Long.MAX_VALUE;
-                } else {
-                    requestedByDownstream += n;
-                }
+        private void handleRequest(long n) {
+            final boolean shouldRequest = requestedByDownstream == 0;
 
-                if (shouldRequest) {
-                    upstream.request(1);
-                }
-            });
+            requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
+
+            if (shouldRequest) {
+                upstream.request(1);
+            }
         }
 
         @Override
