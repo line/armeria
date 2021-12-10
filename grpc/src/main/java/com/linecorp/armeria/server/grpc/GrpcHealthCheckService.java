@@ -194,6 +194,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             public void serverStopping(Server server) {
                 serverHealth.setHealthy(false);
                 watchers.keySet().forEach(StreamObserver::onCompleted);
+                watchers.clear();
             }
         });
     }
