@@ -213,6 +213,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 onError(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
                 upstream.cancel();
+                return;
             }
 
             if (canceled) {
@@ -227,11 +228,13 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         private void handleRequest(long n) {
-            final boolean shouldRequest = requestedByDownstream == 0;
-
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
 
-            if (shouldRequest) {
+            if (pendingRequests == 0) {
+                if (requestedByDownstream != Long.MAX_VALUE) {
+                    requestedByDownstream--;
+                }
+
                 upstream.request(1);
             }
         }
