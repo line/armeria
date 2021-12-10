@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
@@ -93,8 +92,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
-        private volatile AtomicLong requestedByDownstream;
 
+        private long requestedByDownstream;
         private int pendingRequests;
         private boolean isCompleting;
 
@@ -108,7 +107,6 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             this.downstream = downstream;
             this.function = function;
             this.executor = executor;
-            requestedByDownstream = new AtomicLong(0);
         }
 
         @Override
@@ -169,9 +167,9 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                         if (pendingRequests == 0) {
                             downstream.onComplete();
                         }
-                    } else if (requestedByDownstream.get() > 0) {
-                        if (requestedByDownstream.get() != Long.MAX_VALUE) {
-                            requestedByDownstream.decrementAndGet();
+                    } else if (requestedByDownstream > 0) {
+                        if (requestedByDownstream != Long.MAX_VALUE) {
+                            requestedByDownstream--;
                         }
                         upstream.request(1);
                     }
@@ -218,17 +216,19 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            final boolean shouldRequest = requestedByDownstream.get() == 0;
+            executor.execute(() -> {
+                final boolean shouldRequest = requestedByDownstream == 0;
 
-            if (requestedByDownstream.get() + n < 0) {
-                requestedByDownstream.set(Long.MAX_VALUE);
-            } else {
-                requestedByDownstream.addAndGet(n);
-            }
+                if (requestedByDownstream + n < 0) {
+                    requestedByDownstream = Long.MAX_VALUE;
+                } else {
+                    requestedByDownstream += n;
+                }
 
-            if (shouldRequest) {
-                upstream.request(1);
-            }
+                if (shouldRequest) {
+                    upstream.request(1);
+                }
+            });
         }
 
         @Override
