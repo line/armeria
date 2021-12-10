@@ -164,8 +164,11 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                     requireNonNull(item, "function.apply()'s future completed with null");
                     downstream.onNext(item);
 
-                    if (--pendingRequests == 0 && isCompleting) {
-                        downstream.onComplete();
+                    pendingRequests--;
+                    if (isCompleting) {
+                        if (pendingRequests == 0) {
+                            downstream.onComplete();
+                        }
                     } else if (requestedByDownstream.get() > 0) {
                         if (requestedByDownstream.get() != Long.MAX_VALUE) {
                             requestedByDownstream.decrementAndGet();
