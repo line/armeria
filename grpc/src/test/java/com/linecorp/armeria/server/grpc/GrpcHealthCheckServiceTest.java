@@ -130,6 +130,26 @@ class GrpcHealthCheckServiceTest {
                 ImmutableList.of(ServingStatus.SERVING, ServingStatus.NOT_SERVING, ServingStatus.SERVING));
     }
 
+    @Test
+    void watchTimeoutDisableCheck() throws Exception {
+        final HealthCheckRequest request = HealthCheckRequest.getDefaultInstance();
+        final HealthStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
+                                         .responseTimeoutMillis(0)
+                                         .build(HealthStub.class);
+        final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
+        client.watch(request, recorder);
+        TimeUnit.SECONDS.sleep(20);
+        serveHealth.setHealthy(false);
+        TimeUnit.SECONDS.sleep(1);
+        recorder.onCompleted();
+        final List<ServingStatus> responses = recorder.getValues()
+                                                      .stream()
+                                                      .map(HealthCheckResponse::getStatus)
+                                                      .collect(Collectors.toList());
+        assertThat(responses).containsExactlyElementsOf(
+                ImmutableList.of(ServingStatus.SERVING, ServingStatus.NOT_SERVING));
+    }
+
     @ParameterizedTest
     @MethodSource("checkServingStatusArguments")
     void checkServingStatus(GrpcHealthCheckService grpcHealthCheckService,

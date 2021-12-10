@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.healthcheck.HealthCheckUpdateListener;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.healthcheck.ListenableHealthChecker;
@@ -162,6 +163,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     @Override
     public void watch(HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
+        ServiceRequestContext.current().clearRequestTimeout();
         final String service = request.getService();
         final ServingStatus status = checkServingStatus(service);
         final HealthCheckResponse response = getHealthCheckResponse(status);
