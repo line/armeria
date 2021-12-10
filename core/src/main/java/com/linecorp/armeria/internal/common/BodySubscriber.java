@@ -103,7 +103,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         return downstreamUpdater;
     }
 
-    public CompletableFuture<HttpHeaders> trailersFuture() {
+    final CompletableFuture<HttpHeaders> trailersFuture() {
         HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         if (trailersFuture != null) {
             return trailersFuture;
@@ -117,12 +117,12 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         }
     }
 
-    public boolean wroteAny() {
+    final boolean wroteAny() {
         return wroteAny;
     }
 
     @Nullable
-    public final Subscription upstream() {
+    final Subscription upstream() {
         return upstream;
     }
 
@@ -202,7 +202,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         if (!notifyCancellation) {
             downstream = NoopSubscriber.get();
         }
-        completeTrailers(HttpHeaders.of());
+        completeTrailers(EMPTY_TRAILERS);
         final Subscription upstream = this.upstream;
         if (upstream != null) {
             upstream.cancel();
@@ -239,7 +239,6 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     @Override
     public void onComplete() {
-        maybeCompleteHeaders(null);
         final EventExecutor executor = this.executor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
@@ -260,7 +259,6 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     @Override
     public void onError(Throwable cause) {
-        maybeCompleteHeaders(cause);
         final EventExecutor executor = this.executor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
