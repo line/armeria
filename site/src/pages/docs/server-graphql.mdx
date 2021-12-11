@@ -6,6 +6,15 @@ Visit [armeria-examples](https://github.com/line/armeria-examples) to find a ful
 
 </Tip>
 
+First, You need the `armeria-graphql` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-graphql' },
+  ]}
+/>
+
 Let's assume we have the following [GraphQL Schema](https://graphql.org/learn/schema/):
 
 ```graphql
@@ -72,7 +81,7 @@ Server server = sb.build();
 server.start();
 ```
 
-We used [RuntimeWiring](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/idl/RuntimeWiring.html) to wire the type with DataFetcher. Please see [...](https://www.graphql-java.com/documentation/master/schema/#creating-a-schema-using-the-sdl) to find more wiring examples.
+We used [RuntimeWiring](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/idl/RuntimeWiring.html) to wire the type with DataFetcher. Please see [Creating a schema using the SDL](https://www.graphql-java.com/documentation/master/schema/#creating-a-schema-using-the-sdl) to find more wiring examples.
 
 ## Blocking service implementation
 
