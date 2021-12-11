@@ -18,9 +18,6 @@ package com.linecorp.armeria.testing.junit5.server;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -39,32 +36,15 @@ class ServerExtensionWithClientTest {
             sb.service("/backend", (ctx, req) -> HttpResponse.of(200));
             sb.service("/frontend", (ctx, req) -> server.webClient().get("/backend"));
         }
-
-        @Override
-        protected void configureWebClient(WebClientBuilder wcb) {
-            wcb.decorator((delegate, ctx, req) -> {
-                counter.incrementAndGet();
-                return delegate.execute(ctx, req);
-            });
-        }
     };
-
-    private static final AtomicInteger counter = new AtomicInteger();
-
-    @BeforeEach
-    void clear() {
-        counter.set(0);
-    }
 
     @Test
     void requestContextCaptor() throws InterruptedException {
         final WebClient client = server.webClient();
         client.get("/frontend").aggregate().join();
-
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
         assertThat(captor.size()).isEqualTo(2);
-
         assertThat(captor.take().request().uri().getPath()).isEqualTo("/frontend");
-        assertThat(counter.get()).isEqualTo(2);
+        assertThat(captor.take().request().uri().getPath()).isEqualTo("/backend");
     }
 }

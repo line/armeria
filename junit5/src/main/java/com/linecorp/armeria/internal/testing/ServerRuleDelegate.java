@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
@@ -96,19 +97,7 @@ public abstract class ServerRuleDelegate {
 
         this.server.set(server);
 
-        final boolean hasHttps = hasHttps();
-        final WebClientBuilder webClientBuilder = WebClient.builder(hasHttps ? httpsUri() : httpUri());
-        if (hasHttps) {
-            webClientBuilder.factory(ClientFactory.insecure());
-        }
-
-        try {
-            configureWebClient(webClientBuilder);
-        } catch (Exception e) {
-            throw new IllegalStateException("failed to configure a WebClient", e);
-        }
-
-        final WebClient webClient = webClientBuilder.build();
+        final WebClient webClient = webClientBuilder().build();
         this.webClient.set(webClient);
         return server;
     }
@@ -359,12 +348,28 @@ public abstract class ServerRuleDelegate {
     /**
      * Creates a {@link WebClient} each time with {@link WebClientBuilder}.
      */
-    public WebClient webClient(WebClientBuilder webClientBuilder) {
-        return requireNonNull(webClientBuilder, "webClientBuilder").build();
+    public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        final WebClientBuilder builder = webClientBuilder();
+        webClientCustomizer.accept(builder);
+        return builder.build();
     }
 
     private void ensureStarted() {
         // This will ensure that the server has started.
         server();
+    }
+
+    private WebClientBuilder webClientBuilder() {
+        final boolean hasHttps = hasHttps();
+        final WebClientBuilder webClientBuilder = WebClient.builder(hasHttps ? httpsUri() : httpUri());
+        if (hasHttps) {
+            webClientBuilder.factory(ClientFactory.insecure());
+        }
+        try {
+            configureWebClient(webClientBuilder);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to configure a WebClient", e);
+        }
+        return webClientBuilder;
     }
 }
