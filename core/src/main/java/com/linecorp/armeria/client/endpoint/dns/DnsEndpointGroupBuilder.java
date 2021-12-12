@@ -112,9 +112,9 @@ abstract class DnsEndpointGroupBuilder {
     /**
       * Sets the TTL of the cache for the failed DNS queries in seconds.
       */
-    public DnsEndpointGroupBuilder negativeTtl(int ttl) {
-        checkArgument(ttl > 0, "negativeTtl: %s must be > 0", ttl);
-        this.negativeTtl = ttl;
+    public DnsEndpointGroupBuilder negativeTtl(int negativeTtl) {
+        checkArgument(negativeTtl > 0, "negativeTtl: %s (expected: > 0)", negativeTtl);
+        this.negativeTtl = negativeTtl;
         return this;
     }
 
