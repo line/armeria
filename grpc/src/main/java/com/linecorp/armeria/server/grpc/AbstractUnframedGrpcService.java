@@ -165,8 +165,12 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
         if (grpcStatus.getCode() != Code.OK) {
             PooledObjects.close(grpcResponse.content());
-            res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse,
-                                                         unframedGrpcStatusMappingFunction));
+            try {
+                res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse,
+                                                             unframedGrpcStatusMappingFunction));
+            } catch (Exception e) {
+                res.completeExceptionally(e);
+            }
             return;
         }
 

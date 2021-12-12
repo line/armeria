@@ -244,6 +244,40 @@ class GrpcServiceBuilderTest {
         }
     }
 
+    @Test
+    void cannotSetUnframedErrorHandlerIfDisabledUnframedRequests() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableUnframedRequests(false)
+                                            .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("'unframedGrpcErrorHandler' can only be set if unframed requests are "
+                                      + "enabled");
+    }
+
+    @Test
+    void cannotSetUnframedGrpcStatusMappingIfDisabledUnframedRequests() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableUnframedRequests(false)
+                                            .unframedGrpcStatusMapping(UnframedGrpcStatusMappingFunction.of())
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("'unframedGrpcStatusMappingFunction' can only be set if unframed requests "
+                                      + "are enabled");
+    }
+
+    @Test
+    void cannotSetBothUnframedErrorHandlerAndUnframedGrpcStatusMapping() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableUnframedRequests(true)
+                                            .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
+                                            .unframedGrpcStatusMapping(UnframedGrpcStatusMappingFunction.of())
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Both 'unframedGrpcErrorHandler' and 'unframedGrpcStatusMappingFunction' "
+                                      + "cannot be set");
+    }
+
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
 
     private static class ReconnectServiceImpl extends ReconnectServiceImplBase {}
