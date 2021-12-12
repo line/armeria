@@ -1772,7 +1772,11 @@ public final class ServerBuilder {
             for (VirtualHost h : virtualHosts) {
                 final SslContext sslCtx = h.sslContext();
                 if (sslCtx != null) {
-                    mappingBuilder.add(h.hostnamePattern(), sslCtx);
+                    final String originalHostnamePattern = h.originalHostnamePattern();
+                    // The SslContext for the default virtual host was added when creating DomainMappingBuilder.
+                    if (!"*".equals(originalHostnamePattern)) {
+                        mappingBuilder.add(originalHostnamePattern, sslCtx);
+                    }
                 }
             }
             sslContexts = mappingBuilder.build();

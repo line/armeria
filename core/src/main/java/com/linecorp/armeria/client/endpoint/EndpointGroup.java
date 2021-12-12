@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Listenable;
+import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
 
 /**
  * A list of {@link Endpoint}s.

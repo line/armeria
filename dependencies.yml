@@ -8,12 +8,12 @@ boms:
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.41.0
-  - io.micrometer:micrometer-bom:1.7.4
-  - io.netty:netty-bom:4.1.69.Final
+  - io.grpc:grpc-bom:1.41.1
+  - io.micrometer:micrometer-bom:1.7.6
+  - io.netty:netty-bom:4.1.70.Final
   - io.zipkin.brave:brave-bom:5.13.3
-  - org.eclipse.jetty:jetty-bom:9.4.43.v20210629
-  - org.junit:junit-bom:5.8.1
+  - org.eclipse.jetty:jetty-bom:9.4.44.v20210927
+  - org.junit:junit-bom:5.8.2
 
 cglib:
   cglib: { version: '3.3.0' }
@@ -24,9 +24,9 @@ ch.megard:
 
 ch.qos.logback:
   logback-classic:
-    version: '1.2.6'
+    version: '1.2.7'
     javadocs:
-    - https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.6/
+    - https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.7/
 
 com.aayushatharva.brotli4j:
   brotli4j: { version: &BROTLI4J_VERSION '1.6.0' }
@@ -128,12 +128,12 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protobuf-java: { version: &PROTOBUF_VERSION '3.17.2' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.17.3' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
-  protobuf-gradle-plugin: { version: '0.8.17' }
+  protobuf-gradle-plugin: { version: '0.8.18' }
   protoc: { version: *PROTOBUF_VERSION }
 
 com.graphql-java:
@@ -148,12 +148,12 @@ com.lightbend.akka.grpc:
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
-  eureka-client: { version: &EUREKA_VERSION '1.10.16' }
+  eureka-client: { version: &EUREKA_VERSION '1.10.17' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 # DGS is used only for testing in it:dgs module.
 com.netflix.graphql.dgs:
-  graphql-dgs-client: { version: '4.9.1' }
+  graphql-dgs-client: { version: '4.9.10' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
@@ -171,7 +171,12 @@ com.spotify:
     relocations:
     - from: com.spotify.futures
       to: com.linecorp.armeria.internal.shaded.futures
-  futures-extra: { version: 4.3.0 }
+  futures-extra: { version: '4.3.1' }
+
+# OkHttp is used only for testing in it:okhttp module.
+com.squareup.okhttp3:
+  okhttp: { version: &OKHTTP_VERSION '4.9.3' }
+  okhttp-tls: { version: *OKHTTP_VERSION }
 
 com.squareup.retrofit2:
   retrofit:
@@ -190,7 +195,7 @@ com.thesamet.scalapb:
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
-  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.16' }
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.17' }
   akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
   akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
@@ -272,11 +277,11 @@ io.netty:
     - https://netty.io/4.1/api/
 
 io.netty.incubator:
-  netty-incubator-transport-native-io_uring: { version: '0.0.9.Final' }
+  netty-incubator-transport-native-io_uring: { version: '0.0.10.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.4.11'
+    version: &REACTOR_VERSION '3.4.12'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -298,7 +303,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.1.2'
+    version: '3.1.3'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -403,7 +408,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.53'
+    version: &TOMCAT_VERSION '9.0.55'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -424,7 +429,7 @@ org.assertj:
   assertj-core: { version: '3.21.0' }
 
 org.awaitility:
-  awaitility: { version: '4.1.0' }
+  awaitility: { version: '4.1.1' }
 
 org.bouncycastle:
   bcpkix-jdk15on:
@@ -490,7 +495,7 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.31' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.5.32' }
   kotlin-reflect: { version: *KOTLIN_VERSION }
 
 org.jetbrains.kotlinx:
@@ -550,11 +555,11 @@ org.reflections:
       to: com.linecorp.armeria.internal.shaded.reflections
 
 org.scala-lang:
-  scala-library: { version: '2.13.6' }
+  scala-library: { version: '2.13.7' }
 
 org.scala-lang.modules:
   scala-collection-compat_2.12: { version: '2.5.0' }
-  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '1.0.1' }
+  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '1.0.2' }
   scala-java8-compat_2.13: { version: *SCALA_JAVA8_COMPAT_VERSION }
 
 org.scalameta:
@@ -562,9 +567,9 @@ org.scalameta:
   munit_2.13: { version: *MUNIT_VERSION }
 
 org.sangria-graphql:
-  sangria_2.12: { version: &SANGRIA_VERSION '2.1.3' }
+  sangria_2.12: { version: &SANGRIA_VERSION '2.1.6' }
   sangria_2.13: { version: *SANGRIA_VERSION }
-  sangria-slowlog_2.12: { version: &SANGRIA_SLOWLOG_VERSION '2.0.2' }
+  sangria-slowlog_2.12: { version: &SANGRIA_SLOWLOG_VERSION '2.0.4' }
   sangria-slowlog_2.13: { version: *SANGRIA_SLOWLOG_VERSION }
 
 org.slf4j:
@@ -578,11 +583,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.10' }
+  spring-web: { version: '5.3.13' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.5.5'
+    version: &SPRING_BOOT_VERSION '2.5.7'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
@@ -619,7 +624,7 @@ com.github.vladimir-bukhtoyarov:
 
 org.jboss.resteasy:
   resteasy-core-spi:
-    version: &RESTEASY_VERSION '4.7.2.Final'
+    version: &RESTEASY_VERSION '4.7.3.Final'
     javadocs:
     - https://docs.jboss.org/resteasy/docs/4.6.0.Final/javadocs/
   resteasy-core: { version: *RESTEASY_VERSION }

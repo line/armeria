@@ -135,7 +135,6 @@ public abstract class AbstractHttpRequestBuilder {
      */
     public AbstractHttpRequestBuilder path(String path) {
         requireNonNull(path, "path");
-        checkArgument(!path.isEmpty(), "path is empty.");
         this.path = path;
         return this;
     }
@@ -350,7 +349,7 @@ public abstract class AbstractHttpRequestBuilder {
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
-     *            .cookie(Cookie.of("cookie", "foo"))
+     *            .cookie(Cookie.ofSecure("cookie", "foo"))
      *            .build();
      * }</pre>
      *
@@ -370,8 +369,8 @@ public abstract class AbstractHttpRequestBuilder {
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
-     *            .cookies(Cookies.of(Cookie.of("cookie1", "foo"),
-     *                                Cookie.of("cookie2", "bar")))
+     *            .cookies(Cookies.ofSecure(Cookie.ofSecure("cookie1", "foo"),
+     *                                      Cookie.ofSecure("cookie2", "bar")))
      *            .build();
      * }</pre>
      *

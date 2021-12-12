@@ -45,13 +45,13 @@ class CookieClientTest {
         protected void configure(ServerBuilder sb) {
             sb.virtualHost("foo.com")
               .service("/set-cookie", (ctx, req) -> {
-                  final String cookie1 = Cookie.builder("some-cookie", "foo").path("/").build()
-                                               .toSetCookieHeader();
-                  final String cookie2 = Cookie.builder("some-cookie2", "bar").path("/").build()
-                                               .toSetCookieHeader();
-                  final String cookie3 = Cookie.builder("bad-cookie", "hmm").path("/").domain("bar.com")
-                                               .build()
-                                               .toSetCookieHeader();
+                  // Set false to "secure" attribute to use HTTP.
+                  final String cookie1 = Cookie.secureBuilder("some-cookie", "foo").path("/").secure(false)
+                                               .build().toSetCookieHeader();
+                  final String cookie2 = Cookie.secureBuilder("some-cookie2", "bar").path("/").secure(false)
+                                               .build().toSetCookieHeader();
+                  final String cookie3 = Cookie.secureBuilder("bad-cookie", "hmm").path("/").domain("bar.com")
+                                               .secure(false).build().toSetCookieHeader();
                   final HttpHeaders headers = HttpHeaders.builder()
                                                          .add(HttpHeaderNames.SET_COOKIE, cookie1)
                                                          .add(HttpHeaderNames.SET_COOKIE, cookie2)
@@ -93,8 +93,10 @@ class CookieClientTest {
                                   .join().contentUtf8();
 
             final Cookies cookies = Cookie.fromCookieHeader(cookie);
-            assertThat(cookies).hasSize(2).contains(Cookie.of("some-cookie", "foo"),
-                                                    Cookie.of("some-cookie2", "bar"));
+            assertThat(cookies).hasSize(2)
+                               // Set false to "secure" attribute to use HTTP.
+                               .contains(Cookie.secureBuilder("some-cookie", "foo").secure(false).build(),
+                                         Cookie.secureBuilder("some-cookie2", "bar").secure(false).build());
 
             cookie = client.get("http://bar.com:" + port + "/get-cookie").aggregate()
                            .join().contentUtf8();

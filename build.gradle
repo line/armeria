@@ -5,7 +5,7 @@ plugins {
     id 'cz.alenkacz.gradle.scalafmt' version '1.16.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.5.31' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.5.32' apply false
     id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
 
     id 'net.ltgt.errorprone' version '2.0.2' apply false
@@ -53,9 +53,16 @@ allprojects {
     tasks.withType(Test) {
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
+
+        // Drop heap dump and exit on OOME.
+        jvmArgs '-XX:+ExitOnOutOfMemoryError'
+        jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
+        jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
+
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
+
         // Pass special system property to tell our tests that we are measuring coverage.
         if (project.hasFlags('coverage')) {
             systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
