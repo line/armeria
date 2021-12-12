@@ -349,6 +349,7 @@ public abstract class ServerRuleDelegate {
      * Creates a {@link WebClient} each time with {@link WebClientBuilder}.
      */
     public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
         final WebClientBuilder builder = webClientBuilder();
         webClientCustomizer.accept(builder);
         return builder.build();

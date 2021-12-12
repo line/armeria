@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
@@ -298,8 +299,8 @@ public abstract class ServerRule extends ExternalResource {
     /**
      * Creates a {@link WebClient} each time with {@link WebClientBuilder}.
      */
-    public WebClient webClient(WebClientBuilder webClientBuilder) {
-        requireNonNull(webClientBuilder, "webClientBuilder");
-        return delegate.webClient(webClientBuilder);
+    public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return delegate.webClient(webClientCustomizer);
     }
 }

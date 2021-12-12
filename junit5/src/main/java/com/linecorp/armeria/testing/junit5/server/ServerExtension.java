@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -324,9 +325,9 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     /**
      * Creates a {@link WebClient} each time with {@link WebClientBuilder}.
      */
-    public WebClient webClient(WebClientBuilder webClientBuilder) {
-        requireNonNull(webClientBuilder, "webClientBuilder");
-        return delegate.webClient(webClientBuilder);
+    public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return delegate.webClient(webClientCustomizer);
     }
 
     /**
