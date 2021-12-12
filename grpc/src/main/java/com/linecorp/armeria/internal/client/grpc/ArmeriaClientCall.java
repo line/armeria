@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -59,6 +60,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -123,7 +125,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
 
-    private final boolean endpointInitialized;
+    private boolean endpointInitialized;
     @Nullable
     private volatile Runnable pendingTask;
 
@@ -170,7 +172,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        endpointInitialized = endpointGroup.whenReady().isDone() && !endpointGroup.endpoints().isEmpty();
+        endpointInitialized = endpointGroup instanceof Endpoint || endpointGroup instanceof StaticEndpointGroup;
         if (!endpointInitialized) {
             ctx.whenInitialized().handle((unused1, unused2) -> {
                 runPendingTask();
@@ -516,11 +518,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private boolean needsDirectInvocation() {
-        return (endpointInitialized || ctx.whenInitialized().isDone()) && ctx.eventLoop().inEventLoop();
+        return endpointInitialized && ctx.eventLoop().inEventLoop();
     }
 
     private void execute(Runnable task) {
-        if (endpointInitialized || ctx.whenInitialized().isDone()) {
+        if (endpointInitialized) {
             ctx.eventLoop().execute(task);
         } else {
             addPendingTask(task);
@@ -528,6 +530,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void runPendingTask() {
+        // Visibility is guaranteed by the following CAS operation.
+        endpointInitialized = true;
         for (;;) {
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {

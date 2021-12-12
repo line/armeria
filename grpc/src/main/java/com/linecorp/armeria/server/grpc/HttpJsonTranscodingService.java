@@ -28,6 +28,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
@@ -49,13 +50,25 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.BoolValue;
+import com.google.protobuf.BytesValue;
 import com.google.protobuf.DescriptorProtos.MethodOptions;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
+import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
+import com.google.protobuf.DoubleValue;
+import com.google.protobuf.Duration;
+import com.google.protobuf.FloatValue;
+import com.google.protobuf.Int32Value;
+import com.google.protobuf.Int64Value;
+import com.google.protobuf.StringValue;
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.UInt32Value;
+import com.google.protobuf.UInt64Value;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -275,17 +288,35 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case BYTE_STRING:
                 case ENUM:
                     // Use field name which is specified in proto file.
-                    builder.put(namePrefix + field.getName(), new Field(field, parentNames));
+                    builder.put(namePrefix + field.getName(),
+                                new Field(field, parentNames, field.getJavaType()));
                     break;
                 case MESSAGE:
                     @Nullable
-                    final Descriptor typeDesc =
+                    final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
+                    if (wellKnownFieldType != null) {
+                        builder.put(namePrefix + field.getName(),
+                                    new Field(field, parentNames, wellKnownFieldType));
+                        break;
+                    }
+
+                    @Nullable
+                    Descriptor typeDesc =
                             desc.getNestedTypes().stream()
                                 .filter(d -> d.getFullName().equals(field.getMessageType().getFullName()))
-                                .findFirst()
-                                // Find global type if there is no nested type.
-                                .orElseGet(() -> desc.getFile()
-                                                     .findMessageTypeByName(field.getMessageType().getName()));
+                                .findFirst().orElse(null);
+                    if (typeDesc == null) {
+                        // From the proto file.
+                        typeDesc = findTypeDescriptor(desc.getFile(), field);
+                    }
+                    if (typeDesc == null) {
+                        // According to the Language guide, the public import functionality is not available
+                        // in Java. We will try to find dependencies only with "import" keyword.
+                        // https://developers.google.com/protocol-buffers/docs/proto3#importing_definitions
+                        typeDesc = desc.getFile().getDependencies().stream()
+                                       .map(fd -> findTypeDescriptor(fd, field))
+                                       .filter(Objects::nonNull).findFirst().orElse(null);
+                    }
                     checkState(typeDesc != null,
                                "Descriptor for the type '%s' does not exist.",
                                field.getMessageType().getFullName());
@@ -297,6 +328,42 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             }
         });
         return builder.build();
+    }
+
+    @Nullable
+    private static JavaType getJavaTypeForWellKnownTypes(FieldDescriptor fd) {
+        final Descriptor messageType = fd.getMessageType();
+        final String fullName = messageType.getFullName();
+
+        if (Timestamp.getDescriptor().getFullName().equals(fullName) ||
+            Duration.getDescriptor().getFullName().equals(fullName)) {
+            return JavaType.STRING;
+        }
+
+        if (DoubleValue.getDescriptor().getFullName().equals(fullName) ||
+            FloatValue.getDescriptor().getFullName().equals(fullName) ||
+            Int64Value.getDescriptor().getFullName().equals(fullName) ||
+            UInt64Value.getDescriptor().getFullName().equals(fullName) ||
+            Int32Value.getDescriptor().getFullName().equals(fullName) ||
+            UInt32Value.getDescriptor().getFullName().equals(fullName) ||
+            BoolValue.getDescriptor().getFullName().equals(fullName) ||
+            StringValue.getDescriptor().getFullName().equals(fullName) ||
+            BytesValue.getDescriptor().getFullName().equals(fullName)) {
+            // "value" field. Wrappers must have one field.
+            assert messageType.getFields().size() == 1 : "Wrappers must have one 'value' field.";
+            return messageType.getFields().get(0).getJavaType();
+        }
+
+        return null;
+    }
+
+    @Nullable
+    private static Descriptor findTypeDescriptor(FileDescriptor file, FieldDescriptor field) {
+        final Descriptor messageType = field.getMessageType();
+        if (!file.getPackage().equals(messageType.getFile().getPackage())) {
+            return null;
+        }
+        return file.findMessageTypeByName(messageType.getName());
     }
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
@@ -625,14 +692,16 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     static final class Field {
         private final FieldDescriptor descriptor;
         private final List<String> parentNames;
+        private final JavaType javaType;
 
-        private Field(FieldDescriptor descriptor, List<String> parentNames) {
+        private Field(FieldDescriptor descriptor, List<String> parentNames, JavaType javaType) {
             this.descriptor = descriptor;
             this.parentNames = parentNames;
+            this.javaType = javaType;
         }
 
         JavaType type() {
-            return descriptor.getJavaType();
+            return javaType;
         }
 
         String name() {

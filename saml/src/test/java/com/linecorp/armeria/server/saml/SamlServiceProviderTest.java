@@ -244,10 +244,9 @@ public class SamlServiceProviderTest {
             requireNonNull(cookieName, "cookieName");
             requireNonNull(cookieValue, "cookieValue");
 
-            final Cookie cookie = Cookie.builder(cookieName, cookieValue)
+            final Cookie cookie = Cookie.secureBuilder(cookieName, cookieValue)
                                         .domain(spHostname)
                                         .path("/")
-                                        .httpOnly(true)
                                         .build();
             setCookie = cookie.toSetCookieHeader();
         }

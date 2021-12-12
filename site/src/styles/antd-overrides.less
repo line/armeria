@@ -148,6 +148,21 @@ h6 {
   }
 }
 
+.noBullet {
+  > ol, > ul {
+    list-style: none;
+    margin-left: 0;
+    padding-left: 0;
+    > li {
+      margin-left: 0;
+      padding-left: 0;
+      > ol, > ul {
+        margin-left: 24px;
+      }
+    }
+  }
+}
+
 .tweet-box {
   // No sidebar
   @media (max-width: @layout-width-0-max) {

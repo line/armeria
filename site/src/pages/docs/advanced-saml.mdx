@@ -134,8 +134,7 @@ class MySamlSingleSignOnHandler implements SamlSingleSignOnHandler {
 
         // Note that you MUST NOT use this example in a real world application. You may consider encoding
         // the value using JSON Web Tokens to prevent tempering.
-        final Cookie cookie = Cookie.builder("username", username)
-                                    .httpOnly(true)
+        final Cookie cookie = Cookie.secureBuilder("username", username)
                                     .domain("localhost")
                                     .maxAge(60)
                                     .path("/")
