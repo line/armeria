@@ -176,13 +176,14 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                         return;
                     }
 
-                    state = State.WAITING;
                     if (requestedByDownstream > 0) {
                         if (requestedByDownstream != Long.MAX_VALUE) {
                             requestedByDownstream--;
                         }
                         state = State.REQUESTED;
                         upstream.request(1);
+                    } else {
+                        state = State.WAITING;
                     }
                 }
             } catch (Throwable ex) {
