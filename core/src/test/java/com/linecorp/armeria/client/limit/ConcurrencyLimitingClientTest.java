@@ -36,7 +36,6 @@ import org.mockito.Mock;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.client.limit.ConcurrencyLimit.SettableLimit;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -50,8 +49,7 @@ class ConcurrencyLimitingClientTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
-    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> {
-    };
+    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> {};
     @Mock
     private HttpClient delegate;
 
@@ -235,7 +233,7 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
         final ConcurrencyLimit concurrencyLimit =
-                new DefaultConcurrencyLimit(requestContext -> false, SettableLimit.of(2), 100, 500);
+                new DefaultConcurrencyLimit(requestContext -> false, 2, 100, 500);
 
         final ConcurrencyLimitingClient client =
                 newDecorator(concurrencyLimit).apply(delegate);
@@ -269,7 +267,7 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
         final ConcurrencyLimit concurrencyLimit =
-                new DefaultConcurrencyLimit(ctx -> true, SettableLimit.of(1), 100, 500);
+                new DefaultConcurrencyLimit(ctx -> true, 1, 100, 500);
 
         final ConcurrencyLimitingClient clientOne =
                 newDecorator(concurrencyLimit).apply(delegate);

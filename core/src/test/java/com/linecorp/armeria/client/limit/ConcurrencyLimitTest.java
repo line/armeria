@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.limit.ConcurrencyLimit.SettableLimit;
+import com.linecorp.armeria.common.util.CachedValue;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -39,8 +39,7 @@ class ConcurrencyLimitTest {
 
     @Test
     void testConcurrencyLimit() throws InterruptedException {
-        final DefaultConcurrencyLimit limit =
-                new DefaultConcurrencyLimit(ctx -> true, SettableLimit.of(2), 1, 100000);
+        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 2, 1, 100000);
         assertThat(limit.availablePermits()).isEqualTo(2);
 
         final SafeCloseable acquired1 = limit.acquire(ctx).join();
@@ -73,18 +72,21 @@ class ConcurrencyLimitTest {
     }
 
     @Test
-    void testConcurrencyLimit_SettableLimit() throws InterruptedException {
-        final SettableLimit maxConcurrency = new SettableLimit(3);
+    void testConcurrencyLimit_dynamicLimit() throws InterruptedException {
+        final CachedValue<Integer> maxConcurrency = new CachedValue<>(3);
         final DefaultConcurrencyLimit limit =
                 new DefaultConcurrencyLimit(ctx -> true, maxConcurrency, 1, 100000);
         assertThat(limit.maxConcurrency()).isEqualTo(3);
         assertThat(limit.availablePermits()).isEqualTo(3);
 
         maxConcurrency.set(0);
-        assertThat(limit.maxConcurrency()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(limit.maxConcurrency()).isEqualTo(0);
 
         maxConcurrency.set(-1);
-        assertThat(limit.maxConcurrency()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(limit.maxConcurrency()).isEqualTo(0);
+
+        maxConcurrency.set(null);
+        assertThat(limit.maxConcurrency()).isEqualTo(0);
 
         maxConcurrency.set(2);
         assertThat(limit.maxConcurrency()).isEqualTo(2);
@@ -131,8 +133,7 @@ class ConcurrencyLimitTest {
 
     @Test
     void concurrencyLimitTimeout() throws InterruptedException {
-        final DefaultConcurrencyLimit limit =
-                new DefaultConcurrencyLimit(ctx -> true, SettableLimit.of(1), 1, 500);
+        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 1, 1, 500);
         assertThat(limit.availablePermits()).isEqualTo(1);
 
         final SafeCloseable acquired1 = limit.acquire(ctx).join();
@@ -153,8 +154,7 @@ class ConcurrencyLimitTest {
 
     @Test
     void acquireCallbackIsExecutedWithTheMatchingContext() throws InterruptedException {
-        final DefaultConcurrencyLimit limit =
-                new DefaultConcurrencyLimit(ctx -> true, SettableLimit.of(1), 3, 10000);
+        final DefaultConcurrencyLimit limit = new DefaultConcurrencyLimit(ctx -> true, 1, 3, 10000);
         assertThat(limit.availablePermits()).isEqualTo(1);
 
         final SafeCloseable acquired1 = limit.acquire(ctx).join();

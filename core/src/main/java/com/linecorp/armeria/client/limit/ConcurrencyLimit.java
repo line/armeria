@@ -18,9 +18,9 @@ package com.linecorp.armeria.client.limit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Integer.MAX_VALUE;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -57,12 +57,11 @@ public interface ConcurrencyLimit {
     }
 
     /**
-     * Returns a newly-created {@link ConcurrencyLimit} with the specified {@code maxConcurrency}.
+     * Returns a newly-created {@link ConcurrencyLimit} with the specified {@code maxConcurrency}. For example:
+     * <pre> {@code
+     *     ConcurrencyLimit.builder(new DynamicLimit());
      *
-     * <pre>
-     *     ConcurrencyLimit.of(new DynamicLimit());
-     *
-     *     class DynamicLimit extends SettableLimit {
+     *     class DynamicLimit extends CachedValue<Integer> {
      *         public DynamicLimit() {
      *             super(defaultValue);
      *             dogma.watcher().watch((rev, value) -> {
@@ -70,21 +69,22 @@ public interface ConcurrencyLimit {
      *             });
      *         }
      *     }
-     * </pre>
+     * } </pre>
      *
-     * @param maxConcurrency the settable maximum number of concurrent active requests.
+     * @param maxConcurrency the supplier for maximum number of concurrent active requests.
+     *                       It must be supplied a positive number in a very short time.
+     *                       If it does not supply a positive number, all requests will be pending.
      */
-    static ConcurrencyLimit of(SettableLimit maxConcurrency) {
+    static ConcurrencyLimit of(Supplier<Integer> maxConcurrency) {
         return builder(maxConcurrency).build();
     }
 
     /**
-     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
-     *
-     * <pre>
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}. For example:
+     * <pre> {@code
      *     ConcurrencyLimit.builder(new DynamicLimit());
      *
-     *     class DynamicLimit extends SettableLimit {
+     *     class DynamicLimit extends CachedValue<Integer> {
      *         public DynamicLimit() {
      *             super(defaultValue);
      *             dogma.watcher().watch((rev, value) -> {
@@ -92,12 +92,14 @@ public interface ConcurrencyLimit {
      *             });
      *         }
      *     }
-     * </pre>
+     * } </pre>
      *
-     * @param maxConcurrency the settable maximum number of concurrent active requests.
+     * @param maxConcurrency the supplier for maximum number of concurrent active requests.
+     *                       It must be supplied a positive number in a very short time.
+     *                       If it does not supply a positive number, all requests will be pending.
      */
-    static ConcurrencyLimitBuilder builder(SettableLimit maxConcurrency) {
-        return new ConcurrencyLimitBuilder(maxConcurrency);
+    static ConcurrencyLimitBuilder builder(Supplier<Integer> maxConcurrency) {
+        return new ConcurrencyLimitBuilder(requireNonNull(maxConcurrency, "maxConcurrency"));
     }
 
     /**
@@ -119,25 +121,4 @@ public interface ConcurrencyLimit {
      * }</pre>
      */
     CompletableFuture<SafeCloseable> acquire(ClientRequestContext ctx);
-
-    class SettableLimit implements Supplier<Integer> {
-        private final AtomicInteger limit;
-
-        public static SettableLimit of(int initialLimit) {
-            return new SettableLimit(initialLimit);
-        }
-
-        public SettableLimit(int initialLimit) {
-            limit = new AtomicInteger(initialLimit);
-        }
-
-        @Override
-        public final Integer get() {
-            return limit.get();
-        }
-
-        public final void set(int limit) {
-            this.limit.set(limit);
-        }
-    }
 }

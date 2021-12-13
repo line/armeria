@@ -22,9 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.limit.ConcurrencyLimit.SettableLimit;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -43,17 +43,17 @@ public final class ConcurrencyLimitBuilder {
     static final int DEFAULT_MAX_PENDING_ACQUIRES = Integer.MAX_VALUE;
 
     private final boolean useLimit;
-    private final SettableLimit maxConcurrency;
+    private final Supplier<Integer> maxConcurrency;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
     private int maxPendingAcquisitions = DEFAULT_MAX_PENDING_ACQUIRES;
     private Predicate<? super ClientRequestContext> predicate = requestContext -> true;
 
     ConcurrencyLimitBuilder(int maxConcurrency) {
         useLimit = !(maxConcurrency == 0 || maxConcurrency == Integer.MAX_VALUE);
-        this.maxConcurrency = new SettableLimit(maxConcurrency);
+        this.maxConcurrency = () -> maxConcurrency;
     }
 
-    ConcurrencyLimitBuilder(SettableLimit maxConcurrency) {
+    ConcurrencyLimitBuilder(Supplier<Integer> maxConcurrency) {
         useLimit = true;
         this.maxConcurrency = maxConcurrency;
     }

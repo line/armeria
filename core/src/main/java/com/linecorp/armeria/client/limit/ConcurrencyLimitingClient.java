@@ -21,10 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.limit.ConcurrencyLimit.SettableLimit;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -54,7 +54,10 @@ public final class ConcurrencyLimitingClient
 
     /**
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
+     *
+     * @deprecated Use {@link #newDecorator(int)} or {@link #newDecorator(Supplier)}
      */
+    @Deprecated
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             int maxConcurrency, long timeout, TimeUnit unit) {
         final ConcurrencyLimit limit = ConcurrencyLimit.builder(maxConcurrency)
@@ -67,19 +70,8 @@ public final class ConcurrencyLimitingClient
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
-            SettableLimit maxConcurrency) {
+            Supplier<Integer> maxConcurrency) {
         final ConcurrencyLimit limit = ConcurrencyLimit.of(maxConcurrency);
-        return newDecorator(limit);
-    }
-
-    /**
-     * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
-     */
-    public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
-            SettableLimit maxConcurrency, long timeout, TimeUnit unit) {
-        final ConcurrencyLimit limit = ConcurrencyLimit.builder(maxConcurrency)
-                                                       .timeoutMillis(unit.toMillis(timeout))
-                                                       .build();
         return newDecorator(limit);
     }
 

@@ -26,6 +26,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -40,9 +44,10 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * Concurrency settings that limits the concurrent number of active requests.
  */
 final class DefaultConcurrencyLimit implements ConcurrencyLimit {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultConcurrencyLimit.class);
 
     private final Predicate<? super ClientRequestContext> predicate;
-    private final SettableLimit maxConcurrency;
+    private final Supplier<Integer> maxConcurrency;
     private final int maxPendingAcquisitions;
     private final long timeoutMillis;
 
@@ -50,18 +55,13 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final AtomicLong numPendingAcquisitions = new AtomicLong();
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
-    /**
-     *
-     * @deprecated Use {@link #DefaultConcurrencyLimit(Predicate, SettableLimit, int, long)} instead.
-     */
-    @Deprecated
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
                             int maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
-        this(predicate, new SettableLimit(maxConcurrency), maxPendingAcquisitions, timeoutMillis);
+        this(predicate, () -> maxConcurrency, maxPendingAcquisitions, timeoutMillis);
     }
 
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
-                            SettableLimit maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
+                            Supplier<Integer> maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
         this.predicate = predicate;
         this.maxConcurrency = maxConcurrency;
         this.maxPendingAcquisitions = maxPendingAcquisitions;
@@ -81,9 +81,16 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     @VisibleForTesting
     int maxConcurrency() {
-        int maxConcurrency = this.maxConcurrency.get();
+        Integer maxConcurrency = this.maxConcurrency.get();
+        if (maxConcurrency == null) {
+            logger.debug("maxConcurrency must not be null. All requests will be pending.");
+            return 0;
+        }
+
         if (maxConcurrency <= 0) {
-            return Integer.MAX_VALUE;
+            logger.debug("maxConcurrency('{}') must be a positive number. All requests will be pending.",
+                         maxConcurrency);
+            return 0;
         }
         return maxConcurrency;
     }
