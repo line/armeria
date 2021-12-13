@@ -856,6 +856,66 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Applies the specified {@link Consumer} to the {@link HttpData}s
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data1,data2");
+     * HttpResponse result = response.peekData(data -> {
+     *     assert data.toStringUtf8().equals("data1,data2");
+     * });
+     * }</pre>
+     */
+    default HttpResponse peekData(Consumer<? super HttpData> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(action, HttpData.class);
+        return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@linkplain HttpHeaders trailers}
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data");
+     * HttpResponse transformed = response
+     *     .mapTrailers(trailers -> {
+     *         return trailers.withMutations(builder -> builder.add("trailer1", "foo"));
+     *     })
+     *     .peekTrailers(trailers -> {
+     *         assert trailers.get("trailer1").equals("foo");
+     *     });
+     * }</pre>
+     */
+    default HttpResponse peekTrailers(Consumer<? super HttpHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(obj -> {
+            if (!(obj instanceof ResponseHeaders)) {
+                action.accept(obj);
+            }
+        }, HttpHeaders.class);
+        return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to an error emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpResponse transformed@ = response
+     *     .peekError(cause -> {
+     *         assert cause instanceof IllegalStateException;
+     *     })
+     *     .mapError(cause -> new MyDomainException(cause));
+     * }</pre>
+     */
+    @Override
+    default HttpResponse peekError(Consumer<? super Throwable> action) {
+        requireNonNull(action, "action");
+        return of(HttpMessage.super.peekError(action));
+    }
+
+    /**
      * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link HttpResponse}
      * when any error occurs before a {@link ResponseHeaders} is written.
      * Note that the failed {@link HttpResponse} cannot be recovered from an error if a {@link ResponseHeaders}

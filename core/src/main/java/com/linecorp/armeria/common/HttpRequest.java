@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
@@ -604,5 +605,67 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequest mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return of(headers(), HttpMessage.super.mapError(function));
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@link HttpData}s
+     * emitted by this {@link HttpRequest}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("data1,data2"));
+     * HttpRequest result = request.peekData(data -> {
+     *     assert data.toStringUtf8().equals("data1,data2");
+     * });
+     * }</pre>
+     */
+    default HttpRequest peekData(Consumer<? super HttpData> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(action, HttpData.class);
+        return of(headers(), stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@linkplain HttpHeaders trailers}
+     * emitted by this {@link HttpRequest}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("..."));
+     * HttpRequest transformed = request
+     *     .mapTrailers(trailers -> {
+     *         return trailers.withMutations(builder -> builder.set("trailer1", "foo"));
+     *     })
+     *     .peekTrailers(trailers -> {
+     *         assert trailers.get("trailer1").equals("foo");
+     *     });
+     * }</pre>
+     */
+    default HttpRequest peekTrailers(Consumer<? super HttpHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(obj -> {
+            if (!(obj instanceof ResponseHeaders)) {
+                action.accept(obj);
+            }
+        }, HttpHeaders.class);
+        return of(headers(), stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to an error emitted by this {@link HttpRequest}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpRequest transformed = request
+     *     .peekError(cause -> {
+     *         assert cause instanceof IllegalStateException;
+     *     })
+     *     .mapError(cause -> new MyDomainException(cause));
+     * }</pre>
+     */
+    @Override
+    default HttpRequest peekError(Consumer<? super Throwable> action) {
+        requireNonNull(action, "action");
+        return of(headers(), HttpMessage.super.peekError(action));
     }
 }
