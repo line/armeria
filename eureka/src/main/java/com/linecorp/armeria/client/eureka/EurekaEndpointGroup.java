@@ -420,7 +420,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     private static Endpoint withInstanceMetadata(Endpoint endpoint, InstanceInfo instanceInfo) {
-        List<Map.Entry<AttributeKey<?>, ?>> attrs = new ArrayList<>();
+        final List<Map.Entry<AttributeKey<?>, ?>> attrs = new ArrayList<>(instanceInfo.getMetadata().size());
         attrs.add(new SimpleImmutableEntry<>(INSTANCE_INFO, instanceInfo));
         instanceInfo.getMetadata().forEach((key, value) -> {
             if (!"@class".equals(key)) {

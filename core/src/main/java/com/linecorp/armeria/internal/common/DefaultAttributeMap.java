@@ -29,7 +29,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
@@ -107,7 +108,7 @@ public final class DefaultAttributeMap {
 
         synchronized (head) {
             DefaultAttribute<?> curr = head;
-            for (; ; ) {
+            for (;;) {
                 final DefaultAttribute<?> next = curr.next;
                 if (next == null) {
                     if (!ownAttr && rootAttributeMap != null) {
@@ -161,7 +162,7 @@ public final class DefaultAttributeMap {
 
         synchronized (head) {
             DefaultAttribute<?> curr = head;
-            for (; ; ) {
+            for (;;) {
                 final DefaultAttribute<?> next = curr.next;
                 if (next != null && next.key == key) {
                     @SuppressWarnings("unchecked")
@@ -249,7 +250,7 @@ public final class DefaultAttributeMap {
         return new ConcatenatedCopyOnWriteIterator(ownAttrsIt, rootAttrs);
     }
 
-    Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             return Collections.emptyIterator();
@@ -351,8 +352,7 @@ public final class DefaultAttributeMap {
 
         @Nullable
         private DefaultAttribute<?> findNext(@Nullable DefaultAttribute<?> next) {
-            loop:
-            for (; ; ) {
+            loop: for (;;) {
                 if (next == null) {
                     for (idx++; idx < attributes.length(); idx++) {
                         final DefaultAttribute<?> head = attributes.get(idx);
@@ -437,7 +437,7 @@ public final class DefaultAttributeMap {
                 this.next = childIt.next();
             } else {
                 // Skip the attribute in rootIt if it's in the child.
-                for (; ; ) {
+                for (;;) {
                     if (rootIt.hasNext()) {
                         final Entry<AttributeKey<?>, Object> tempNext = rootIt.next();
                         if (ownAttr(tempNext.getKey()) == null) {

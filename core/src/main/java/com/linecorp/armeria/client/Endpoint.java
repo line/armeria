@@ -44,13 +44,13 @@ import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.common.DefaultAttributeMap;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.DefaultAttributeMap;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.AttributeKey;
@@ -563,7 +563,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns a new host endpoint with the specified {@link AttributeKey} and value.
      *
      * @return the new endpoint with the specified {@link AttributeKey} and value. {@code this} if this
-     * endpoint has the same value with the specified {@link AttributeKey}.
+     *     endpoint has the same value with the specified {@link AttributeKey}.
      *
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
@@ -571,10 +571,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (value == null && attributes == null) {
             return this;
         }
-        if (attributes != null && Objects.equals(attributes.attr(key), value)) {
+        if (attributes != null && attributes.attr(key) == value) {
             return this;
         }
-        DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
+        final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
         if (this.attributes != null) {
             copyAttributes(newAttributes, this.attributes.attrs());
         }
@@ -587,16 +587,16 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * the new endpoint.
      *
      * @return the new endpoint with the additional attributes. {@code this} if given
-     * attributes is empty.
+     *     attributes is empty.
      *
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withAttrs(Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
-        Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
+        final Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
         if (!newAttrIterator.hasNext()) {
             return this;
         }
-        DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
+        final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
         if (this.attributes != null) {
             copyAttributes(newAttributes, this.attributes.attrs());
         }

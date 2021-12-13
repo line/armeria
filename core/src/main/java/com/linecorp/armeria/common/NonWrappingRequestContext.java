@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.DefaultAttributeMap;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;

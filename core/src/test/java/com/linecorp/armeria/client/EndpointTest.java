@@ -459,8 +459,11 @@ class EndpointTest {
 
         final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
         final AttributeKey<String> key2 = AttributeKey.valueOf("value2");
+        final AttributeKey<Object> objKey = AttributeKey.valueOf("objKey");
+        final Object objValue = new Object();
         final Endpoint endpointB = endpointA.withAttr(key1, "value1")
                                             .withAttr(key2, "value2")
+                                            .withAttr(objKey, objValue)
                                             .withAttr(key1, "value1-1");
 
         assertThat(endpointB).isNotSameAs(endpointA);
@@ -469,11 +472,11 @@ class EndpointTest {
         assertThat(endpointB.attr(key2)).isEqualTo("value2");
 
         // key with same value
-        assertThat(endpointB.withAttr(key2, "value2")).isSameAs(endpointB);
-        assertThat(endpointB.withAttr(AttributeKey.valueOf("key3"), null)).isSameAs(endpointB);
+        assertThat(endpointB.withAttr(objKey, objValue)).isSameAs(endpointB);
+        assertThat(endpointB.withAttr(AttributeKey.valueOf("keyNotFound"), null)).isSameAs(endpointB);
 
         // value remove
-        Endpoint endpointC = endpointB.withAttr(AttributeKey.valueOf("key1"), null);
+        final Endpoint endpointC = endpointB.withAttr(AttributeKey.valueOf("key1"), null);
         assertThat(endpointC).isNotSameAs(endpointB);
         assertThat(endpointC.attr(key1)).isNull();
     }
@@ -489,7 +492,7 @@ class EndpointTest {
 
         attrs.add(new AbstractMap.SimpleImmutableEntry<>(key1, "value1"));
         attrs.add(new AbstractMap.SimpleImmutableEntry<>(key2, "value2"));
-        Endpoint newEndpoint = endpoint.withAttrs(attrs);
+        final Endpoint newEndpoint = endpoint.withAttrs(attrs);
 
         assertThat(newEndpoint.attr(key1))
                 .isEqualTo("value1");
@@ -503,6 +506,5 @@ class EndpointTest {
 
         // empty
         assertThat(newEndpoint.withAttrs(Collections.emptyList())).isSameAs(newEndpoint);
-
     }
 }
