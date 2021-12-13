@@ -208,8 +208,6 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
             return;
         }
 
-        final Subscriber<? super HttpData> downstream = this.downstream;
-        assert downstream != null;
         assert httpObject instanceof HttpData;
 
         final EventExecutor executor = this.executor;
