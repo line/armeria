@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
+import io.grpc.ClientInterceptor;
 import io.grpc.ServiceDescriptor;
 
 /**
@@ -128,6 +130,13 @@ public final class GrpcClientOptions {
     public static final ClientOption<GrpcClientStubFactory>
             GRPC_CLIENT_STUB_FACTORY = ClientOption.define("GRPC_CLIENT_STUB_FACTORY",
                                                            NullGrpcClientStubFactory.INSTANCE);
+
+    /**
+     * Sets the {@link ClientInterceptor}s to the gRPC client stub.
+     * The specified interceptor(s) is/are executed in reverse order.
+     */
+    public static final ClientOption<Iterable<? extends ClientInterceptor>>
+            INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS", ImmutableList.of());
 
     private GrpcClientOptions() {}
 }

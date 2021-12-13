@@ -143,9 +143,8 @@ public class ThriftHttpHeaderTest {
         final Iface client =
                 Clients.builder(server.httpUri(BINARY) + "/hello")
                        .decorator((delegate, ctx, req) -> {
-                           return delegate.execute(ctx, req).mapHeaders(headers -> {
+                           return delegate.execute(ctx, req).peekHeaders(headers -> {
                                assertThat(headers.get("foo")).isEqualTo("bar");
-                               return headers;
                            });
                        })
                        .build(Iface.class);
