@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.SplitHttpRequest;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements SplitHttpRequest {
+public final class DefaultSplitHttpRequest extends AbstractSplitHttpMessage implements SplitHttpRequest {
 
     private final RequestHeaders headers;
 
