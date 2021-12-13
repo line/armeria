@@ -87,7 +87,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     private volatile boolean cancelCalled;
 
-    protected BodySubscriber(int prefetch, HttpMessage upstreamMessage, EventExecutor upstreamExecutor) {
+    BodySubscriber(int prefetch, HttpMessage upstreamMessage, EventExecutor upstreamExecutor) {
         pendingRequests = prefetch;
         this.upstreamMessage = requireNonNull(upstreamMessage, "upstreamMessage");
         this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
