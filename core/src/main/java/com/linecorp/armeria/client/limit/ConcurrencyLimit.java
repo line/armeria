@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.CachingSupplier;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -57,47 +58,61 @@ public interface ConcurrencyLimit {
     }
 
     /**
-     * Returns a newly-created {@link ConcurrencyLimit} with the specified {@code maxConcurrency}. For example:
+     * Returns a newly-created {@link ConcurrencyLimit} with the specified {@link Supplier}.
+     * {@link Supplier#get()} might be frequently called, so please consider using {@link CachingSupplier} if
+     * supplying the value needs a heavy computation. For example:
      * <pre> {@code
-     *     ConcurrencyLimit.builder(new DynamicLimit());
+     *     ConcurrencyLimit limit = ConcurrencyLimit.of(new DynamicLimit());
      *
-     *     class DynamicLimit extends CachedValue<Integer> {
+     *     class DynamicLimit implements Supplier<Integer> {
+     *         private final CachingSupplier<Integer> cachingSupplier = CachingSupplier.of(16);
+     *
      *         public DynamicLimit() {
-     *             super(defaultValue);
-     *             dogma.watcher().watch((rev, value) -> {
-     *                 set(Integer.parse(value));
-     *             });
+     *             LimitChangeListener<Integer> listener = ...
+     *             listener.addListener(updatedValue -> cachingSupplier.set(updatedValue));
      *         }
+     *
+     *         @Override
+     *         public final Integer get() {
+     *             return cachingSupplier.get();
+     *         }
+     *
      *     }
      * } </pre>
      *
-     * @param maxConcurrency the supplier for maximum number of concurrent active requests.
-     *                       It must be supplied a positive number in a very short time.
-     *                       If it does not supply a positive number, all requests will be pending.
+     * <p>Note that {@link Supplier} must supply a positive number. if not, all requests will be pending.
      */
+    @UnstableApi
     static ConcurrencyLimit of(Supplier<Integer> maxConcurrency) {
         return builder(maxConcurrency).build();
     }
 
     /**
-     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}. For example:
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@link Supplier}. For example:
+     * {@link Supplier#get()} might be frequently called, so please consider using {@link CachingSupplier} if
+     * supplying the value needs a heavy computation. For example:
      * <pre> {@code
-     *     ConcurrencyLimit.builder(new DynamicLimit());
+     *     ConcurrencyLimitBuilder builder = ConcurrencyLimit.builder(new DynamicLimit());
      *
-     *     class DynamicLimit extends CachedValue<Integer> {
+     *     class DynamicLimit implements Supplier<Integer> {
+     *         private final CachingSupplier<Integer> cachingSupplier = CachingSupplier.of(16);
+     *
      *         public DynamicLimit() {
-     *             super(defaultValue);
-     *             dogma.watcher().watch((rev, value) -> {
-     *                 set(Integer.parse(value));
-     *             });
+     *             LimitChangeListener<Integer> listener = ...
+     *             listener.addListener(updatedValue -> cachingSupplier.set(updatedValue));
      *         }
+     *
+     *         @Override
+     *         public final Integer get() {
+     *             return cachingSupplier.get();
+     *         }
+     *
      *     }
      * } </pre>
      *
-     * @param maxConcurrency the supplier for maximum number of concurrent active requests.
-     *                       It must be supplied a positive number in a very short time.
-     *                       If it does not supply a positive number, all requests will be pending.
+     * <p>Note that {@link Supplier} must supply a positive number. if not, all requests will be pending.
      */
+    @UnstableApi
     static ConcurrencyLimitBuilder builder(Supplier<Integer> maxConcurrency) {
         return new ConcurrencyLimitBuilder(requireNonNull(maxConcurrency, "maxConcurrency"));
     }

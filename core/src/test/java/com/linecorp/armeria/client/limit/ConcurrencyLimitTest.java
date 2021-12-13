@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.util.CachedValue;
+import com.linecorp.armeria.common.util.CachingSupplier;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -73,7 +73,7 @@ class ConcurrencyLimitTest {
 
     @Test
     void testConcurrencyLimit_dynamicLimit() throws InterruptedException {
-        final CachedValue<Integer> maxConcurrency = new CachedValue<>(3);
+        final CachingSupplier<Integer> maxConcurrency = CachingSupplier.of(3);
         final DefaultConcurrencyLimit limit =
                 new DefaultConcurrencyLimit(ctx -> true, maxConcurrency, 1, 100000);
         assertThat(limit.maxConcurrency()).isEqualTo(3);

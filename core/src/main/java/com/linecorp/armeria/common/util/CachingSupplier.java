@@ -26,14 +26,18 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * <p>
  * - Supplies dynamically a maximum number of concurrent active requests for {@link ConcurrencyLimit}.
  */
-public class CachedValue<T> implements Supplier<T> {
+public class CachingSupplier<T> implements Supplier<T> {
     @Nullable
     private volatile T value;
 
     /**
      * Creates a new instance with the specified {@code initialValue}.
      */
-    public CachedValue(@Nullable T initialValue) {
+    public static <T> CachingSupplier<T> of(@Nullable T initialValue) {
+        return new CachingSupplier<>(initialValue);
+    }
+
+    protected CachingSupplier(@Nullable T initialValue) {
         value = initialValue;
     }
 
