@@ -80,7 +80,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
     private volatile Subscription upstream;
 
     @Nullable
-    private volatile EventExecutor executor;
+    private volatile EventExecutor downstreamExecutor;
 
     @Nullable
     private volatile Throwable cause;
@@ -116,12 +116,12 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         return upstream;
     }
 
-    protected void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
-                                  SubscriptionOption... options) {
-        assert executor.inEventLoop();
+    void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor downstreamExecutor,
+                        SubscriptionOption... options) {
+        assert downstreamExecutor.inEventLoop();
 
         this.downstream = downstream;
-        this.executor = executor;
+        this.downstreamExecutor = downstreamExecutor;
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
                 notifyCancellation = true;
@@ -210,7 +210,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
         assert httpObject instanceof HttpData;
 
-        final EventExecutor executor = this.executor;
+        final EventExecutor executor = downstreamExecutor;
         if (executor.inEventLoop()) {
             onNext0((HttpData) httpObject);
         } else {
@@ -229,7 +229,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
     @Override
     public void onComplete() {
         maybeCompleteHeaders(null);
-        final EventExecutor executor = this.executor;
+        final EventExecutor executor = downstreamExecutor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
             completing = true;
@@ -243,14 +243,14 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
         }
     }
 
-    private void onComplete0(Subscriber<? super HttpData> downstream) {
+    private static void onComplete0(Subscriber<? super HttpData> downstream) {
         downstream.onComplete();
     }
 
     @Override
     public void onError(Throwable cause) {
         maybeCompleteHeaders(cause);
-        final EventExecutor executor = this.executor;
+        final EventExecutor executor = downstreamExecutor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
             this.cause = cause;
