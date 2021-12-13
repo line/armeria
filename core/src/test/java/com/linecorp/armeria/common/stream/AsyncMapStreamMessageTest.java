@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -137,5 +139,23 @@ class AsyncMapStreamMessageTest {
                 .then(() -> finishLast.complete(1))
                 .expectNext(1, 2, 3)
                 .verifyComplete();
+    }
+
+    @Test
+    void mapAsyncAbortGoesToUpstream() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(0, 1, 2);
+        final StreamMessage<Integer> mapped = streamMessage.mapAsync(CompletableFuture::completedFuture);
+
+        mapped.abort();
+        assertThat(streamMessage.isComplete()).isTrue();
+    }
+
+    @Test
+    void mapAsyncAbortGoesToUpstreamWithException() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(0, 1, 2);
+        final StreamMessage<Integer> mapped = streamMessage.mapAsync(CompletableFuture::completedFuture);
+
+        mapped.abort(new RuntimeException());
+        StepVerifier.create(streamMessage).verifyError(RuntimeException.class);
     }
 }
