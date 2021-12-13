@@ -305,6 +305,11 @@ public class ArmeriaSettings {
          *       <td>{@code health}</td>
          *       <td>{@link HealthCheckService}</td>
          *     </tr>
+         *     <tr>
+         *       <td>{@code actuator}</td>
+         *       <td>To bind {@code WebOperationService}. Note that this option is only valid when
+         *           {@code "armeria-spring-boot2-actuator-autoconfigure"} is activated.</td>
+         *     </tr>
          *   </tbody>
          * </table>
          *
