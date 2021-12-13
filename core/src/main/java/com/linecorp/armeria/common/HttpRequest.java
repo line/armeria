@@ -536,7 +536,7 @@ public interface HttpRequest extends Request, HttpMessage {
      */
     @CheckReturnValue
     default SplitHttpRequest split(EventExecutor executor) {
-        return new DefaultSplitHttpRequest(this, requrieNonNull(executor, "executor"));
+        return new DefaultSplitHttpRequest(this, requireNonNull(executor, "executor"));
     }
 
     @Override
