@@ -1,0 +1,228 @@
+---
+menuTitle: "Implement a gRPC service"
+order: 2
+type: step
+tags: ['server']
+level: basic
+---
+
+# Implementing a gRPC service
+
+In the [previous step](/tutorials/grpc/blog/define-service), we defined our blog service in a proto file, compiled it and obtained Java code. Now, let's develop the service based on the Java code generated.
+
+<TutorialSteps current={2} />
+
+In this step, we'll implement service methods for each CRUD operation.
+
+## What you need
+
+You need to have [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file) from the [service and messages](/tutorials/grpc/blog/define-service) defined in a proto file.
+
+## 1. Create a blog service class
+
+Create a BlogService.java file to implement our blog service. Add a `BlogService` class by extending the `BlogServiceGrpc.BlogServiceImplBase`. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/grpc/src/main/java/example/armeria/server/blog/grpc/BlogService.java).
+
+```java filename=BlogService.java
+package example.armeria.server.blog.grpc;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import example.armeria.server.blog.grpc.Blog.BlogPost;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  private final AtomicInteger idGenerator = new AtomicInteger();
+  private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+}
+```
+
+## 2. Create a blog post
+
+Create a blog post by overriding the `createBlogPost()` method generated. We'll assign a randomly generated ID to the post for the sake of simplicity.
+
+```java filename=BlogService.java
+import java.time.Instant;
+
+import example.armeria.server.blog.grpc.Blog.BlogPost;
+import example.armeria.server.blog.grpc.Blog.CreateBlogPostRequest;
+
+import io.grpc.stub.StreamObserver;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  ...
+  @Override
+  public void createBlogPost(CreateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+      final int id = idGenerator.getAndIncrement();
+      final Instant now = Instant.now();
+      final BlogPost updated = BlogPost.newBuilder()
+                                      .setId(id)
+                                      .setTitle(request.getTitle())
+                                      .setContent(request.getContent())
+                                      .setModifiedAt(now.toEpochMilli())
+                                      .setCreatedAt(now.toEpochMilli())
+                                      .build();
+      blogPosts.put(id, updated);
+      final BlogPost stored = updated;
+      responseObserver.onNext(stored);
+      responseObserver.onCompleted();
+  }
+}
+```
+
+## 3. Read a blog post
+
+Retrieve a single blog post by overriding the `getBlogPost()` method. In this step, we need to create an exception handler for retrieving a blog post that doesn't exist.
+
+1. Add the `BlogNotFoundException` to throw when the request seeks a blog post that doesn't exist.
+  ```java filename=BlogNotFoundException.java
+  package example.armeria.server.blog.grpc;
+
+  final class BlogNotFoundException extends IllegalStateException {
+      private static final long serialVersionUID = -2914549282978136686L;
+
+      BlogNotFoundException(String s) {
+          super(s);
+      }
+  }
+  ```
+2. Add the `getBlostPost()` method. Throw the exception if the blog post requested does not exist. We'll implement the exception handler in the next step.
+  ```java filename=BlogService.java
+  import example.armeria.server.blog.grpc.Blog.GetBlogPostRequest;
+
+  final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    ...
+    @Override
+    public void getBlogPost(GetBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+        final BlogPost blogPost = blogPosts.get(request.getId());
+        if (blogPost == null) {
+            throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+        } else {
+            responseObserver.onNext(blogPost);
+            responseObserver.onCompleted();
+        }
+    }
+  }
+  ```
+3. Create an exception handler, `GrpcExceptionHandler`. We'll apply this exception handler to our blog service when we [add the service to a server](/tutorials/grpc/blog/add-service-to-server).
+  ```java filename=GrpcExceptionHandler.java
+  package example.armeria.server.blog.grpc;
+
+  import com.linecorp.armeria.common.RequestContext;
+  import com.linecorp.armeria.common.annotation.Nullable;
+  import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+
+  import io.grpc.Metadata;
+  import io.grpc.Status;
+
+  class GrpcExceptionHandler implements GrpcStatusFunction {
+    @Nullable
+    @Override
+    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        if (cause instanceof IllegalArgumentException) {
+            return Status.INVALID_ARGUMENT.withCause(cause);
+        }
+        if (cause instanceof BlogNotFoundException) {
+            return Status.NOT_FOUND.withCause(cause).withDescription(cause.getMessage());
+        }
+
+        return null;
+    }
+  }
+  ```
+
+## 4. Read multiple blog posts
+
+Read multiple blog posts by overriding the `listBlogPosts()` method. We'll return blog posts in the order specified in the request.
+
+```java filename=BlogService.java
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import example.armeria.server.blog.grpc.Blog.ListBlogPostsRequest;
+import example.armeria.server.blog.grpc.Blog.ListBlogPostsResponse;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  ...
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request,
+                            StreamObserver<ListBlogPostsResponse> responseObserver) {
+    final Collection<BlogPost> blogPosts;
+    if ("desc".equals(request.getOrderBy())) {
+        blogPosts = this.blogPosts.entrySet()
+                                  .stream()
+                                  .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                                  .map(Entry::getValue).collect(Collectors.toList());
+    } else {
+        blogPosts = this.blogPosts.values();
+    }
+    responseObserver.onNext(ListBlogPostsResponse.newBuilder().addAllBlogs(blogPosts).build());
+    responseObserver.onCompleted();
+  }
+}
+```
+
+## 5. Update a blog post
+
+Update a blog posts by overriding the `updateBlogPost()` method.
+
+```java filename=BlogService.java
+import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
+import io.grpc.Status;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  ...
+  @Override
+  public void updateBlogPost(UpdateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+    final BlogPost oldBlogPost = blogPosts.get(request.getId());
+    if (oldBlogPost == null) {
+      responseObserver.onError(
+              Status.NOT_FOUND.withDescription("The blog post does not exist. ID: " + request.getId())
+                              .asRuntimeException());
+    } else {
+        final BlogPost newBlogPost = oldBlogPost.toBuilder()
+                                                .setTitle(request.getTitle())
+                                                .setContent(request.getContent())
+                                                .setModifiedAt(Instant.now().toEpochMilli())
+                                                .build();
+        blogPosts.put(request.getId(), newBlogPost);
+        responseObserver.onNext(newBlogPost);
+        responseObserver.onCompleted();
+    }
+  }
+}
+```
+
+## 6. Delete a blog post
+
+Delete a blog posts by overriding the `deleteBlogPost()` method.
+
+```java filename=BlogService.java
+import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  ...
+  @Override
+  public void deleteBlogPost(DeleteBlogPostRequest request, StreamObserver<Empty> responseObserver) {
+      final BlogPost removed = blogPosts.remove(request.getId());
+      if (removed == null) {
+          responseObserver.onError(
+                  Status.NOT_FOUND.withDescription("The blog post does not exist. ID: " + request.getId())
+                                  .asRuntimeException());
+      } else {
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+      }
+  }
+}
+```
+
+## What's next
+
+In this step, we've implemented service methods.
+
+Next, at [Step N. Add ](/tutorials/grpc/blog/add-services-to-server), we'll build and add the service to a server instance.
+
+<TutorialSteps current={2} />
