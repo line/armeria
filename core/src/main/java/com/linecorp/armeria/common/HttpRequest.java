@@ -522,7 +522,7 @@ public interface HttpRequest extends Request, HttpMessage {
     }
 
     /**
-     * Transforms the {@link ResponseHeaders} of this {@link HttpRequest} by applying the specified
+     * Transforms the {@link RequestHeaders} of this {@link HttpRequest} by applying the specified
      * {@link Function}.
      *
      * <p>For example:<pre>{@code
