@@ -563,7 +563,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns a new host endpoint with the specified {@link AttributeKey} and value.
      *
      * @return the new endpoint with the specified {@link AttributeKey} and value. {@code this} if this
-     *     endpoint has the same value with the specified {@link AttributeKey}.
+     *         endpoint has the same value with the specified {@link AttributeKey}.
      *
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
