@@ -31,7 +31,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * A {@link FixedStreamMessage} that aggregates an arbitrary number of objects.
- * The aggregated objects can be published after this stream is closed.
+ * The aggregated objects can be published after the stream is closed.
  */
 public class AggregatingStreamMessage<T> extends AbstractFixedStreamMessage<T> implements StreamWriter<T> {
 

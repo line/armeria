@@ -1231,9 +1231,8 @@ class GrpcServiceServerTest {
     private static class BlockingClientProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(
-                                 UnitTestServiceGrpc.newBlockingStub(channel),
-                                 UnitTestServiceGrpc.newBlockingStub(blockingChannel))
+            return Stream.of(UnitTestServiceGrpc.newBlockingStub(channel),
+                             UnitTestServiceGrpc.newBlockingStub(blockingChannel))
                          .map(Arguments::of);
         }
     }
@@ -1241,9 +1240,8 @@ class GrpcServiceServerTest {
     private static class StreamingClientProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(
-                                 UnitTestServiceGrpc.newStub(channel),
-                                 UnitTestServiceGrpc.newStub(blockingChannel))
+            return Stream.of(UnitTestServiceGrpc.newStub(channel),
+                             UnitTestServiceGrpc.newStub(blockingChannel))
                          .map(Arguments::of);
         }
     }

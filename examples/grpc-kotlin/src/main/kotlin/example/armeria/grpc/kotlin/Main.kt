@@ -55,7 +55,6 @@ object Main {
         return Server.builder()
             .http(httpPort)
             .https(httpsPort)
-            .requestTimeoutMillis(0)
             .tlsSelfSigned()
             .service(grpcService) // You can access the documentation service at http://127.0.0.1:8080/docs.
             // See https://armeria.dev/docs/server-docservice for more information.

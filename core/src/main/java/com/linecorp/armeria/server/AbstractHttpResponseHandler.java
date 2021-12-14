@@ -153,7 +153,7 @@ abstract class AbstractHttpResponseHandler {
 
     /**
      * Writes an access log if the {@link TransientServiceOption#WITH_ACCESS_LOGGING} option is enabled for
-     * the {@link HttpService}.
+     * the {@link #service()}.
      */
     final void maybeWriteAccessLog() {
         final ServiceConfig config = reqCtx.config();

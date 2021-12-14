@@ -24,9 +24,7 @@ class HelloServiceTest {
     @MethodSource("uris")
     fun reply(uri: String) {
         runBlocking {
-            val helloService = Clients.builder(uri)
-                .responseTimeoutMillis(0)
-                .build(HelloServiceCoroutineStub::class.java)
+            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
             assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).message)
                 .isEqualTo("Hello, Armeria!")
         }

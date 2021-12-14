@@ -88,7 +88,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
-    static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
+    private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
 
     private static final HttpData DATA_INVALID_REQUEST_PATH = HttpData.ofUtf8(MSG_INVALID_REQUEST_PATH);
 
@@ -430,8 +430,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             req.setResponse(res);
 
             assert responseEncoder != null;
-            // TODO(ikhoon): Use AggregatedHttpResponse for non-streaming response for
-            //               ExchangeType.UNARY and ExchangeType.REQUEST_STREAMING.
             if (service.exchangeType(headers, routed.route()).isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);

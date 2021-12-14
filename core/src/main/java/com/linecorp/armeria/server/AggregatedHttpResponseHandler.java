@@ -132,7 +132,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         return isComplete;
     }
 
-    private class WriteFutureListener implements ChannelFutureListener {
+    private final class WriteFutureListener implements ChannelFutureListener {
         private final boolean wroteEmptyData;
         @Nullable
         private final Throwable cause;
