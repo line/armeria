@@ -16,28 +16,38 @@
 
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.limit.ConcurrencyLimit;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Supplies the cached value that is useful below cases.
  * <p>
  * - Supplies dynamically a maximum number of concurrent active requests for {@link ConcurrencyLimit}.
+ * For example:
+ * <pre>{@code
+ * class DynamicSupplier extends SettableSupplier<Integer> {
+ *   public DynamicSupplier() {
+ *     super(10); //set initial value
+ *     AnyListener<Integer> listener = ...
+ *     listener.addListener(this::set);
+ *   }
+ * }}</pre>
  */
-public class CachingSupplier<T> implements Supplier<T> {
-    @Nullable
+public class SettableSupplier<T> implements Supplier<T> {
     private volatile T value;
 
     /**
      * Creates a new instance with the specified {@code initialValue}.
      */
-    public static <T> CachingSupplier<T> of(@Nullable T initialValue) {
-        return new CachingSupplier<>(initialValue);
+    public static <T> SettableSupplier<T> of(T initialValue) {
+        requireNonNull(initialValue, "initialValue");
+        return new SettableSupplier<>(initialValue);
     }
 
-    protected CachingSupplier(@Nullable T initialValue) {
+    protected SettableSupplier(T initialValue) {
         value = initialValue;
     }
 
@@ -45,7 +55,6 @@ public class CachingSupplier<T> implements Supplier<T> {
      * Returns the cached value
      */
     @Override
-    @Nullable
     public final T get() {
         return value;
     }
@@ -53,7 +62,8 @@ public class CachingSupplier<T> implements Supplier<T> {
     /**
      * Caches a value.
      */
-    public final void set(@Nullable T value) {
+    public final void set(T value) {
+        requireNonNull(value, "value");
         this.value = value;
     }
 }

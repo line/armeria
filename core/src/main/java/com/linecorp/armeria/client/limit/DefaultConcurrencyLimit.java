@@ -56,11 +56,6 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
-                            int maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
-        this(predicate, () -> maxConcurrency, maxPendingAcquisitions, timeoutMillis);
-    }
-
-    DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
                             Supplier<Integer> maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
         this.predicate = predicate;
         this.maxConcurrency = maxConcurrency;
@@ -83,13 +78,12 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     int maxConcurrency() {
         Integer maxConcurrency = this.maxConcurrency.get();
         if (maxConcurrency == null) {
-            logger.debug("maxConcurrency must not be null. All requests will be pending.");
+            logger.warn("maxConcurrency.get() returned null; maxConcurrency is set to 0.");
             return 0;
         }
 
-        if (maxConcurrency <= 0) {
-            logger.debug("maxConcurrency('{}') must be a positive number. All requests will be pending.",
-                         maxConcurrency);
+        if (maxConcurrency < 0) {
+            logger.warn("maxConcurrency.get() returned {}; maxConcurrency is set to 0.", maxConcurrency);
             return 0;
         }
         return maxConcurrency;

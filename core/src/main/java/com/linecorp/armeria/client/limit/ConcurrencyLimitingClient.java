@@ -55,7 +55,8 @@ public final class ConcurrencyLimitingClient
     /**
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      *
-     * @deprecated Use {@link #newDecorator(int)} or {@link #newDecorator(Supplier)}
+     * @deprecated Use {@link #newDecorator(ConcurrencyLimit)} with the limit created via
+     *             {@link ConcurrencyLimit#builder(int)}
      */
     @Deprecated
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(

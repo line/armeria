@@ -25,7 +25,7 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.CachingSupplier;
+import com.linecorp.armeria.common.util.SettableSupplier;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -59,22 +59,22 @@ public interface ConcurrencyLimit {
 
     /**
      * Returns a newly-created {@link ConcurrencyLimit} with the specified {@link Supplier}.
-     * {@link Supplier#get()} might be frequently called, so please consider using {@link CachingSupplier} if
+     * {@link Supplier#get()} might be frequently called, so please consider using {@link SettableSupplier} if
      * supplying the value needs a heavy computation. For example:
      * <pre> {@code
      *     ConcurrencyLimit limit = ConcurrencyLimit.of(new DynamicLimit());
      *
      *     class DynamicLimit implements Supplier<Integer> {
-     *         private final CachingSupplier<Integer> cachingSupplier = CachingSupplier.of(16);
+     *         private final SettableSupplier<Integer> settableSupplier = SettableSupplier.of(16);
      *
      *         public DynamicLimit() {
      *             LimitChangeListener<Integer> listener = ...
-     *             listener.addListener(updatedValue -> cachingSupplier.set(updatedValue));
+     *             listener.addListener(updatedValue -> settableSupplier.set(updatedValue));
      *         }
      *
      *         @Override
      *         public final Integer get() {
-     *             return cachingSupplier.get();
+     *             return settableSupplier.get();
      *         }
      *
      *     }
@@ -89,22 +89,22 @@ public interface ConcurrencyLimit {
 
     /**
      * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@link Supplier}. For example:
-     * {@link Supplier#get()} might be frequently called, so please consider using {@link CachingSupplier} if
+     * {@link Supplier#get()} might be frequently called, so please consider using {@link SettableSupplier} if
      * supplying the value needs a heavy computation. For example:
      * <pre> {@code
      *     ConcurrencyLimitBuilder builder = ConcurrencyLimit.builder(new DynamicLimit());
      *
      *     class DynamicLimit implements Supplier<Integer> {
-     *         private final CachingSupplier<Integer> cachingSupplier = CachingSupplier.of(16);
+     *         private final SettableSupplier<Integer> settableSupplier = SettableSupplier.of(16);
      *
      *         public DynamicLimit() {
      *             LimitChangeListener<Integer> listener = ...
-     *             listener.addListener(updatedValue -> cachingSupplier.set(updatedValue));
+     *             listener.addListener(updatedValue -> settableSupplier.set(updatedValue));
      *         }
      *
      *         @Override
      *         public final Integer get() {
-     *             return cachingSupplier.get();
+     *             return settableSupplier.get();
      *         }
      *
      *     }
@@ -114,7 +114,8 @@ public interface ConcurrencyLimit {
      */
     @UnstableApi
     static ConcurrencyLimitBuilder builder(Supplier<Integer> maxConcurrency) {
-        return new ConcurrencyLimitBuilder(requireNonNull(maxConcurrency, "maxConcurrency"));
+        requireNonNull(maxConcurrency, "maxConcurrency");
+        return new ConcurrencyLimitBuilder(maxConcurrency);
     }
 
     /**

@@ -49,7 +49,7 @@ class ConcurrencyLimitingClientTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
-    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> {};
+    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> { /* no-op */ };
     @Mock
     private HttpClient delegate;
 
@@ -233,7 +233,7 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
         final ConcurrencyLimit concurrencyLimit =
-                new DefaultConcurrencyLimit(requestContext -> false, 2, 100, 500);
+                new DefaultConcurrencyLimit(requestContext -> false, () -> 2, 100, 500);
 
         final ConcurrencyLimitingClient client =
                 newDecorator(concurrencyLimit).apply(delegate);
@@ -267,7 +267,7 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
         final ConcurrencyLimit concurrencyLimit =
-                new DefaultConcurrencyLimit(ctx -> true, 1, 100, 500);
+                new DefaultConcurrencyLimit(ctx -> true, () -> 1, 100, 500);
 
         final ConcurrencyLimitingClient clientOne =
                 newDecorator(concurrencyLimit).apply(delegate);
