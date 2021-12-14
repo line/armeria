@@ -553,10 +553,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     @Nullable
     public <T> T attr(AttributeKey<T> key) {
-        if (this.attributes == null) {
+        if (attributes == null) {
             return null;
         }
-        return this.attributes.attr(key);
+        return attributes.attr(key);
     }
 
     /**
