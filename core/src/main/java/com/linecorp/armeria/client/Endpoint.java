@@ -575,8 +575,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
         final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
-        if (this.attributes != null) {
-            copyAttributes(newAttributes, this.attributes.attrs());
+        if (attributes != null) {
+            copyAttributes(newAttributes, attributes.attrs());
         }
         newAttributes.setAttr(key, value);
         return withAttributes(newAttributes);
