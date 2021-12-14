@@ -565,7 +565,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @return the new endpoint with the specified {@link AttributeKey} and value. {@code this} if this
      *         endpoint has the same value with the specified {@link AttributeKey}.
      *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public <T> Endpoint withAttr(AttributeKey<T> key, @Nullable T value) {
         if (value == null && attributes == null) {
