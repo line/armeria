@@ -420,6 +420,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final HttpHeadersBuilder defaultTrailers =
                 trailersOnly ? defaultHeaders.toBuilder() : HttpHeaders.builder();
         final HttpHeaders trailers = statusToTrailers(ctx, defaultTrailers, status, metadata);
+        // Set responseContent before closing stream to use responseCause in error handling
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
         try {
             if (!trailersOnly && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {

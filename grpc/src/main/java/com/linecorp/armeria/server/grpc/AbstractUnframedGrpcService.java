@@ -75,7 +75,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         this.delegate = delegate;
         this.unframedGrpcErrorHandler = requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
         this.unframedGrpcStatusMappingFunction = requireNonNull(unframedGrpcStatusMappingFunction,
-                                                                "unframedGrpcStatusFunction");
+                                                                "unframedGrpcStatusMappingFunction");
     }
 
     @Override

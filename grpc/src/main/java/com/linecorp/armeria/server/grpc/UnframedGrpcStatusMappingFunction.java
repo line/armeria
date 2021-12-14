@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
@@ -30,7 +32,9 @@ import io.grpc.Status;
 public interface UnframedGrpcStatusMappingFunction {
 
     /**
-     * Return the default mapping function which follows the mapping rules defined in upstream Google APIs.
+     * Return the default mapping function which follows the mapping rules defined in upstream Google APIs
+     * <a href="https://github.com/googleapis/googleapis/blob/b2a7d2709887e38bcd3b5142424e563b0b386b6f/google/rpc/code.proto">
+     * code.proto</a>.
      */
     static UnframedGrpcStatusMappingFunction of() {
         return (ctx, status, response) -> GrpcStatus.grpcStatusToHttpStatus(status);
@@ -43,10 +47,11 @@ public interface UnframedGrpcStatusMappingFunction {
     HttpStatus apply(ServiceRequestContext ctx, Status status, @Nullable Throwable cause);
 
     /**
-     * If {@link #apply(ServiceRequestContext, Status, Throwable)} returns {@code null}, the {@code other}
-     * will be returned as default.
+     * Returns a composed {@link UnframedGrpcStatusMappingFunction} that applies {@code this} first and
+     * the specified {@code other} later if {@code this} returns {@code null}.
      */
     default UnframedGrpcStatusMappingFunction orElse(UnframedGrpcStatusMappingFunction other) {
+        requireNonNull(other, "other");
         return (ctx, status, cause) -> {
             final HttpStatus httpStatus = apply(ctx, status, cause);
             if (httpStatus != null) {
