@@ -553,19 +553,18 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     @Nullable
     public <T> T attr(AttributeKey<T> key) {
-        if (this.attributes == null) {
+        if (attributes == null) {
             return null;
         }
-        return this.attributes.attr(key);
+        return attributes.attr(key);
     }
 
     /**
      * Returns a new host endpoint with the specified {@link AttributeKey} and value.
      *
      * @return the new endpoint with the specified {@link AttributeKey} and value. {@code this} if this
-     *     endpoint has the same value with the specified {@link AttributeKey}.
+     *         endpoint has the same value with the specified {@link AttributeKey}.
      *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public <T> Endpoint withAttr(AttributeKey<T> key, @Nullable T value) {
         if (value == null && attributes == null) {
@@ -575,8 +574,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
         final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
-        if (this.attributes != null) {
-            copyAttributes(newAttributes, this.attributes.attrs());
+        if (attributes != null) {
+            copyAttributes(newAttributes, attributes.attrs());
         }
         newAttributes.setAttr(key, value);
         return withAttributes(newAttributes);
