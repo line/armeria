@@ -32,6 +32,7 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.CookieUtil.initCookie;
 
+import java.util.Arrays;
 import java.util.Date;
 
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 
 /**
  * A <a href="https://datatracker.ietf.org/doc/rfc6265/">RFC 6265</a> compliant cookie decoder for client side.
@@ -235,7 +237,7 @@ final class ClientCookieDecoder {
             builder.httpOnly(true);
         } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
             final String sameSite = computeValue(header, valueStart, valueEnd);
-            if (sameSite != null) {
+            if (isValidSameSite(sameSite)) {
                 builder.sameSite(sameSite);
             }
         }
@@ -264,6 +266,11 @@ final class ClientCookieDecoder {
                 builder.maxAge(maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0));
             }
         }
+    }
+
+    private static boolean isValidSameSite(@Nullable String sameSite) {
+        return Arrays.stream(SameSite.values())
+                     .anyMatch(e -> e.name().equalsIgnoreCase(sameSite));
     }
 
     private ClientCookieDecoder() {}
