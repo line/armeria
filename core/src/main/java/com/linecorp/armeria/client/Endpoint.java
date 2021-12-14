@@ -584,23 +584,22 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Returns a new host endpoint with the additional attributes. All attributes of this endpoint is copied to
-     * the new endpoint.
+     * Returns a new host endpoint by replacing its attributes with the specified ones.
      *
-     * @return the new endpoint with the additional attributes. {@code this} if given
-     *         attributes is empty.
+     * @return the new endpoint with the specified attributes. {@code this} if specified
+     *         attributes are some as this endpoint's attributes.
      */
-    public Endpoint withAttrs(Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
+    public Endpoint withAttrs(@Nullable Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
         requireNonNull(attributes, "attributes");
         final Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
         if (!newAttrIterator.hasNext()) {
-            return this;
+            if (this.attributes == null) {
+                return this;
+            }
+            return withAttributes(null);
         }
         final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
-        if (this.attributes != null) {
-            copyAttributes(newAttributes, this.attributes.attrs());
-        }
-        copyAttributes(newAttributes, attributes.iterator());
+        copyAttributes(newAttributes, newAttrIterator);
         return withAttributes(newAttributes);
     }
 
@@ -615,7 +614,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return attributes.attrs();
     }
 
-    private Endpoint withAttributes(DefaultAttributeMap newAttributes) {
+    private Endpoint withAttributes(@Nullable DefaultAttributeMap newAttributes) {
         return new Endpoint(host, ipAddr, port, weight, hostType, newAttributes);
     }
 

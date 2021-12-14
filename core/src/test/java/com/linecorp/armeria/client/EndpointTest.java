@@ -505,6 +505,8 @@ class EndpointTest {
                 .hasSize(2);
 
         // empty
-        assertThat(newEndpoint.withAttrs(Collections.emptyList())).isSameAs(newEndpoint);
+        assertThat(newEndpoint.withAttrs(Collections.emptyList()).attrs()).toIterable().isEmpty();
+        // not change other properties.
+        assertThat(newEndpoint.withAttrs(Collections.emptyList())).isEqualTo(endpoint);
     }
 }
