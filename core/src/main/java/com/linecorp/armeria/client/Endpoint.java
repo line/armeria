@@ -553,6 +553,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     @Nullable
     public <T> T attr(AttributeKey<T> key) {
+        requireNonNull(key, "key");
         if (attributes == null) {
             return null;
         }
@@ -567,6 +568,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *
      */
     public <T> Endpoint withAttr(AttributeKey<T> key, @Nullable T value) {
+        requireNonNull(key, "key");
         if (value == null && attributes == null) {
             return this;
         }
@@ -586,11 +588,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * the new endpoint.
      *
      * @return the new endpoint with the additional attributes. {@code this} if given
-     *     attributes is empty.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
+     *         attributes is empty.
      */
     public Endpoint withAttrs(Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
+        requireNonNull(attributes, "attributes");
         final Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
         if (!newAttrIterator.hasNext()) {
             return this;
