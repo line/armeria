@@ -50,6 +50,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.BytesValue;
 import com.google.protobuf.DescriptorProtos.MethodOptions;
@@ -65,10 +66,13 @@ import com.google.protobuf.Duration;
 import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
+import com.google.protobuf.ListValue;
 import com.google.protobuf.StringValue;
+import com.google.protobuf.Struct;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.UInt32Value;
 import com.google.protobuf.UInt64Value;
+import com.google.protobuf.Value;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -354,6 +358,24 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return messageType.getFields().get(0).getJavaType();
         }
 
+        // The messages of the following types can be sent only via HTTP body.
+        if (Struct.getDescriptor().getFullName().equals(fullName) ||
+            ListValue.getDescriptor().getFullName().equals(fullName) ||
+            Value.getDescriptor().getFullName().equals(fullName) ||
+            // google.protobuf.Any message has the following two fields:
+            //   string type_url = 1;
+            //   bytes value = 2;
+            // which look acceptable as HTTP GET parameters, but the client must send the message like below:
+            // {
+            //   "@type": "type.googleapis.com/google.protobuf.Duration",
+            //   "value": "1.212s"
+            // }
+            // There's no specifications about rewriting parameter names, so we will handle
+            // google.protobuf.Any message only when it is sent via HTTP body.
+            Any.getDescriptor().getFullName().equals(fullName)) {
+            return JavaType.MESSAGE;
+        }
+
         return null;
     }
 
@@ -572,6 +594,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 // Ignore unknown parameters.
                 continue;
             }
+
+            if (field.javaType == JavaType.MESSAGE) {
+                throw new IllegalArgumentException(
+                        "Unsupported message type: " + field.descriptor.getFullName());
+            }
+
             ObjectNode currentNode = root;
             for (String parentName : field.parentNames) {
                 final JsonNode node = currentNode.get(parentName);

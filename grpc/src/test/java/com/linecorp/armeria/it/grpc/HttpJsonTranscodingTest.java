@@ -25,12 +25,14 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -47,8 +49,16 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoStructRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoStructResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoValueRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoValueResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoWrappersRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoWrappersResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
@@ -160,6 +170,31 @@ class HttpJsonTranscodingTest {
                 assertThat(request.getBytesVal().getValue().toStringUtf8()).isEqualTo(testBytesValue);
             }
             responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoStruct(EchoStructRequest request, StreamObserver<EchoStructResponse> responseObserver) {
+            responseObserver.onNext(EchoStructResponse.newBuilder().setValue(request.getValue()).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoListValue(EchoListValueRequest request,
+                                  StreamObserver<EchoListValueResponse> responseObserver) {
+            responseObserver.onNext(EchoListValueResponse.newBuilder().setValue(request.getValue()).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoValue(EchoValueRequest request, StreamObserver<EchoValueResponse> responseObserver) {
+            responseObserver.onNext(EchoValueResponse.newBuilder().setValue(request.getValue()).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoAny(EchoAnyRequest request, StreamObserver<EchoAnyResponse> responseObserver) {
+            responseObserver.onNext(EchoAnyResponse.newBuilder().setValue(request.getValue()).build());
             responseObserver.onCompleted();
         }
     }
@@ -374,6 +409,82 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
+    void shouldAcceptStruct() throws Exception {
+        final String jsonContent = "{\"intVal\": 1, \"stringVal\": \"1\"}";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/struct", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        final JsonNode value = root.get("value");
+        assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
+        assertThat(value.get("intVal").asInt()).isOne();
+        assertThat(value.get("stringVal").asText()).isEqualTo("1");
+    }
+
+    @Test
+    void shouldAcceptListValue_String() throws Exception {
+        final String jsonContent = "[\"1\", \"2\"]";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        final JsonNode value = root.get("value");
+        assertThat(value.isArray()).isTrue();
+        assertThat(value.get(0).asText()).isEqualTo("1");
+        assertThat(value.get(1).asText()).isEqualTo("2");
+    }
+
+    @Test
+    void shouldAcceptListValue_Number() throws Exception {
+        final String jsonContent = "[1, 2]";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        final JsonNode value = root.get("value");
+        assertThat(value.isArray()).isTrue();
+        assertThat(value.get(0).asInt()).isEqualTo(1);
+        assertThat(value.get(1).asInt()).isEqualTo(2);
+    }
+
+    @Test
+    void shouldAcceptValue_String() throws Exception {
+        final String jsonContent = "\"1\"";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("value").asText()).isEqualTo("1");
+    }
+
+    @Test
+    void shouldAcceptValue_Number() throws Exception {
+        final String jsonContent = "1";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("value").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldAcceptAny() throws Exception {
+        final String jsonContent =
+                '{' +
+                "  \"@type\": \"type.googleapis.com/google.protobuf.Duration\"," +
+                "  \"value\": \"1.212s\"" +
+                '}';
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/any", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        final JsonNode value = root.get("value");
+        assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
+        assertThat(value.get("@type").asText()).isEqualTo("type.googleapis.com/google.protobuf.Duration");
+        assertThat(value.get("value").asText()).isEqualTo("1.212s");
+    }
+
+    @Test
+    void shouldDenyHttpGetParameters_Struct_Value_ListValue_Any() throws Exception {
+        assertThat(webClient.get("/v1/echo/struct?value=1").aggregate().get().status())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(webClient.get("/v1/echo/list_value?value=1&value=2").aggregate().get().status())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(webClient.get("/v1/echo/value?value=1").aggregate().get().status())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(webClient.get("/v1/echo/any?value=1").aggregate().get().status())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void shouldAcceptNaNAndInfinity() throws Exception {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("doubleVal", "NaN")
@@ -433,5 +544,12 @@ class HttpJsonTranscodingTest {
 
     private static String pathMapping(JsonNode method) {
         return method.get("endpoints").get(0).get("pathMapping").asText();
+    }
+
+    private static AggregatedHttpResponse jsonPostRequest(WebClient webClient, String path, String body)
+            throws ExecutionException, InterruptedException {
+        final RequestHeaders headers = RequestHeaders.builder().method(HttpMethod.POST).path(path)
+                                                     .contentType(MediaType.JSON).build();
+        return webClient.execute(headers, body).aggregate().get();
     }
 }
