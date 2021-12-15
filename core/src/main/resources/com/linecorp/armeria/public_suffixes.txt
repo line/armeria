@@ -252,7 +252,6 @@ aerodrome.aero
 aeroport.fr
 aetna
 af
-afamilycompany
 affinitylottery.org.uk
 afjord.no
 afl
@@ -725,6 +724,8 @@ barsyonline.com
 barueri.br
 barum.no
 bas.it
+base.ec
+base.shop
 baseball
 baseball.museum
 basel.museum
@@ -1074,6 +1075,7 @@ busan.kr
 bushey.museum
 business
 buy
+buyshop.jp
 buyshouses.net
 buzen.fukuoka.jp
 buzz
@@ -1379,6 +1381,7 @@ cloud.fedoraproject.org
 cloud.goog
 cloud.interhostsolutions.be
 cloud.jelastic.open.tim.it
+cloud.nospamproxy.com
 cloud66.ws
 cloud66.zone
 cloudaccess.host
@@ -1988,7 +1991,6 @@ dsmynas.org
 dst.mi.us
 dtv
 dubai
-duck
 duckdns.org
 dunlop
 dupont
@@ -2213,7 +2215,7 @@ education
 education.museum
 educational.museum
 educator.aero
-edugit.org
+edugit.io
 ee
 ee.eu.org
 eero-stage.online
@@ -2327,6 +2329,7 @@ eu-west-2.elasticbeanstalk.com
 eu-west-3.elasticbeanstalk.com
 eu.ax
 eu.com
+eu.encoway.cloud
 eu.int
 eu.meteorapp.com
 eu.org
@@ -2376,6 +2379,7 @@ farmers.museum
 farmstead.museum
 farsund.no
 fashion
+fashionstore.jp
 fast
 fastblog.net
 fastly-terrarium.com
@@ -2823,7 +2827,6 @@ gjerstad.no
 gjesdal.no
 gjovik.no
 gl
-glade
 glas.museum
 glass
 glass.museum
@@ -3192,6 +3195,7 @@ hanamaki.iwate.jp
 hanamigawa.chiba.jp
 hanawa.fukushima.jp
 handa.aichi.jp
+handcrafted.jp
 handson.museum
 hanggliding.aero
 hangout
@@ -3408,6 +3412,7 @@ hongo.hiroshima.jp
 honjo.akita.jp
 honjo.saitama.jp
 honjyo.akita.jp
+hoplix.shop
 hopto.me
 hopto.org
 hornindal.no
@@ -4147,6 +4152,7 @@ kawaguchi.saitama.jp
 kawahara.tottori.jp
 kawai.iwate.jp
 kawai.nara.jp
+kawaiishop.jp
 kawajima.saitama.jp
 kawakami.nagano.jp
 kawakami.nara.jp
@@ -4303,6 +4309,7 @@ konin.pl
 konskowola.pl
 konsulat.gov.pl
 konyvelo.hu
+koobin.events
 koori.fukushima.jp
 kopervik.no
 koriyama.fukushima.jp
@@ -5743,8 +5750,6 @@ nobeoka.miyazaki.jp
 noboribetsu.hokkaido.jp
 noda.chiba.jp
 noda.iwate.jp
-nodum.co
-nodum.io
 nog.community
 nogata.fukuoka.jp
 nogi.tochigi.jp
@@ -5887,11 +5892,11 @@ of.fashion
 of.je
 of.london
 of.no
-off
 off.ai
 office
 office-on-the.net
 official.academy
+official.ec
 ofunato.iwate.jp
 og.ao
 og.it
@@ -6537,6 +6542,7 @@ pro.na
 pro.om
 pro.pr
 pro.tt
+pro.typeform.com
 pro.vn
 prochowice.pl
 prod
@@ -6630,7 +6636,6 @@ rag-cloud.hosteur.com
 ragusa.it
 rahkkeravju.no
 raholt.no
-raid
 railroad.museum
 railway.museum
 raisa.no
@@ -6643,6 +6648,7 @@ ranzan.saitama.jp
 rar.ve
 ras.ru
 rauma.no
+ravendb.cloud
 ravendb.community
 ravendb.me
 ravendb.run
@@ -6879,6 +6885,7 @@ s3.dualstack.us-east-2.amazonaws.com
 s3.eu-central-1.amazonaws.com
 s3.eu-west-2.amazonaws.com
 s3.eu-west-3.amazonaws.com
+s3.teckids.org
 s3.us-east-2.amazonaws.com
 sa
 sa-east-1.elasticbeanstalk.com
@@ -7060,7 +7067,6 @@ sciencehistory.museum
 sciences.museum
 sciencesnaturelles.museum
 scientist.aero
-scjohnson
 scot
 scotland.museum
 scrapper-site.net
@@ -7282,6 +7288,7 @@ shop.th
 shoparena.pl
 shopitsite.com
 shopping
+shopselect.net
 shopware.store
 shouji
 show
@@ -7549,6 +7556,7 @@ sunndal.no
 supabase.co
 supabase.in
 supabase.net
+supersale.jp
 supplies
 supply
 support
@@ -7768,6 +7776,7 @@ the.br
 theater
 theater.museum
 theatre
+theshop.jp
 theworkpc.com
 thingdustdata.com
 thruhere.net
