@@ -70,7 +70,7 @@ class GrpcHealthCheckServiceTest {
     static ServerExtension server = new ServerExtension(true) {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.requestTimeoutMillis(5000);
+            sb.requestTimeoutMillis(3000);
             sb.decorator(LoggingService.newDecorator());
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl())
@@ -139,7 +139,7 @@ class GrpcHealthCheckServiceTest {
                                          .build(HealthStub.class);
         final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
         client.watch(request, recorder);
-        TimeUnit.SECONDS.sleep(20);
+        TimeUnit.SECONDS.sleep(5);
         serveHealth.setHealthy(false);
         TimeUnit.SECONDS.sleep(1);
         recorder.onCompleted();
