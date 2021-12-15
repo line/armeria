@@ -44,7 +44,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -126,9 +125,6 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
-
-    @Nullable
-    private UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction;
 
     @Nullable
     private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
@@ -448,20 +444,6 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Set a custom HTTP status code mapper. This is useful to serve custom HTTP status code when using unframed
-     * gRPC service.
-     * @param unframedGrpcStatusMappingFunction The function which maps the {@link Throwable} or
-     *                                          gRPC {@link Status} code to an {@link HttpStatus} code.
-     */
-    @UnstableApi
-    public GrpcServiceBuilder unframedGrpcStatusMapping(
-            UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction) {
-        requireNonNull(unframedGrpcStatusMappingFunction, "unframedGrpcStatusMappingFunction");
-        this.unframedGrpcStatusMappingFunction = unframedGrpcStatusMappingFunction;
-        return this;
-    }
-
-    /**
      * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
      *
      * <p>Limitations:
@@ -722,21 +704,9 @@ public final class GrpcServiceBuilder {
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
             interceptors().add(coroutineContextInterceptor);
         }
-        if (enableUnframedRequests) {
-            if (unframedGrpcErrorHandler != null && unframedGrpcStatusMappingFunction != null) {
-                throw new IllegalStateException(
-                        "Both 'unframedGrpcErrorHandler' and 'unframedGrpcStatusMappingFunction' cannot be "
-                        + "set");
-            }
-        } else {
-            if (unframedGrpcErrorHandler != null) {
-                throw new IllegalStateException(
-                        "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
-            }
-            if (unframedGrpcStatusMappingFunction != null) {
-                throw new IllegalStateException(
-                        "'unframedGrpcStatusMappingFunction' can only be set if unframed requests are enabled");
-            }
+        if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
         }
         if (!enableHttpJsonTranscoding && httpJsonTranscodingErrorHandler != null) {
             throw new IllegalStateException(
@@ -784,28 +754,17 @@ public final class GrpcServiceBuilder {
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes,
                 enableUnframedRequests || enableHttpJsonTranscoding);
-        if (enableUnframedRequests || enableHttpJsonTranscoding) {
-            UnframedGrpcStatusMappingFunction unframedGrpcStatusMappingFunction = firstNonNull(
-                    this.unframedGrpcStatusMappingFunction, UnframedGrpcStatusMappingFunction.of());
-            if (unframedGrpcStatusMappingFunction != UnframedGrpcStatusMappingFunction.of()) {
-                // Ensure that unframedGrpcStatusMappingFunction never returns null
-                // by falling back to the default.
-                unframedGrpcStatusMappingFunction = unframedGrpcStatusMappingFunction
-                        .orElse(UnframedGrpcStatusMappingFunction.of());
-            }
-            if (enableUnframedRequests) {
-                final UnframedGrpcErrorHandler unframedGrpcErrorHandler = firstNonNull(
-                        this.unframedGrpcErrorHandler, UnframedGrpcErrorHandler.of());
-                grpcService = new UnframedGrpcService(grpcService, handlerRegistry, unframedGrpcErrorHandler,
-                                                      unframedGrpcStatusMappingFunction);
-            }
-            if (enableHttpJsonTranscoding) {
-                final UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler = firstNonNull(
-                        this.httpJsonTranscodingErrorHandler, UnframedGrpcErrorHandler.ofJson());
-                grpcService = HttpJsonTranscodingService.of(grpcService,
-                                                            httpJsonTranscodingErrorHandler,
-                                                            unframedGrpcStatusMappingFunction);
-            }
+        if (enableUnframedRequests) {
+            grpcService = new UnframedGrpcService(
+                    grpcService, handlerRegistry,
+                    unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
+                                                     : UnframedGrpcErrorHandler.of());
+        }
+        if (enableHttpJsonTranscoding) {
+            grpcService = HttpJsonTranscodingService.of(
+                    grpcService,
+                    httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
+                                                            : UnframedGrpcErrorHandler.ofJson());
         }
         return grpcService;
     }
