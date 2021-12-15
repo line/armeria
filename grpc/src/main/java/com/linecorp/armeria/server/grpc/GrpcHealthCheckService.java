@@ -194,6 +194,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
             @Override
             public void serverStopping(Server server) {
+                // NOT_SERVING will be sent to clients by changing a healthiness of a server
                 serverHealth.setHealthy(false);
                 watchers.keySet().forEach(StreamObserver::onCompleted);
                 watchers.clear();
