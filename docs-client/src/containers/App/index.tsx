@@ -26,6 +26,7 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
@@ -200,7 +201,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                       </code>
                     </Typography>
                     <Typography display="inline" variant="subtitle1">
-                      <code>{simpleName(service.name)}</code>
+                      <Tooltip title={`${service.name}`} placement="top">
+                        <code>{simpleName(service.name)}</code>
+                      </Tooltip>
                     </Typography>
                   </ListItemText>
                   {openServices[service.name] ? <ExpandLess /> : <ExpandMore />}
