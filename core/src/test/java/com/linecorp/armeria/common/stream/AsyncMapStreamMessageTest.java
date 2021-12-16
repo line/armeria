@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 
 import reactor.test.StepVerifier;
 
@@ -129,8 +129,8 @@ class AsyncMapStreamMessageTest {
         final CompletableFuture<Integer> finishLast = new CompletableFuture<>();
         final CompletableFuture<Integer> finishSecond = new CompletableFuture<>();
 
-        final List<CompletableFuture<Integer>> futures = Lists.newArrayList(finishLast, finishFirst,
-                                                                            finishSecond);
+        final List<CompletableFuture<Integer>> futures = ImmutableList.of(finishLast, finishFirst,
+                                                                          finishSecond);
         final StreamMessage<Integer> shouldPreserveOrder = streamMessage.mapAsync(futures::get);
 
         StepVerifier.create(shouldPreserveOrder)
