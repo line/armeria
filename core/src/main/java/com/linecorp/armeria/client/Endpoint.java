@@ -604,20 +604,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Returns a new host endpoint by removing its attributes.
-     *
-     * @return the new endpoint by removing its attributes. {@code this} if this
-     *         endpoint does not have any attributes.
-     */
-    public Endpoint withoutAttrs() {
-        if (attributes == null) {
-            return this;
-        }
-        return withAttributes(null);
-    }
-
-
-    /**
      * Returns an iterator of all attributes of this endpoint, or an empty iterator if this endpoint does not
      * have any attributes.
      */

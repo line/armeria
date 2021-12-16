@@ -529,7 +529,5 @@ class EndpointTest {
         assertThat(endpointB.withAttrs(Collections.emptyList())).isSameAs(endpointB);
         // not change other properties.
         assertThat(endpointB.withAttrs(Collections.emptyList())).isEqualTo(endpoint);
-
-        assertThat(endpointB.withoutAttrs().attrs()).toIterable().isEmpty();
     }
 }
