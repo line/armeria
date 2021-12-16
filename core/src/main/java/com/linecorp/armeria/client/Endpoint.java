@@ -584,24 +584,38 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Returns a new host endpoint by replacing its attributes with the specified ones.
+     * Returns a new host endpoint by adding the specified attributes.
      *
-     * @return the new endpoint with the specified attributes. {@code this} if specified
-     *         attributes are some as this endpoint's attributes.
+     * @return the new endpoint by adding the specified attributes. {@code this} if specified
+     *         attributes are empty.
      */
     public Endpoint withAttrs(@Nullable Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
         requireNonNull(attributes, "attributes");
         final Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
         if (!newAttrIterator.hasNext()) {
-            if (this.attributes == null) {
-                return this;
-            }
-            return withAttributes(null);
+            return this;
         }
         final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
+        if (this.attributes != null) {
+            copyAttributes(newAttributes, this.attributes.attrs());
+        }
         copyAttributes(newAttributes, newAttrIterator);
         return withAttributes(newAttributes);
     }
+
+    /**
+     * Returns a new host endpoint by removing its attributes.
+     *
+     * @return the new endpoint by removing its attributes. {@code this} if this
+     *         endpoint does not have any attributes.
+     */
+    public Endpoint withoutAttrs() {
+        if (attributes == null) {
+            return this;
+        }
+        return withAttributes(null);
+    }
+
 
     /**
      * Returns an iterator of all attributes of this endpoint, or an empty iterator if this endpoint does not

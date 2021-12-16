@@ -492,21 +492,44 @@ class EndpointTest {
 
         attrs.add(new AbstractMap.SimpleImmutableEntry<>(key1, "value1"));
         attrs.add(new AbstractMap.SimpleImmutableEntry<>(key2, "value2"));
-        final Endpoint newEndpoint = endpoint.withAttrs(attrs);
 
-        assertThat(newEndpoint.attr(key1))
+        final List<Entry<AttributeKey<?>, String>> attrs2 = new ArrayList<>();
+        final AttributeKey<String> key3 = AttributeKey.valueOf("key3");
+        attrs2.add(new AbstractMap.SimpleImmutableEntry<>(key1, "value1-2"));
+        attrs2.add(new AbstractMap.SimpleImmutableEntry<>(key3, "value3"));
+
+        final Endpoint endpointB = endpoint.withAttrs(attrs);
+        final Endpoint endpointC = endpointB.withAttrs(attrs2);
+
+        assertThat(endpointB.attr(key1))
                 .isEqualTo("value1");
-        assertThat(newEndpoint.attr(key2))
+        assertThat(endpointB.attr(key2))
                 .isEqualTo("value2");
-        assertThat(newEndpoint.attrs())
+        assertThat(endpointB.attrs())
                 .toIterable()
                 .anyMatch(entry -> entry.getKey().equals(key1) && "value1".equals(entry.getValue()))
                 .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
                 .hasSize(2);
 
-        // empty
-        assertThat(newEndpoint.withAttrs(Collections.emptyList()).attrs()).toIterable().isEmpty();
+        // key1 is updated, key3 is anded.
+        assertThat(endpointC.attr(key1))
+                .isEqualTo("value1-2");
+        assertThat(endpointC.attr(key2))
+                .isEqualTo("value2");
+        assertThat(endpointC.attr(key3))
+                .isEqualTo("value3");
+        assertThat(endpointC.attrs())
+                .toIterable()
+                .anyMatch(entry -> entry.getKey().equals(key1) && "value1-2".equals(entry.getValue()))
+                .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
+                .anyMatch(entry -> entry.getKey().equals(key3) && "value3".equals(entry.getValue()))
+                .hasSize(3);
+
+        // update by empty attrs, not crate new endpoint.
+        assertThat(endpointB.withAttrs(Collections.emptyList())).isSameAs(endpointB);
         // not change other properties.
-        assertThat(newEndpoint.withAttrs(Collections.emptyList())).isEqualTo(endpoint);
+        assertThat(endpointB.withAttrs(Collections.emptyList())).isEqualTo(endpoint);
+
+        assertThat(endpointB.withoutAttrs().attrs()).toIterable().isEmpty();
     }
 }
