@@ -64,7 +64,7 @@ class AsyncClientTest {
     @Test
     void testUnknownUrl() {
         final HelloServiceFutureStub helloService = helloService("/services/helloService2.hs");
-        assertThatThrownBy(() -> helloService.sayHello().get()).isInstanceOf(
+        assertThatThrownBy(() -> helloService.sayHello().get()).hasCauseInstanceOf(
                 HessianConnectionException.class);
     }
 

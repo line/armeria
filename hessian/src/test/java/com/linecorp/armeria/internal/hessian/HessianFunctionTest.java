@@ -54,7 +54,7 @@ class HessianFunctionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "fun1", "fun2", "futureFun1", })
+    @ValueSource(strings = { "fun1", "fun2" })
     void testParseSync(String name) {
         final HessianFunction fun1 = HessianFunction.of(DemoService.class, methodMap.get(name), name, null);
         assertThat(fun1).hasFieldOrPropertyWithValue("responseType", ResponseType.OTHER_OBJECTS);
