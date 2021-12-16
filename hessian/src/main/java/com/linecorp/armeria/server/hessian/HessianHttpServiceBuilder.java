@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.hessian.HessianCallService;
 import com.linecorp.armeria.internal.server.hessian.HessianHttpServiceImpl;
 import com.linecorp.armeria.internal.server.hessian.HessianServiceMetadata;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  *           .build();
  * }</pre>
  */
+@UnstableApi
 public final class HessianHttpServiceBuilder {
 
     static final SerializationFormat HESSIAN = SerializationFormat.of("hessian");

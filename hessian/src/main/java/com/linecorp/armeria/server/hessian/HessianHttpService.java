@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.hessian;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 
 /**
@@ -24,6 +25,7 @@ import com.linecorp.armeria.server.HttpServiceWithRoutes;
  *
  * @author eisig
  */
+@UnstableApi
 public interface HessianHttpService extends HttpServiceWithRoutes {
 
     /**
