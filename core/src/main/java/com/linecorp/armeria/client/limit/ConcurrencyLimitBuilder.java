@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -43,7 +44,7 @@ public final class ConcurrencyLimitBuilder {
     static final int DEFAULT_MAX_PENDING_ACQUIRES = Integer.MAX_VALUE;
 
     private final boolean useLimit;
-    private final Supplier<Integer> maxConcurrency;
+    private final IntSupplier maxConcurrency;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
     private int maxPendingAcquisitions = DEFAULT_MAX_PENDING_ACQUIRES;
     private Predicate<? super ClientRequestContext> predicate = requestContext -> true;
@@ -53,7 +54,7 @@ public final class ConcurrencyLimitBuilder {
         this.maxConcurrency = () -> maxConcurrency;
     }
 
-    ConcurrencyLimitBuilder(Supplier<Integer> maxConcurrency) {
+    ConcurrencyLimitBuilder(IntSupplier maxConcurrency) {
         useLimit = true;
         this.maxConcurrency = maxConcurrency;
     }

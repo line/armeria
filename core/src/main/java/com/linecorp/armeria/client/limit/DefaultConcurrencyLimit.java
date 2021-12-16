@@ -25,8 +25,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.IntSupplier;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +47,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private static final Logger logger = LoggerFactory.getLogger(DefaultConcurrencyLimit.class);
 
     private final Predicate<? super ClientRequestContext> predicate;
-    private final Supplier<Integer> maxConcurrency;
+    private final IntSupplier maxConcurrency;
     private final int maxPendingAcquisitions;
     private final long timeoutMillis;
 
@@ -56,7 +56,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
-                            Supplier<Integer> maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
+                            IntSupplier maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
         this.predicate = predicate;
         this.maxConcurrency = maxConcurrency;
         this.maxPendingAcquisitions = maxPendingAcquisitions;
@@ -76,12 +76,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     @VisibleForTesting
     int maxConcurrency() {
-        Integer maxConcurrency = this.maxConcurrency.get();
-        if (maxConcurrency == null) {
-            logger.warn("maxConcurrency.get() returned null; maxConcurrency is set to 0.");
-            return 0;
-        }
-
+        int maxConcurrency = this.maxConcurrency.getAsInt();
         if (maxConcurrency < 0) {
             logger.warn("maxConcurrency.get() returned {}; maxConcurrency is set to 0.", maxConcurrency);
             return 0;

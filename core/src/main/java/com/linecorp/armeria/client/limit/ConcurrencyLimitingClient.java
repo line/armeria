@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.function.IntSupplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -71,7 +71,7 @@ public final class ConcurrencyLimitingClient
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
-            Supplier<Integer> maxConcurrency) {
+            IntSupplier maxConcurrency) {
         final ConcurrencyLimit limit = ConcurrencyLimit.of(maxConcurrency);
         return newDecorator(limit);
     }
