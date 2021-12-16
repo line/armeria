@@ -547,6 +547,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     /**
      * Transforms values emitted by this {@link StreamMessage} by applying the specified asynchronous
      * {@link Function} and emitting the value the future completes with.
+     * The {@link StreamMessage} publishes items in order, non-overlappingly, one after the other finishes.
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
      * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
