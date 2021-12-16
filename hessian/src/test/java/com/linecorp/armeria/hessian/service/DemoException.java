@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.hessian.service;
+
 /**
- * hessian server.
+ * demo exception.
+ *
+ * @author eisig
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public class DemoException extends RuntimeException {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
-
+    public DemoException(String message) {
+        super(message);
+    }
+}

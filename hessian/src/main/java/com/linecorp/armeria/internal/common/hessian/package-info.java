@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -18,7 +17,7 @@
  * hessian server.
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+package com.linecorp.armeria.internal.common.hessian;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
 

@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.hessian.service;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+
 /**
- * hessian server.
+ * Future support.
+ * @author eisig
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public interface HelloServiceFutureStub {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+    CompletableFuture<String> sayHello();
 
+    CompletionStage<HelloResponse> sayHello2(
+            HelloRequest request);
+
+    CompletionStage<HelloResponse> delaySayHello(
+            HelloRequest request);
+
+    CompletableFuture<SequenceResponse> seq(
+            SequenceRequest request);
+}

@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.internal.client.hessian;
+
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryProvider;
+
 /**
- * hessian server.
+ * {@link ClientFactoryProvider} that creates a {@link HessianClientFactory}.
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public final class HessianHttpClientFactoryProvider implements ClientFactoryProvider {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
-
+    @Override
+    public ClientFactory newFactory(ClientFactory httpClientFactory) {
+        return new HessianClientFactory(httpClientFactory);
+    }
+}

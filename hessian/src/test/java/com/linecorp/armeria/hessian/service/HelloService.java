@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,37 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.hessian.service;
+
+import java.io.InputStream;
+
 /**
- * hessian server.
+ * demo service.
+ *
+ * @author eisig
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public interface HelloService {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+    String sayHello();
 
+    String sayHelloStr(String str);
+
+    HelloResponse sayHello2(
+            HelloRequest request);
+
+    InputStream replySteam(HelloRequest request);
+
+    HelloResponse delaySayHello(
+            HelloRequest request);
+
+    HelloResponse failedSayHello(
+            HelloRequest request);
+
+    SequenceResponse seq(SequenceRequest request);
+
+    HelloResponse largeResponse(
+            HelloRequest request);
+
+    String threadName();
+}

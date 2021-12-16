@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.it.server;
+
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.hessian.service.HelloService;
+
 /**
- * hessian server.
+ * test with armeria hessian client.
+ *
+ * @author eisig
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public class ArmeriaHessianClientTest extends AbstractHessianServerTest {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+    @Override
+    HelloService helloService() {
+        return Clients.builder("hessian+http://127.0.0.1:" + server.httpPort() + "/services/helloService.hs")
+                      .build(HelloService.class);
+    }
 
+    @Override
+    HelloService helloServiceCreateWithUrl() {
+        // todo
+        return helloService();
+    }
+}

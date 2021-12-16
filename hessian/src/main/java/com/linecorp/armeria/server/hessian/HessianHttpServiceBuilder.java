@@ -1,29 +1,44 @@
+/*
+ * Copyright 2021 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 
-package cn.swiftpass.feynman.hessian.server;
+package com.linecorp.armeria.server.hessian;
 
-import cn.swiftpass.feynman.hessian.internal.HessianServiceImplMetadata;
-import cn.swiftpass.feynman.hessian.internal.server.HessianCallService;
-import cn.swiftpass.feynman.hessian.internal.server.HessianHttpServiceImpl;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.server.RpcService;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import lombok.Value;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
 import java.beans.Introspector;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.hessian.HessianCallService;
+import com.linecorp.armeria.internal.server.hessian.HessianHttpServiceImpl;
+import com.linecorp.armeria.internal.server.hessian.HessianServiceMetadata;
+import com.linecorp.armeria.server.RpcService;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * {@link HessianHttpService} 的 builder. 允许绑定多个 Hessian服务
+ * The builder of {@link HessianHttpService}.
  *
  * <h2>Example</h2> <pre>{@code
  * Server server =
@@ -36,19 +51,17 @@ import static java.util.Objects.requireNonNull;
  *                                     .build())
  *           .build();
  * }</pre>
- *
- * <p>
- * </p>
  */
 public final class HessianHttpServiceBuilder {
 
     static final SerializationFormat HESSIAN = SerializationFormat.of("hessian");
 
-    private static final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse> defaultExceptionHandler = (
+    private static final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            defaultExceptionHandler = (
             ctx, cause) -> RpcResponse.ofFailure(cause);
 
     private static final Function<Object, Class<?>> defaultApiClassDetector = o -> {
-        Class<?>[] interfaces = o.getClass().getInterfaces();
+        final Class<?>[] interfaces = o.getClass().getInterfaces();
         if (interfaces.length != 1) {
             throw new IllegalArgumentException(
                     "Expect hessian implementation " + o.getClass() + " to implement exactly one interface");
@@ -72,14 +85,15 @@ public final class HessianHttpServiceBuilder {
     @Nullable
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
 
-    private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse> exceptionHandler = defaultExceptionHandler;
+    private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            exceptionHandler = defaultExceptionHandler;
 
     HessianHttpServiceBuilder() {
         this.apiClassDetector = defaultApiClassDetector;
     }
 
     /**
-     * 服务的路由前缀。必须使用'/'开头。 如果要用‘/'分隔，需要显示添加。比如’/services/'
+     * The service route prefix, must start with '/'.
      */
     public HessianHttpServiceBuilder prefix(String prefix) {
         requireNonNull(prefix, "prefix");
@@ -97,7 +111,7 @@ public final class HessianHttpServiceBuilder {
     }
 
     /**
-     * 对对象来获取hessian的apiClass
+     * 对对象来获取hessian的apiClass.
      */
     public HessianHttpServiceBuilder apiClassDetector(Function<Object, Class<?>> apiClassDetector) {
         this.apiClassDetector = apiClassDetector;
@@ -105,20 +119,20 @@ public final class HessianHttpServiceBuilder {
     }
 
     /**
-     * 增加服务。
+     * 增加服务.
      * @param path 路径。
      * @param apiClass hessian的api
      * @param implementation hessian的实现
      * @param blocking 是否非阻塞的实现
      */
     public HessianHttpServiceBuilder addService(String path, Class<?> apiClass, Object implementation,
-            boolean blocking) {
+                                                boolean blocking) {
         hessianService.add(new ServiceEntry(path, apiClass, implementation, blocking));
         return this;
     }
 
     /**
-     * 增加服务。
+     * 增加服务.
      * @param path 路径。
      * @param apiClass hessian的api
      * @param implementation hessian的实现
@@ -129,7 +143,7 @@ public final class HessianHttpServiceBuilder {
     }
 
     /**
-     * 增加服务。
+     * 增加服务.
      * @param path 路径。
      * @param implementation hessian的实现
      */
@@ -163,7 +177,8 @@ public final class HessianHttpServiceBuilder {
      * {@link Throwable} and {@link ServiceRequestContext}.
      */
     public HessianHttpServiceBuilder exceptionHandler(
-            BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse> exceptionHandler) {
+            BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+                    exceptionHandler) {
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
         return this;
     }
@@ -172,12 +187,12 @@ public final class HessianHttpServiceBuilder {
      * A {@code Function<? super RpcService, ? extends RpcService>} to decorate the
      * {@link RpcService}.
      */
-    public HessianHttpServiceBuilder decorate(Function<? super RpcService, ? extends RpcService> decoratorFunction) {
+    public HessianHttpServiceBuilder decorate(
+            Function<? super RpcService, ? extends RpcService> decoratorFunction) {
         requireNonNull(decoratorFunction, "decoratorFunction");
         if (this.decoratorFunction == null) {
             this.decoratorFunction = decoratorFunction;
-        }
-        else {
+        } else {
             this.decoratorFunction = this.decoratorFunction.andThen(decoratorFunction);
         }
         return this;
@@ -195,16 +210,18 @@ public final class HessianHttpServiceBuilder {
      */
     public HessianHttpServiceImpl build() {
         @SuppressWarnings("UnstableApiUsage")
-        ImmutableList<ServiceEntry> implementations = hessianService.build();
-        ImmutableMap.Builder<String, HessianServiceImplMetadata> path2ServiceMapBuilder = ImmutableMap.builder();
+        final ImmutableList<ServiceEntry> implementations = hessianService.build();
+        final ImmutableMap.Builder<String, HessianServiceMetadata> path2ServiceMapBuilder =
+                ImmutableMap.builder();
         for (ServiceEntry entry : implementations) {
-            Class<?> apiClass = entry.apiClass != null ? entry.apiClass : apiClassDetector.apply(entry.implementation);
+            final Class<?> apiClass = entry.apiClass != null ? entry.apiClass : apiClassDetector.apply(
+                    entry.implementation);
             checkArgument(apiClass != null, "apiClass must not be null");
-            String path = entry.path != null ? entry.path : autoServicePathProducer.apply(apiClass);
+            final String path = entry.path != null ? entry.path : autoServicePathProducer.apply(apiClass);
             checkArgument(path != null, "path must not be null");
-            String fullPath = buildPath(path, prefix, suffix);
-            HessianServiceImplMetadata ssm = new HessianServiceImplMetadata(apiClass, entry.implementation,
-                    entry.blocking);
+            final String fullPath = buildPath(path, prefix, suffix);
+            final HessianServiceMetadata ssm = new HessianServiceMetadata(apiClass, entry.implementation,
+                                                                          entry.blocking);
             path2ServiceMapBuilder.put(fullPath, ssm);
         }
         final HessianCallService hcs = HessianCallService.of(path2ServiceMapBuilder.build());
@@ -215,8 +232,7 @@ public final class HessianHttpServiceBuilder {
         String fullPath;
         if (Strings.isNullOrEmpty(prefix) || path.startsWith(prefix)) {
             fullPath = path;
-        }
-        else {
+        } else {
             fullPath = prefix + path;
             fullPath = fullPath.replaceAll("//", "/");
         }
@@ -226,30 +242,35 @@ public final class HessianHttpServiceBuilder {
         }
         if (fullPath.startsWith("/")) {
             return fullPath;
-        }
-        else {
+        } else {
             return '/' + fullPath;
         }
     }
 
-    private HessianHttpServiceImpl build0(RpcService tcs, Map<String, HessianServiceImplMetadata> path2ServiceMap) {
+    private HessianHttpServiceImpl build0(RpcService tcs,
+                                          Map<String, HessianServiceMetadata> path2ServiceMap) {
 
         return new HessianHttpServiceImpl(decorate(tcs), defaultSerializationFormat, exceptionHandler);
     }
 
-    @Value
-    private static class ServiceEntry {
+    private static final class ServiceEntry {
 
         @Nullable
-        String path;
+        private final String path;
 
         @Nullable
-        Class<?> apiClass;
+        private final Class<?> apiClass;
 
-        Object implementation;
+        private final Object implementation;
 
-        boolean blocking;
+        private final boolean blocking;
 
+        private ServiceEntry(@Nullable String path, @Nullable Class<?> apiClass, Object implementation,
+                             boolean blocking) {
+            this.path = path;
+            this.apiClass = apiClass;
+            this.implementation = implementation;
+            this.blocking = blocking;
+        }
     }
-
 }

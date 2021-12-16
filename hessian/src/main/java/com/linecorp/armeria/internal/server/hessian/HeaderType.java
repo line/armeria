@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.internal.server.hessian;
+
 /**
- * hessian server.
+ * Hessian header type.
+ * @author eisig
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public enum HeaderType {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+    CALL_1_REPLY_1, CALL_1_REPLY_2, HESSIAN_2, REPLY_1, REPLY_2;
 
+    public boolean isCall2() {
+        return this == HeaderType.HESSIAN_2;
+    }
+
+    public boolean isReply2() {
+        switch (this) {
+            case CALL_1_REPLY_2:
+            case HESSIAN_2:
+                return true;
+            default:
+                return false;
+        }
+    }
+}

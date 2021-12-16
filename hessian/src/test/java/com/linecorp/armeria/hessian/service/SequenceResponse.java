@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.hessian.service;
+
+import java.io.Serializable;
+
 /**
- * hessian server.
+ * seq response.
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public class SequenceResponse implements Serializable {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+    private final Integer count;
 
+    public SequenceResponse(Integer count) {
+        this.count = count;
+    }
+
+    public Integer getCount() {
+        return count;
+    }
+}

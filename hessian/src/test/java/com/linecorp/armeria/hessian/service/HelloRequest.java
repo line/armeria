@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+package com.linecorp.armeria.hessian.service;
+
+import java.io.Serializable;
+
 /**
- * hessian server.
+ * hello request.
+ *
+ * @author eisig
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+public class HelloRequest implements Serializable {
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+    private final String message;
 
+    public HelloRequest(String message) {
+        this.message = message;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}

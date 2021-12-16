@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,11 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 /**
  * hessian server.
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.hessian;
+package com.linecorp.armeria.internal.server.hessian;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
 
