@@ -57,12 +57,17 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        // Ensure that unframedGrpcStatusMappingFunction never returns null
+        // by falling back to the default.
+        final UnframedGrpcStatusMappingFunction mappingFunction =
+                requireNonNull(statusMappingFunction, "statusMappingFunction")
+                        .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final MediaType grpcMediaType = response.contentType();
             if (grpcMediaType != null && grpcMediaType.isJson()) {
-                return ofJson(statusMappingFunction).handle(ctx, status, response);
+                return ofJson(mappingFunction).handle(ctx, status, response);
             } else {
-                return ofPlainText(statusMappingFunction).handle(ctx, status, response);
+                return ofPlainText(mappingFunction).handle(ctx, status, response);
             }
         };
     }
@@ -84,9 +89,8 @@ public interface UnframedGrpcErrorHandler {
         // Ensure that unframedGrpcStatusMappingFunction never returns null
         // by falling back to the default.
         final UnframedGrpcStatusMappingFunction mappingFunction =
-                statusMappingFunction == UnframedGrpcStatusMappingFunction.of()
-                ? statusMappingFunction
-                : requireNonNull(statusMappingFunction, "statusMappingFunction");
+                requireNonNull(statusMappingFunction, "statusMappingFunction")
+                        .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
             final Map<String, Object> message;
@@ -131,9 +135,8 @@ public interface UnframedGrpcErrorHandler {
         // Ensure that unframedGrpcStatusMappingFunction never returns null
         // by falling back to the default.
         final UnframedGrpcStatusMappingFunction mappingFunction =
-                statusMappingFunction == UnframedGrpcStatusMappingFunction.of()
-                ? statusMappingFunction
-                : requireNonNull(statusMappingFunction, "statusMappingFunction");
+                requireNonNull(statusMappingFunction, "statusMappingFunction")
+                        .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
             final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());

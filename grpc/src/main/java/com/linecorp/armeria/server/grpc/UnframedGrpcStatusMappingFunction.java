@@ -52,6 +52,9 @@ public interface UnframedGrpcStatusMappingFunction {
      */
     default UnframedGrpcStatusMappingFunction orElse(UnframedGrpcStatusMappingFunction other) {
         requireNonNull(other, "other");
+        if (this == other) {
+            return this;
+        }
         return (ctx, status, cause) -> {
             final HttpStatus httpStatus = apply(ctx, status, cause);
             if (httpStatus != null) {
