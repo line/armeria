@@ -19,11 +19,11 @@ package com.linecorp.armeria.common.util;
 import java.util.function.IntSupplier;
 
 import com.linecorp.armeria.client.limit.ConcurrencyLimit;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Supplies the cached value that is useful below cases.
- * <p>
- * - Supplies dynamically a maximum number of concurrent active requests for {@link ConcurrencyLimit}.
+ * <p> - Supplies dynamically a maximum number of concurrent active requests for {@link ConcurrencyLimit}.
  * For example:
  * <pre>{@code
  * class DynamicSupplier extends SettableIntSupplier {
@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.limit.ConcurrencyLimit;
  *   }
  * }}</pre>
  */
+@UnstableApi
 public class SettableIntSupplier implements IntSupplier {
     private volatile int value;
 
@@ -49,7 +50,7 @@ public class SettableIntSupplier implements IntSupplier {
     }
 
     /**
-     * Returns the cached value
+     * Returns the cached value.
      */
     @Override
     public final int getAsInt() {

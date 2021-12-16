@@ -25,8 +25,8 @@ import java.util.function.IntSupplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.SettableIntSupplier;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.SettableIntSupplier;
 
 /**
  * Limits the concurrency of client requests.
@@ -62,23 +62,21 @@ public interface ConcurrencyLimit {
      * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
      * {@link SettableIntSupplier} if supplying the value needs a heavy computation. For example:
      * <pre> {@code
-     *     ConcurrencyLimit limit = ConcurrencyLimit.of(new DynamicLimit());
+     * ConcurrencyLimit limit = ConcurrencyLimit.of(new DynamicLimit());
      *
-     *     class DynamicLimit implements IntSupplier {
-     *         private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
+     * class DynamicLimit implements IntSupplier {
+     *     private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
      *
-     *         public DynamicLimit() {
-     *             LimitChangeListener<Integer> listener = ...
-     *             listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
-     *         }
-     *
-     *         @Override
-     *         public final Integer getAsInt() {
-     *             return settableIntSupplier.getAsInt();
-     *         }
-     *
+     *     public DynamicLimit() {
+     *         LimitChangeListener<Integer> listener = ...
+     *         listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
      *     }
-     * } </pre>
+     *
+     *     @Override
+     *     public int getAsInt() {
+     *         return settableIntSupplier.getAsInt();
+     *     }
+     * }} </pre>
      *
      * <p>Note that {@link IntSupplier} must supply a positive number. if not, all requests will be pending.
      */
@@ -92,23 +90,21 @@ public interface ConcurrencyLimit {
      * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
      * {@link SettableIntSupplier} if supplying the value needs a heavy computation. For example:
      * <pre> {@code
-     *     ConcurrencyLimitBuilder builder = ConcurrencyLimit.builder(new DynamicLimit());
+     * ConcurrencyLimitBuilder builder = ConcurrencyLimit.builder(new DynamicLimit());
      *
-     *     class DynamicLimit implements IntSupplier {
-     *         private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
+     * class DynamicLimit implements IntSupplier {
+     *     private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
      *
-     *         public DynamicLimit() {
-     *             LimitChangeListener<Integer> listener = ...
-     *             listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
-     *         }
-     *
-     *         @Override
-     *         public final Integer getAsInt() {
-     *             return settableIntSupplier.getAsInt();
-     *         }
-     *
+     *     public DynamicLimit() {
+     *         LimitChangeListener<Integer> listener = ...
+     *         listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
      *     }
-     * } </pre>
+     *
+     *     @Override
+     *     public int getAsInt() {
+     *         return settableIntSupplier.getAsInt();
+     *     }
+     * }} </pre>
      *
      * <p>Note that {@link IntSupplier} must supply a positive number. if not, all requests will be pending.
      */

@@ -70,13 +70,13 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     @VisibleForTesting
     int availablePermits() {
-        int availablePermitCount = maxConcurrency() - acquiredPermits.get();
+        final int availablePermitCount = maxConcurrency() - acquiredPermits.get();
         return Math.max(availablePermitCount, 0);
     }
 
     @VisibleForTesting
     int maxConcurrency() {
-        int maxConcurrency = this.maxConcurrency.getAsInt();
+        final int maxConcurrency = this.maxConcurrency.getAsInt();
         if (maxConcurrency < 0) {
             logger.warn("maxConcurrency.get() returned {}; maxConcurrency is set to 0.", maxConcurrency);
             return 0;
