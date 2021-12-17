@@ -589,7 +589,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @return the new endpoint by adding the specified attributes. {@code this} if specified
      *         attributes are empty.
      */
-    public Endpoint withAttrs(@Nullable Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
+    public Endpoint withAttrs(Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
         requireNonNull(attributes, "attributes");
         final Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
         if (!newAttrIterator.hasNext()) {
