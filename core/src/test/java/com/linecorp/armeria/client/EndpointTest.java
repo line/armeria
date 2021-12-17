@@ -511,7 +511,7 @@ class EndpointTest {
                 .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
                 .hasSize(2);
 
-        // key1 is updated, key3 is anded.
+        // key1 is updated, key3 is added.
         assertThat(endpointC.attr(key1))
                 .isEqualTo("value1-2");
         assertThat(endpointC.attr(key2))
@@ -528,6 +528,6 @@ class EndpointTest {
         // update by empty attrs, not crate new endpoint.
         assertThat(endpointB.withAttrs(Collections.emptyList())).isSameAs(endpointB);
         // not change other properties.
-        assertThat(endpointB.withAttrs(Collections.emptyList())).isEqualTo(endpoint);
+        assertThat(endpointB).isEqualTo(endpointC);
     }
 }
