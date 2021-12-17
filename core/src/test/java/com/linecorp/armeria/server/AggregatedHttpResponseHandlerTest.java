@@ -132,10 +132,15 @@ class AggregatedHttpResponseHandlerTest {
     };
 
     @Test
-    void echo() {
+    void echo() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.post("/echo", "Hello").aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("Hello");
+
+        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        final RequestLog requestLog = ctx.log().whenComplete().join();
+        assertThat(requestLog.responseDurationNanos()).isPositive();
+        assertThat(requestLog.responseCause()).isNull();
     }
 
     @Test
