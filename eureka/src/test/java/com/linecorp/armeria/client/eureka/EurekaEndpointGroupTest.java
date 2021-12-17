@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.eureka;
 
+import static com.linecorp.armeria.client.eureka.EurekaEndpointGroup.INSTANCE_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
@@ -48,8 +49,6 @@ class EurekaEndpointGroupTest {
 
     private static final EncoderWrapper encoder = CodecWrappers.getEncoder(JacksonJson.class);
     private static final String APP_WITH_METADATA = "with-metadata";
-    private static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf(
-            EurekaEndpointGroup.class, "instanceInfo");
 
     @RegisterExtension
     static final ServerExtension eurekaServer = new ServerExtension() {
