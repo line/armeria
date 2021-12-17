@@ -251,8 +251,8 @@ class GrpcServiceBuilderTest {
                                             .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
                                             .build())
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("'unframedGrpcErrorHandler' can only be set if unframed requests are "
-                                      + "enabled");
+                .hasMessageContaining(
+                        "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
