@@ -614,7 +614,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return attributes.attrs();
     }
 
-    private Endpoint withAttributes(@Nullable DefaultAttributeMap newAttributes) {
+    private Endpoint withAttributes(DefaultAttributeMap newAttributes) {
         return new Endpoint(host, ipAddr, port, weight, hostType, newAttributes);
     }
 
