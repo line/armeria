@@ -67,7 +67,7 @@ public interface ConcurrencyLimit {
      * class DynamicLimit implements IntSupplier {
      *     private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
      *
-     *     public DynamicLimit() {
+     *     DynamicLimit() {
      *         LimitChangeListener<Integer> listener = ...
      *         listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
      *     }
@@ -86,7 +86,7 @@ public interface ConcurrencyLimit {
     }
 
     /**
-     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@link IntSupplier}. For example:
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@link IntSupplier}.
      * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
      * {@link SettableIntSupplier} if supplying the value needs a heavy computation. For example:
      * <pre> {@code
@@ -95,7 +95,7 @@ public interface ConcurrencyLimit {
      * class DynamicLimit implements IntSupplier {
      *     private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
      *
-     *     public DynamicLimit() {
+     *     DynamicLimit() {
      *         LimitChangeListener<Integer> listener = ...
      *         listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
      *     }

@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * For example:
  * <pre>{@code
  * class DynamicSupplier extends SettableIntSupplier {
- *   public DynamicSupplier() {
+ *   DynamicSupplier() {
  *     super(10); //set initial value
  *     AnyListener<Integer> listener = ...
  *     listener.addListener(this::set);
