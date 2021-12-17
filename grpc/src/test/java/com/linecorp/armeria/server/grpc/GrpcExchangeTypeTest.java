@@ -50,21 +50,6 @@ class GrpcExchangeTypeTest {
         assertThat(exchangeType).isEqualTo(expectedExchangeType);
     }
 
-    @ArgumentsSource(ExchangeTypeWithGrpcWebTextProvider.class)
-    @ParameterizedTest
-    void exchangeTypeWithGrpcWebText(MethodDescriptor<?, ?> method, ExchangeType expectedExchangeType) {
-        final TestServiceImpl testService = new TestServiceImpl(null);
-        final GrpcService grpcService = GrpcService.builder()
-                                                   .addService(testService)
-                                                   .build();
-        final RequestHeaders headers =
-                RequestHeaders.builder(HttpMethod.POST, '/' + method.getFullMethodName())
-                              .contentType(GrpcSerializationFormats.PROTO_WEB_TEXT.mediaType())
-                              .build();
-        final ExchangeType exchangeType = grpcService.exchangeType(headers, null);
-        assertThat(exchangeType).isEqualTo(expectedExchangeType);
-    }
-
     @ArgumentsSource(ExchangeTypeProvider.class)
     @ParameterizedTest
     void exchangeTypeWithUnframed(MethodDescriptor<?, ?> method, ExchangeType expectedExchangeType) {
@@ -113,23 +98,6 @@ class GrpcExchangeTypeTest {
                     Arguments.of(TestServiceGrpc.getStreamingOutputCallMethod(),
                                  ExchangeType.RESPONSE_STREAMING),
                     Arguments.of(TestServiceGrpc.getStreamingInputCallMethod(), ExchangeType.REQUEST_STREAMING),
-                    Arguments.of(TestServiceGrpc.getFullDuplexCallMethod(), ExchangeType.BIDI_STREAMING)
-            );
-        }
-    }
-
-    private static final class ExchangeTypeWithGrpcWebTextProvider implements ArgumentsProvider {
-
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            // Some Base64 decoders such as JDK's Base64.getDecoder() cannot decode the concatenated
-            // Base64-encoded chunk. AggregatedHttpResponse is disabled and only RESPONSE_STREAMING and
-            // BIDI_STREAMING are supported.
-            return Stream.of(
-                    Arguments.of(TestServiceGrpc.getUnaryCallMethod(), ExchangeType.RESPONSE_STREAMING),
-                    Arguments.of(TestServiceGrpc.getStreamingOutputCallMethod(),
-                                 ExchangeType.RESPONSE_STREAMING),
-                    Arguments.of(TestServiceGrpc.getStreamingInputCallMethod(), ExchangeType.BIDI_STREAMING),
                     Arguments.of(TestServiceGrpc.getFullDuplexCallMethod(), ExchangeType.BIDI_STREAMING)
             );
         }
