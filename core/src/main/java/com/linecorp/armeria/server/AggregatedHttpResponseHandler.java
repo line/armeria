@@ -65,6 +65,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
             return null;
         }
 
+        logBuilder().startResponse();
         write(response, null);
         return null;
     }
