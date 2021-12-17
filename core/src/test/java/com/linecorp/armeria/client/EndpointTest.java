@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.collect.Maps;
+
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.AttributeKey;
@@ -490,13 +492,13 @@ class EndpointTest {
         final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
         final AttributeKey<String> key2 = AttributeKey.valueOf("key2");
 
-        attrs.add(new AbstractMap.SimpleImmutableEntry<>(key1, "value1"));
-        attrs.add(new AbstractMap.SimpleImmutableEntry<>(key2, "value2"));
+        attrs.add(Maps.immutableEntry(key1, "value1"));
+        attrs.add(Maps.immutableEntry(key2, "value2"));
 
         final List<Entry<AttributeKey<?>, String>> attrs2 = new ArrayList<>();
         final AttributeKey<String> key3 = AttributeKey.valueOf("key3");
-        attrs2.add(new AbstractMap.SimpleImmutableEntry<>(key1, "value1-2"));
-        attrs2.add(new AbstractMap.SimpleImmutableEntry<>(key3, "value3"));
+        attrs2.add(Maps.immutableEntry(key1, "value1-2"));
+        attrs2.add(Maps.immutableEntry(key3, "value3"));
 
         final Endpoint endpointB = endpoint.withAttrs(attrs);
         final Endpoint endpointC = endpointB.withAttrs(attrs2);
