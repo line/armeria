@@ -192,20 +192,24 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   button
                   onClick={() => handleServiceCollapse(service.name)}
                 >
-                  <ListItemText>
-                    <Typography display="inline" variant="body2">
-                      <code>
-                        {specification.hasUniqueServiceNames()
-                          ? ''
-                          : `${packageName(service.name)}.`}
-                      </code>
-                    </Typography>
-                    <Typography display="inline" variant="subtitle1">
-                      <Tooltip title={`${service.name}`} placement="top">
+                  {specification.hasUniqueServiceNames() ? (
+                    <ListItemText>
+                      <Typography display="inline" variant="subtitle1">
+                        <Tooltip title={service.name} placement="top">
+                          <code>{simpleName(service.name)}</code>
+                        </Tooltip>
+                      </Typography>
+                    </ListItemText>
+                  ) : (
+                    <ListItemText>
+                      <Typography display="inline" variant="body2">
+                        <code>{packageName(service.name)}</code>
+                      </Typography>
+                      <Typography display="inline" variant="subtitle1">
                         <code>{simpleName(service.name)}</code>
-                      </Tooltip>
-                    </Typography>
-                  </ListItemText>
+                      </Typography>
+                    </ListItemText>
+                  )}
                   {openServices[service.name] ? <ExpandLess /> : <ExpandMore />}
                 </ListItem>
                 <Collapse in={openServices[service.name]} timeout="auto">
@@ -268,11 +272,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>
-                    {specification.hasUniqueEnumNames()
-                      ? simpleName(enm.name)
-                      : enm.name}
-                  </code>
+                  {specification.hasUniqueEnumNames() ? (
+                    <Tooltip title={enm.name} placement="top">
+                      <code>{simpleName(enm.name)}</code>
+                    </Tooltip>
+                  ) : (
+                    <code>{enm.name}</code>
+                  )}
                 </ListItemText>
               </ListItem>
             ))}
@@ -301,11 +307,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>
-                    {specification.hasUniqueStructNames()
-                      ? simpleName(struct.name)
-                      : struct.name}
-                  </code>
+                  {specification.hasUniqueStructNames() ? (
+                    <Tooltip title={struct.name} placement="top">
+                      <code>{simpleName(struct.name)}</code>
+                    </Tooltip>
+                  ) : (
+                    <code>{struct.name}</code>
+                  )}
                 </ListItemText>
               </ListItem>
             ))}
@@ -334,11 +342,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>
-                    {specification.hasUniqueStructNames()
-                      ? simpleName(struct.name)
-                      : struct.name}
-                  </code>
+                  {specification.hasUniqueStructNames() ? (
+                    <Tooltip title={struct.name} placement="top">
+                      <code>{simpleName(struct.name)}</code>
+                    </Tooltip>
+                  ) : (
+                    <code>{struct.name}</code>
+                  )}
                 </ListItemText>
               </ListItem>
             ))}
