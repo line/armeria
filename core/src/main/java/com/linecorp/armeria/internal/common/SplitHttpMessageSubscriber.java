@@ -228,7 +228,7 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
 
     @Override
     public void onComplete() {
-        maybeCompleteHeaders(null);
+        doOnCompletion(null);
         final EventExecutor executor = downstreamExecutor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
@@ -245,7 +245,7 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
 
     @Override
     public void onError(Throwable cause) {
-        maybeCompleteHeaders(cause);
+        doOnCompletion(cause);
         final EventExecutor executor = downstreamExecutor;
         final Subscriber<? super HttpData> downstream = this.downstream;
         if (executor == null || downstream == null) {
@@ -283,7 +283,7 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         }
     }
 
-    protected void maybeCompleteHeaders(@Nullable Throwable cause) {
+    private void maybeCompleteTrailers() {
         if (trailersFuture == null) {
             if (trailersFutureUpdater.compareAndSet(this, null, EMPTY_TRAILERS_FUTURE)) {
                 return;
@@ -293,5 +293,9 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         final HeadersFuture<HttpHeaders> trailersFuture = this.trailersFuture;
         assert trailersFuture != null;
         trailersFuture.doComplete(HttpHeaders.of());
+    }
+
+    protected void doOnCompletion(@Nullable Throwable cause) {
+        maybeCompleteTrailers();
     }
 }
