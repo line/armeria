@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.internal.common;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-final class HeadersFuture<T> extends UnmodifiableFuture<T> {
+final class HeadersFuture<T extends HttpHeaders> extends UnmodifiableFuture<T> {
 
     @Override
     protected void doComplete(@Nullable T value) {
