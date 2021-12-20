@@ -59,7 +59,7 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         return bodySubscriber.headersFuture();
     }
 
-    private static final class SplitHttpResponseBodySubscriber extends BodySubscriber {
+    private static final class SplitHttpResponseBodySubscriber extends SplitHttpMessageSubscriber {
 
         private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
 

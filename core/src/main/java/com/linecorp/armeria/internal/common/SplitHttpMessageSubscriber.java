@@ -40,13 +40,13 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
-class BodySubscriber implements Subscriber<HttpObject>, Subscription {
+class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription {
 
-    private static final Logger logger = LoggerFactory.getLogger(BodySubscriber.class);
+    private static final Logger logger = LoggerFactory.getLogger(SplitHttpMessageSubscriber.class);
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<BodySubscriber, HeadersFuture>
-            trailersFutureUpdater = AtomicReferenceFieldUpdater.newUpdater(BodySubscriber.class,
+    private static final AtomicReferenceFieldUpdater<SplitHttpMessageSubscriber, HeadersFuture>
+            trailersFutureUpdater = AtomicReferenceFieldUpdater.newUpdater(SplitHttpMessageSubscriber.class,
                                                                            HeadersFuture.class,
                                                                            "trailersFuture");
 
@@ -87,7 +87,7 @@ class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
     private volatile boolean cancelCalled;
 
-    BodySubscriber(int prefetch, HttpMessage upstreamMessage, EventExecutor upstreamExecutor) {
+    SplitHttpMessageSubscriber(int prefetch, HttpMessage upstreamMessage, EventExecutor upstreamExecutor) {
         pendingRequests = prefetch;
         this.upstreamMessage = requireNonNull(upstreamMessage, "upstreamMessage");
         this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
