@@ -93,7 +93,7 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     }
 
     @Override
-    public DnsTextEndpointGroupBuilder negativeTtl(int ttl) {
-        return (DnsTextEndpointGroupBuilder) super.negativeTtl(ttl);
+    public DnsTextEndpointGroupBuilder negativeTtl(int negativeTtl) {
+        return (DnsTextEndpointGroupBuilder) super.negativeTtl(negativeTtl);
     }
 }
