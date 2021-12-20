@@ -46,22 +46,10 @@ public interface ConcurrencyLimit {
     }
 
     /**
-     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
-     *
-     * @param maxConcurrency the maximum number of concurrent active requests.
-     *                       Specify {@code 0} to disable the limit.
-     */
-    static ConcurrencyLimitBuilder builder(int maxConcurrency) {
-        checkArgument(maxConcurrency >= 0,
-                      "maxConcurrency: %s (expected: >= 0)", maxConcurrency);
-        return new ConcurrencyLimitBuilder(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
-    }
-
-    /**
      * Returns a newly-created {@link ConcurrencyLimit} with the specified {@link IntSupplier}.
      * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
      * {@link SettableIntSupplier} if supplying the value needs a heavy computation. For example:
-     * <pre> {@code
+     * <pre>{@code
      * ConcurrencyLimit limit = ConcurrencyLimit.of(new DynamicLimit());
      *
      * class DynamicLimit implements IntSupplier {
@@ -76,7 +64,7 @@ public interface ConcurrencyLimit {
      *     public int getAsInt() {
      *         return settableIntSupplier.getAsInt();
      *     }
-     * }} </pre>
+     * }}</pre>
      *
      * <p>Note that {@link IntSupplier} must supply a positive number. if not, all requests will be pending.
      */
@@ -86,10 +74,22 @@ public interface ConcurrencyLimit {
     }
 
     /**
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
+     *
+     * @param maxConcurrency the maximum number of concurrent active requests.
+     *                       Specify {@code 0} to disable the limit.
+     */
+    static ConcurrencyLimitBuilder builder(int maxConcurrency) {
+        checkArgument(maxConcurrency >= 0,
+                      "maxConcurrency: %s (expected: >= 0)", maxConcurrency);
+        return new ConcurrencyLimitBuilder(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
+    }
+
+    /**
      * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@link IntSupplier}.
      * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
      * {@link SettableIntSupplier} if supplying the value needs a heavy computation. For example:
-     * <pre> {@code
+     * <pre>{@code
      * ConcurrencyLimitBuilder builder = ConcurrencyLimit.builder(new DynamicLimit());
      *
      * class DynamicLimit implements IntSupplier {
@@ -104,7 +104,7 @@ public interface ConcurrencyLimit {
      *     public int getAsInt() {
      *         return settableIntSupplier.getAsInt();
      *     }
-     * }} </pre>
+     * }}</pre>
      *
      * <p>Note that {@link IntSupplier} must supply a positive number. if not, all requests will be pending.
      */
