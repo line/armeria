@@ -40,7 +40,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
     private volatile int subscribed;
 
-    private final HttpMessage upstream;
+    protected final HttpMessage upstream;
     private final EventExecutor upstreamExecutor;
     private final SplitHttpMessageSubscriber bodySubscriber;
 

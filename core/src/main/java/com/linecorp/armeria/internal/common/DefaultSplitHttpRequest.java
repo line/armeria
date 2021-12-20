@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SplitHttpRequest;
@@ -34,5 +36,13 @@ public final class DefaultSplitHttpRequest extends AbstractSplitHttpMessage impl
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("headers", headers)
+                          .add("upstream", upstream)
+                          .toString();
     }
 }
