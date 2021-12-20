@@ -136,7 +136,7 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
             if (cause != null) {
                 onError0(cause, downstream);
             } else if (completing) {
-                onComplete0(downstream);
+                downstream.onComplete();
             }
         } catch (Throwable t) {
             throwIfFatal(t);
@@ -237,14 +237,10 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         }
 
         if (executor.inEventLoop()) {
-            onComplete0(downstream);
+            downstream.onComplete();
         } else {
-            executor.execute(() -> onComplete0(downstream));
+            executor.execute(downstream::onComplete);
         }
-    }
-
-    private static void onComplete0(Subscriber<? super HttpData> downstream) {
-        downstream.onComplete();
     }
 
     @Override
