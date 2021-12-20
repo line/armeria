@@ -89,7 +89,8 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
             super.onNext(httpObject);
         }
 
-        private void maybeCompleteHeaders(@Nullable Throwable cause) {
+        @Override
+        protected void doOnCompletion(@Nullable Throwable cause) {
             if (!headersFuture.isDone()) {
                 if (cause != null && !(cause instanceof CancelledSubscriptionException) &&
                     !(cause instanceof AbortedStreamException)) {
@@ -98,12 +99,6 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
                     headersFuture.doComplete(HEADERS_WITH_UNKNOWN_STATUS);
                 }
             }
-        }
-
-        @Override
-        protected void doOnCompletion(@Nullable Throwable cause) {
-            maybeCompleteHeaders(cause);
-            super.doOnCompletion(cause);
         }
     }
 }
