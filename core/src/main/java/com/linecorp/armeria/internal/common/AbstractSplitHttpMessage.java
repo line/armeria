@@ -44,12 +44,12 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
     private final EventExecutor upstreamExecutor;
     private final SplitHttpMessageSubscriber bodySubscriber;
 
-    protected AbstractSplitHttpMessage(HttpMessage upstream, EventExecutor executor,
+    protected AbstractSplitHttpMessage(HttpMessage upstream, EventExecutor upstreamExecutor,
                                        SplitHttpMessageSubscriber bodySubscriber) {
         this.upstream = requireNonNull(upstream, "upstream");
-        upstreamExecutor = requireNonNull(executor, "executor");
+        this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
         this.bodySubscriber = bodySubscriber;
-        upstream.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
+        upstream.subscribe(bodySubscriber, this.upstreamExecutor, SubscriptionOption.values());
     }
 
     @Override
@@ -110,10 +110,10 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
             return;
         }
 
-        if (executor.inEventLoop()) {
+        if (upstreamExecutor.inEventLoop()) {
             bodySubscriber.initDownstream(subscriber, executor, options);
         } else {
-            executor.execute(() -> bodySubscriber.initDownstream(subscriber, executor, options));
+            upstreamExecutor.execute(() -> bodySubscriber.initDownstream(subscriber, executor, options));
         }
     }
 }

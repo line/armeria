@@ -87,6 +87,8 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
 
     private volatile boolean cancelCalled;
 
+    private boolean needsDirectInvocation;
+
     SplitHttpMessageSubscriber(int prefetch, HttpMessage upstreamMessage, EventExecutor upstreamExecutor) {
         pendingRequests = prefetch;
         this.upstreamMessage = requireNonNull(upstreamMessage, "upstreamMessage");
@@ -118,8 +120,6 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
 
     void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor downstreamExecutor,
                         SubscriptionOption... options) {
-        assert downstreamExecutor.inEventLoop();
-
         this.downstream = downstream;
         this.downstreamExecutor = downstreamExecutor;
         for (SubscriptionOption option : options) {
@@ -129,7 +129,16 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
                 usePooledObject = true;
             }
         }
+        needsDirectInvocation = downstreamExecutor == upstreamExecutor;
 
+        if (needsDirectInvocation) {
+            initDownstream(downstream);
+        } else {
+            downstreamExecutor.execute(() -> initDownstream(downstream));
+        }
+    }
+
+    private void initDownstream(Subscriber<? super HttpData> downstream) {
         try {
             downstream.onSubscribe(this);
             final Throwable cause = this.cause;
@@ -210,11 +219,12 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
 
         assert httpObject instanceof HttpData;
 
-        final EventExecutor executor = downstreamExecutor;
-        if (executor.inEventLoop()) {
+        if (needsDirectInvocation) {
             onNext0((HttpData) httpObject);
         } else {
-            executor.execute(() -> onNext0((HttpData) httpObject));
+            final EventExecutor downstreamExecutor = this.downstreamExecutor;
+            assert downstreamExecutor != null;
+            downstreamExecutor.execute(() -> onNext0((HttpData) httpObject));
         }
     }
 
@@ -223,40 +233,41 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         if (!usePooledObject) {
             httpData = PooledObjects.copyAndClose(httpData);
         }
+        assert downstream != null;
         downstream.onNext(httpData);
     }
 
     @Override
     public void onComplete() {
         doOnCompletion(null);
-        final EventExecutor executor = downstreamExecutor;
+        final EventExecutor downstreamExecutor = this.downstreamExecutor;
         final Subscriber<? super HttpData> downstream = this.downstream;
-        if (executor == null || downstream == null) {
+        if (downstreamExecutor == null || downstream == null) {
             completing = true;
             return;
         }
 
-        if (executor.inEventLoop()) {
+        if (needsDirectInvocation) {
             downstream.onComplete();
         } else {
-            executor.execute(downstream::onComplete);
+            downstreamExecutor.execute(downstream::onComplete);
         }
     }
 
     @Override
     public void onError(Throwable cause) {
         doOnCompletion(cause);
-        final EventExecutor executor = downstreamExecutor;
+        final EventExecutor downstreamExecutor = this.downstreamExecutor;
         final Subscriber<? super HttpData> downstream = this.downstream;
-        if (executor == null || downstream == null) {
+        if (downstreamExecutor == null || downstream == null) {
             this.cause = cause;
             return;
         }
 
-        if (executor.inEventLoop()) {
+        if (needsDirectInvocation) {
             onError0(cause, downstream);
         } else {
-            executor.execute(() -> onError0(cause, downstream));
+            downstreamExecutor.execute(() -> onError0(cause, downstream));
         }
     }
 

@@ -28,8 +28,8 @@ public final class DefaultSplitHttpRequest extends AbstractSplitHttpMessage impl
 
     private final RequestHeaders headers;
 
-    public DefaultSplitHttpRequest(HttpRequest request, EventExecutor executor) {
-        super(request, executor, new SplitHttpMessageSubscriber(0, request, executor));
+    public DefaultSplitHttpRequest(HttpRequest request, EventExecutor upstreamExecutor) {
+        super(request, upstreamExecutor, new SplitHttpMessageSubscriber(0, request, upstreamExecutor));
         headers = request.headers();
     }
 

@@ -44,13 +44,13 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
 
     private final SplitHttpResponseBodySubscriber bodySubscriber;
 
-    public DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor) {
-        this(response, executor, new SplitHttpResponseBodySubscriber(response, executor));
+    public DefaultSplitHttpResponse(HttpResponse response, EventExecutor upstreamExecutor) {
+        this(response, upstreamExecutor, new SplitHttpResponseBodySubscriber(response, upstreamExecutor));
     }
 
-    private DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor,
+    private DefaultSplitHttpResponse(HttpResponse response, EventExecutor upstreamExecutor,
                                      SplitHttpResponseBodySubscriber bodySubscriber) {
-        super(response, executor, bodySubscriber);
+        super(response, upstreamExecutor, bodySubscriber);
         this.bodySubscriber = bodySubscriber;
     }
 
@@ -63,8 +63,8 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
 
         private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
 
-        SplitHttpResponseBodySubscriber(HttpResponse response, EventExecutor executor) {
-            super(1, response, executor);
+        SplitHttpResponseBodySubscriber(HttpResponse response, EventExecutor upstreamExecutor) {
+            super(1, response, upstreamExecutor);
         }
 
         CompletableFuture<ResponseHeaders> headersFuture() {
