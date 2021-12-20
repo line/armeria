@@ -40,7 +40,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
 
     private volatile int subscribed;
 
-    protected final HttpMessage upstream;
+    private final HttpMessage upstream;
     private final EventExecutor upstreamExecutor;
     private final SplitHttpMessageSubscriber bodySubscriber;
 
@@ -50,6 +50,10 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
         this.bodySubscriber = bodySubscriber;
         upstream.subscribe(bodySubscriber, this.upstreamExecutor, SubscriptionOption.values());
+    }
+
+    protected final HttpMessage upstream() {
+        return upstream;
     }
 
     @Override

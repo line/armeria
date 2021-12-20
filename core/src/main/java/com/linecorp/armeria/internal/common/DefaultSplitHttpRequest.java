@@ -42,7 +42,7 @@ public final class DefaultSplitHttpRequest extends AbstractSplitHttpMessage impl
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("headers", headers)
-                          .add("upstream", upstream)
+                          .add("upstream", upstream())
                           .toString();
     }
 }
