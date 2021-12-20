@@ -20,7 +20,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -35,12 +34,6 @@ import io.netty.util.concurrent.EventExecutor;
 public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implements SplitHttpResponse {
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
-    private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS;
-
-    static {
-        EMPTY_TRAILERS = new HeadersFuture<>();
-        EMPTY_TRAILERS.doComplete(HttpHeaders.of());
-    }
 
     private final SplitHttpResponseBodySubscriber bodySubscriber;
 
