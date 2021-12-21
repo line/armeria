@@ -62,7 +62,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     private final int negativeTtl;
     private final Backoff backoff;
     private final List<DnsQuestion> questions;
-    private final DefaultDnsNameResolver resolver;
+    @VisibleForTesting
+    final DefaultDnsNameResolver resolver;
     private final Logger logger;
     private final String logPrefix;
 

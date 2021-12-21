@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Ordering;
@@ -52,7 +53,9 @@ public final class DefaultDnsNameResolver {
 
     private static final Iterable<DnsRecord> EMPTY_ADDITIONALS = ImmutableList.of();
 
-    private final DnsNameResolver delegate;
+    @VisibleForTesting
+    public final DnsNameResolver delegate;
+
     private final Comparator<DnsRecordType> preferredOrder;
     private final EventLoop eventLoop;
     private final long queryTimeoutMillis;

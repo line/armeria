@@ -83,8 +83,8 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     }
 
     @Override
-    public DnsAddressEndpointGroupBuilder negativeTtl(int negativeTtl) {
-        return (DnsAddressEndpointGroupBuilder) super.negativeTtl(negativeTtl);
+    public DnsAddressEndpointGroupBuilder setNegativeTtl(int ttl) {
+        return (DnsAddressEndpointGroupBuilder) super.setNegativeTtl(ttl);
     }
 
     @Override

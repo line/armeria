@@ -23,6 +23,7 @@ import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Rule;
@@ -45,6 +46,8 @@ import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsCache;
+import io.netty.resolver.dns.DnsCacheEntry;
 import io.netty.util.NetUtil;
 
 public class DnsAddressEndpointGroupTest {
@@ -333,6 +336,27 @@ public class DnsAddressEndpointGroupTest {
 
                 assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("partial.com").withIpAddr("::1"));
+            }
+        }
+    }
+
+    @Test
+    public void negativeTtl() throws Exception {
+        final String badhost = "invalid";
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of())) {
+            try (DnsAddressEndpointGroup group =
+                     DnsAddressEndpointGroup.builder(badhost)
+                         .serverAddresses(server.addr())
+                         .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                         .setNegativeTtl(600)
+                         .build()) {
+
+                await().untilAsserted(() -> assertThat(group.attemptsSoFar).isGreaterThan(2));
+                assertThat(group.endpoints()).isEmpty();
+                final DnsCache cache = group.resolver.delegate.resolveCache();
+                final List<? extends DnsCacheEntry> entries = cache.get(badhost, null);
+                assertThat(entries.size()).isEqualTo(1);
+                assertThat(entries.get(0).address()).isNull();
             }
         }
     }
