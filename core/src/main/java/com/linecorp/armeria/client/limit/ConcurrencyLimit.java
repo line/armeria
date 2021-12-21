@@ -48,7 +48,7 @@ public interface ConcurrencyLimit {
     /**
      * Returns a newly-created {@link ConcurrencyLimit} with the specified {@link IntSupplier}.
      * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
-     * {@link SettableIntSupplier} if supplying the value needs a heavy computation. For example:
+     * {@link SettableIntSupplier} if supplying the value needs heavy computation. For example:
      * <pre>{@code
      * ConcurrencyLimit limit = ConcurrencyLimit.of(new DynamicLimit());
      *
@@ -66,7 +66,8 @@ public interface ConcurrencyLimit {
      *     }
      * }}</pre>
      *
-     * <p>Note that {@link IntSupplier} must supply a positive number. if not, all requests will be pending.
+     * <p>Note that {@link IntSupplier} must supply a positive number. Otherwise, all requests will end up
+     * in pending state.
      */
     @UnstableApi
     static ConcurrencyLimit of(IntSupplier maxConcurrency) {
@@ -88,7 +89,7 @@ public interface ConcurrencyLimit {
     /**
      * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@link IntSupplier}.
      * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
-     * {@link SettableIntSupplier} if supplying the value needs a heavy computation. For example:
+     * {@link SettableIntSupplier} if supplying the value needs heavy computation. For example:
      * <pre>{@code
      * ConcurrencyLimitBuilder builder = ConcurrencyLimit.builder(new DynamicLimit());
      *
@@ -106,7 +107,8 @@ public interface ConcurrencyLimit {
      *     }
      * }}</pre>
      *
-     * <p>Note that {@link IntSupplier} must supply a positive number. if not, all requests will be pending.
+     * <p>Note that {@link IntSupplier} must supply a positive number. Otherwise, all requests will end up
+     * in pending state.
      */
     @UnstableApi
     static ConcurrencyLimitBuilder builder(IntSupplier maxConcurrency) {

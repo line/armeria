@@ -22,9 +22,9 @@ import com.linecorp.armeria.client.limit.ConcurrencyLimit;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Supplies the cached value that is useful below cases.
+ * Supplies a cached value which can be useful for the below case.
  *
- * <p>- Supplies dynamically a maximum number of concurrent active requests for {@link ConcurrencyLimit}.
+ * <p>- Supplies the maximum number of concurrent active requests dynamically for {@link ConcurrencyLimit}.
  * For example:
  * <pre>{@code
  * class DynamicSupplier extends SettableIntSupplier {
