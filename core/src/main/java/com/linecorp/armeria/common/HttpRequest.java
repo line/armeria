@@ -632,24 +632,17 @@ public interface HttpRequest extends Request, HttpMessage {
      *
      * <p>For example:<pre>{@code
      * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
-     *                                      HttpData.ofUtf8("..."));
-     * HttpRequest transformed = request
-     *     .mapTrailers(trailers -> {
-     *         return trailers.withMutations(builder -> builder.set("trailer1", "foo"));
-     *     })
-     *     .peekTrailers(trailers -> {
-     *         assert trailers.get("trailer1").equals("foo");
-     *     });
+     *                                      HttpData.ofUtf8("..."),
+     *                                      HttpHeaders.of("trailer", "foo"));
+     * HttpRequest result = request.peekTrailers(trailers -> {
+     *     assert trailers.get("trailer").equals("foo");
+     * });
      * }</pre>
      */
     @UnstableApi
     default HttpRequest peekTrailers(Consumer<? super HttpHeaders> action) {
         requireNonNull(action, "action");
-        final StreamMessage<HttpObject> stream = peek(obj -> {
-            if (!(obj instanceof ResponseHeaders)) {
-                action.accept(obj);
-            }
-        }, HttpHeaders.class);
+        final StreamMessage<HttpObject> stream = peek(action, HttpHeaders.class);
         return of(headers(), stream);
     }
 
@@ -658,11 +651,9 @@ public interface HttpRequest extends Request, HttpMessage {
      *
      * <p>For example:<pre>{@code
      * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
-     * HttpRequest transformed = request
-     *     .peekError(cause -> {
-     *         assert cause instanceof IllegalStateException;
-     *     })
-     *     .mapError(cause -> new MyDomainException(cause));
+     * HttpRequest result = request.peekError(cause -> {
+     *     assert cause instanceof IllegalStateException;
+     * });
      * }</pre>
      */
     @Override

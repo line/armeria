@@ -879,14 +879,12 @@ public interface HttpResponse extends Response, HttpMessage {
      * emitted by this {@link HttpResponse}.
      *
      * <p>For example:<pre>{@code
-     * HttpResponse response = HttpResponse.of("data");
-     * HttpResponse transformed = response
-     *     .mapTrailers(trailers -> {
-     *         return trailers.withMutations(builder -> builder.add("trailer1", "foo"));
-     *     })
-     *     .peekTrailers(trailers -> {
-     *         assert trailers.get("trailer1").equals("foo");
-     *     });
+     * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+     *                                         HttpData.ofUtf8("..."),
+     *                                         HttpHeaders.of("trailer", "foo"));
+     * HttpResponse result = response.peekTrailers(trailers -> {
+     *     assert trailers.get("trailer").equals("foo");
+     * });
      * }</pre>
      */
     @UnstableApi
@@ -905,11 +903,9 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
-     * HttpResponse transformed@ = response
-     *     .peekError(cause -> {
-     *         assert cause instanceof IllegalStateException;
-     *     })
-     *     .mapError(cause -> new MyDomainException(cause));
+     * HttpResponse result = response.peekError(cause -> {
+     *     assert cause instanceof IllegalStateException;
+     * });
      * }</pre>
      */
     @Override

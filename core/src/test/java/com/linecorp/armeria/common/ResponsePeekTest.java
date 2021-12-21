@@ -78,8 +78,6 @@ class ResponsePeekTest {
 
         final AggregatedHttpResponse aggregated = transformed.aggregate().join();
         assertThat(aggregated.contentUtf8()).isEqualTo("foo\nbar\n");
-        assertThat(aggregated.headers().toBuilder().removeAndThen(HttpHeaderNames.CONTENT_LENGTH).build())
-                .isEqualTo(headers);
     }
 
     @Test
