@@ -24,7 +24,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ParameterizedPathMappingTest {
-
     @Test
     void givenMatchingPathParam_whenApply_thenReturns() throws Exception {
         final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/{value}");
@@ -160,5 +159,32 @@ class ParameterizedPathMappingTest {
                 new ParameterizedPathMapping("/service/{value}/items/{value}/:itemId");
         assertThat(pathMappingWithComplexPattern.patternString())
                 .isEqualTo("/service/:value/items/:value/:itemId");
+    }
+
+    @Test
+    void captureTheRestPattern() {
+        final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/{*value}");
+        final RoutingResult matchSingleParam = ppm.apply(create("/service/hello", "foo=bar")).build();
+        assertThat(matchSingleParam.isPresent()).isTrue();
+        assertThat(matchSingleParam.pathParams()).containsEntry("value", "hello");
+
+        final RoutingResult matchMultiParams = ppm.apply(create("/service/foo/bar", "foo=bar")).build();
+        assertThat(matchMultiParams.isPresent()).isTrue();
+        assertThat(matchMultiParams.pathParams()).containsEntry("value", "foo/bar");
+
+        final ParameterizedPathMapping emptyParam = new ParameterizedPathMapping("/service/{*}");
+        final RoutingResult result = emptyParam.apply(create("/service/hello", "foo=bar")).build();
+        assertThat(result.isPresent()).isTrue();
+        assertThat(result.pathParams()).containsEntry("", "hello");
+    }
+
+    @Test
+    void captureTheRestPattern_invalidPattern() {
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/{*value2}"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/foo"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo{*value}"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
