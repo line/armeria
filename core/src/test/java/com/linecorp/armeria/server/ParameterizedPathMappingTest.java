@@ -180,10 +180,12 @@ class ParameterizedPathMappingTest {
 
     @Test
     void captureTheRestPattern_invalidPattern() {
+        // {*...} must be located at the end of the path.
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/{*value2}"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/foo"))
                 .isInstanceOf(IllegalArgumentException.class);
+        // {*...} can only be preceded by a path separator.
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo{*value}"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
