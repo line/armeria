@@ -845,6 +845,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * });
      * }</pre>
      */
+    @UnstableApi
     default HttpResponse peekHeaders(Consumer<? super ResponseHeaders> action) {
         requireNonNull(action, "action");
         final StreamMessage<HttpObject> stream = peek(headers -> {
@@ -866,6 +867,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * });
      * }</pre>
      */
+    @UnstableApi
     default HttpResponse peekData(Consumer<? super HttpData> action) {
         requireNonNull(action, "action");
         final StreamMessage<HttpObject> stream = peek(action, HttpData.class);
@@ -887,6 +889,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *     });
      * }</pre>
      */
+    @UnstableApi
     default HttpResponse peekTrailers(Consumer<? super HttpHeaders> action) {
         requireNonNull(action, "action");
         final StreamMessage<HttpObject> stream = peek(obj -> {
@@ -910,6 +913,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * }</pre>
      */
     @Override
+    @UnstableApi
     default HttpResponse peekError(Consumer<? super Throwable> action) {
         requireNonNull(action, "action");
         return of(HttpMessage.super.peekError(action));
