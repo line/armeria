@@ -237,9 +237,7 @@ final class ClientCookieDecoder {
             builder.httpOnly(true);
         } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
             final String sameSite = computeValue(header, valueStart, valueEnd);
-            if (isValidSameSite(sameSite)) {
-                builder.sameSite(sameSite);
-            }
+            builder.sameSite(getValidSameSite(sameSite));
         }
     }
 
@@ -268,9 +266,16 @@ final class ClientCookieDecoder {
         }
     }
 
-    private static boolean isValidSameSite(@Nullable String sameSite) {
+    /**
+     * Returns a valid {@code "SameSite"} attribute.
+     * This method returns {@code "Lax"} as default if the attribute is empty or invalid value.
+     */
+    private static String getValidSameSite(@Nullable String sameSite) {
         return Arrays.stream(SameSite.values())
-                     .anyMatch(e -> e.name().equalsIgnoreCase(sameSite));
+                     .map(SameSite::name)
+                     .filter(name -> name.equalsIgnoreCase(sameSite))
+                     .findFirst()
+                     .orElse(SameSite.Lax.name());
     }
 
     private ClientCookieDecoder() {}
