@@ -56,10 +56,9 @@ import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
@@ -735,9 +734,9 @@ class GrpcServiceServerTest {
     @Test
     void ignoreClientTimeout() {
         final UnitTestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO) + "/no-client-timeout/")
-                       .build(UnitTestServiceBlockingStub.class)
-                       .withDeadlineAfter(10, TimeUnit.SECONDS);
+                GrpcClients.builder(server.httpUri() + "/no-client-timeout/")
+                           .build(UnitTestServiceBlockingStub.class)
+                           .withDeadlineAfter(10, TimeUnit.SECONDS);
         assertThatThrownBy(() -> client.timesOut(
                 SimpleRequest.getDefaultInstance())).isInstanceOfSatisfying(
                 StatusRuntimeException.class, t ->
@@ -794,9 +793,9 @@ class GrpcServiceServerTest {
     private static void clientSocketClosedBeforeHalfClose(String protocol) throws Exception {
         final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
-                Clients.builder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + '/')
-                       .factory(factory)
-                       .build(UnitTestServiceStub.class);
+                GrpcClients.builder(protocol + "://127.0.0.1:" + server.httpPort() + '/')
+                           .factory(factory)
+                           .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
         final StreamObserver<SimpleRequest> stream = stub.streamClientCancels(
                 new StreamObserver<SimpleResponse>() {
@@ -828,16 +827,16 @@ class GrpcServiceServerTest {
         });
     }
 
-    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     @ParameterizedTest
     void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
             throws Exception {
 
         final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
-                Clients.builder(server.uri(protocol, GrpcSerializationFormats.PROTO))
-                       .factory(factory)
-                       .build(UnitTestServiceStub.class);
+                GrpcClients.builder(server.uri(protocol))
+                           .factory(factory)
+                           .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
         stub.streamClientCancelsBeforeResponseClosedCancels(
                 SimpleRequest.getDefaultInstance(),
@@ -868,7 +867,7 @@ class GrpcServiceServerTest {
         final RpcResponse rpcResponse = (RpcResponse) log.responseContent();
         final StatusException cause = (StatusException) rpcResponse.cause();
         assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
-        if (protocol.isMultiplex())  {
+        if (protocol.isMultiplex()) {
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedStreamException.class);
         } else {
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedSessionException.class);
@@ -995,7 +994,7 @@ class GrpcServiceServerTest {
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
-                new byte[] { TRAILERS_FRAME_HEADER },
+                new byte[]{ TRAILERS_FRAME_HEADER },
                 Ints.toByteArray(serializedStatusHeader.length),
                 serializedStatusHeader);
         assertThat(response.content().array()).containsExactly(
@@ -1063,19 +1062,20 @@ class GrpcServiceServerTest {
         final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
         final AtomicReference<byte[]> payload = new AtomicReference<>();
         final UnitTestServiceBlockingStub jsonStub =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
-                       .decorator(client -> new SimpleDecoratingHttpClient(client) {
-                           @Override
-                           public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
-                                   throws Exception {
-                               requestHeaders.set(req.headers());
-                               return unwrap().execute(ctx, req).mapData(data -> {
-                                   payload.set(data.array());
-                                   return data;
-                               });
-                           }
-                       })
-                       .build(UnitTestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .serializationFormat(GrpcSerializationFormats.JSON)
+                           .decorator(client -> new SimpleDecoratingHttpClient(client) {
+                               @Override
+                               public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                       throws Exception {
+                                   requestHeaders.set(req.headers());
+                                   return unwrap().execute(ctx, req).mapData(data -> {
+                                       payload.set(data.array());
+                                       return data;
+                                   });
+                               }
+                           })
+                           .build(UnitTestServiceBlockingStub.class);
         final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
         assertThat(response).isEqualTo(RESPONSE_MESSAGE);
         assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
@@ -1104,20 +1104,21 @@ class GrpcServiceServerTest {
                                      .build(serviceDescriptor);
         };
         final UnitTestServiceBlockingStub jsonStub =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON) + "/json-preserving/")
-                       .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(marshallerFactory))
-                       .decorator(client -> new SimpleDecoratingHttpClient(client) {
-                           @Override
-                           public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
-                                   throws Exception {
-                               requestHeaders.set(req.headers());
-                               return unwrap().execute(ctx, req).mapData(data -> {
-                                   payload.set(data.array());
-                                   return data;
-                               });
-                           }
-                       })
-                       .build(UnitTestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri() + "/json-preserving/")
+                           .serializationFormat(GrpcSerializationFormats.JSON)
+                           .jsonMarshallerFactory(marshallerFactory)
+                           .decorator(client -> new SimpleDecoratingHttpClient(client) {
+                               @Override
+                               public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                       throws Exception {
+                                   requestHeaders.set(req.headers());
+                                   return unwrap().execute(ctx, req).mapData(data -> {
+                                       payload.set(data.array());
+                                       return data;
+                                   });
+                               }
+                           })
+                           .build(UnitTestServiceBlockingStub.class);
         final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
         assertThat(response).isEqualTo(RESPONSE_MESSAGE);
         assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
@@ -1231,8 +1232,8 @@ class GrpcServiceServerTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    UnitTestServiceGrpc.newBlockingStub(channel),
-                    UnitTestServiceGrpc.newBlockingStub(blockingChannel))
+                                 UnitTestServiceGrpc.newBlockingStub(channel),
+                                 UnitTestServiceGrpc.newBlockingStub(blockingChannel))
                          .map(Arguments::of);
         }
     }
@@ -1241,8 +1242,8 @@ class GrpcServiceServerTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    UnitTestServiceGrpc.newStub(channel),
-                    UnitTestServiceGrpc.newStub(blockingChannel))
+                                 UnitTestServiceGrpc.newStub(channel),
+                                 UnitTestServiceGrpc.newStub(blockingChannel))
                          .map(Arguments::of);
         }
     }

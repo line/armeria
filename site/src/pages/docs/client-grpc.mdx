@@ -35,7 +35,7 @@ Making a call starts from creating a client:
 ```java
 import com.linecorp.armeria.client.Clients;
 
-HelloServiceBlockingStub helloService = Clients.newClient(
+HelloServiceBlockingStub helloService = GrpcClients.newClient(
         "gproto+http://127.0.0.1:8080/",
         HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class or HelloServiceStub.class
 
@@ -48,6 +48,12 @@ Note that we added the serialization format of the call using the `+` operator i
 Because we are calling a [gRPC] server, we can choose: `gproto` or `gjson`. If you are using [gRPC-Web],
 you can use `gproto-web`, `gproto-web-text` or `gjson-web`.
 
+<Tip>
+
+If a serialization format is not specified, `gproto` will be used by default.
+
+</Tip>
+
 Since we specified `HelloServiceBlockingStub.class` as the client type, `Clients.newClient()` will return a
 synchronous client implementation.  If we specified `HelloServiceFutureStub`, the calling code would have
 looked like the following:
@@ -59,7 +65,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.linecorp.armeria.client.Clients;
 import java.util.concurrent.ForkJoinPool;
 
-HelloServiceFutureStub helloService = Clients.newClient(
+HelloServiceFutureStub helloService = GrpcClients.newClient(
         "gproto+http://127.0.0.1:8080/",
         HelloServiceFutureStub.class);
 
@@ -99,9 +105,11 @@ You can also use the builder pattern for client construction:
 ```java
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO;
 
 HelloServiceBlockingStub helloService =
-    Clients.builder("gproto+http://127.0.0.1:8080/")
+        GrpcClients.builder("http://127.0.0.1:8080/")
+           .serializationFormat(GrpcSerializationFormats.PROTO)
            .responseTimeoutMillis(10000)
            .decorator(LoggingClient.newDecorator())
            .build(HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class
@@ -130,7 +138,7 @@ import com.linecorp.armeria.common.grpc.StatusCauseException;
 
 import io.grpc.StatusRuntimeException;
 
-HelloServiceBlockingStub helloService = Clients.newClient(
+HelloServiceBlockingStub helloService = GrpcClients.newClient(
         "gproto+http://127.0.0.1:8080/",
         HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class or HelloServiceStub.class
 

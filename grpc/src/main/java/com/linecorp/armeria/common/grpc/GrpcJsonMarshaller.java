@@ -23,7 +23,7 @@ import java.util.function.Function;
 
 import com.google.protobuf.Message;
 
-import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.MethodDescriptor.Marshaller;
@@ -33,7 +33,7 @@ import io.grpc.ServiceDescriptor;
  * A JSON marshaller for gRPC method request or response messages to and from JSON.
  *
  * @see GrpcServiceBuilder#jsonMarshallerFactory(Function)
- * @see GrpcClientOptions#GRPC_JSON_MARSHALLER_FACTORY
+ * @see GrpcClientBuilder#jsonMarshallerFactory(Function)
  */
 public interface GrpcJsonMarshaller {
 

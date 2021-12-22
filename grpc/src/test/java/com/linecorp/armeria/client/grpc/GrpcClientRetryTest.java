@@ -30,8 +30,6 @@ import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -61,9 +59,9 @@ final class GrpcClientRetryTest {
     @Test
     void childrenContextsHaveSameRpcRequest() {
         final TestServiceBlockingStub client =
-                Clients.builder(server.uri(SessionProtocol.HTTP, GrpcSerializationFormats.PROTO))
-                       .decorator(RetryingClient.newDecorator(retryRuleWithContent()))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .decorator(RetryingClient.newDecorator(retryRuleWithContent()))
+                           .build(TestServiceBlockingStub.class);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final SimpleResponse result = client.unaryCall(SimpleRequest.getDefaultInstance());
@@ -79,16 +77,17 @@ final class GrpcClientRetryTest {
 
     private static RetryRuleWithContent<HttpResponse> retryRuleWithContent() {
         return RetryRuleWithContent.<HttpResponse>builder()
-                .onResponseHeaders((ctx, headers) -> {
-                    // Trailers may be sent together with response headers, with no message in the body.
-                    final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
-                    return grpcStatus != null && grpcStatus != 0;
-                })
-                .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
-                    final HttpHeaders trailers = aggregatedRes.trailers();
-                    return trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
-                }))
-                .thenBackoff();
+                                   .onResponseHeaders((ctx, headers) -> {
+                                       // Trailers may be sent together with response headers, with no
+                                       // message in the body.
+                                       final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
+                                       return grpcStatus != null && grpcStatus != 0;
+                                   })
+                                   .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
+                                       final HttpHeaders trailers = aggregatedRes.trailers();
+                                       return trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
+                                   }))
+                                   .thenBackoff();
     }
 
     private static class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {

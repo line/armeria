@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.grpc.scala
 
-import com.linecorp.armeria.client.Clients
-import com.linecorp.armeria.client.grpc.GrpcClientOptions
+import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.common.SerializationFormat
-import com.linecorp.armeria.common.grpc.{GrpcJsonMarshaller, GrpcSerializationFormats}
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
 import com.linecorp.armeria.grpc.scala.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import com.linecorp.armeria.grpc.scala.hello.HelloServiceGrpc.HelloServiceStub
@@ -28,15 +27,13 @@ import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.server.logging.LoggingService
 import io.grpc.Status.Code
-import io.grpc.{ServiceDescriptor, Status, StatusRuntimeException}
+import io.grpc.{Status, StatusRuntimeException}
+import java.util.stream
 import org.assertj.core.api.Assertions.{assertThat, assertThatThrownBy}
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
-
-import java.util.function.{Function => JFunction}
-import java.util.stream
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
@@ -64,12 +61,9 @@ object HelloServiceTest {
 
   private def newClient[A](serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO)(implicit
       tag: ClassTag[A]): A = {
-    val jsonMarshallerFactory: JFunction[_ >: ServiceDescriptor, _ <: GrpcJsonMarshaller] =
-      _ => ScalaPbJsonMarshaller()
-
-    Clients
+    GrpcClients
       .builder(uri(serializationFormat))
-      .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(jsonMarshallerFactory))
+      .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
       .build(tag.runtimeClass)
       .asInstanceOf[A]
   }

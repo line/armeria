@@ -17,6 +17,7 @@
 package com.linecorp.armeria.grpc.kotlin
 
 import com.linecorp.armeria.client.Clients
+import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.grpc.kotlin.Hello.HelloRequest
 import com.linecorp.armeria.grpc.kotlin.HelloServiceGrpcKt.HelloServiceCoroutineStub
 import com.linecorp.armeria.server.Server
@@ -51,7 +52,7 @@ class HelloServiceTest {
     @MethodSource("uris")
     fun parallelReplyFromServerSideBlockingCall(uri: String) {
         runBlocking {
-            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
+            val helloService = GrpcClients.newClient(uri, HelloServiceCoroutineStub::class.java)
             repeat(30) {
                 launch {
                     val message = helloService.shortBlockingHello(
@@ -113,7 +114,7 @@ class HelloServiceTest {
     @ParameterizedTest
     @MethodSource("uris")
     fun exceptionMapping(uri: String) {
-        val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
+        val helloService = GrpcClients.newClient(uri, HelloServiceCoroutineStub::class.java)
         assertThatThrownBy {
             runBlocking { helloService.helloError(HelloRequest.newBuilder().setName("Armeria").build()) }
         }.isInstanceOfSatisfying(StatusException::class.java) {
@@ -126,7 +127,7 @@ class HelloServiceTest {
     @MethodSource("uris")
     fun shouldReportCloseExactlyOnceWithNonOK(uri: String) {
         val closeCalled = AtomicInteger()
-        val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
+        val helloService = GrpcClients.newClient(uri, HelloServiceCoroutineStub::class.java)
             .withInterceptors(object : ClientInterceptor {
                 override fun <I, O> interceptCall(
                     method: MethodDescriptor<I, O>,
@@ -171,7 +172,7 @@ class HelloServiceTest {
 
             blockingServer = newServer(0, true)
             blockingServer.start().join()
-            helloService = Clients.newClient(protoUri(), HelloServiceCoroutineStub::class.java)
+            helloService = GrpcClients.newClient(protoUri(), HelloServiceCoroutineStub::class.java)
         }
 
         @AfterAll

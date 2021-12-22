@@ -80,15 +80,15 @@ support gRPC JSON serialization format.
 
 ```scala
 import com.linecorp.armeria.client.Clients
-import com.linecorp.armeria.client.grpc.GrpcClientOptions
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats.JSON
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
         
 val client = 
-  Clients.builder("gproto+http://127.0.0.1:8080/")
-         // Register 'ScalaPBJsonMarshaller' for enabling gRPC JSON serialization format
-         .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY
-                                  .newValue(_ => ScalaPbJsonMarshaller()))
-         .build(classOf[HelloServiceBlockingStub])
+  GrpcClients.builder("http://127.0.0.1:8080/")
+             .serializationFormat(GrpcSerializationFormats.JSON)
+             // Register 'ScalaPBJsonMarshaller' for enabling gRPC JSON serialization format
+             .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
+             .build(classOf[HelloServiceBlockingStub])
     
 val request = HelloRequest("Armerian World")
 val reply = helloService.hello(request)
