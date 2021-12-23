@@ -172,6 +172,17 @@ class ParameterizedPathMappingTest {
         assertThat(matchMultiParams.isPresent()).isTrue();
         assertThat(matchMultiParams.pathParams()).containsEntry("value", "foo/bar");
 
+        final ParameterizedPathMapping ppm2 = new ParameterizedPathMapping("/service/{value1}/{*value2}");
+        final RoutingResult matchSingleParam2 = ppm2.apply(create("/service/foo/bar", "foo=bar")).build();
+        assertThat(matchSingleParam2.isPresent()).isTrue();
+        assertThat(matchSingleParam2.pathParams()).containsEntry("value1", "foo")
+                                                  .containsEntry("value2", "bar");
+
+        final RoutingResult matchMultiParams2 = ppm2.apply(create("/service/foo/bar/baz", "foo=bar")).build();
+        assertThat(matchMultiParams2.isPresent()).isTrue();
+        assertThat(matchMultiParams2.pathParams()).containsEntry("value1", "foo")
+                                                  .containsEntry("value2", "bar/baz");
+
         final ParameterizedPathMapping emptyParam = new ParameterizedPathMapping("/service/{*}");
         final RoutingResult result = emptyParam.apply(create("/service/hello", "foo=bar")).build();
         assertThat(result.isPresent()).isTrue();

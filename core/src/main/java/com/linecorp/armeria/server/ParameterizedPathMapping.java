@@ -89,7 +89,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
      *
      * @param pathPattern the {@link String} that contains path params.
-     *             e.g. {@code /users/{name}} or {@code /users/:name} or {@code /users/{*name}}
+     *                    e.g. {@code /users/{name}}, {@code /users/:name} or {@code /users/{*name}}
      *
      * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
      */
@@ -171,7 +171,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     @Nullable
     private static String paramName(String token) {
         if (token.startsWith("{") && token.endsWith("}")) {
-            final int beginIndex = token.indexOf('*') == 1 ? "{*".length() : "{".length();
+            final int beginIndex = token.indexOf('*') == 1 ? 2 : 1;
             return token.substring(beginIndex, token.length() - 1);
         }
 
