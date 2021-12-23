@@ -94,21 +94,25 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
         this.uri = uri;
         scheme = Scheme.parse(uri.getScheme());
-        if (scheme.serializationFormat() == SerializationFormat.NONE) {
-            // If not set, gRPC protobuf is used as a default serialization format.
-            serializationFormat(GrpcSerializationFormats.PROTO);
-        } else {
-            ensureGrpcSerializationFormat(scheme.serializationFormat());
-        }
+        maybeNormalizeScheme();
         endpointGroup = null;
     }
 
     GrpcClientBuilder(Scheme scheme, EndpointGroup endpointGroup) {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpointGroup, "endpointGroup");
-        ensureGrpcSerializationFormat(scheme.serializationFormat());
         this.scheme = scheme;
+        maybeNormalizeScheme();
         this.endpointGroup = endpointGroup;
+    }
+
+    private void maybeNormalizeScheme() {
+        if (scheme.serializationFormat() == SerializationFormat.NONE) {
+            // If not set, gRPC protobuf is used as a default serialization format.
+            serializationFormat(GrpcSerializationFormats.PROTO);
+        } else {
+            ensureGrpcSerializationFormat(scheme.serializationFormat());
+        }
     }
 
     /**

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
@@ -37,9 +38,14 @@ class GrpcClientBuilderTest {
 
     @Test
     void defaultSerializationFormat() {
-        final TestServiceBlockingStub client =
+        TestServiceBlockingStub client =
                 GrpcClients.builder("http://foo.com").build(TestServiceBlockingStub.class);
-        final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
+        ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
+        assertThat(clientParams.uri().getScheme())
+                .startsWith(GrpcSerializationFormats.PROTO.uriText());
+
+        client = GrpcClients.builder("none+http", EndpointGroup.of()).build(TestServiceBlockingStub.class);
+        clientParams = Clients.unwrap(client, ClientBuilderParams.class);
         assertThat(clientParams.uri().getScheme())
                 .startsWith(GrpcSerializationFormats.PROTO.uriText());
     }
