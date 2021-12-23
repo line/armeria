@@ -72,10 +72,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     private final String path;
     private final Scheme scheme;
 
-    /**
-     * Returns a newly created {@link ClientBuilder} with the specified {@link URI}.
-     */
-    protected ClientBuilder(URI uri) {
+    ClientBuilder(URI uri) {
         checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
         checkArgument(uri.getRawAuthority() != null, "uri must have authority: %s", uri);
         this.uri = uri;
@@ -84,11 +81,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
         scheme = Scheme.parse(uri.getScheme());
     }
 
-    /**
-     * Returns a newly created {@link ClientBuilder} with the specified {@link Scheme}, {@link EndpointGroup},
-     * and {@code path}.
-     */
-    protected ClientBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
+    ClientBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
         if (path != null) {
             checkArgument(path.startsWith("/"),
                           "path: %s (expected: an absolute path starting with '/')", path);

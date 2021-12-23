@@ -145,7 +145,7 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     /**
-     * The maximum size, in bytes, of messages sent in a request.
+     * Sets the maximum size, in bytes, of messages sent in a request.
      * The default value is {@value ArmeriaMessageFramer#NO_MAX_OUTBOUND_MESSAGE_SIZE},
      * which means unlimited.
      */
