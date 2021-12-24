@@ -22,7 +22,7 @@ package com.linecorp.armeria.common;
 public interface SplitHttpRequest extends SplitHttpMessage {
 
     /**
-     * Returns a {@link RequestHeaders}.
+     * Returns the {@link RequestHeaders}.
      */
     RequestHeaders headers();
 }
