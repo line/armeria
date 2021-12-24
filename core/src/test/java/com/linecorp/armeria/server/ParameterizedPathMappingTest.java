@@ -182,11 +182,6 @@ class ParameterizedPathMappingTest {
         assertThat(matchMultiParams2.isPresent()).isTrue();
         assertThat(matchMultiParams2.pathParams()).containsEntry("value1", "foo")
                                                   .containsEntry("value2", "bar/baz");
-
-        final ParameterizedPathMapping emptyParam = new ParameterizedPathMapping("/service/{*}");
-        final RoutingResult result = emptyParam.apply(create("/service/hello", "foo=bar")).build();
-        assertThat(result.isPresent()).isTrue();
-        assertThat(result.pathParams()).containsEntry("", "hello");
     }
 
     @Test
@@ -195,6 +190,9 @@ class ParameterizedPathMappingTest {
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/{*value2}"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/foo"))
+                .isInstanceOf(IllegalArgumentException.class);
+        // {*...} must have a param name is not empty.
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*}"))
                 .isInstanceOf(IllegalArgumentException.class);
         // {*...} can only be preceded by a path separator.
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo{*value}"))

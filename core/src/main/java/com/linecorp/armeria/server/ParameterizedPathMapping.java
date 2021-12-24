@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -45,7 +45,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
 
-    private static final Pattern CAPTURE_THE_REST_PATTERN = Pattern.compile("/\\{\\*[^/{}]*}");
+    private static final Pattern CAPTURE_THE_REST_PATTERN = Pattern.compile("/\\{\\*([^/{}]*)}");
 
     private static final String[] EMPTY_NAMES = new String[0];
 
@@ -114,7 +114,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         final StringJoiner skeletonJoiner = new StringJoiner("/");
 
         final List<String> paramNames = new ArrayList<>();
-        final Set<String> captureTheRestPathNames = new HashSet<>();
         for (String token : PATH_SPLITTER.split(pathPattern)) {
             final String paramName = paramName(token);
             if (paramName == null) {
@@ -125,16 +124,12 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 continue;
             }
 
-            if (isCaptureTheRestPathParam(token)) {
-                captureTheRestPathNames.add(paramName);
-            }
-
             final int paramNameIdx = paramNames.indexOf(paramName);
             if (paramNameIdx < 0) {
                 // If the given token appeared first time, add it to the set and
                 // replace it with a capturing group expression in regex.
                 paramNames.add(paramName);
-                if (captureTheRestPathNames.contains(paramName)) {
+                if (isCaptureRestPathMatching(token)) {
                     patternJoiner.add("(.*)");
                 } else {
                     patternJoiner.add("([^/]+)");
@@ -171,7 +166,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     @Nullable
     private static String paramName(String token) {
         if (token.startsWith("{") && token.endsWith("}")) {
-            final int beginIndex = token.indexOf('*') == 1 ? 2 : 1;
+            final int beginIndex = token.charAt(1) == '*' ? 2 : 1;
             return token.substring(beginIndex, token.length() - 1);
         }
 
@@ -185,7 +180,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     /**
      * Return true if path parameter contains capture the rest path pattern {*foo}.
      */
-    private static boolean isCaptureTheRestPathParam(String token) {
+    private static boolean isCaptureRestPathMatching(String token) {
         return token.startsWith("{*") && token.endsWith("}");
     }
 
@@ -197,6 +192,10 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         if (!matcher.find()) {
             // Return true if the path does not include the capture the rest pattern.
             return true;
+        }
+        final String paramName = matcher.group(1);
+        if (isNullOrEmpty(paramName)) {
+            return false;
         }
         // The capture the rest pattern must be located at the end of the path.
         return pathPattern.length() == matcher.end();
