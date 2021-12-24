@@ -52,7 +52,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         upstream.subscribe(bodySubscriber, this.upstreamExecutor, SubscriptionOption.values());
     }
 
-    protected final HttpMessage upstream() {
+    final HttpMessage upstream() {
         return upstream;
     }
 
