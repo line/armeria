@@ -17,6 +17,9 @@
 package com.linecorp.armeria.client.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.CALL_CREDENTIALS;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.COMPRESSOR;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.DECOMPRESSOR_REGISTRY;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES;
@@ -68,7 +71,11 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
+import io.grpc.CallCredentials;
 import io.grpc.ClientInterceptor;
+import io.grpc.Codec;
+import io.grpc.Compressor;
+import io.grpc.DecompressorRegistry;
 import io.grpc.ServiceDescriptor;
 
 /**
@@ -166,6 +173,37 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder maxResponseMessageLength(int maxResponseMessageLength) {
         checkArgument(maxResponseMessageLength >= -1, "maxResponseMessageLength: %s (expected: >= -1)");
         return option(MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(maxResponseMessageLength));
+    }
+
+    /**
+     * Sets the {@link Compressor} to use when compressing messages. If not set, {@link Codec.Identity#NONE}
+     * will be used by default.
+     *
+     * <p>Note that it is only safe to call this if the server supports the compression format chosen. There is
+     * no negotiation performed; if the server does not support the compression chosen, the call will
+     * fail.
+     */
+    public GrpcClientBuilder compressor(Compressor compressor) {
+        requireNonNull(compressor, "compressor");
+        return option(COMPRESSOR.newValue(compressor));
+    }
+
+    /**
+     * Sets the {@link DecompressorRegistry} to use when decompressing messages. If not set, will use
+     * the default, which supports gzip only.
+     */
+    public GrpcClientBuilder decompressorRegistry(DecompressorRegistry registry) {
+        requireNonNull(registry, "registry");
+        return option(DECOMPRESSOR_REGISTRY.newValue(registry));
+    }
+
+    /**
+     * Sets the {@link CallCredentials} that carries credential data that will be propagated to the server
+     * via request metadata.
+     */
+    public GrpcClientBuilder callCredentials(CallCredentials callCredentials) {
+        requireNonNull(callCredentials, "callCredentials");
+        return option(CALL_CREDENTIALS.newValue(callCredentials));
     }
 
     /**

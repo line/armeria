@@ -45,6 +45,7 @@ import io.grpc.CallCredentials;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
+import io.grpc.Compressor;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.MethodDescriptor;
@@ -104,10 +105,18 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final int maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
         final int maxInboundMessageSizeBytes = maxInboundMessageSizeBytes(options);
         final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
+        final Compressor compressor = options.get(GrpcClientOptions.COMPRESSOR);
+        final DecompressorRegistry decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
 
         final HttpClient client;
 
-        final CallCredentials credentials = callOptions.getCredentials();
+        CallCredentials credentials = callOptions.getCredentials();
+        if (credentials == null) {
+            final CallCredentials credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
+            if (credentials0 != NullCallCredentials.INSTANCE) {
+                credentials = credentials0;
+            }
+        }
         if (credentials != null) {
             client = new CallCredentialsDecoratingClient(httpClient, credentials, method, authority());
         } else {
@@ -124,8 +133,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 maxOutboundMessageSizeBytes,
                 maxInboundMessageSizeBytes,
                 callOptions,
+                compressor,
                 CompressorRegistry.getDefaultInstance(),
-                DecompressorRegistry.getDefaultInstance(),
+                decompressorRegistry,
                 serializationFormat,
                 jsonMarshaller,
                 unsafeWrapResponseBuffers,

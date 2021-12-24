@@ -54,6 +54,7 @@ class GrpcClientBuilderTest {
     void customSerializationFormat() {
         final TestServiceBlockingStub client =
                 GrpcClients.builder("gjson+http://foo.com").build(TestServiceBlockingStub.class);
+
         final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
         assertThat(clientParams.uri().getScheme())
                 .startsWith(GrpcSerializationFormats.JSON.uriText());

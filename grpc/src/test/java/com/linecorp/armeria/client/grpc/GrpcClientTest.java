@@ -955,6 +955,65 @@ class GrpcClientTest {
     }
 
     @Test
+    void credentialsUnaryCall_withBuilder() {
+        final TestServiceBlockingStub stub =
+                // Explicitly construct URL to better test authority.
+                GrpcClients.builder("gproto+http://localhost:" + server.httpPort())
+                           .callCredentials(new CallCredentials() {
+                               @Override
+                               public void applyRequestMetadata(RequestInfo requestInfo,
+                                                                Executor appExecutor,
+                                                                MetadataApplier applier) {
+                                   assertThat(requestInfo.getMethodDescriptor())
+                                           .isEqualTo(TestServiceGrpc.getEmptyCallMethod());
+                                   assertThat(requestInfo.getAuthority())
+                                           .isEqualTo("localhost:" + server.httpPort());
+                                   assertThat(requestInfo.getSecurityLevel())
+                                           .isEqualTo(SecurityLevel.NONE);
+                                   assertThat(appExecutor).isEqualTo(
+                                           CommonPools.blockingTaskExecutor());
+
+                                   CommonPools.blockingTaskExecutor().schedule(() -> {
+                                       final Metadata metadata = new Metadata();
+                                       metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "token");
+                                       applier.apply(metadata);
+                                   }, 100, TimeUnit.MILLISECONDS);
+                               }
+
+                               @Override
+                               public void thisUsesUnstableApi() {}
+                           })
+                           .build(TestServiceBlockingStub.class);
+
+        assertThat(stub.emptyCall(EMPTY)).isNotNull();
+
+        final HttpHeaders clientHeaders = CLIENT_HEADERS_CAPTURE.get();
+        assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("token");
+        CLIENT_HEADERS_CAPTURE.set(null);
+
+        // Override client level CallCredentials with CallOptions.
+        final TestServiceBlockingStub stubWithCredentials =
+                stub.withCallCredentials(new CallCredentials() {
+                    @Override
+                    public void applyRequestMetadata(RequestInfo requestInfo,
+                                                     Executor appExecutor,
+                                                     MetadataApplier applier) {
+                        final Metadata metadata = new Metadata();
+                        metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "token2");
+                        applier.apply(metadata);
+                    }
+
+                    @Override
+                    public void thisUsesUnstableApi() {}
+                });
+
+        assertThat(stubWithCredentials.emptyCall(EMPTY)).isNotNull();
+
+        final HttpHeaders clientHeaders0 = CLIENT_HEADERS_CAPTURE.get();
+        assertThat(clientHeaders0.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("token2");
+    }
+
+    @Test
     void credentialsUnaryCall_https() {
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.

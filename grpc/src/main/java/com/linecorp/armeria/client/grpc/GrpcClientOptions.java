@@ -34,10 +34,15 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
+import io.grpc.CallCredentials;
 import io.grpc.ClientInterceptor;
+import io.grpc.Codec;
+import io.grpc.Compressor;
+import io.grpc.DecompressorRegistry;
 import io.grpc.ServiceDescriptor;
 
 /**
@@ -137,6 +142,28 @@ public final class GrpcClientOptions {
      */
     public static final ClientOption<Iterable<? extends ClientInterceptor>>
             INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS", ImmutableList.of());
+
+    /**
+     * Sets the {@link Compressor} to use when compressing messages. If not set, {@link Codec.Identity#NONE}
+     * will be used by default.
+     */
+    public static final ClientOption<Compressor> COMPRESSOR =
+            ClientOption.define("GRPC_CLIENT_COMPRESSOR", Codec.Identity.NONE);
+
+    /**
+     * Sets the {@link DecompressorRegistry} to use when decompressing messages. If not set, will use
+     * the default, which supports gzip only.
+     */
+    public static final ClientOption<DecompressorRegistry> DECOMPRESSOR_REGISTRY =
+            ClientOption.define("GRPC_CLIENT_DECOMPRESSOR_REGISTRY",
+                                DecompressorRegistry.getDefaultInstance());
+
+    /**
+     * Sets the {@link CallCredentials} that carries credential data that will be propagated to the server
+     * via request metadata.
+     */
+    public static final ClientOption<CallCredentials> CALL_CREDENTIALS =
+            ClientOption.define("GRPC_CLIENT_CALL_CREDENTIALS", NullCallCredentials.INSTANCE);
 
     private GrpcClientOptions() {}
 }
