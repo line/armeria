@@ -90,7 +90,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     /**
      * Updated by {@link #flagsUpdater}.
      */
-    private volatile int flags;
+    volatile int flags;
     /**
      * Updated by {@link #deferredFlagsUpdater}.
      */
@@ -1266,6 +1266,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
             if (rpcResponse.cause() != null) {
                 responseCause = rpcResponse.cause();
+                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }
         }
 
