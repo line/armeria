@@ -16,20 +16,23 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -119,25 +122,25 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         }
     }
 
-    private static void setInternalHealthUpdateListener(
-            HealthCheckUpdateListener healthCheckUpdateListener,
+    private static void setHealthUpdateListenerToServerHealthCheckers(
+            Consumer<String> healthCheckUpdateListener,
             Collection<ListenableHealthChecker> listenableHealthCheckers) {
-        listenableHealthCheckers.forEach(lhc -> {
-            lhc.addListener(healthChecker -> {
-                try {
-                    healthCheckUpdateListener.healthUpdated(healthChecker.isHealthy());
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated():", t);
-                }
-            });
-        });
+        listenableHealthCheckers.forEach(
+                lhc -> lhc.addListener(healthChecker -> healthCheckUpdateListener.accept("")));
+    }
+
+    private static void setHealthUpdateListenerToGrpcServiceHealthCheckers(
+            Consumer<String> healthCheckUpdateListener,
+            Iterable<Entry<String, ListenableHealthChecker>> listenableHealthCheckers) {
+        listenableHealthCheckers.forEach(entry -> entry.getValue().addListener(
+                healthChecker -> healthCheckUpdateListener.accept(entry.getKey())));
     }
 
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> serverHealthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
-    private final IdentityHashMap<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>>
-            watchers = new IdentityHashMap<>();
+    private final Multimap<String, Entry<StreamObserver<HealthCheckResponse>, ServingStatus>> watchers =
+            HashMultimap.create();
     @Nullable
     private Server server;
 
@@ -155,9 +158,10 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                                                 .addAll(serverHealthCheckers)
                                                 .build();
         this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
-        final HealthCheckUpdateListener healthCheckUpdateListener = provideInternalHealthUpdateListener();
-        setInternalHealthUpdateListener(healthCheckUpdateListener, this.serverHealthCheckers);
-        setInternalHealthUpdateListener(healthCheckUpdateListener, this.grpcServiceHealthCheckers.values());
+        final Consumer<String> healthCheckUpdateListener = provideInternalHealthUpdateListener();
+        setHealthUpdateListenerToServerHealthCheckers(healthCheckUpdateListener, this.serverHealthCheckers);
+        setHealthUpdateListenerToGrpcServiceHealthCheckers(healthCheckUpdateListener,
+                                                           this.grpcServiceHealthCheckers.entrySet());
     }
 
     @Override
@@ -184,11 +188,12 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             final ServingStatus status = checkServingStatus(service);
             final HealthCheckResponse response = getHealthCheckResponse(status);
             responseObserver.onNext(response);
-            watchers.put(responseObserver, Maps.immutableEntry(service, response.getStatus()));
+            watchers.put(service, Maps.immutableEntry(responseObserver, response.getStatus()));
         }
         ((ServerCallStreamObserver<HealthCheckResponse>) responseObserver).setOnCancelHandler(() -> {
             synchronized (watchers) {
-                watchers.remove(responseObserver);
+                final ServingStatus currentStatus = checkServingStatus(service);
+                watchers.get(service).remove(Maps.immutableEntry(responseObserver, currentStatus));
             }
         });
     }
@@ -214,7 +219,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                 // NOT_SERVING will be sent to clients by changing a healthiness of a server
                 serverHealth.setHealthy(false);
                 synchronized (watchers) {
-                    watchers.keySet().forEach(StreamObserver::onCompleted);
+                    watchers.values().forEach(entry -> entry.getKey().onCompleted());
                     watchers.clear();
                 }
             }
@@ -256,22 +261,46 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         });
     }
 
-    private HealthCheckUpdateListener provideInternalHealthUpdateListener() {
-        return isHealthy -> {
+    private Consumer<String> provideInternalHealthUpdateListener() {
+        return serviceName -> {
             synchronized (watchers) {
-                for (Entry<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>> entry
-                        : watchers.entrySet()) {
-                    final ServingStatus previousStatus = entry.getValue().getValue();
-                    final String serviceName = entry.getValue().getKey();
-                    final ServingStatus currentStatus = checkServingStatus(serviceName);
-                    if (currentStatus != previousStatus) {
-                        final StreamObserver<HealthCheckResponse> responseObserver = entry.getKey();
-                        responseObserver.onNext(getHealthCheckResponse(currentStatus));
-                        entry.setValue(Maps.immutableEntry(serviceName, currentStatus));
-                    }
+                final ServingStatus currentStatus = checkServingStatus(serviceName);
+                final HealthCheckResponse healthCheckResponse = getHealthCheckResponse(currentStatus);
+                if (serviceName.isEmpty()) {
+                    notifyStreamObservers("", healthCheckResponse, currentStatus);
+                    return;
                 }
+                notifyStreamObservers(serviceName, healthCheckResponse, currentStatus);
             }
         };
+    }
+
+    private void notifyStreamObservers(
+            String serviceName,
+            HealthCheckResponse healthCheckResponse,
+            ServingStatus currentStatus) {
+        final List<Entry<Entry<StreamObserver<HealthCheckResponse>, ServingStatus>,
+                Entry<StreamObserver<HealthCheckResponse>, ServingStatus>>> updated = new ArrayList<>();
+        for (Entry<StreamObserver<HealthCheckResponse>, ServingStatus> streamObserver
+                : watchers.get(serviceName)) {
+            if (streamObserver.getValue() != currentStatus) {
+                streamObserver.getKey().onNext(healthCheckResponse);
+                updated.add(Maps.immutableEntry(
+                        Maps.immutableEntry(
+                                streamObserver.getKey(),
+                                streamObserver.getValue()
+                        ),
+                        Maps.immutableEntry(
+                                streamObserver.getKey(),
+                                currentStatus
+                        )
+                ));
+            }
+        }
+        updated.forEach(entry -> {
+            watchers.get(serviceName).remove(entry.getKey());
+            watchers.put(serviceName, entry.getValue());
+        });
     }
 
     private boolean isServerHealthy() {
