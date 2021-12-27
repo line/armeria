@@ -554,8 +554,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * a {@code null} value nor a future which completes with a {@code null} value.
      *
      * <p>Example:<pre>{@code
-     * StreamMessage streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
-     * StreamMessage transformed = streamMessage.mapAsync(x -> CompletableFuture.completedFuture(x + 1));
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> transformed = streamMessage.mapAsync(x -> CompletableFuture.completedFuture(x + 1));
      * }</pre>
      */
     default <U> StreamMessage<U> mapAsync(
