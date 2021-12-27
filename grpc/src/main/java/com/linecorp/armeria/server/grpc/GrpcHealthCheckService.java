@@ -17,12 +17,12 @@
 package com.linecorp.armeria.server.grpc;
 
 import java.util.Collection;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.jctools.maps.NonBlockingIdentityHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,8 +122,8 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> serverHealthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
-    private final NonBlockingIdentityHashMap<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>>
-            watchers = new NonBlockingIdentityHashMap<>();
+    private final IdentityHashMap<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>>
+            watchers = new IdentityHashMap<>();
     @Nullable
     private Server server;
 
