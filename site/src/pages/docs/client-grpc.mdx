@@ -108,7 +108,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO;
 
 HelloServiceBlockingStub helloService =
-        GrpcClients.builder("http://127.0.0.1:8080/")
+    GrpcClients.builder("http://127.0.0.1:8080/")
            .serializationFormat(GrpcSerializationFormats.PROTO)
            .responseTimeoutMillis(10000)
            .decorator(LoggingClient.newDecorator())
