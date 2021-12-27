@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 
 /**
- * Creates a new gRPC client that connects to a specified {@link URI} or an {@link EndpointGroup}.
+ * Creates a new gRPC client that connects to a {@link URI} or an {@link EndpointGroup}.
  */
 @UnstableApi
 public final class GrpcClients {
