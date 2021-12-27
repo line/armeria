@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -57,11 +57,11 @@ import io.grpc.stub.StreamObserver;
 
 class GrpcHealthCheckServiceTest {
 
-    static final SettableHealthChecker serveHealth = new SettableHealthChecker(true);
+    static final SettableHealthChecker serverHealth = new SettableHealthChecker(true);
 
     static final GrpcHealthCheckService service = GrpcHealthCheckService
             .builder()
-            .checkers(serveHealth)
+            .checkers(serverHealth)
             .checkerForGrpcService("com.linecorp.armeria.grpc.testing.TestService",
                                    new SettableHealthChecker(true))
             .build();
@@ -81,7 +81,7 @@ class GrpcHealthCheckServiceTest {
 
     @BeforeEach
     void setUp() {
-        serveHealth.setHealthy(true);
+        serverHealth.setHealthy(true);
     }
 
     @Test
@@ -99,14 +99,16 @@ class GrpcHealthCheckServiceTest {
         response = client.check(request);
         assertThat(response.getStatus()).isEqualTo(ServingStatus.SERVING);
 
-        final StatusRuntimeException exception = assertThrows(StatusRuntimeException.class, () -> client.check(
+        assertThatThrownBy(() -> client.check(
                 HealthCheckRequest.newBuilder()
                                   .setService("com.linecorp.armeria.grpc.testing.NotFoundTestService")
-                                  .build()));
-        assertThat(exception.getStatus().getCode()).isEqualTo(Status.NOT_FOUND.getCode());
-        assertThat(exception.getMessage()).isEqualTo(
-                "NOT_FOUND: The service name(com.linecorp.armeria.grpc.testing.NotFoundTestService) " +
-                "is not registered in this service");
+                                  .build()))
+                .isInstanceOf(StatusRuntimeException.class)
+                .hasMessage(
+                        "NOT_FOUND: The service name(com.linecorp.armeria.grpc.testing.NotFoundTestService) " +
+                        "is not registered in this service")
+                .extracting(throwable -> ((StatusRuntimeException) throwable).getStatus().getCode())
+                .isEqualTo(Status.NOT_FOUND.getCode());
     }
 
     @Test
@@ -118,17 +120,17 @@ class GrpcHealthCheckServiceTest {
         final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
         client.watch(request, recorder);
         TimeUnit.SECONDS.sleep(1);
-        serveHealth.setHealthy(false);
+        serverHealth.setHealthy(false);
         TimeUnit.SECONDS.sleep(1);
-        serveHealth.setHealthy(true);
+        serverHealth.setHealthy(true);
         TimeUnit.SECONDS.sleep(1);
         recorder.onCompleted();
         final List<ServingStatus> responses = recorder.getValues()
                                                       .stream()
                                                       .map(HealthCheckResponse::getStatus)
                                                       .collect(Collectors.toList());
-        assertThat(responses).containsExactlyElementsOf(
-                ImmutableList.of(ServingStatus.SERVING, ServingStatus.NOT_SERVING, ServingStatus.SERVING));
+        assertThat(responses).containsExactly(
+                ServingStatus.SERVING, ServingStatus.NOT_SERVING, ServingStatus.SERVING);
     }
 
     @Test
@@ -140,15 +142,14 @@ class GrpcHealthCheckServiceTest {
         final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
         client.watch(request, recorder);
         TimeUnit.SECONDS.sleep(5);
-        serveHealth.setHealthy(false);
+        serverHealth.setHealthy(false);
         TimeUnit.SECONDS.sleep(1);
         recorder.onCompleted();
         final List<ServingStatus> responses = recorder.getValues()
                                                       .stream()
                                                       .map(HealthCheckResponse::getStatus)
                                                       .collect(Collectors.toList());
-        assertThat(responses).containsExactlyElementsOf(
-                ImmutableList.of(ServingStatus.SERVING, ServingStatus.NOT_SERVING));
+        assertThat(responses).containsExactly(ServingStatus.SERVING, ServingStatus.NOT_SERVING);
     }
 
     @ParameterizedTest

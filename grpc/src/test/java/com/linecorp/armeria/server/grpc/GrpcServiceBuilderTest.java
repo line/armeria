@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.grpc;
 import static com.linecorp.armeria.server.grpc.GrpcServiceBuilder.toGrpcStatusFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -273,15 +272,15 @@ class GrpcServiceBuilderTest {
 
     @Test
     void illegalStateOfGrpcHealthCheckService() {
-        assertThrows(IllegalStateException.class,
-                     () -> GrpcService.builder()
-                                      .grpcHealthCheckService(new GrpcHealthCheckService(
-                                              ImmutableSet.of(),
-                                              ImmutableMap.of(),
-                                              ImmutableList.of()
-                                      ))
-                                      .enableGrpcHealthCheckService(true)
-                                      .build());
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .grpcHealthCheckService(new GrpcHealthCheckService(
+                                                    ImmutableSet.of(),
+                                                    ImmutableMap.of(),
+                                                    ImmutableList.of()
+                                            ))
+                                            .enableGrpcHealthCheckService(true)
+                                            .build())
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
