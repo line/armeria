@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -45,7 +44,9 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
 
-    private static final Pattern CAPTURE_THE_REST_PATTERN = Pattern.compile("/\\{\\*([^/{}]*)}");
+    private static final Pattern CAPTURE_REST_PATTERN = Pattern.compile("/\\{\\*([^/{}]*)}");
+
+    private static final Pattern CAPTURE_REST_VARIABLE_NAME_PATTERN = Pattern.compile("^\\w+$");
 
     private static final String[] EMPTY_NAMES = new String[0];
 
@@ -104,9 +105,9 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
             throw new IllegalArgumentException("pathPattern: " + pathPattern + " (invalid pattern)");
         }
 
-        if (!isValidCaptureTheRestPattern(pathPattern)) {
+        if (!isValidCaptureRestPattern(pathPattern)) {
             throw new IllegalArgumentException(
-                    "pathPattern: " + pathPattern + " (invalid capture the rest pattern)");
+                    "pathPattern: " + pathPattern + " (invalid capture rest pattern)");
         }
 
         final StringJoiner patternJoiner = new StringJoiner("/");
@@ -185,19 +186,20 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     }
 
     /**
-     * Return true if the capture the rest pattern specified is valid.
+     * Return true if the capture rest pattern specified is valid.
      */
-    private static boolean isValidCaptureTheRestPattern(String pathPattern) {
-        final Matcher matcher = CAPTURE_THE_REST_PATTERN.matcher(pathPattern);
+    private static boolean isValidCaptureRestPattern(String pathPattern) {
+        final Matcher matcher = CAPTURE_REST_PATTERN.matcher(pathPattern);
         if (!matcher.find()) {
-            // Return true if the path does not include the capture the rest pattern.
+            // Return true if the path does not include the capture rest pattern.
             return true;
         }
         final String paramName = matcher.group(1);
-        if (isNullOrEmpty(paramName)) {
+        // The variable name must be at least a character of alphabet, number and underscore.
+        if (!CAPTURE_REST_VARIABLE_NAME_PATTERN.matcher(paramName).matches()) {
             return false;
         }
-        // The capture the rest pattern must be located at the end of the path.
+        // The capture rest pattern must be located at the end of the path.
         return pathPattern.length() == matcher.end();
     }
 

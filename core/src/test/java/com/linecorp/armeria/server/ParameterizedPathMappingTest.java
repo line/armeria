@@ -162,7 +162,7 @@ class ParameterizedPathMappingTest {
     }
 
     @Test
-    void captureTheRestPattern() {
+    void captureRestPattern() {
         final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/{*value}");
         final RoutingResult matchSingleParam = ppm.apply(create("/service/hello", "foo=bar")).build();
         assertThat(matchSingleParam.isPresent()).isTrue();
@@ -172,27 +172,31 @@ class ParameterizedPathMappingTest {
         assertThat(matchMultiParams.isPresent()).isTrue();
         assertThat(matchMultiParams.pathParams()).containsEntry("value", "foo/bar");
 
-        final ParameterizedPathMapping ppm2 = new ParameterizedPathMapping("/service/{value1}/{*value2}");
+        final ParameterizedPathMapping ppm2 = new ParameterizedPathMapping("/service/{value1}/{*value_2}");
         final RoutingResult matchSingleParam2 = ppm2.apply(create("/service/foo/bar", "foo=bar")).build();
         assertThat(matchSingleParam2.isPresent()).isTrue();
         assertThat(matchSingleParam2.pathParams()).containsEntry("value1", "foo")
-                                                  .containsEntry("value2", "bar");
+                                                  .containsEntry("value_2", "bar");
 
         final RoutingResult matchMultiParams2 = ppm2.apply(create("/service/foo/bar/baz", "foo=bar")).build();
         assertThat(matchMultiParams2.isPresent()).isTrue();
         assertThat(matchMultiParams2.pathParams()).containsEntry("value1", "foo")
-                                                  .containsEntry("value2", "bar/baz");
+                                                  .containsEntry("value_2", "bar/baz");
     }
 
     @Test
-    void captureTheRestPattern_invalidPattern() {
+    void captureRestPattern_invalidPattern() {
         // {*...} must be located at the end of the path.
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/{*value2}"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*value}/foo"))
                 .isInstanceOf(IllegalArgumentException.class);
-        // {*...} must have a param name is not empty.
+        // The variable name must be at least a character of alphabet, number and underscore.
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{*}"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{**}"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{* }"))
                 .isInstanceOf(IllegalArgumentException.class);
         // {*...} can only be preceded by a path separator.
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo{*value}"))
