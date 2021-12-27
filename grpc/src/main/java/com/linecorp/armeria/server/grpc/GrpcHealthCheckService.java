@@ -126,7 +126,6 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             watchers = new NonBlockingIdentityHashMap<>();
     @Nullable
     private Server server;
-    private boolean updating;
 
     GrpcHealthCheckService(
             Set<ListenableHealthChecker> serverHealthCheckers,
@@ -167,12 +166,16 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     public void watch(HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
         ServiceRequestContext.current().clearRequestTimeout();
         final String service = request.getService();
-        final ServingStatus status = checkServingStatus(service);
-        final HealthCheckResponse response = getHealthCheckResponse(status);
-        responseObserver.onNext(response);
-        watchers.put(responseObserver, Maps.immutableEntry(service, response.getStatus()));
+        synchronized (watchers) {
+            final ServingStatus status = checkServingStatus(service);
+            final HealthCheckResponse response = getHealthCheckResponse(status);
+            responseObserver.onNext(response);
+            watchers.put(responseObserver, Maps.immutableEntry(service, response.getStatus()));
+        }
         ((ServerCallStreamObserver<HealthCheckResponse>) responseObserver).setOnCancelHandler(() -> {
-            watchers.remove(responseObserver);
+            synchronized (watchers) {
+                watchers.remove(responseObserver);
+            }
         });
     }
 
@@ -196,8 +199,10 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             public void serverStopping(Server server) {
                 // NOT_SERVING will be sent to clients by changing a healthiness of a server
                 serverHealth.setHealthy(false);
-                watchers.keySet().forEach(StreamObserver::onCompleted);
-                watchers.clear();
+                synchronized (watchers) {
+                    watchers.keySet().forEach(StreamObserver::onCompleted);
+                    watchers.clear();
+                }
             }
         });
     }
@@ -253,11 +258,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     private HealthCheckUpdateListener provideInternalHealthUpdateListener() {
         return isHealthy -> {
-            if (updating) {
-                return;
-            }
-            updating = true;
-            try {
+            synchronized (watchers) {
                 for (Entry<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>> entry
                         : watchers.entrySet()) {
                     final ServingStatus previousStatus = entry.getValue().getValue();
@@ -269,8 +270,6 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                         entry.setValue(Maps.immutableEntry(serviceName, currentStatus));
                     }
                 }
-            } finally {
-                updating = false;
             }
         };
     }
