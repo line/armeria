@@ -120,7 +120,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     }
 
     private final SettableHealthChecker serverHealth;
-    private final Set<ListenableHealthChecker> healthCheckers;
+    private final Set<ListenableHealthChecker> serverHealthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
     private final NonBlockingIdentityHashMap<StreamObserver<HealthCheckResponse>, Entry<String, ServingStatus>>
             watchers = new NonBlockingIdentityHashMap<>();
@@ -129,7 +129,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private boolean updating;
 
     GrpcHealthCheckService(
-            Set<ListenableHealthChecker> healthCheckers,
+            Set<ListenableHealthChecker> serverHealthCheckers,
             Map<String, ListenableHealthChecker> grpcServiceHealthCheckers,
             List<HealthCheckUpdateListener> updateListeners
     ) {
@@ -137,13 +137,13 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         if (!updateListeners.isEmpty()) {
             addServerHealthUpdateListener(updateListeners);
         }
-        this.healthCheckers = ImmutableSet.<ListenableHealthChecker>builder()
-                                          .add(serverHealth)
-                                          .addAll(healthCheckers)
-                                          .build();
+        this.serverHealthCheckers = ImmutableSet.<ListenableHealthChecker>builder()
+                                                .add(serverHealth)
+                                                .addAll(serverHealthCheckers)
+                                                .build();
         this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
         final HealthCheckUpdateListener healthCheckUpdateListener = provideInternalHealthUpdateListener();
-        setInternalHealthUpdateListener(healthCheckUpdateListener, this.healthCheckers);
+        setInternalHealthUpdateListener(healthCheckUpdateListener, this.serverHealthCheckers);
         setInternalHealthUpdateListener(healthCheckUpdateListener, this.grpcServiceHealthCheckers.values());
     }
 
@@ -204,7 +204,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     @VisibleForTesting
     ServingStatus checkServingStatus(@Nullable String serviceName) {
-        if (!isHealthy()) {
+        if (!isServerHealthy()) {
             return ServingStatus.NOT_SERVING;
         }
         if (Strings.isNullOrEmpty(serviceName)) {
@@ -275,8 +275,8 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         };
     }
 
-    private boolean isHealthy() {
-        for (HealthChecker healthChecker : healthCheckers) {
+    private boolean isServerHealthy() {
+        for (HealthChecker healthChecker : serverHealthCheckers) {
             if (!healthChecker.isHealthy()) {
                 return false;
             }

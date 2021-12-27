@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.healthcheck.ListenableHealthChecker;
 @UnstableApi
 public final class GrpcHealthCheckServiceBuilder {
 
-    private final ImmutableSet.Builder<ListenableHealthChecker> healthCheckers = ImmutableSet.builder();
+    private final ImmutableSet.Builder<ListenableHealthChecker> serverHealthCheckers = ImmutableSet.builder();
 
     private final ImmutableMap.Builder<String, ListenableHealthChecker> grpcHealthCheckers =
             ImmutableMap.builder();
@@ -45,15 +45,16 @@ public final class GrpcHealthCheckServiceBuilder {
     /**
      * Adds the specified {@link ListenableHealthChecker}s that determine the healthiness of the {@link Server}.
      */
-    public GrpcHealthCheckServiceBuilder checkers(ListenableHealthChecker... healthCheckers) {
-        return checkers(ImmutableSet.copyOf(requireNonNull(healthCheckers, "healthCheckers")));
+    public GrpcHealthCheckServiceBuilder checkers(ListenableHealthChecker... serverHealthCheckers) {
+        return checkers(ImmutableSet.copyOf(requireNonNull(serverHealthCheckers, "healthCheckers")));
     }
 
     /**
      * Adds the specified {@link ListenableHealthChecker}s that determine the healthiness of the {@link Server}.
      */
-    public GrpcHealthCheckServiceBuilder checkers(Iterable<? extends ListenableHealthChecker> healthCheckers) {
-        this.healthCheckers.addAll(requireNonNull(healthCheckers, "healthCheckers"));
+    public GrpcHealthCheckServiceBuilder checkers(
+            Iterable<? extends ListenableHealthChecker> serverHealthCheckers) {
+        this.serverHealthCheckers.addAll(requireNonNull(serverHealthCheckers, "healthCheckers"));
         return this;
     }
 
@@ -87,7 +88,7 @@ public final class GrpcHealthCheckServiceBuilder {
      */
     public GrpcHealthCheckService build() {
         return new GrpcHealthCheckService(
-                healthCheckers.build(),
+                serverHealthCheckers.build(),
                 grpcHealthCheckers.build(),
                 updateListeners.build()
         );
