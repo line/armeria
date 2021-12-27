@@ -90,7 +90,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     /**
      * Updated by {@link #flagsUpdater}.
      */
-    volatile int flags;
+    private volatile int flags;
     /**
      * Updated by {@link #deferredFlagsUpdater}.
      */
