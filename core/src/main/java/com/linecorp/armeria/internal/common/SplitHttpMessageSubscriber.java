@@ -202,7 +202,7 @@ class SplitHttpMessageSubscriber implements Subscriber<HttpObject>, Subscription
         if (!notifyCancellation) {
             downstream = NoopSubscriber.get();
         }
-        completeTrailers(HttpHeaders.of());
+        doOnCompletion(null);
         final Subscription upstream = this.upstream;
         if (upstream != null) {
             upstream.cancel();
