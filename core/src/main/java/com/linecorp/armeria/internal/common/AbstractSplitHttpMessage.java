@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMessage;
@@ -50,10 +52,6 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
         this.bodySubscriber = bodySubscriber;
         upstream.subscribe(bodySubscriber, this.upstreamExecutor, SubscriptionOption.values());
-    }
-
-    final HttpMessage upstream() {
-        return upstream;
     }
 
     @Override
@@ -119,5 +117,15 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
         } else {
             upstreamExecutor.execute(() -> bodySubscriber.initDownstream(subscriber, executor, options));
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("subscribed", subscribed)
+                          .add("upstream", upstream)
+                          .add("upstreamExecutor", upstreamExecutor)
+                          .add("bodySubscriber", bodySubscriber)
+                          .toString();
     }
 }
