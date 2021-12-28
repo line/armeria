@@ -244,6 +244,17 @@ class GrpcServiceBuilderTest {
         }
     }
 
+    @Test
+    void cannotSetUnframedErrorHandlerIfDisabledUnframedRequests() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableUnframedRequests(false)
+                                            .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+    }
+
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
 
     private static class ReconnectServiceImpl extends ReconnectServiceImplBase {}

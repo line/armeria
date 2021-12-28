@@ -367,12 +367,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private void doClose(Status status, Metadata metadata) {
         if (cancelled) {
             // No need to write anything to client if cancelled already.
-            closeListener(status, false);
+            closeListener(status, false, true);
             return;
         }
 
         if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
-            closeListener(status, false);
+            closeListener(status, false, true);
             return;
         }
 
@@ -411,7 +411,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    closeListener(status, false);
+                    closeListener(status, false, true);
                     return;
                 }
             }
@@ -420,6 +420,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final HttpHeadersBuilder defaultTrailers =
                 trailersOnly ? defaultHeaders.toBuilder() : HttpHeaders.builder();
         final HttpHeaders trailers = statusToTrailers(ctx, defaultTrailers, status, metadata);
+        // Set responseContent before closing stream to use responseCause in error handling
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
         try {
             if (!trailersOnly && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 GrpcWebTrailers.set(ctx, trailers);
@@ -434,7 +436,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             }
         } finally {
-            closeListener(status, completed);
+            closeListener(status, completed, false);
         }
     }
 
@@ -489,7 +491,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // Special case for unary calls.
                 if (messageReceived && method.getType() == MethodType.UNARY) {
                     closeListener(Status.INTERNAL.withDescription(
-                            "More than one request messages for unary call or server streaming call"), false);
+                            "More than one request messages for unary call or server streaming call"), false,
+                                  true);
                     return;
                 }
                 messageReceived = true;
@@ -581,14 +584,16 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status, false);
+        closeListener(status, false, true);
     }
 
-    private void closeListener(Status newStatus, boolean completed) {
+    private void closeListener(Status newStatus, boolean completed, boolean setResponseContent) {
         if (!listenerClosed) {
             listenerClosed = true;
 
-            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
+            if (setResponseContent) {
+                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
+            }
 
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
