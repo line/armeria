@@ -45,7 +45,7 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
     private final SplitHttpMessageSubscriber bodySubscriber;
 
     AbstractSplitHttpMessage(HttpMessage upstream, EventExecutor upstreamExecutor,
-                                       SplitHttpMessageSubscriber bodySubscriber) {
+                             SplitHttpMessageSubscriber bodySubscriber) {
         this.upstream = requireNonNull(upstream, "upstream");
         this.upstreamExecutor = requireNonNull(upstreamExecutor, "upstreamExecutor");
         this.bodySubscriber = bodySubscriber;
