@@ -58,9 +58,23 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @param name the name of the {@link Cookie}
      * @param value the value of the {@link Cookie}
+     *
+     * @deprecated Use {@link #ofSecure(String, String)} instead to create a secure {@link Cookie}.
      */
+    @Deprecated
     static Cookie of(String name, String value) {
         return builder(name, value).build();
+    }
+
+    /**
+     * Returns a newly created {@link Cookie} with secure settings. {@code "Secure"}, {@code "HttpOnly"},
+     * and {@code "SameSite=Strict"} are enabled.
+     *
+     * @param name the name of the {@link Cookie}
+     * @param value the value of the {@link Cookie}
+     */
+    static Cookie ofSecure(String name, String value) {
+        return secureBuilder(name, value).build();
     }
 
     /**
@@ -68,9 +82,23 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @param name the name of the {@link Cookie}
      * @param value the value of the {@link Cookie}
+     *
+     * @deprecated Use {@link #secureBuilder(String, String)} instead to create a secure {@link Cookie}.
      */
+    @Deprecated
     static CookieBuilder builder(String name, String value) {
         return new CookieBuilder(name, value);
+    }
+
+    /**
+     * Returns a newly created {@link CookieBuilder} which builds a {@link Cookie} with secure settings.
+     * {@code "Secure"}, {@code "HttpOnly"}, and {@code "SameSite=Strict"} are enabled by default.
+     *
+     * @param name the name of the {@link Cookie}
+     * @param value the value of the {@link Cookie}
+     */
+    static CookieBuilder secureBuilder(String name, String value) {
+        return new CookieBuilder(name, value).secure(true).httpOnly(true).sameSite("Strict");
     }
 
     /**
