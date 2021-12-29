@@ -170,7 +170,7 @@ jobs:
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace site -PgithubToken=${{ secrets.GH_ACCESS_TOKEN }}
+          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel site
         shell: bash
 
       - name: Clean up the cache
