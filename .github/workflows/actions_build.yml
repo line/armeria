@@ -159,6 +159,8 @@ jobs:
       - name: Build the site
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel site
+        env:
+          ORG_GRADLE_PROJECT_githubToken: ${{ secrets.GH_ACCESS_TOKEN }}
 
       - name: Clean up the cache
         run: |
