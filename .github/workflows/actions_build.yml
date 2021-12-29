@@ -173,6 +173,7 @@ jobs:
           ./gradlew --no-daemon --stacktrace site
         env:
           ORG_GRADLE_PROJECT_githubToken: ${{ secrets.GH_ACCESS_TOKEN }}
+        shell: bash
 
       - name: Clean up the cache
         run: |
