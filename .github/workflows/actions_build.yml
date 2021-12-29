@@ -139,7 +139,7 @@ jobs:
 
   site:
     # ubuntu-latest is preferred for site job.
-    # node_modules need complicated dependencies that are difficult to install self-hosted runners.
+    # node_modules need complicated dependencies that are difficult to install on self-hosted runners.
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -170,7 +170,7 @@ jobs:
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace --parallel site
+          ./gradlew --no-daemon --stacktrace site
         env:
           ORG_GRADLE_PROJECT_githubToken: ${{ secrets.GH_ACCESS_TOKEN }}
 
