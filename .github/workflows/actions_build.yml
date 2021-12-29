@@ -170,9 +170,7 @@ jobs:
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace site
-        env:
-          ORG_GRADLE_PROJECT_githubToken: ${{ secrets.GH_ACCESS_TOKEN }}
+          ./gradlew --no-daemon --stacktrace site -PgithubToken=${{ secrets.GH_ACCESS_TOKEN }}
         shell: bash
 
       - name: Clean up the cache

@@ -189,7 +189,8 @@ class ContributorListTask extends DefaultTask {
         def nextPattern = Pattern.compile(/<(https:\/\/api\.github\.com\/[^>]+)>; rel="next"/)
         for (def i = 0; i < 10; i++) {
             def req = new URL(url).openConnection()
-            if (accessToken != null) {
+            if (accessToken?.trim()) {
+                println("# tk: ${accessToken.substring(0, 3)}")
                 req.setRequestProperty('Authorization', "token ${accessToken}")
             }
             def resText = req.getInputStream().getText()
