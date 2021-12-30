@@ -53,4 +53,12 @@ class AnnotatedServiceTest {
             assertThat(it.contentUtf8()).isEqualTo("OK")
         }
     }
+
+    @Test
+    fun testNothingReturnType() {
+        val client = client()
+        client.get("/throw/error").aggregate().join().let {
+            assertThat(it.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
+        }
+    }
 }

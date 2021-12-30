@@ -43,6 +43,14 @@ internal fun isReturnTypeUnit(method: Method): Boolean {
 }
 
 /**
+ * Returns true if a method returns kotlin.Nothing.
+ */
+internal fun isReturnTypeNothing(method: Method): Boolean {
+    val kFunction = method.kotlinFunction ?: return false
+    return kFunction.returnType.jvmErasure == Nothing::class
+}
+
+/**
  * [Method.getReturnType] equivalent for kotlin suspending function.
  */
 internal fun kFunctionReturnType(method: Method): Class<*> =

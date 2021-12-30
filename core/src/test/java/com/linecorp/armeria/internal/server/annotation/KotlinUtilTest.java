@@ -55,6 +55,12 @@ class KotlinUtilTest {
         assertThat(KotlinUtil.isSuspendingAndReturnTypeUnit(testMethod)).isFalse();
     }
 
+    @Test
+    void isReturnTypeNothing() throws NoSuchMethodException {
+        final Method testMethod = DummyService.class.getDeclaredMethod("testMethod");
+        assertThat(KotlinUtil.isReturnTypeNothing(testMethod)).isFalse();
+    }
+
     private static class DummyService {
         void testMethod() {
         }
