@@ -94,26 +94,26 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private String path;
     private Scheme scheme;
-    private boolean schemeChanged;
 
     GrpcClientBuilder(URI uri) {
         requireNonNull(uri, "uri");
         checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
+        endpointGroup = null;
         this.uri = uri;
         scheme = Scheme.parse(uri.getScheme());
-        maybeNormalizeScheme();
-        endpointGroup = null;
+        validateOrSetSerializationFormat();
     }
 
     GrpcClientBuilder(Scheme scheme, EndpointGroup endpointGroup) {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpointGroup, "endpointGroup");
+        uri = null;
         this.scheme = scheme;
-        maybeNormalizeScheme();
+        validateOrSetSerializationFormat();
         this.endpointGroup = endpointGroup;
     }
 
-    private void maybeNormalizeScheme() {
+    private void validateOrSetSerializationFormat() {
         if (scheme.serializationFormat() == SerializationFormat.NONE) {
             // If not set, gRPC protobuf is used as a default serialization format.
             serializationFormat(GrpcSerializationFormats.PROTO);
@@ -132,7 +132,10 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         requireNonNull(serializationFormat, "serializationFormat");
         ensureGrpcSerializationFormat(serializationFormat);
         scheme = Scheme.of(serializationFormat, scheme.sessionProtocol());
-        schemeChanged = true;
+        if (uri != null) {
+            final String rawUri = uri.toString();
+            uri = URI.create(scheme + rawUri.substring(rawUri.indexOf(':')));
+        }
         return this;
     }
 
@@ -344,10 +347,6 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         final ClientFactory factory = options.factory();
         URI uri = this.uri;
         if (uri != null) {
-            if (schemeChanged) {
-                final String rawUri = uri.toString();
-                uri = URI.create(scheme + rawUri.substring(rawUri.indexOf(':')));
-            }
             if (path != null) {
                 uri = uri.resolve(path);
             }
