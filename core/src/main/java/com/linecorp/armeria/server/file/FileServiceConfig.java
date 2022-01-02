@@ -26,6 +26,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
@@ -44,10 +45,11 @@ public final class FileServiceConfig {
     private final boolean autoDecompress;
     private final boolean autoIndex;
     private final HttpHeaders headers;
+    private final MimeTypeFunction mimeTypeFunction;
 
     FileServiceConfig(HttpVfs vfs, Clock clock, @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                       boolean serveCompressedFiles, boolean autoDecompress, boolean autoIndex,
-                      HttpHeaders headers) {
+                      HttpHeaders headers, MimeTypeFunction mimeTypeFunction) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.entryCacheSpec = validateEntryCacheSpec(entryCacheSpec);
@@ -56,6 +58,7 @@ public final class FileServiceConfig {
         this.autoDecompress = autoDecompress;
         this.autoIndex = autoIndex;
         this.headers = requireNonNull(headers, "headers");
+        this.mimeTypeFunction = requireNonNull(mimeTypeFunction, "mimeTypeFunction");
     }
 
     @Nullable
@@ -142,16 +145,24 @@ public final class FileServiceConfig {
         return headers;
     }
 
+    /**
+     * Returns {@link MimeTypeFunction} that used for resolves {@link MediaType} from file path.
+     */
+    public MimeTypeFunction mimeTypeFunction() {
+        return mimeTypeFunction;
+    }
+
     @Override
     public String toString() {
         return toString(this, vfs(), clock(), entryCacheSpec(), maxCacheEntrySizeBytes(),
-                        serveCompressedFiles(), autoIndex(), headers());
+                        serveCompressedFiles(), autoIndex(), headers(), mimeTypeFunction());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
                            @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                            boolean serveCompressedFiles, boolean autoIndex,
-                           @Nullable Iterable<Entry<AsciiString, String>> headers) {
+                           @Nullable Iterable<Entry<AsciiString, String>> headers,
+                           MimeTypeFunction mimeTypeFunction) {
 
         return MoreObjects.toStringHelper(holder).omitNullValues()
                           .add("vfs", vfs)
@@ -161,6 +172,7 @@ public final class FileServiceConfig {
                           .add("serveCompressedFiles", serveCompressedFiles)
                           .add("autoIndex", autoIndex)
                           .add("headers", headers)
+                          .add("mimeTypeFunction", mimeTypeFunction)
                           .toString();
     }
 }

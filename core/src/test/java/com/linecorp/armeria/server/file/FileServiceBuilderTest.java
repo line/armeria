@@ -20,8 +20,44 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class FileServiceBuilderTest {
+
+    private static final String baseResourceDir =
+      FileServiceBuilderTest.class.getPackage().getName().replace('.', '/') + '/';
+
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.serviceUnder(
+              "/mimeTypeFunction",
+              FileService.builder(getClass().getClassLoader(), baseResourceDir + "baz")
+                .serveCompressedFiles(true)
+                .autoDecompress(true)
+                .maxCacheEntries(0)
+                .mimeTypeFunction(new MimeTypeFunction() {
+                    @Override
+                    public MediaType guessFromPath(String path) {
+                        return MediaType.JSON_UTF_8;
+                    }
+
+                    @Override
+                    public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+                        return MediaType.JSON_UTF_8;
+                    }
+                })
+                .build());
+        }
+    };
 
     @Test
     void autoDecompress() {
@@ -36,5 +72,13 @@ class FileServiceBuilderTest {
                                             .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should enable serveCompressedFiles when autoDecompress is set");
+    }
+
+    @Test
+    void testCustomHardCodedMimeTypeFunction() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+          .get("/mimeTypeFunction/baz.txt").aggregate()
+          .join();
+        assertThat(response.headers().contentType().is(MediaType.JSON_UTF_8)).isTrue();
     }
 }

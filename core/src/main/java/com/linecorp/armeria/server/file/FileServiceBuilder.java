@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -57,6 +58,7 @@ public final class FileServiceBuilder {
     boolean canSetEntryCacheSpec = true;
     @Nullable
     HttpHeadersBuilder headers;
+    MimeTypeFunction mimeTypeFunction = defaultMimeTypeFunction();
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -227,6 +229,29 @@ public final class FileServiceBuilder {
     }
 
     /**
+     * Sets {@link MimeTypeFunction} that provides files extension to {@link MediaType} resolver.
+     * if not set, {@link FileServiceBuilder#defaultMimeTypeFunction()} is used by default.
+     */
+    public FileServiceBuilder mimeTypeFunction(MimeTypeFunction mimeTypeFunction) {
+        this.mimeTypeFunction = requireNonNull(mimeTypeFunction, "mimeTypeFunction");
+        return this;
+    }
+
+    private MimeTypeFunction defaultMimeTypeFunction() {
+        return new MimeTypeFunction() {
+            @Override
+            public MediaType guessFromPath(String path) {
+                return MimeTypeUtil.guessFromPath(path);
+            }
+
+            @Override
+            public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+                return MimeTypeUtil.guessFromPath(path, contentEncoding);
+            }
+        };
+    }
+
+    /**
      * Returns a newly-created {@link FileService} based on the properties of this builder.
      */
     public FileService build() {
@@ -236,12 +261,12 @@ public final class FileServiceBuilder {
 
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders()));
+                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(), mimeTypeFunction));
     }
 
     @Override
     public String toString() {
         return FileServiceConfig.toString(this, vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                                          serveCompressedFiles, autoIndex, headers);
+                                          serveCompressedFiles, autoIndex, headers, mimeTypeFunction);
     }
 }

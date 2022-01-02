@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.file;
 
 import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateData;
-import static com.linecorp.armeria.server.file.MimeTypeUtil.guessFromPath;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -332,7 +331,8 @@ public final class FileService extends AbstractHttpService {
                     if (decompress && encoding != null) {
                         // The compressed data will be decompressed while being served.
                         return new DecompressingHttpFile(uncachedFile, encoding,
-                                                         guessFromPath(path, encoding.headerValue));
+                                                         config.mimeTypeFunction()
+                                                               .guessFromPath(path, encoding.headerValue));
                     } else {
                         return uncachedFile;
                     }
