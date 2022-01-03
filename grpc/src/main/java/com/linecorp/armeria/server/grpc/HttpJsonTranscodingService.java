@@ -161,8 +161,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
                 final Route route = routeAndVariables.getKey();
                 final List<PathVariable> pathVariables = routeAndVariables.getValue();
-
-                final Map<String, Field> fields = buildFields(methodDesc.getInputType(), ImmutableList.of());
+                final Map<String, Field> fields =
+                        buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of());
 
                 int order = 0;
                 builder.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
@@ -274,7 +274,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return new SimpleImmutableEntry<>(builder.build(), PathVariable.from(segments, pathMappingType));
     }
 
-    private static Map<String, Field> buildFields(Descriptor desc, List<String> parentNames) {
+    private static Map<String, Field> buildFields(Descriptor desc,
+                                                  List<String> parentNames,
+                                                  Set<Descriptor> visitingTypes) {
         final StringJoiner namePrefixJoiner = new StringJoiner(".");
         parentNames.forEach(namePrefixJoiner::add);
         final String namePrefix = namePrefixJoiner.length() == 0 ? "" : namePrefixJoiner.toString() + '.';
@@ -304,6 +306,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         break;
                     }
 
+                    if (visitingTypes.contains(field.getMessageType())) {
+                        // Found recursion. No more analysis for this type.
+                        throw new RecursiveTypeException(field.getMessageType());
+                    }
+
                     @Nullable
                     Descriptor typeDesc =
                             desc.getNestedTypes().stream()
@@ -324,10 +331,25 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     checkState(typeDesc != null,
                                "Descriptor for the type '%s' does not exist.",
                                field.getMessageType().getFullName());
-                    builder.putAll(buildFields(typeDesc, ImmutableList.<String>builder()
-                                                                      .addAll(parentNames)
-                                                                      .add(field.getName())
-                                                                      .build()));
+                    try {
+                        builder.putAll(buildFields(typeDesc,
+                                                   ImmutableList.<String>builder()
+                                                                .addAll(parentNames)
+                                                                .add(field.getName())
+                                                                .build(),
+                                                   ImmutableSet.<Descriptor>builder()
+                                                               .addAll(visitingTypes)
+                                                               .add(field.getMessageType())
+                                                               .build()));
+                    } catch (RecursiveTypeException e) {
+                        if (e.recursiveTypeDescriptor() != field.getMessageType()) {
+                            // Re-throw the exception if it is not caused by my field.
+                            throw e;
+                        }
+
+                        builder.put(namePrefix + field.getName(),
+                                    new Field(field, parentNames, JavaType.MESSAGE));
+                    }
                     break;
             }
         });
@@ -336,6 +358,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     @Nullable
     private static JavaType getJavaTypeForWellKnownTypes(FieldDescriptor fd) {
+        // MapField can be sent only via HTTP body.
+        if (fd.isMapField()) {
+            return JavaType.MESSAGE;
+        }
+
         final Descriptor messageType = fd.getMessageType();
         final String fullName = messageType.getFullName();
 
@@ -856,6 +883,23 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                  */
                 REFERENCE
             }
+        }
+    }
+
+    /**
+     * Notifies that a recursively nesting type exists.
+     */
+    static class RecursiveTypeException extends IllegalArgumentException {
+        private static final long serialVersionUID = -6764357154559606786L;
+
+        private final Descriptor recursiveTypeDescriptor;
+
+        RecursiveTypeException(Descriptor recursiveTypeDescriptor) {
+            this.recursiveTypeDescriptor = recursiveTypeDescriptor;
+        }
+
+        Descriptor recursiveTypeDescriptor() {
+            return recursiveTypeDescriptor;
         }
     }
 }

@@ -112,6 +112,17 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  rpc EchoRecursive(EchoRecursiveRequest) returns (EchoRecursiveResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/recursive"
+
+      additional_bindings {
+        post: "/v1/echo/recursive"
+        body: "value"
+      }
+    };
+  }
 }
 
 message GetMessageRequestV1 {
@@ -211,4 +222,17 @@ message EchoAnyRequest {
 
 message EchoAnyResponse {
   google.protobuf.Any value = 1;
+}
+
+message EchoRecursiveRequest {
+  Recursive value = 1;
+}
+
+message EchoRecursiveResponse {
+  Recursive value = 1;
+}
+
+message Recursive {
+  string value = 1;
+  Recursive nested = 2;
 }
