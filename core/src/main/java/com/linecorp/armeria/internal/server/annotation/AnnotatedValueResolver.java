@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -1252,7 +1253,10 @@ final class AnnotatedValueResolver {
                 return (Class<?>) ((ParameterizedType) type).getRawType();
             }
             if (type instanceof WildcardType) {
-                return (Class<?>) ((WildcardType) type).getUpperBounds()[0];
+                final Type[] upperBounds = ((WildcardType) type).getUpperBounds();
+                if (upperBounds.length > 0) {
+                    return (Class<?>) upperBounds[0];
+                }
             }
 
             throw new IllegalArgumentException("Unsupported or invalid parameter type: " + type);
