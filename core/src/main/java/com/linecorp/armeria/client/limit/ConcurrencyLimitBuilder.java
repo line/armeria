@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -41,12 +42,19 @@ public final class ConcurrencyLimitBuilder {
     static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
     static final int DEFAULT_MAX_PENDING_ACQUIRES = Integer.MAX_VALUE;
 
-    private final int maxConcurrency;
+    private final boolean useLimit;
+    private final IntSupplier maxConcurrency;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
     private int maxPendingAcquisitions = DEFAULT_MAX_PENDING_ACQUIRES;
     private Predicate<? super ClientRequestContext> predicate = requestContext -> true;
 
     ConcurrencyLimitBuilder(int maxConcurrency) {
+        useLimit = !(maxConcurrency == 0 || maxConcurrency == Integer.MAX_VALUE);
+        this.maxConcurrency = () -> maxConcurrency;
+    }
+
+    ConcurrencyLimitBuilder(IntSupplier maxConcurrency) {
+        useLimit = true;
         this.maxConcurrency = maxConcurrency;
     }
 
@@ -94,7 +102,7 @@ public final class ConcurrencyLimitBuilder {
      * Returns a newly-created {@link ConcurrencyLimit} based on the properties of this builder.
      */
     public ConcurrencyLimit build() {
-        if (maxConcurrency == 0 || maxConcurrency == Integer.MAX_VALUE) {
+        if (!useLimit) {
             return noLimit;
         }
         return new DefaultConcurrencyLimit(predicate, maxConcurrency, maxPendingAcquisitions, timeoutMillis);
