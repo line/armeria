@@ -723,9 +723,14 @@ class AnnotatedServiceTest {
     @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService13 {
 
-        @Get("/wildcard")
+        @Get("/wildcard1")
         public String wildcard(@Param List<? extends String> param) {
             return String.join(":", param);
+        }
+
+        @Get("/wildcard2")
+        public <T extends String> String wildcard2(@Param List<T> param) {
+            return String.join(":", param.toString());
         }
     }
 
@@ -1079,7 +1084,8 @@ class AnnotatedServiceTest {
     @Test
     void testWildcard() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            testBody(hc, get("/13/wildcard?param=Hello&param=World"), "Hello:World");
+            testBody(hc, get("/13/wildcard1?param=Hello&param=World"), "Hello:World");
+            testBody(hc, get("/13/wildcard2?param=Hello&param=World"), "Hello:World");
         }
     }
 

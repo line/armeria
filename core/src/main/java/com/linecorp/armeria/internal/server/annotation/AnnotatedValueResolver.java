@@ -34,6 +34,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -1256,6 +1257,12 @@ final class AnnotatedValueResolver {
                 final Type[] upperBounds = ((WildcardType) type).getUpperBounds();
                 if (upperBounds.length > 0) {
                     return (Class<?>) upperBounds[0];
+                }
+            }
+            if (type instanceof TypeVariable) {
+                final Type[] bounds = ((TypeVariable) type).getBounds();
+                if (bounds.length > 0) {
+                    return (Class<?>) bounds[0];
                 }
             }
 
