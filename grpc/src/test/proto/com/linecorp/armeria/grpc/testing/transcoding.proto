@@ -123,6 +123,18 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  // When the request message is recursive.
+  rpc EchoRecursive2(Recursive) returns (Recursive) {
+    option (google.api.http) = {
+      get: "/v1/echo/recursive2"
+
+      additional_bindings {
+        post: "/v1/echo/recursive2"
+        body: "*"
+      }
+    };
+  }
 }
 
 message GetMessageRequestV1 {

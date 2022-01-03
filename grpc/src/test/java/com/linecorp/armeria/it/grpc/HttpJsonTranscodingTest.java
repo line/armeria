@@ -69,6 +69,7 @@ import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2.SubMess
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV3;
 import com.linecorp.armeria.grpc.testing.Transcoding.Message;
 import com.linecorp.armeria.grpc.testing.Transcoding.MessageType;
+import com.linecorp.armeria.grpc.testing.Transcoding.Recursive;
 import com.linecorp.armeria.grpc.testing.Transcoding.UpdateMessageRequestV1;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin;
@@ -204,6 +205,13 @@ class HttpJsonTranscodingTest {
         public void echoRecursive(EchoRecursiveRequest request,
                                   StreamObserver<EchoRecursiveResponse> responseObserver) {
             responseObserver.onNext(EchoRecursiveResponse.newBuilder().setValue(request.getValue()).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoRecursive2(Recursive request,
+                                   StreamObserver<Recursive> responseObserver) {
+            responseObserver.onNext(request);
             responseObserver.onCompleted();
         }
     }
@@ -513,8 +521,27 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
+    void shouldAcceptRecursive2() throws Exception {
+        final String jsonContent =
+                '{' +
+                "  \"value\": \"a\"," +
+                "  \"nested\": {" +
+                "    \"value\": \"b\"" +
+                "  }" +
+                '}';
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/recursive2", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("value").asText()).isEqualTo("a");
+        final JsonNode nested = root.get("nested");
+        assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
+        assertThat(nested.get("value").asText()).isEqualTo("b");
+    }
+
+    @Test
     void shoudDenyRecursiveViaHttpGet() throws Exception {
         assertThat(webClient.get("/v1/echo/recursive?value=a").aggregate().get().status())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(webClient.get("/v1/echo/recursive2?nested=a").aggregate().get().status())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Note that the parameter will be ignored because it won't be matched with any fields.
