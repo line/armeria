@@ -730,7 +730,7 @@ class AnnotatedServiceTest {
 
         @Get("/wildcard2")
         public <T extends String> String wildcard2(@Param List<T> param) {
-            return String.join(":", param.toString());
+            return String.join(":", param);
         }
     }
 
