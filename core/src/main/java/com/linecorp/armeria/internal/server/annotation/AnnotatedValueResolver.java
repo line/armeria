@@ -1260,7 +1260,7 @@ final class AnnotatedValueResolver {
                 }
             }
             if (type instanceof TypeVariable) {
-                final Type[] bounds = ((TypeVariable) type).getBounds();
+                final Type[] bounds = ((TypeVariable<?>) type).getBounds();
                 if (bounds.length > 0) {
                     return (Class<?>) bounds[0];
                 }
