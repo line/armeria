@@ -111,6 +111,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final HttpClient client;
 
         CallCredentials credentials = callOptions.getCredentials();
+        if (credentials == NullCallCredentials.INSTANCE) {
+            credentials = null;
+        }
         if (credentials == null) {
             final CallCredentials credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
             if (credentials0 != NullCallCredentials.INSTANCE) {

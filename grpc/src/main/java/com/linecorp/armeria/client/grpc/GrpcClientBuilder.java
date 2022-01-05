@@ -247,22 +247,22 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      *       {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)} via
      *       {@link GrpcJsonMarshallerBuilder#jsonMarshallerCustomizer(Consumer)}.
      *       <pre>{@code
-     *        GrpcClients.builder(grpcServerUri)
-     *                   .jsonMarshallerFactory(serviceDescriptor -> {
-     *                       return GrpcJsonMarshaller.builder()
-     *                                                .jsonMarshallerCustomizer(builder -> {
-     *                                                    builder.preservingProtoFieldNames(true);
-     *                                                })
-     *                                                .build(serviceDescriptor);
-     *                   })
-     *                   .build();
+     *       GrpcClients.builder(grpcServerUri)
+     *                  .jsonMarshallerFactory(serviceDescriptor -> {
+     *                      return GrpcJsonMarshaller.builder()
+     *                                               .jsonMarshallerCustomizer(builder -> {
+     *                                                   builder.preservingProtoFieldNames(true);
+     *                                               })
+     *                                               .build(serviceDescriptor);
+     *                  })
+     *                  .build();
      *       }</pre></li>
      *   <li>Set a customer marshaller for non-{@link Message} types such as {@code scalapb.GeneratedMessage}
      *       with {@code com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller} for Scala.
      *       <pre>{@code
-     *        GrpcClients.builder(grpcServerUri)
-     *                   .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
-     *                   .build()
+     *       GrpcClients.builder(grpcServerUri)
+     *                  .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
+     *                  .build()
      *       }</pre></li>
      * </ul>
      */

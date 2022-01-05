@@ -33,7 +33,7 @@ message HelloReply {
 Making a call starts from creating a client:
 
 ```java
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 
 HelloServiceBlockingStub helloService = GrpcClients.newClient(
         "gproto+http://127.0.0.1:8080/",
@@ -62,7 +62,7 @@ looked like the following:
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import java.util.concurrent.ForkJoinPool;
 
 HelloServiceFutureStub helloService = GrpcClients.newClient(
@@ -105,7 +105,7 @@ You can also use the builder pattern for client construction:
 ```java
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 
 HelloServiceBlockingStub helloService =
     GrpcClients.builder("http://127.0.0.1:8080/")
@@ -133,7 +133,7 @@ in the server will be returned to the client as a <type://StatusCauseException> 
 example, the server always fails with `throw new IllegalStateException("Failed!");`
 
 ```java
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 
 import io.grpc.StatusRuntimeException;

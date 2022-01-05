@@ -75,12 +75,12 @@ Please see [gRPC service](https://armeria.dev/docs/server-grpc) for more informa
 ## Calling a gRPC service
 
 You can also call a gRPC service using a ScalaPB gRPC client.
-`ScalaPbJsonMarshaller` should be registered with <type://GrpcClientOptions#GRPC_JSON_MARSHALLER_FACTORY> to 
+`ScalaPbJsonMarshaller` should be registered with <type://GrpcClientBuilder#jsonMarshallerFactory(Function)> to 
 support gRPC JSON serialization format.
 
 ```scala
-import com.linecorp.armeria.client.Clients
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats.JSON
+import com.linecorp.armeria.client.grpc.GrpcClients
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
         
 val client = 

@@ -20,14 +20,21 @@ import java.util.concurrent.Executor;
 
 import io.grpc.CallCredentials;
 
+/**
+ * A null {@link CallCredentials} for internal use.
+ */
 public final class NullCallCredentials extends CallCredentials {
     public static final CallCredentials INSTANCE = new NullCallCredentials();
 
     private NullCallCredentials() {}
 
     @Override
-    public void applyRequestMetadata(RequestInfo requestInfo, Executor appExecutor, MetadataApplier applier) {}
+    public void applyRequestMetadata(RequestInfo requestInfo, Executor appExecutor, MetadataApplier applier) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void thisUsesUnstableApi() {}
+    public void thisUsesUnstableApi() {
+        throw new UnsupportedOperationException();
+    }
 }
