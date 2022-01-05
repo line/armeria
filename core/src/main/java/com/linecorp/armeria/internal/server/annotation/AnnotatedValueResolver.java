@@ -58,7 +58,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
