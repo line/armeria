@@ -282,13 +282,13 @@ class SuspendingAnnotatedServiceTest {
         }
 
         private fun get(path: String): AggregatedHttpResponse {
-            val webClient = WebClient.of(server.httpUri())
-            return webClient.get(path).aggregate().join()
+            val webClient = WebClient.of(server.httpUri()).blocking()
+            return webClient.get(path)
         }
 
         private fun delete(path: String): AggregatedHttpResponse {
-            val webClient = WebClient.of(server.httpUri())
-            return webClient.delete(path).aggregate().join()
+            val webClient = WebClient.of(server.httpUri()).blocking()
+            return webClient.delete(path)
         }
 
         private fun assertInEventLoop() {

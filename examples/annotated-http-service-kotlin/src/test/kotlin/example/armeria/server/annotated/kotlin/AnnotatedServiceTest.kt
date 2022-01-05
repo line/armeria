@@ -28,9 +28,9 @@ class AnnotatedServiceTest {
 
     @Test
     fun testContextAwareService() {
-        val res = client().get("/contextAware/foo?name=armeria&id=100").aggregate().join()
+        val res = client().prepare().get("/contextAware/foo?name=armeria&id=100").asString().execute().join()
         assertThat(res.status()).isEqualTo(HttpStatus.OK)
-        assertThatJson(res.contentUtf8())
+        assertThatJson(res.content())
             .node("id").isEqualTo(100)
             .node("name").isEqualTo("armeria")
     }
@@ -38,19 +38,31 @@ class AnnotatedServiceTest {
     @Test
     fun testDecoratingService() {
         val client = client()
-        client.get("/decorating/foo").aggregate().join().let {
-            assertThat(it.status()).isEqualTo(HttpStatus.OK)
-            assertThat(it.contentUtf8()).isEqualTo("OK")
-        }
+        client.prepare()
+            .get("/decorating/foo")
+            .asString()
+            .execute()
+            .join().let {
+                assertThat(it.status()).isEqualTo(HttpStatus.OK)
+                assertThat(it.content()).isEqualTo("OK")
+            }
 
-        client.get("/decorating/bar").aggregate().join().let {
-            assertThat(it.status()).isEqualTo(HttpStatus.OK)
-            assertThat(it.contentUtf8()).isEqualTo("OK")
-        }
+        client.prepare()
+            .get("/decorating/bar")
+            .asString()
+            .execute()
+            .join().let {
+                assertThat(it.status()).isEqualTo(HttpStatus.OK)
+                assertThat(it.content()).isEqualTo("OK")
+            }
 
-        client.get("/decorating/blocking").aggregate().join().let {
-            assertThat(it.status()).isEqualTo(HttpStatus.OK)
-            assertThat(it.contentUtf8()).isEqualTo("OK")
-        }
+        client.prepare()
+            .get("/decorating/blocking")
+            .asString()
+            .execute()
+            .join().let {
+                assertThat(it.status()).isEqualTo(HttpStatus.OK)
+                assertThat(it.content()).isEqualTo("OK")
+            }
     }
 }

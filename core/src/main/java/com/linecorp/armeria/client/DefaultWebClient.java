@@ -114,11 +114,6 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                        pathAndQuery.path(), pathAndQuery.query(), null, req, requestOptions);
     }
 
-    @Override
-    public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
-        return execute(aggregatedReq.toHttpRequest());
-    }
-
     private static HttpResponse abortRequestAndReturnFailureResponse(
             HttpRequest req, IllegalArgumentException cause) {
         req.abort(cause);

@@ -32,7 +32,10 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
+
+import io.netty.channel.EventLoop;
 
 /**
  * An asynchronous web client.
@@ -242,7 +245,10 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends the specified HTTP request.
      */
     @CheckReturnValue
-    HttpResponse execute(AggregatedHttpRequest aggregatedReq);
+    default HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
+        requireNonNull(aggregatedReq, "aggregatedReq");
+        return execute(aggregatedReq.toHttpRequest());
+    }
 
     /**
      * Sends an empty HTTP request with the specified headers.
@@ -579,6 +585,15 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default HttpResponse trace(String path, QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.TRACE, WebClientUtil.addQueryParams(path, params)));
+    }
+
+    /**
+     * Returns a {@link BlockingWebClient} that connects to the same {@link URI} with this {@link WebClient}.
+     * Note that a blocking request should be sent in a non-{@link EventLoop} thread such
+     * {@link BlockingTaskExecutor}.
+     */
+    default BlockingWebClient blocking() {
+        return new DefaultBlockingWebClient(this);
     }
 
     @Override

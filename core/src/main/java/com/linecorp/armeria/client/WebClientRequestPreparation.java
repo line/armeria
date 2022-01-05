@@ -19,10 +19,13 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.Map;
 
 import org.reactivestreams.Publisher;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -32,16 +35,20 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}.
  */
-public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder
-        implements RequestOptionsSetters {
+public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
+        implements RequestPreparationSetters<HttpResponse> {
 
     private final WebClient client;
 
@@ -55,6 +62,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     /**
      * Builds and executes the request.
      */
+    @Override
     public HttpResponse execute() {
         final HttpRequest httpRequest = buildRequest();
         final RequestOptions requestOptions;
@@ -67,10 +75,112 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     }
 
     /**
+     * Sets the specified {@link ResponseAs} that converts the {@link HttpResponse} into another.
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<HttpResponse, T> as(ResponseAs<HttpResponse, T> responseAs) {
+        return new TransformingRequestPreparation<>(this, responseAs);
+    }
+
+    /**
+     * Sets the specified {@link ResponseAs} that converts the {@link HttpResponse} into an
+     * {@link ResponseEntity}.
+     */
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asEntity(
+            FutureResponseAs<ResponseEntity<T>> responseAs) {
+        return new FutureTransformingRequestPreparation<>(this, responseAs);
+    }
+
+    /**
+     * Converts the content of the {@link HttpResponse} into bytes.
+     * For example:
+     * <pre>{@code
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<byte[]>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asBytes()
+     *           .execute();
+     * }</pre>
+     */
+    @UnstableApi
+    public FutureTransformingRequestPreparation<ResponseEntity<byte[]>> asBytes() {
+        return asEntity(ResponseAs.bytes());
+    }
+
+    /**
+     * Converts the content of the {@link HttpResponse} into {@link String}.
+     * For example:
+     * <pre>{@code
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<String>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asString()
+     *           .execute();
+     * }</pre>
+     */
+    @UnstableApi
+    public FutureTransformingRequestPreparation<ResponseEntity<String>> asString() {
+        return asEntity(ResponseAs.string());
+    }
+
+    /**
+     * Deserializes the content of the {@link HttpResponse} into the specified non-container type using the
+     * default {@link ObjectMapper}.
+     * For example:
+     * <pre>{@code
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(MyObject.class)
+     *           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as
+     * {@link Collection} or {@link Map}.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz) {
+        return asEntity(ResponseAs.json(clazz));
+    }
+
+    /**
+     * Deserializes the content of the {@link HttpResponse} into the specified Java type using the default
+     * {@link ObjectMapper}.
+     * For example:
+     * <pre>{@code
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<List<MyObject>>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>> {})
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(TypeReference<? extends T> typeRef) {
+        return asEntity(ResponseAs.json(typeRef));
+    }
+
+    /**
      * Sets the specified {@link RequestOptions} that could overwrite the previously configured values such as
      * {@link #responseTimeout(Duration)}, {@link #writeTimeout(Duration)}, {@link #maxResponseLength(long)}
      * and {@link #attr(AttributeKey, Object)}.
      */
+    @Override
     public WebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
         requireNonNull(requestOptions, "requestOptions");
 
