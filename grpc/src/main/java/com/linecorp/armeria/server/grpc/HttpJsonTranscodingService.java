@@ -276,7 +276,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     private static Map<String, Field> buildFields(Descriptor desc,
                                                   List<String> parentNames,
-                                                  Set<Descriptor> visitingTypes) {
+                                                  Set<Descriptor> visitedTypes) {
         final StringJoiner namePrefixJoiner = new StringJoiner(".");
         parentNames.forEach(namePrefixJoiner::add);
         final String namePrefix = namePrefixJoiner.length() == 0 ? "" : namePrefixJoiner.toString() + '.';
@@ -306,8 +306,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         break;
                     }
 
-                    if (visitingTypes.contains(field.getMessageType())) {
+                    if (visitedTypes.contains(field.getMessageType())) {
                         // Found recursion. No more analysis for this type.
+                        // Raise an exception in order to mark the root parameter as JavaType.MESSAGE.
                         throw new RecursiveTypeException(field.getMessageType());
                     }
 
@@ -338,7 +339,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                                                 .add(field.getName())
                                                                 .build(),
                                                    ImmutableSet.<Descriptor>builder()
-                                                               .addAll(visitingTypes)
+                                                               .addAll(visitedTypes)
                                                                .add(field.getMessageType())
                                                                .build()));
                     } catch (RecursiveTypeException e) {
@@ -889,7 +890,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     /**
      * Notifies that a recursively nesting type exists.
      */
-    static class RecursiveTypeException extends IllegalArgumentException {
+    private static class RecursiveTypeException extends IllegalArgumentException {
         private static final long serialVersionUID = -6764357154559606786L;
 
         private final Descriptor recursiveTypeDescriptor;

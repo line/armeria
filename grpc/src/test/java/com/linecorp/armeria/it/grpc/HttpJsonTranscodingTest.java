@@ -25,14 +25,15 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -244,21 +245,21 @@ class HttpJsonTranscodingTest {
     final WebClient webClient = WebClient.builder(server.httpUri()).build();
 
     @Test
-    void shouldGetMessageV1ByGrpcClient() throws Exception {
+    void shouldGetMessageV1ByGrpcClient() {
         final Message message = grpcClient.getMessageV1(
                 GetMessageRequestV1.newBuilder().setName("messages/1").build());
         assertThat(message.getText()).isEqualTo("messages/1");
     }
 
     @Test
-    void shouldGetMessageV1ByWebClient() throws Exception {
-        final AggregatedHttpResponse response = webClient.get("/v1/messages/1").aggregate().get();
+    void shouldGetMessageV1ByWebClient() throws JsonProcessingException {
+        final AggregatedHttpResponse response = webClient.get("/v1/messages/1").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
     }
 
     @Test
-    void shouldGetMessageV2ByGrpcClient() throws Exception {
+    void shouldGetMessageV2ByGrpcClient() {
         final Message message = grpcClient.getMessageV2(
                 GetMessageRequestV2.newBuilder()
                                    .setMessageId("1")
@@ -270,26 +271,27 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldGetMessageV2ByWebClient() throws Exception {
+    void shouldGetMessageV2ByWebClient() throws JsonProcessingException {
         final AggregatedHttpResponse response =
                 webClient.get("/v2/messages/1?revision=999&sub.subfield=sub&type=DETAIL")
-                         .aggregate().get();
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("1:999:sub:DETAIL");
     }
 
     @Test
-    void shouldGetMessageV2ByWebClient_GetDefaultValueIfUnknownEnumIsSpecified() throws Exception {
+    void shouldGetMessageV2ByWebClient_GetDefaultValueIfUnknownEnumIsSpecified()
+            throws JsonProcessingException {
         final AggregatedHttpResponse response =
                 webClient.get("/v2/messages/1?revision=999&sub.subfield=sub&type=UNKNOWN")
-                         .aggregate().get();
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         // Return a default enum(value 0).
         assertThat(root.get("text").asText()).isEqualTo("1:999:sub:SIMPLE");
     }
 
     @Test
-    void shouldGetMessageV3ByGrpcClient() throws Exception {
+    void shouldGetMessageV3ByGrpcClient() {
         final Message message = grpcClient.getMessageV3(
                 GetMessageRequestV3.newBuilder()
                                    .setMessageId("1")
@@ -299,25 +301,25 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldGetMessageV3ByWebClient() throws Exception {
+    void shouldGetMessageV3ByWebClient() throws JsonProcessingException {
         final AggregatedHttpResponse response =
                 webClient.get("/v3/messages/1?revision=2&revision=3&revision=4")
-                         .aggregate().get();
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("1:2:3:4");
     }
 
     @Test
-    void shouldGetMessageV3ByWebClient_CheckOrder() throws Exception {
+    void shouldGetMessageV3ByWebClient_CheckOrder() throws JsonProcessingException {
         final AggregatedHttpResponse response =
                 webClient.get("/v3/messages/1?revision=4&revision=3&revision=2")
-                         .aggregate().get();
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("1:4:3:2");
     }
 
     @Test
-    void shouldUpdateMessageV1ByGrpcClient() throws Exception {
+    void shouldUpdateMessageV1ByGrpcClient() {
         final Message message = grpcClient.updateMessageV1(
                 UpdateMessageRequestV1.newBuilder()
                                       .setMessageId("1")
@@ -327,7 +329,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldUpdateMessageV1ByWebClient() throws Exception {
+    void shouldUpdateMessageV1ByWebClient() throws JsonProcessingException {
         final AggregatedHttpResponse response =
                 webClient.execute(RequestHeaders.builder()
                                                 .method(HttpMethod.PATCH)
@@ -335,20 +337,20 @@ class HttpJsonTranscodingTest {
                                                 .contentType(MediaType.JSON)
                                                 .build(),
                                   HttpData.ofUtf8("{\"text\": \"v1\"}"))
-                         .aggregate().get();
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("1:v1");
     }
 
     @Test
-    void shouldUpdateMessageV2ByGrpcClient() throws Exception {
+    void shouldUpdateMessageV2ByGrpcClient() {
         final Message message = grpcClient.updateMessageV2(Message.newBuilder().setText("v2").build());
         // There's no way to get 'message_id' from a gRPC request.
         assertThat(message.getText()).isEqualTo("no_id:v2");
     }
 
     @Test
-    void shouldUpdateMessageV2ByWebClient() throws Exception {
+    void shouldUpdateMessageV2ByWebClient() throws JsonProcessingException {
         final AggregatedHttpResponse response =
                 webClient.execute(RequestHeaders.builder()
                                                 .method(HttpMethod.PATCH)
@@ -356,25 +358,25 @@ class HttpJsonTranscodingTest {
                                                 .contentType(MediaType.JSON)
                                                 .build(),
                                   HttpData.ofUtf8("{\"text\": \"v2\"}"))
-                         .aggregate().get();
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("1:v2");
     }
 
     @Test
-    void shouldAcceptRfc3339TimeFormatAndDuration() throws Exception {
+    void shouldAcceptRfc3339TimeFormatAndDuration() throws JsonProcessingException {
         final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
         final String duration = "1.000340012s";
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().get();
+                webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
     }
 
     @Test
-    void shouldAcceptWrappers1() throws Exception {
+    void shouldAcceptWrappers1() throws JsonProcessingException {
         final String bytesValue = new String(
                 Base64.getEncoder().encode(testBytesValue.getBytes(StandardCharsets.UTF_8)));
 
@@ -390,7 +392,7 @@ class HttpJsonTranscodingTest {
              .add("bytesVal", bytesValue);
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().get();
+                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
         assertThat(root.get("floatVal").asDouble()).isEqualTo(123.456f, withPrecision(0.001d));
@@ -404,7 +406,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptWrappers2() throws Exception {
+    void shouldAcceptWrappers2() throws JsonProcessingException, JsonMappingException {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("doubleVal", String.valueOf(123.456d))
              .add("int64Val", String.valueOf(Long.MAX_VALUE))
@@ -412,7 +414,7 @@ class HttpJsonTranscodingTest {
              .add("stringVal", "string");
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().get();
+                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
         assertThat(root.get("floatVal")).isNull();
@@ -426,7 +428,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptStruct() throws Exception {
+    void shouldAcceptStruct() throws JsonProcessingException, JsonMappingException {
         final String jsonContent = "{\"intVal\": 1, \"stringVal\": \"1\"}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -437,7 +439,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptListValue_String() throws Exception {
+    void shouldAcceptListValue_String() throws JsonProcessingException, JsonMappingException {
         final String jsonContent = "[\"1\", \"2\"]";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -448,7 +450,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptListValue_Number() throws Exception {
+    void shouldAcceptListValue_Number() throws JsonProcessingException, JsonMappingException {
         final String jsonContent = "[1, 2]";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -459,7 +461,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptValue_String() throws Exception {
+    void shouldAcceptValue_String() throws JsonProcessingException, JsonMappingException {
         final String jsonContent = "\"1\"";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -467,7 +469,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptValue_Number() throws Exception {
+    void shouldAcceptValue_Number() throws JsonProcessingException, JsonMappingException {
         final String jsonContent = "1";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -475,7 +477,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptAny() throws Exception {
+    void shouldAcceptAny() throws JsonProcessingException, JsonMappingException {
         final String jsonContent =
                 '{' +
                 "  \"@type\": \"type.googleapis.com/google.protobuf.Duration\"," +
@@ -490,19 +492,19 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldDenyHttpGetParameters_Struct_Value_ListValue_Any() throws Exception {
-        assertThat(webClient.get("/v1/echo/struct?value=1").aggregate().get().status())
+    void shouldDenyHttpGetParameters_Struct_Value_ListValue_Any() {
+        assertThat(webClient.get("/v1/echo/struct?value=1").aggregate().join().status())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(webClient.get("/v1/echo/list_value?value=1&value=2").aggregate().get().status())
+        assertThat(webClient.get("/v1/echo/list_value?value=1&value=2").aggregate().join().status())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(webClient.get("/v1/echo/value?value=1").aggregate().get().status())
+        assertThat(webClient.get("/v1/echo/value?value=1").aggregate().join().status())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(webClient.get("/v1/echo/any?value=1").aggregate().get().status())
+        assertThat(webClient.get("/v1/echo/any?value=1").aggregate().join().status())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
-    void shouldAcceptRecursive() throws Exception {
+    void shouldAcceptRecursive() throws JsonProcessingException {
         final String jsonContent =
                 '{' +
                 "  \"value\": \"a\"," +
@@ -521,7 +523,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptRecursive2() throws Exception {
+    void shouldAcceptRecursive2() throws JsonProcessingException {
         final String jsonContent =
                 '{' +
                 "  \"value\": \"a\"," +
@@ -538,40 +540,40 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shoudDenyRecursiveViaHttpGet() throws Exception {
-        assertThat(webClient.get("/v1/echo/recursive?value=a").aggregate().get().status())
+    void shoudDenyRecursiveViaHttpGet() {
+        assertThat(webClient.get("/v1/echo/recursive?value=a").aggregate().join().status())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(webClient.get("/v1/echo/recursive2?nested=a").aggregate().get().status())
+        assertThat(webClient.get("/v1/echo/recursive2?nested=a").aggregate().join().status())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Note that the parameter will be ignored because it won't be matched with any fields.
-        assertThat(webClient.get("/v1/echo/recursive?value.nested.value=a").aggregate().get().status())
+        assertThat(webClient.get("/v1/echo/recursive?value.nested.value=a").aggregate().join().status())
                 .isEqualTo(HttpStatus.OK);
     }
 
     @Test
-    void shouldAcceptNaNAndInfinity() throws Exception {
+    void shouldAcceptNaNAndInfinity() throws JsonProcessingException {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("doubleVal", "NaN")
              .add("floatVal", "Infinity");
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().get();
+                webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("doubleVal").asDouble()).isNaN();
         assertThat(root.get("floatVal").asDouble()).isInfinite();
     }
 
     @Test
-    void shouldReturnMethodNotAllowed() throws Exception {
-        final AggregatedHttpResponse response = webClient.get("/foo/").aggregate().get();
+    void shouldReturnMethodNotAllowed() {
+        final AggregatedHttpResponse response = webClient.get("/foo/").aggregate().join();
         // Because the FramedGrpcService only support HTTP POST.
         assertThat(response.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @Test
-    void shouldBeIntegratedWithDocService() throws Exception {
-        final AggregatedHttpResponse response = webClient.get("/docs/specification.json").aggregate().get();
+    void shouldBeIntegratedWithDocService() throws JsonProcessingException {
+        final AggregatedHttpResponse response = webClient.get("/docs/specification.json").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode methods =
                 StreamSupport.stream(root.get("services").spliterator(), false)
@@ -611,8 +613,7 @@ class HttpJsonTranscodingTest {
         return method.get("endpoints").get(0).get("pathMapping").asText();
     }
 
-    private static AggregatedHttpResponse jsonPostRequest(WebClient webClient, String path, String body)
-            throws ExecutionException, InterruptedException {
+    private static AggregatedHttpResponse jsonPostRequest(WebClient webClient, String path, String body) {
         final RequestHeaders headers = RequestHeaders.builder().method(HttpMethod.POST).path(path)
                                                      .contentType(MediaType.JSON).build();
         return webClient.execute(headers, body).aggregate().join();
