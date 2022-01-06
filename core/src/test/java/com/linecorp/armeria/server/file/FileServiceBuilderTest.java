@@ -31,7 +31,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class FileServiceBuilderTest {
 
-    private static final String baseResourceDir =
+    private static final String BASE_RESOURCE_DIR =
       FileServiceBuilderTest.class.getPackage().getName().replace('.', '/') + '/';
 
     @RegisterExtension
@@ -40,19 +40,31 @@ class FileServiceBuilderTest {
         protected void configure(ServerBuilder sb) {
             sb.serviceUnder(
               "/mimeTypeFunction",
-              FileService.builder(getClass().getClassLoader(), baseResourceDir + "baz")
-                .serveCompressedFiles(true)
-                .autoDecompress(true)
-                .maxCacheEntries(0)
+              FileService.builder(getClass().getClassLoader(), BASE_RESOURCE_DIR + "bar")
                 .mimeTypeFunction(new MimeTypeFunction() {
                     @Override
                     public MediaType guessFromPath(String path) {
-                        return MediaType.JSON_UTF_8;
+                        if (path.endsWith(".custom-json-extension")) {
+                            return MediaType.JSON_UTF_8;
+                        }
+                        if (path.endsWith(".custom-txt-extension")) {
+                            return MediaType.PLAIN_TEXT_UTF_8;
+                        }
+                        return null;
                     }
 
                     @Override
                     public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-                        return MediaType.JSON_UTF_8;
+                        if (contentEncoding == null) {
+                            return guessFromPath(path);
+                        }
+                        if (path.endsWith(".gzip.custom-json-extension")) {
+                            return MediaType.JSON_UTF_8;
+                        }
+                        if (path.endsWith(".brotli.custom-txt-extension")) {
+                            return MediaType.PLAIN_TEXT_UTF_8;
+                        }
+                        return null;
                     }
                 })
                 .build());
@@ -75,10 +87,26 @@ class FileServiceBuilderTest {
     }
 
     @Test
-    void testCustomHardCodedMimeTypeFunction() {
+    void testCustomHardCodedMimeTypeFunctionGuessFromPathCustomJsonExtension() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-          .get("/mimeTypeFunction/baz.txt").aggregate()
+          .get("/mimeTypeFunction/bar.custom-json-extension").aggregate()
           .join();
-        assertThat(response.headers().contentType().is(MediaType.JSON_UTF_8)).isTrue();
+        assertThat(response.headers().contentType()).isSameAs(MediaType.JSON_UTF_8);
+    }
+
+    @Test
+    void testCustomHardCodedMimeTypeFunctionGuessFromPathCustomTextExtension() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+          .get("/mimeTypeFunction/bar.custom-txt-extension").aggregate()
+          .join();
+        assertThat(response.headers().contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
+    }
+
+    @Test
+    void testCustomHardCodedMimeTypeFunctionNotMatchThenDefaultIsUsed() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+          .get("/mimeTypeFunction/bar.xhtml").aggregate()
+          .join();
+        assertThat(response.headers().contentType()).isSameAs(MediaType.XHTML_UTF_8);
     }
 }

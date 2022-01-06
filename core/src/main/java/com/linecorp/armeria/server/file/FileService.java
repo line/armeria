@@ -323,7 +323,8 @@ public final class FileService extends AbstractHttpService {
         @Nullable
         final String contentEncoding = encoding != null ? encoding.headerValue : null;
         final HttpFile uncachedFile = config.vfs().get(readExecutor, path, config.clock(),
-                                                       contentEncoding, config.headers());
+                                                       contentEncoding, config.headers(),
+                                                       config.mimeTypeFunction());
 
         return uncachedFile.readAttributes(readExecutor).thenApply(uncachedAttrs -> {
             if (cache == null) {

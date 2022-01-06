@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,12 +15,16 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A function used for resolve {@link MediaType} of file.
+ * A function used for determining the {@link MediaType} of a file based on its path.
  */
+@UnstableApi
 public interface MimeTypeFunction {
 
   /**
@@ -28,7 +32,7 @@ public interface MimeTypeFunction {
    * @param path of file to resolved. For example "/foo/bar.txt" or "bar.txt"
    * @return the {@link MediaType}
    */
-  MediaType guessFromPath(String path);
+  @Nullable MediaType guessFromPath(String path);
 
   /**
    * Resolve MIME types {@link MediaType} with given {@code path} and {@code contentEncoding}.
@@ -36,5 +40,49 @@ public interface MimeTypeFunction {
    * @param contentEncoding compress encoded type
    * @return the {@link MediaType}
    */
-  MediaType guessFromPath(String path, @Nullable String contentEncoding);
+  @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding);
+
+  /**
+   * Returns a newly created {@link MimeTypeFunction} that tries this {@link MimeTypeFunction} first and
+   * then the specified {@code other} when the first call returns {@code null}.
+   */
+  default MimeTypeFunction orElse(MimeTypeFunction other) {
+    requireNonNull(other, "other");
+    return new MimeTypeFunction() {
+      @Override
+      public @Nullable MediaType guessFromPath(String path) {
+        final @Nullable MediaType mediaType = MimeTypeFunction.this.guessFromPath(path);
+        if (mediaType != null) {
+          return mediaType;
+        }
+        return other.guessFromPath(path);
+      }
+
+      @Override
+      public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+        final @Nullable MediaType mediaType = MimeTypeFunction.this.guessFromPath(path, contentEncoding);
+        if (mediaType != null) {
+          return mediaType;
+        }
+        return other.guessFromPath(path, contentEncoding);
+      }
+    };
+  }
+
+  /**
+   * Returns the default {@link MimeTypeFunction}.
+   */
+  static MimeTypeFunction ofDefault() {
+    return new MimeTypeFunction() {
+      @Override
+      public @Nullable MediaType guessFromPath(String path) {
+        return MimeTypeUtil.guessFromPath(path);
+      }
+
+      @Override
+      public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+        return MimeTypeUtil.guessFromPath(path, contentEncoding);
+      }
+    };
+  }
 }

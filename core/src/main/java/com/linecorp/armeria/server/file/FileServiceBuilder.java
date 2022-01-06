@@ -58,7 +58,8 @@ public final class FileServiceBuilder {
     boolean canSetEntryCacheSpec = true;
     @Nullable
     HttpHeadersBuilder headers;
-    MimeTypeFunction mimeTypeFunction = defaultMimeTypeFunction();
+    @Nullable
+    MimeTypeFunction mimeTypeFunction;
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -230,25 +231,11 @@ public final class FileServiceBuilder {
 
     /**
      * Sets {@link MimeTypeFunction} that provides files extension to {@link MediaType} resolver.
-     * if not set, {@link FileServiceBuilder#defaultMimeTypeFunction()} is used by default.
+     * if not set, {@link MimeTypeFunction#ofDefault()} is used by default.
      */
     public FileServiceBuilder mimeTypeFunction(MimeTypeFunction mimeTypeFunction) {
         this.mimeTypeFunction = requireNonNull(mimeTypeFunction, "mimeTypeFunction");
         return this;
-    }
-
-    private MimeTypeFunction defaultMimeTypeFunction() {
-        return new MimeTypeFunction() {
-            @Override
-            public MediaType guessFromPath(String path) {
-                return MimeTypeUtil.guessFromPath(path);
-            }
-
-            @Override
-            public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-                return MimeTypeUtil.guessFromPath(path, contentEncoding);
-            }
-        };
     }
 
     /**
@@ -258,6 +245,9 @@ public final class FileServiceBuilder {
         if (autoDecompress && !serveCompressedFiles) {
             throw new IllegalStateException("Should enable serveCompressedFiles when autoDecompress is set");
         }
+
+        final MimeTypeFunction mimeTypeFunction = this.mimeTypeFunction == null ? MimeTypeFunction.ofDefault()
+                                                  : this.mimeTypeFunction.orElse(MimeTypeFunction.ofDefault());
 
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,

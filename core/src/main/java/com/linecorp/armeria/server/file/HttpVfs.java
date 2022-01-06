@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.Meter;
@@ -66,11 +67,12 @@ public interface HttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
-     *
+     * @param mimeTypeFunction the {@link MimeTypeFunction} to determined {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
     HttpFile get(Executor fileReadExecutor, String path, Clock clock,
-                 @Nullable String contentEncoding, HttpHeaders additionalHeaders);
+                 @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+                 MimeTypeFunction mimeTypeFunction);
 
     /**
      * Returns whether the file at the specified {@code path} is a listable directory.

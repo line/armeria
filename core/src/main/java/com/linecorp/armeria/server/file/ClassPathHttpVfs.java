@@ -50,13 +50,14 @@ final class ClassPathHttpVfs extends AbstractBlockingHttpVfs {
 
     @Override
     protected HttpFile blockingGet(
-            Executor fileReadExecutor, String path, Clock clock,
-            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+            Executor fileReadExecutor, String path, Clock clock, @Nullable String contentEncoding,
+            HttpHeaders additionalHeaders, MimeTypeFunction mimeTypeFunction) {
 
         RouteUtil.ensureAbsolutePath(path, "path");
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
         final HttpFileBuilder builder = HttpFile.builder(classLoader, resourcePath);
-        return FileSystemHttpVfs.build(builder, clock, path, contentEncoding, additionalHeaders);
+        return FileSystemHttpVfs.build(builder, clock, path, contentEncoding, additionalHeaders,
+                                       mimeTypeFunction);
     }
 
     @Override
