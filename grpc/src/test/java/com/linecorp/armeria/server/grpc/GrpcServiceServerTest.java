@@ -395,10 +395,9 @@ class GrpcServiceServerTest {
 
             sb.service(
                     GrpcService.builder()
-                               .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                               .addService(ServerInterceptors.intercept(
-                                       new UnitTestServiceImpl(),
-                                       REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                               .maxRequestMessageLength(MAX_MESSAGE_SIZE)
+                               .addService(new UnitTestServiceImpl())
+                               .intercept(REPLACE_EXCEPTION, ADD_TO_CONTEXT)
                                .enableUnframedRequests(true)
                                .supportedSerializationFormats(GrpcSerializationFormats.values())
                                .build(),
@@ -447,10 +446,9 @@ class GrpcServiceServerTest {
 
             sb.serviceUnder("/",
                             GrpcService.builder()
-                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                                       .addService(ServerInterceptors.intercept(
-                                               new UnitTestServiceImpl(),
-                                               REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                                       .maxRequestMessageLength(MAX_MESSAGE_SIZE)
+                                       .addService(new UnitTestServiceImpl())
+                                       .intercept(REPLACE_EXCEPTION, ADD_TO_CONTEXT)
                                        .enableUnframedRequests(true)
                                        .supportedSerializationFormats(
                                                GrpcSerializationFormats.values())

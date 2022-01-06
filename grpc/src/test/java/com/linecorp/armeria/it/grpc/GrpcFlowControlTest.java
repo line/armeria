@@ -191,7 +191,7 @@ public class GrpcFlowControlTest {
             sb.serviceUnder("/",
                             GrpcService.builder()
                                        .addService(new FlowControlService())
-                                       .setMaxInboundMessageSizeBytes(Integer.MAX_VALUE)
+                                       .maxRequestMessageLength(Integer.MAX_VALUE)
                                        .build());
         }
     };

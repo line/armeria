@@ -51,6 +51,7 @@ import org.mockito.ArgumentCaptor;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
+import com.google.rpc.RequestInfo;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -169,8 +170,8 @@ class GrpcClientTest {
             sb.serviceUnder("/",
                             GrpcService.builder()
                                        .addService(interceptService)
-                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                                       .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .maxRequestMessageLength(MAX_MESSAGE_SIZE)
+                                       .maxResponseMessageLength(MAX_MESSAGE_SIZE)
                                        .useClientTimeoutHeader(false)
                                        .build()
                                        .decorate((service, ctx, req) -> {

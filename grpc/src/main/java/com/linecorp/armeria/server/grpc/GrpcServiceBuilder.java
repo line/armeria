@@ -131,9 +131,9 @@ public final class GrpcServiceBuilder {
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxRequestMessageLength = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
-    private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
+    private int maxResponseMessageLength = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
     private Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory =
             GrpcJsonMarshaller::of;
@@ -390,23 +390,50 @@ public final class GrpcServiceBuilder {
      * and {@link ServerBuilder#requestTimeoutMillis(long)}
      * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
      * to very high values and set this to the expected limit of individual messages in the stream.
+     *
+     * @deprecated Use {@link #maxRequestMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
-        checkArgument(maxInboundMessageSizeBytes > 0,
-                      "maxInboundMessageSizeBytes must be >0");
-        this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        return this;
+        return maxRequestMessageLength(maxInboundMessageSizeBytes);
     }
 
     /**
      * Sets the maximum size in bytes of an individual outgoing message. If not set, all messages will be sent.
      * This can be a safety valve to prevent overflowing network connections with large messages due to business
      * logic bugs.
+     * @deprecated Use {@link #maxResponseMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxOutboundMessageSizeBytes(int maxOutboundMessageSizeBytes) {
-        checkArgument(maxOutboundMessageSizeBytes > 0,
-                      "maxOutboundMessageSizeBytes must be >0");
-        this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        return maxResponseMessageLength(maxOutboundMessageSizeBytes);
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual request message. If not set, will use
+     * {@link VirtualHost#maxRequestLength()}. To support long-running RPC streams, it is recommended to
+     * set {@link ServerBuilder#maxRequestLength(long)}
+     * (or {@link VirtualHostBuilder#maxRequestLength(long)})
+     * and {@link ServerBuilder#requestTimeoutMillis(long)}
+     * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
+     * to very high values and set this to the expected limit of individual messages in the stream.
+     */
+    public GrpcServiceBuilder maxRequestMessageLength(int maxRequestMessageLength) {
+        checkArgument(maxRequestMessageLength > 0,
+                      "maxRequestMessageLength: %s (expected: > 0)", maxRequestMessageLength);
+        this.maxRequestMessageLength = maxRequestMessageLength;
+        return this;
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual response message. If not set, all messages will be sent.
+     * This can be a safety valve to prevent overflowing network connections with large messages due to business
+     * logic bugs.
+     */
+    public GrpcServiceBuilder maxResponseMessageLength(int maxResponseMessageLength) {
+        checkArgument(maxResponseMessageLength > 0,
+                      "maxResponseMessageLength: %s (expected: > 0)", maxResponseMessageLength);
+        this.maxResponseMessageLength = maxResponseMessageLength;
         return this;
     }
 

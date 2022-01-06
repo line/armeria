@@ -132,10 +132,8 @@ class UnframedGrpcServiceTest {
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
         return (UnframedGrpcService) GrpcService.builder()
                                                 .addService(bindableService)
-                                                .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                .supportedSerializationFormats(
-                                                        GrpcSerializationFormats.values())
+                                                .maxRequestMessageLength(MAX_MESSAGE_BYTES)
+                                                .maxResponseMessageLength(MAX_MESSAGE_BYTES)
                                                 .enableUnframedRequests(true)
                                                 .unframedGrpcErrorHandler(
                                                         UnframedGrpcErrorHandler.ofPlainText())
@@ -146,9 +144,8 @@ class UnframedGrpcServiceTest {
     void shouldThrowExceptionIfUnframedRequestHandlerAddedButUnframedRequestsAreDisabled() {
         final IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
                 GrpcService.builder()
-                           .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                           .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                           .supportedSerializationFormats(GrpcSerializationFormats.values())
+                           .maxRequestMessageLength(MAX_MESSAGE_BYTES)
+                           .maxResponseMessageLength(MAX_MESSAGE_BYTES)
                            .enableUnframedRequests(false)
                            .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
                            .build());
