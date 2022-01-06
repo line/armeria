@@ -615,6 +615,6 @@ class HttpJsonTranscodingTest {
             throws ExecutionException, InterruptedException {
         final RequestHeaders headers = RequestHeaders.builder().method(HttpMethod.POST).path(path)
                                                      .contentType(MediaType.JSON).build();
-        return webClient.execute(headers, body).aggregate().get();
+        return webClient.execute(headers, body).aggregate().join();
     }
 }
