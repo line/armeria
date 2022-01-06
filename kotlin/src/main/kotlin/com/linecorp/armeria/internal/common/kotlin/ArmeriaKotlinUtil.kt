@@ -26,6 +26,13 @@ import kotlin.reflect.jvm.jvmErasure
 import kotlin.reflect.jvm.kotlinFunction
 
 /**
+ * Returns true if a method can be represented by a Kotlin function.
+ */
+internal fun isKFunction(method: Method): Boolean {
+    return method.kotlinFunction != null
+}
+
+/**
  * Returns true if a method is a suspending function.
  */
 internal fun isSuspendingFunction(method: Method): Boolean {

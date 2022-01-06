@@ -231,7 +231,7 @@ public final class AnnotatedService implements HttpService {
         final Class<?> returnType;
         final Type genericReturnType;
 
-        if (KotlinUtil.isSuspendingFunction(method) && !KotlinUtil.isReturnTypeNothing(method)) {
+        if (KotlinUtil.isKFunction(method) && !KotlinUtil.isReturnTypeNothing(method)) {
             returnType = KotlinUtil.kFunctionReturnType(method);
             genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
         } else {
