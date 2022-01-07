@@ -33,6 +33,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
+import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
 import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -513,6 +515,28 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequestDuplicator toDuplicator(EventExecutor executor, long maxRequestLength) {
         requireNonNull(executor, "executor");
         return new DefaultHttpRequestDuplicator(this, executor, maxRequestLength);
+    }
+
+    /**
+     * Returns a new {@link SplitHttpRequest} which splits a stream of {@link HttpObject}s into
+     * {@link HttpData}s and an HTTP trailers.
+     * {@link SplitHttpRequest#trailers()} might not complete until the entire request body is consumed
+     * completely.
+     */
+    @CheckReturnValue
+    default SplitHttpRequest split() {
+        return split(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Returns a new {@link SplitHttpRequest} which splits a stream of {@link HttpObject}s into
+     * {@link HttpData}s and an HTTP trailers.
+     * {@link SplitHttpRequest#trailers()} might not complete until the entire request body is consumed
+     * completely.
+     */
+    @CheckReturnValue
+    default SplitHttpRequest split(EventExecutor executor) {
+        return new DefaultSplitHttpRequest(this, requireNonNull(executor, "executor"));
     }
 
     @Override
