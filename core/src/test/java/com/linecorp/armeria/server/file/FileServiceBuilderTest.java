@@ -103,5 +103,4 @@ class FileServiceBuilderTest {
           .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.XHTML_UTF_8);
     }
-
 }
