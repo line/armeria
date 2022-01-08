@@ -58,12 +58,6 @@ class FileServiceBuilderTest {
                         if (contentEncoding == null) {
                             return guessFromPath(path);
                         }
-                        if (path.endsWith(".gzip.custom-json-extension")) {
-                            return MediaType.JSON_UTF_8;
-                        }
-                        if (path.endsWith(".brotli.custom-txt-extension")) {
-                            return MediaType.PLAIN_TEXT_UTF_8;
-                        }
                         return null;
                     }
                 })
@@ -87,7 +81,7 @@ class FileServiceBuilderTest {
     }
 
     @Test
-    void testCustomHardCodedMimeTypeFunctionGuessFromPathCustomJsonExtension() {
+    void testCustomMimeTypeFunctionGuessFromPathCustomJsonExtension() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
           .get("/mimeTypeFunction/bar.custom-json-extension").aggregate()
           .join();
@@ -95,7 +89,7 @@ class FileServiceBuilderTest {
     }
 
     @Test
-    void testCustomHardCodedMimeTypeFunctionGuessFromPathCustomTextExtension() {
+    void testCustomMimeTypeFunctionGuessFromPathCustomTextExtension() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
           .get("/mimeTypeFunction/bar.custom-txt-extension").aggregate()
           .join();
@@ -103,10 +97,11 @@ class FileServiceBuilderTest {
     }
 
     @Test
-    void testCustomHardCodedMimeTypeFunctionNotMatchThenDefaultIsUsed() {
+    void testCustomMimeTypeFunctionNotMatchThenDefaultIsUsed() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
           .get("/mimeTypeFunction/bar.xhtml").aggregate()
           .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.XHTML_UTF_8);
     }
+
 }

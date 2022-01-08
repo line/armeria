@@ -67,12 +67,31 @@ public interface HttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
+     * @return the {@link HttpFile} at the specified {@code path}
+     *
+     * @deprecated Use {@link #get(Executor, String, Clock, String, HttpHeaders, MimeTypeFunction)} instead.
+     */
+    @Deprecated
+    HttpFile get(Executor fileReadExecutor, String path, Clock clock,
+                 @Nullable String contentEncoding, HttpHeaders additionalHeaders);
+
+    /**
+     * Finds the file at the specified {@code path}.
+     *
+     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
+     * @param path an absolute path that starts with {@code '/'}, whose component separator is {@code '/'}
+     * @param clock the {@link Clock} which provides the current date and time
+     * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
+     *                        {@code null} to omit the header.
+     * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
      * @param mimeTypeFunction the {@link MimeTypeFunction} to determined {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
-    HttpFile get(Executor fileReadExecutor, String path, Clock clock,
+    default HttpFile get(Executor fileReadExecutor, String path, Clock clock,
                  @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-                 MimeTypeFunction mimeTypeFunction);
+                 MimeTypeFunction mimeTypeFunction) {
+        return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders);
+    }
 
     /**
      * Returns whether the file at the specified {@code path} is a listable directory.

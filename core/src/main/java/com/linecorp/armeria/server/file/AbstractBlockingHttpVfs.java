@@ -51,6 +51,28 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
     /**
      * {@inheritDoc} This method invokes {@link #blockingGet(Executor, String, Clock, String, HttpHeaders,
      * MimeTypeFunction)} from the specified {@code fileReadExecutor}.
+     *
+     * @deprecated Use {@link #get(Executor, String, Clock, String, HttpHeaders, MimeTypeFunction)} instead.
+     */
+    @Deprecated
+    @Override
+    public final HttpFile get(
+            Executor fileReadExecutor, String path, Clock clock,
+            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+
+        requireNonNull(fileReadExecutor, "fileReadExecutor");
+        requireNonNull(path, "path");
+        requireNonNull(clock, "clock");
+        requireNonNull(additionalHeaders, "additionalHeaders");
+
+        return HttpFile.from(CompletableFuture.supplyAsync(
+                () -> blockingGet(fileReadExecutor, path, clock,
+                                  contentEncoding, additionalHeaders), fileReadExecutor));
+    }
+
+    /**
+     * {@inheritDoc} This method invokes {@link #blockingGet(Executor, String, Clock, String, HttpHeaders,
+     * MimeTypeFunction)} from the specified {@code fileReadExecutor}.
      */
     @Override
     public final HttpFile get(
@@ -77,12 +99,32 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
+     * @return the {@link HttpFile} at the specified {@code path}
+     *
+     * @deprecated Use {@link #blockingGet(Executor, String, Clock, String, HttpHeaders, MimeTypeFunction)}
+     *     instead.
+     */
+    @Deprecated
+    protected abstract HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
+                                            @Nullable String contentEncoding, HttpHeaders additionalHeaders);
+
+    /**
+     * Finds the file at the specified {@code path}.
+     *
+     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
+     * @param path an absolute path that starts with {@code '/'}, whose component separator is {@code '/'}
+     * @param clock the {@link Clock} which provides the current date and time
+     * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
+     *                        {@code null} to omit the header.
+     * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
      * @param mimeTypeFunction the {@link MimeTypeFunction} to determined {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
-    protected abstract HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
+    protected HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
                                             @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-                                            MimeTypeFunction mimeTypeFunction);
+                                            MimeTypeFunction mimeTypeFunction) {
+        return blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders);
+    }
 
     /**
      * {@inheritDoc} This method invokes {@link #blockingCanList(Executor, String)} from the specified

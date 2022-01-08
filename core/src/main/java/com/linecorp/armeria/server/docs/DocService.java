@@ -391,6 +391,15 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         private final Map<String, AggregatedHttpFile> files = new ConcurrentHashMap<>();
 
+        @Deprecated
+        @Override
+        public HttpFile get(
+                Executor fileReadExecutor, String path, Clock clock,
+                @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+            return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
+                       MimeTypeFunction.ofDefault());
+        }
+
         @Override
         public HttpFile get(
           Executor fileReadExecutor, String path, Clock clock,

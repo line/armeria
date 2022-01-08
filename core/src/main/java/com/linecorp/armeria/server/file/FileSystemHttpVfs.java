@@ -50,6 +50,15 @@ final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
         }
     }
 
+    @Deprecated
+    @Override
+    protected HttpFile blockingGet(
+            Executor fileReadExecutor, String path, Clock clock,
+            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+        return blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
+                           MimeTypeFunction.ofDefault());
+    }
+
     @Override
     protected HttpFile blockingGet(
             Executor fileReadExecutor, String path, Clock clock,
