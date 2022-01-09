@@ -340,7 +340,7 @@ public abstract class ServerRuleDelegate {
     }
 
     /**
-     * Returns the {@link WebClient}.
+     * Returns the {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
      */
     public WebClient webClient() {
         return webClient.get();
