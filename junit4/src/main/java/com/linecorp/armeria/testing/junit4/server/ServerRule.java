@@ -298,7 +298,8 @@ public abstract class ServerRule extends ExternalResource {
     }
 
     /**
-     * Creates a {@link WebClient} each time with {@link WebClientBuilder}.
+     * Returna a newly created {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}
+     * and then the specified customizer.
      */
     public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
