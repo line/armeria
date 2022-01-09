@@ -317,7 +317,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Returns the {@link WebClient}.
+     * Returns the {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
      */
     public WebClient webClient() {
         return delegate.webClient();
