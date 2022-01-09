@@ -102,6 +102,7 @@ public abstract class ServerRule extends ExternalResource {
 
     /**
      * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     * You can get the configured {@link WebClient} using {@link #webClient()}.
      */
     protected void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {}
 
