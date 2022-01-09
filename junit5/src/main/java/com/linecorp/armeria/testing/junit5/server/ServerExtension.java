@@ -120,6 +120,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
 
     /**
      * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     * You can get the configured {@link WebClient} using {@link #webClient()}.
      */
     protected void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {}
 
