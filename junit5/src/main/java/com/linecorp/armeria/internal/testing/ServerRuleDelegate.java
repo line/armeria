@@ -109,6 +109,7 @@ public abstract class ServerRuleDelegate {
 
     /**
      * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     * You can get the configured {@link WebClient} using {@link #webClient()}.
      */
     public abstract void configureWebClient(WebClientBuilder webClientBuilder) throws Exception;
 
