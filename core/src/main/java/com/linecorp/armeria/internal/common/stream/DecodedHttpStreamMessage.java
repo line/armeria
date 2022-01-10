@@ -152,12 +152,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 this.requestHeaders = null;
                 subscriber.onNext(requestHeaders);
             } else {
-                // Use buffered data first.
-                // Because whenConsumed will run in the same thread(called by onRequest) after looping the
-                // existing queue.(onRequest & event notification in whenConsumed will run in the same executor
-                // specified at subscribe)
                 whenConsumed().thenRun(() -> {
-                    // There isn't any buffered data, or it's not enough
                     if (demand() > 0) {
                         askUpstreamForElement();
                     }
