@@ -189,19 +189,18 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Close the request early when it is sure that there will be
                     // neither content nor trailers.
-                    final EventLoop eventLoop = ctx.channel().eventLoop();
-                    final RequestHeaders armeriaRequestHeaders =
+                    final RequestHeaders requestHeaders =
                             ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx, armeriaRequestHeaders);
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), requestHeaders);
                     final Routed<ServiceConfig> routed;
-                    if (routingCtx instanceof EarlyResponseRoutingContext) {
+                    if (routingCtx.status() != RoutingStatus.OK) {
                         routed = null;
                     } else {
                         try {
                             // Find the service that matches the path.
                             routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
                         } catch (Throwable cause) {
-                            logger.warn("{} Unexpected exception: {}", ctx.channel(), armeriaRequestHeaders,
+                            logger.warn("{} Unexpected exception: {}", ctx.channel(), requestHeaders,
                                         cause);
                             fail(id, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                             return;
@@ -211,12 +210,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
-                    this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, armeriaRequestHeaders,
+                    final EventLoop eventLoop = ctx.channel().eventLoop();
+                    this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, requestHeaders,
                                                            keepAlive, inboundTrafficController, routingCtx,
                                                            routed);
 
-                    // AggregatingDecodedHttpRequest will be fired after all objects are collected.
-                    if (!(req instanceof AggregatingDecodedHttpRequest)) {
+                    // An aggregating request will be fired after all objects are collected.
+                    if (!req.isAggregated()) {
                         ctx.fireChannelRead(req);
                     }
                 } else {
@@ -275,8 +275,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     decodedReq.close();
-                    if (decodedReq instanceof AggregatingDecodedHttpRequest) {
-                        // AggregatingDecodedHttpRequest is now ready to be fired.
+                    if (decodedReq.isAggregated()) {
+                        // An aggregated request is now ready to be fired.
                         ctx.fireChannelRead(decodedReq);
                     }
                     this.req = null;

@@ -41,8 +41,9 @@ final class DefaultRoutingContext implements RoutingContext {
      */
     static RoutingContext of(VirtualHost virtualHost, String hostname,
                              String path, @Nullable String query,
-                             RequestHeaders headers, boolean isCorsPreflight) {
-        return new DefaultRoutingContext(virtualHost, hostname, headers, path, query, null, isCorsPreflight);
+                             RequestHeaders headers, boolean isCorsPreflight, RoutingStatus routingStatus) {
+        return new DefaultRoutingContext(virtualHost, hostname, headers, path, query, null, isCorsPreflight,
+                                         routingStatus);
     }
 
     /**
@@ -50,10 +51,10 @@ final class DefaultRoutingContext implements RoutingContext {
      */
     static RoutingContext of(VirtualHost virtualHost, String hostname,
                              PathAndQuery pathAndQuery,
-                             RequestHeaders headers, boolean isCorsPreflight) {
+                             RequestHeaders headers, boolean isCorsPreflight, RoutingStatus routingStatus) {
         requireNonNull(pathAndQuery, "pathAndQuery");
         return new DefaultRoutingContext(virtualHost, hostname, headers, pathAndQuery.path(),
-                                         pathAndQuery.query(), pathAndQuery, isCorsPreflight);
+                                         pathAndQuery.query(), pathAndQuery, isCorsPreflight, routingStatus);
     }
 
     private final VirtualHost virtualHost;
@@ -68,9 +69,10 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     private final MediaType contentType;
     private final List<MediaType> acceptTypes;
+    private final boolean isCorsPreflight;
+    private final RoutingStatus routingStatus;
     @Nullable
     private volatile QueryParams queryParams;
-    private final boolean isCorsPreflight;
     @Nullable
     private HttpStatusException deferredCause;
 
@@ -78,7 +80,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
                           String path, @Nullable String query, @Nullable PathAndQuery pathAndQuery,
-                          boolean isCorsPreflight) {
+                          boolean isCorsPreflight, RoutingStatus routingStatus) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.headers = requireNonNull(headers, "headers");
@@ -86,6 +88,7 @@ final class DefaultRoutingContext implements RoutingContext {
         this.query = query;
         this.pathAndQuery = pathAndQuery;
         this.isCorsPreflight = isCorsPreflight;
+        this.routingStatus = routingStatus;
         method = headers.method();
         contentType = headers.contentType();
         acceptTypes = headers.accept();
@@ -156,6 +159,11 @@ final class DefaultRoutingContext implements RoutingContext {
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public RoutingStatus status() {
+        return routingStatus;
     }
 
     @Override

@@ -85,4 +85,9 @@ interface DecodedHttpRequest extends HttpRequest {
      * @see Http2RequestDecoder#onRstStreamRead(ChannelHandlerContext, int, long)
      */
     void abortResponse(Throwable cause, boolean cancel);
+
+    /**
+     * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
+     */
+    boolean isAggregated();
 }

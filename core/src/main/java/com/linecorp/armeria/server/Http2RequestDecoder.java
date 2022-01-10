@@ -136,13 +136,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            final EventLoop eventLoop = ctx.channel().eventLoop();
             final RequestHeaders armeriaRequestHeaders =
                     ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, headers, endOfStream, scheme, cfg);
-
-            final RoutingContext routingCtx = newRoutingContext(cfg, ctx, armeriaRequestHeaders);
+            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), armeriaRequestHeaders);
             final Routed<ServiceConfig> routed;
-            if (routingCtx instanceof EarlyResponseRoutingContext) {
+            if (routingCtx.status() != RoutingStatus.OK) {
                 routed = null;
             } else {
                 try {
@@ -157,11 +155,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             final int id = ++nextId;
+            final EventLoop eventLoop = ctx.channel().eventLoop();
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, armeriaRequestHeaders, true,
                                         inboundTrafficController, routingCtx, routed);
             requests.put(streamId, req);
-            // AggregatingDecodedHttpRequest will be fired after all objects are collected.
-            if (!(req instanceof AggregatingDecodedHttpRequest)) {
+            // An aggregating request will be fired later after all objects are collected.
+            if (!req.isAggregated()) {
                 ctx.fireChannelRead(req);
             }
         } else {
@@ -170,8 +169,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(trailers);
-                if (req instanceof AggregatingDecodedHttpRequest) {
-                    // AggregatingDecodedHttpRequest can be fired now.
+                if (req.isAggregated()) {
+                    // An aggregated request can be fired now.
                     ctx.fireChannelRead(req);
                 }
             } catch (Throwable t) {
@@ -238,7 +237,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Received an empty DATA frame
             if (endOfStream) {
                 req.close();
-                if (req instanceof AggregatingDecodedHttpRequest) {
+                if (req.isAggregated()) {
                     ctx.fireChannelRead(req);
                 }
             }
@@ -275,8 +274,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                if (endOfStream && decodedReq instanceof AggregatingDecodedHttpRequest) {
-                    // AggregatingDecodedHttpRequest is now ready to be fired.
+                if (endOfStream && decodedReq.isAggregated()) {
+                    // An aggregated request is now ready to be fired.
                     ctx.fireChannelRead(req);
                 }
             } catch (Throwable t) {

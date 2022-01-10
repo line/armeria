@@ -180,4 +180,9 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
             response.abort(cause);
         }
     }
+
+    @Override
+    public boolean isAggregated() {
+        return false;
+    }
 }

@@ -178,4 +178,9 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
             response.abort(cause);
         }
     }
+
+    @Override
+    public boolean isAggregated() {
+        return false;
+    }
 }

@@ -296,7 +296,7 @@ public final class JettyService implements HttpService {
 
     @Override
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        return ExchangeType.UNARY;
+        return ExchangeType.RESPONSE_STREAMING;
     }
 
     private static void fillRequest(

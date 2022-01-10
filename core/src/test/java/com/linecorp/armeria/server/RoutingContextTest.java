@@ -58,7 +58,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, false);
+                                          "/hello", null, null, false, RoutingStatus.OK);
         final RoutingContext ctx2 =
                 new DefaultRoutingContext(virtualHost, "example.com",
                                           RequestHeaders.of(HttpMethod.GET, "/hello",
@@ -66,7 +66,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, false);
+                                          "/hello", null, null, false, RoutingStatus.OK);
         final RoutingContext ctx3 =
                 new DefaultRoutingContext(virtualHost, "example.com",
                                           RequestHeaders.of(HttpMethod.GET, "/hello",
@@ -74,7 +74,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.XML_UTF_8 + ", " +
                                                             MediaType.JSON_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, false);
+                                          "/hello", null, null, false, RoutingStatus.OK);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
@@ -102,7 +102,7 @@ class RoutingContextTest {
         final String requestPath = query != null ? path + '?' + query : path;
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
         return DefaultRoutingContext.of(virtualHost, "example.com",
-                                        path, query, headers, false);
+                                        path, query, headers, false, RoutingStatus.OK);
     }
 
     static VirtualHost virtualHost() {

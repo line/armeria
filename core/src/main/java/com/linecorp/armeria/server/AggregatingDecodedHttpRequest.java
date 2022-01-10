@@ -169,6 +169,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
+    public boolean isAggregated() {
+        return true;
+    }
+
+    @Override
     public RequestHeaders headers() {
         return headers;
     }

@@ -23,44 +23,44 @@ import java.net.InetSocketAddress;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.PathAndQuery;
-import com.linecorp.armeria.server.EarlyResponseRoutingContext.Reason;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 
 final class ServiceRouteUtil {
 
-    static RoutingContext newRoutingContext(ServerConfig serverConfig, ChannelHandlerContext ctx,
+    static RoutingContext newRoutingContext(ServerConfig serverConfig, Channel channel,
                                             RequestHeaders headers) {
 
         final String hostname = hostname(headers);
-        final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-        final VirtualHost virtualHost = serverConfig.findVirtualHost(hostname, port);
+        final int port = ((InetSocketAddress) channel.localAddress()).getPort();
         final String originalPath = headers.path();
 
         PathAndQuery pathAndQuery = null;
-        Reason earlyRespondingReason = null;
+        final RoutingStatus routingStatus;
         if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
             // 'OPTIONS * HTTP/1.1' will be handled by HttpServerHandler
             if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
-                earlyRespondingReason = Reason.OPTIONS_REQUEST;
+                routingStatus = RoutingStatus.OPTIONS;
             } else {
-                earlyRespondingReason = Reason.INVALID_PATH;
+                routingStatus = RoutingStatus.INVALID_PATH;
             }
         } else {
             pathAndQuery = PathAndQuery.parse(originalPath);
-            if (pathAndQuery == null) {
-                earlyRespondingReason = Reason.INVALID_PATH;
+            if (pathAndQuery != null) {
+                routingStatus = RoutingStatus.OK;
+            } else {
+                routingStatus = RoutingStatus.INVALID_PATH;
             }
         }
 
-        if (earlyRespondingReason != null) {
-            return new EarlyResponseRoutingContext(
-                    DefaultRoutingContext.of(virtualHost, hostname, headers.path(), /* query */ null,
-                                             headers, /* isCorsPreflight */ false), earlyRespondingReason);
+        final VirtualHost virtualHost = serverConfig.findVirtualHost(hostname, port);
+        if (routingStatus != RoutingStatus.OK) {
+            return DefaultRoutingContext.of(virtualHost, hostname, headers.path(), /* query */ null, headers,
+                                            isCorsPreflightRequest(headers), routingStatus);
+        } else {
+            return DefaultRoutingContext.of(virtualHost, hostname, pathAndQuery, headers,
+                                            isCorsPreflightRequest(headers), routingStatus);
         }
-
-        return DefaultRoutingContext.of(virtualHost, hostname, pathAndQuery, headers,
-                                        isCorsPreflightRequest(headers));
     }
 
     private static String hostname(RequestHeaders headers) {

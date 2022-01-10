@@ -237,7 +237,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 path(),
                 query(),
                 req.headers(),
-                false);
+                false,
+                RoutingStatus.OK);
 
         final RoutingResult routingResult =
                 this.routingResult != null ? this.routingResult

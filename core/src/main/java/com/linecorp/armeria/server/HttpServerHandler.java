@@ -61,7 +61,6 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.server.EarlyResponseRoutingContext.Reason;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -316,14 +315,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final RoutingContext routingCtx = req.routingContext();
-        if (routingCtx instanceof EarlyResponseRoutingContext) {
-            final Reason earlyRespondingReason = ((EarlyResponseRoutingContext) routingCtx).reason();
+        final RoutingStatus routingStatus = routingCtx.status();
+        if (routingStatus != RoutingStatus.OK) {
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
-            if (earlyRespondingReason == Reason.OPTIONS_REQUEST) {
+            if (routingStatus == RoutingStatus.OPTIONS) {
                 // Handle 'OPTIONS * HTTP/1.1'.
                 handleOptions(ctx, reqCtx);
             } else {
+                assert routingStatus == RoutingStatus.INVALID_PATH;
                 rejectInvalidPath(ctx, reqCtx);
             }
             return;

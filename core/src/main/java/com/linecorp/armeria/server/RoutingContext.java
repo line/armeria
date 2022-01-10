@@ -84,6 +84,11 @@ public interface RoutingContext {
     RequestHeaders headers();
 
     /**
+     * Returns the {@link RoutingStatus} of the request.
+     */
+    RoutingStatus status();
+
+    /**
      * Defers throwing an {@link HttpStatusException} until reaching the end of the service list.
      */
     void deferStatusException(HttpStatusException cause);

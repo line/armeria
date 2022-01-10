@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,21 +16,20 @@
 
 package com.linecorp.armeria.server;
 
-final class EarlyResponseRoutingContext extends RoutingContextWrapper {
-
-    private final Reason reason;
-
-    EarlyResponseRoutingContext(RoutingContext delegate, Reason reason) {
-        super(delegate);
-        this.reason = reason;
-    }
-
-    Reason reason() {
-        return reason;
-    }
-
-    enum Reason {
-        OPTIONS_REQUEST,
-        INVALID_PATH
-    }
+/**
+ * A routing status of an incoming HTTP request.
+ */
+public enum RoutingStatus {
+    /**
+     * The routing completed successfully.
+     */
+    OK,
+    /**
+     * An {@code "OPTIONS * HTTP/1.1"} request.
+     */
+    OPTIONS,
+    /**
+     * The request specified an invalid path.
+     */
+    INVALID_PATH
 }
