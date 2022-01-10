@@ -58,7 +58,8 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
      */
     @Nullable
     protected T latestValue() {
-        // TODO(ikhoon): Make this method abstract in Armeria 2.0
+        // TODO(ikhoon): Make this method abstract in Armeria 2.0 to avoid the mistake of not defining
+        //               the lastest value in subclasses.
         return null;
     }
 
