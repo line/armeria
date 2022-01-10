@@ -172,9 +172,9 @@ class BodyPartTest {
         final StreamMessage<HttpData> publisher = StreamMessage.of(httpData);
         final Path destination = tempDir.resolve("foo.bin");
         BodyPart.of(HttpHeaders.of(), publisher)
-                .writeFile(destination,
-                           CommonPools.workerGroup().next(),
-                           CommonPools.blockingTaskExecutor())
+                .writeTo(destination,
+                         CommonPools.workerGroup().next(),
+                         CommonPools.blockingTaskExecutor())
                 .join();
         final byte[] bytes = Files.readAllBytes(destination);
         assertThat(bytes).contains(expected);

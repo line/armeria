@@ -159,8 +159,8 @@ public interface BodyPart {
      * @param options the {@link OpenOption} specifying how the file is opened
      * @return a {@link CompletableFuture} to handle asynchronous result
      */
-    CompletableFuture<Void> writeFile(Path path, EventExecutor eventExecutor,
-                                      ExecutorService blockingTaskExecutor, OpenOption... options);
+    CompletableFuture<Void> writeTo(Path path, EventExecutor eventExecutor,
+                                    ExecutorService blockingTaskExecutor, OpenOption... options);
 
     /**
      * Aggregates this {@link BodyPart}. The returned {@link CompletableFuture} will be notified when

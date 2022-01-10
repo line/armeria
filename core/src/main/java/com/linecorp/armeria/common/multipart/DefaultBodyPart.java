@@ -56,9 +56,9 @@ final class DefaultBodyPart implements BodyPart {
     }
 
     @Override
-    public CompletableFuture<Void> writeFile(Path path, EventExecutor eventExecutor,
-                                             ExecutorService blockingTaskExecutor,
-                                             OpenOption... options) {
+    public CompletableFuture<Void> writeTo(Path path, EventExecutor eventExecutor,
+                                           ExecutorService blockingTaskExecutor,
+                                           OpenOption... options) {
         return StreamMessages.writeTo(content, path, eventExecutor, blockingTaskExecutor, options);
     }
 
@@ -107,7 +107,7 @@ final class DefaultBodyPart implements BodyPart {
      */
     private static final class ContentAggregator extends HttpObjectAggregator<AggregatedBodyPart> {
 
-        private HttpHeaders headers;
+        private final HttpHeaders headers;
 
         ContentAggregator(HttpHeaders headers, CompletableFuture<AggregatedBodyPart> future,
                           @Nullable ByteBufAllocator alloc) {

@@ -135,7 +135,7 @@ final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
             return;
         }
         files.put(name, path);
-        bodyPart.writeFile(path, eventExecutor, blockingTaskExecutor, options)
+        bodyPart.writeTo(path, eventExecutor, blockingTaskExecutor, options)
                 .handleAsync((unused, throwable) -> {
                     inProgressCount--;
                     if (throwable != null) {
@@ -163,6 +163,7 @@ final class ContentAwareMultipartCollector implements Subscriber<BodyPart> {
         doComplete();
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private void doComplete() {
         // The last BodyPart is in-progress.
         if (inProgressCount != 0) {

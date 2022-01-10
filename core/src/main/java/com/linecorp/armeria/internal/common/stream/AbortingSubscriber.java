@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
+import java.lang.reflect.Field;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -24,13 +26,26 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 public final class AbortingSubscriber<T> implements Subscriber<T> {
 
+    private static final AbortedStreamException ABORTED_STREAM_EXCEPTION_INSTANCE;
+
+    static {
+        try {
+            // Avoid making AbortedStreamException#INSTANCE as public.
+            final Field field = AbortedStreamException.class.getDeclaredField("INSTANCE");
+            field.setAccessible(true);
+            ABORTED_STREAM_EXCEPTION_INSTANCE = (AbortedStreamException) field.get(null);
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
+
     public static final AbortingSubscriber<Object> INSTANCE =
-            new AbortingSubscriber<>(AbortedStreamException.INSTANCE);
+            new AbortingSubscriber<>(ABORTED_STREAM_EXCEPTION_INSTANCE);
 
     @SuppressWarnings("unchecked")
     public static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
-        return cause == null || cause == AbortedStreamException.INSTANCE ? (AbortingSubscriber<T>) INSTANCE
-                                                                         : new AbortingSubscriber<>(cause);
+        return cause == null || cause == ABORTED_STREAM_EXCEPTION_INSTANCE ? (AbortingSubscriber<T>) INSTANCE
+                                                                           : new AbortingSubscriber<>(cause);
     }
 
     private final Throwable cause;

@@ -91,8 +91,8 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             try {
                 parser.close();
             } catch (MimeParsingException ignore) {
-                // There is a cause already happened and passed to subscriber already
-                // So the parsing exception is not important for user and miss leading if we log here.
+                // This exception has been passed to the subscriber already and will be handled there,
+                // so we shouldn't log it because otherwise it may mislead a user.
             }
         }
     }
@@ -262,6 +262,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             }
         }
 
+        @SuppressWarnings("UnstableApiUsage")
         private void request0(long n) {
             final long oldDemand = demandOfMultipart;
             demandOfMultipart = LongMath.saturatedAdd(oldDemand, n);
