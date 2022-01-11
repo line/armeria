@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.healthcheck;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.Nonnull;
+
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.server.Server;
 
@@ -60,6 +62,12 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
         if (oldValue != isHealthy) {
             notifyListeners(this);
         }
+        return this;
+    }
+
+    @Nonnull
+    @Override
+    protected HealthChecker latestValue() {
         return this;
     }
 

@@ -295,7 +295,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
-                    " - this is likely a bug in the stub implementation.");
+                    " - this is likely a bug in the stub implementation.", t);
             return null;
         }
         if (listener == null) {

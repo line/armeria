@@ -156,7 +156,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint ratio of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointRatio(double)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
         if (maxEndpointCount != null) {
@@ -173,7 +172,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint count of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointCount(int)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
         if (maxEndpointRatio != null) {
@@ -201,16 +199,12 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     public final HealthCheckedEndpointGroup build() {
         final HealthCheckStrategy healthCheckStrategy;
         if (maxEndpointCount != null) {
-            healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                            .maxEndpointCount(maxEndpointCount)
-                                            .build();
+            healthCheckStrategy = HealthCheckStrategy.ofCount(maxEndpointCount);
         } else {
             if (maxEndpointRatio == null || maxEndpointRatio == 1.0) {
-                healthCheckStrategy = new AllHealthCheckStrategy();
+                healthCheckStrategy = HealthCheckStrategy.all();
             } else {
-                healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                                .maxEndpointRatio(maxEndpointRatio)
-                                                .build();
+                healthCheckStrategy = HealthCheckStrategy.ofRatio(maxEndpointRatio);
             }
         }
 

@@ -162,6 +162,14 @@ class DefaultRequestLogTest {
     }
 
     @Test
+    void rpcFailure_responseContentWithCause() {
+        final Throwable error = new Throwable("response failed");
+        log.responseContent(RpcResponse.ofFailure(error), null);
+        assertThat(log.responseCause()).isSameAs(error);
+        assertThat(log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)).isEqualTo(true);
+    }
+
+    @Test
     void addChild() {
         when(ctx.method()).thenReturn(HttpMethod.GET);
         final DefaultRequestLog child = new DefaultRequestLog(ctx);

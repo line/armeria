@@ -36,25 +36,26 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpExpectationFailedEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -74,7 +75,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private final ServerConfig cfg;
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
-    private final ServerHttp1ObjectEncoder encoder;
+    private ServerHttpObjectEncoder encoder;
 
     /** The request being decoded currently. */
     @Nullable
@@ -224,6 +225,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     return;
                 }
             }
+            if (msg instanceof LastHttpContent && encoder instanceof ServerHttp2ObjectEncoder) {
+                // An HTTP/1 connection has been upgraded to HTTP/2.
+                ctx.pipeline().remove(this);
+            }
 
             // req is not null.
             if (msg instanceof LastHttpContent && req instanceof EmptyContentDecodedHttpRequest) {
@@ -349,12 +354,23 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof UpgradeEvent) {
+
+            final ChannelPipeline pipeline = ctx.pipeline();
+            final ChannelHandlerContext connectionHandlerCtx =
+                    pipeline.context(Http2ServerConnectionHandler.class);
+            final Http2ServerConnectionHandler connectionHandler =
+                    (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
+            encoder.close();
+            // The HTTP/2 encoder will be used when a protocol violation error occurs after upgrading to HTTP/2
+            // that is directly written by 'fail()'.
+            encoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
+
             // Generate the initial Http2Settings frame,
             // so that the next handler knows the protocol upgrade occurred as well.
             ctx.fireChannelRead(DEFAULT_HTTP2_SETTINGS);
 
             // Continue handling the upgrade request after the upgrade is complete.
-            final FullHttpRequest nettyReq = ((UpgradeEvent) evt).upgradeRequest();
+            final HttpRequest nettyReq = ((UpgradeEvent) evt).upgradeRequest();
 
             // Remove the headers related with the upgrade.
             nettyReq.headers().remove(HttpHeaderNames.CONNECTION);
@@ -362,22 +378,20 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             nettyReq.headers().remove(Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER);
 
             if (logger.isDebugEnabled()) {
-                logger.debug("{} Handling the pre-upgrade request ({}): {} {} {} ({}B)",
+                logger.debug("{} Handling the pre-upgrade request ({}): {} {} {}",
                              ctx.channel(), ((UpgradeEvent) evt).protocol(),
-                             nettyReq.method(), nettyReq.uri(), nettyReq.protocolVersion(),
-                             nettyReq.content().readableBytes());
+                             nettyReq.method(), nettyReq.uri(), nettyReq.protocolVersion());
             }
 
             channelRead(ctx, nettyReq);
-            channelReadComplete(ctx);
             return;
         }
-        if (evt instanceof InitiateConnectionShutdown) {
+        if (evt instanceof InitiateConnectionShutdown && encoder instanceof ServerHttp1ObjectEncoder) {
             // HTTP/1 doesn't support draining that signals clients about connection shutdown but still
             // accepts in flight requests. Simply destroy KeepAliveHandler which causes next response
             // to have a "Connection: close" header and connection to be closed after the next response.
             destroyKeepAliveHandler();
-            encoder.initiateConnectionShutdown();
+            ((ServerHttp1ObjectEncoder) encoder).initiateConnectionShutdown();
             return;
         }
 
@@ -393,6 +407,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     }
 
     private void destroyKeepAliveHandler() {
-        encoder.keepAliveHandler().destroy();
+        if (encoder instanceof Http1ObjectEncoder) {
+            // Http2ObjectEncoder will be destroyed by Http2RequestDecoder.
+            encoder.keepAliveHandler().destroy();
+        }
     }
 }

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server
 
-import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.{HttpStatus, MediaType}
 import com.linecorp.armeria.server.annotation.{Post, ProducesJson}
 import munit.FunSuite
@@ -30,7 +29,7 @@ class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
 
   List("/echo", "/echo-option").foreach { path =>
     test(s"$path - should encode and decode case class from and to JSON") {
-      val client = WebClient.of(server.httpUri())
+      val client = server.webClient()
       val json = """{"x":10,"y":"hello"}"""
       val response = client
         .prepare()
@@ -45,7 +44,7 @@ class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
 
   List("/echo", "/echo-option").foreach { path =>
     test(s"$path - should return 404 Bad Request for null values with non-Option value") {
-      val client = WebClient.of(server.httpUri())
+      val client = server.webClient()
       val json = """{"x":10}"""
       val response = client
         .prepare()

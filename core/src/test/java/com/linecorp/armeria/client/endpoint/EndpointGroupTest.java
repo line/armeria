@@ -19,7 +19,10 @@ package com.linecorp.armeria.client.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -83,5 +86,55 @@ class EndpointGroupTest {
         final EndpointGroup group = EndpointGroup.of(FOO, BAR);
         final EndpointGroup composite = EndpointGroup.of(group);
         assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR);
+    }
+
+    @Test
+    void shouldNotifyListenerWithLatestValue() {
+        final Endpoint endpoint = Endpoint.of("foo");
+        final AtomicReference<List<Endpoint>> listener = new AtomicReference<>();
+        endpoint.addListener(listener::set, true);
+        assertThat(listener.get()).containsExactly(endpoint);
+        listener.set(null);
+
+        final EndpointGroup staticEndpointGroup = EndpointGroup.of(endpoint);
+        staticEndpointGroup.addListener(listener::set, true);
+        assertThat(listener.get()).containsExactly(endpoint);
+        listener.set(null);
+
+        final DynamicEndpointGroup dynamicEndpointGroup = new DynamicEndpointGroup();
+        dynamicEndpointGroup.addEndpoint(endpoint);
+        staticEndpointGroup.addListener(listener::set, true);
+        assertThat(listener.get()).containsExactly(endpoint);
+    }
+
+    @Nested
+    class InitialEndpoints {
+        @Test
+        void group1First() throws Exception {
+            final DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+            final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+            final EndpointGroup composite = EndpointGroup.of(group1, group2);
+            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.whenReady();
+            assertThat(initialEndpoints).isNotCompleted();
+
+            group1.setEndpoints(ImmutableList.of(FOO, BAR));
+            group2.setEndpoints(ImmutableList.of(CAT, DOG));
+            assertThat(initialEndpoints.join()).containsExactlyInAnyOrder(FOO, BAR);
+            assertThat(composite.whenReady().get()).containsExactlyInAnyOrder(FOO, BAR);
+        }
+
+        @Test
+        void group2First() throws Exception {
+            final DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+            final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+            final EndpointGroup composite = EndpointGroup.of(group1, group2);
+            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.whenReady();
+            assertThat(initialEndpoints).isNotCompleted();
+
+            group2.setEndpoints(ImmutableList.of(CAT, DOG));
+            group1.setEndpoints(ImmutableList.of(FOO, BAR));
+            assertThat(initialEndpoints.join()).containsExactlyInAnyOrder(CAT, DOG);
+            assertThat(composite.whenReady().get()).containsExactlyInAnyOrder(CAT, DOG);
+        }
     }
 }

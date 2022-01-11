@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.sangria
 
+import com.linecorp.armeria.client.WebClientBuilder
+import com.linecorp.armeria.client.logging.LoggingClient
 import com.linecorp.armeria.common.HttpMethod
 import com.linecorp.armeria.server.sangria.GraphqlTestUtil.executeQuery
 import com.linecorp.armeria.server.{ServerBuilder, ServiceRequestContext}
@@ -23,6 +25,7 @@ import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
 import sangria.macros.derive._
 import sangria.schema._
+
 import scala.concurrent.Future
 
 class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
@@ -39,6 +42,10 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
           .build())
   }
 
+  override protected def configureWebClient: WebClientBuilder => Unit = { wcb =>
+    wcb.decorator(LoggingClient.newDecorator())
+  }
+
   for {
     method <- List(HttpMethod.GET, HttpMethod.POST)
     path <- List("/graphql-eventloop", "/graphql-blocking")
@@ -53,7 +60,7 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
       }
       """
 
-    val response1 = executeQuery(client, method = method, path = path, query = query1)
+    val response1 = executeQuery(server.webClient(), method = method, path = path, query = query1)
     println(response1.contentUtf8())
     assertThatJson(response1.contentUtf8()).isEqualTo("""
           {
@@ -76,7 +83,7 @@ class GraphqlExecutionContextSuite extends FunSuite with ServerSuite {
       }
       """
 
-    val response2 = executeQuery(client, method = method, path = path, query = query2)
+    val response2 = executeQuery(server.webClient(), method = method, path = path, query = query2)
     assertThatJson(response2.contentUtf8()).isEqualTo("""
         {
           "data": {

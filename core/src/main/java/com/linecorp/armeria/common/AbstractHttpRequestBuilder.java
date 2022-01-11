@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,12 +32,10 @@ import java.util.Map.Entry;
 
 import org.reactivestreams.Publisher;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
-import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
-import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
-import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -45,21 +43,15 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 /**
  * Builds a new {@link HttpRequest}.
  */
-public abstract class AbstractHttpRequestBuilder {
+public abstract class AbstractHttpRequestBuilder extends AbstractHttpMessageBuilder {
 
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
-    @Nullable
-    private HttpHeadersBuilder httpTrailers;
     @Nullable
     private QueryParamsBuilder queryParams;
     @Nullable
     private Map<String, String> pathParams;
     @Nullable
     private List<Cookie> cookies;
-    @Nullable
-    private HttpData content;
-    @Nullable
-    private Publisher<? extends HttpData> publisher;
     @Nullable
     private String path;
     private boolean disablePathParams;
@@ -140,67 +132,82 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
-     * Sets the content for this request.
+     * Sets the content as UTF_8 for this request.
      */
-    public AbstractHttpRequestBuilder content(MediaType contentType, CharSequence content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
+    @Override
+    public AbstractHttpRequestBuilder content(String content) {
+        return (AbstractHttpRequestBuilder) super.content(content);
     }
 
     /**
      * Sets the content for this request.
      */
+    @Override
+    public AbstractHttpRequestBuilder content(MediaType contentType, CharSequence content) {
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
+    }
+
+    /**
+     * Sets the content for this request.
+     */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, String content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
+    }
+
+    /**
+     * Sets the content as UTF_8 for this request. The {@code content} is formatted by
+     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
+     */
+    @Override
+    @FormatMethod
+    public AbstractHttpRequestBuilder content(@FormatString String format, Object... content) {
+        return (AbstractHttpRequestBuilder) super.content(format, content);
     }
 
     /**
      * Sets the content for this request. The {@code content} is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
+    @Override
     @FormatMethod
     public AbstractHttpRequestBuilder content(MediaType contentType, @FormatString String format,
                                               Object... content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(format, "format");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), format, content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, format, content);
     }
 
     /**
      * Sets the content for this request. The {@code content} will be wrapped using
      * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
      */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, byte[] content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.wrap(content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
     /**
      * Sets the content for this request.
      */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, HttpData content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        requestHeadersBuilder.contentType(contentType);
-        this.content = content;
-        return this;
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
     /**
      * Sets the {@link Publisher} for this request.
      */
-    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(publisher, "publisher");
-        checkState(content == null, "content has been set already");
-        requestHeadersBuilder.contentType(contentType);
-        this.publisher = publisher;
-        return this;
+    @Override
+    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
+    }
+
+    /**
+     * Sets the content for this request. The {@code content} is converted into JSON format
+     * using the default {@link ObjectMapper}.
+     */
+    @Override
+    public AbstractHttpRequestBuilder contentJson(Object content) {
+        return (AbstractHttpRequestBuilder) super.contentJson(content);
     }
 
     /**
@@ -212,9 +219,9 @@ public abstract class AbstractHttpRequestBuilder {
      *            .build();
      * }</pre>
      */
+    @Override
     public AbstractHttpRequestBuilder header(CharSequence name, Object value) {
-        requestHeadersBuilder.setObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
-        return this;
+        return (AbstractHttpRequestBuilder) super.header(name, value);
     }
 
     /**
@@ -228,24 +235,19 @@ public abstract class AbstractHttpRequestBuilder {
      *
      * @see HttpHeaders
      */
+    @Override
     public AbstractHttpRequestBuilder headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        requireNonNull(headers, "headers");
-        requestHeadersBuilder.set(headers);
-        return this;
+        return (AbstractHttpRequestBuilder) super.headers(headers);
     }
 
     /**
      * Sets HTTP trailers for this request.
      */
+    @Override
     public AbstractHttpRequestBuilder trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
-        requireNonNull(trailers, "trailers");
-        if (httpTrailers == null) {
-            httpTrailers = HttpHeaders.builder();
-        }
-        httpTrailers.set(trailers);
-        return this;
+        return (AbstractHttpRequestBuilder) super.trailers(trailers);
     }
 
     /**
@@ -349,7 +351,7 @@ public abstract class AbstractHttpRequestBuilder {
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
-     *            .cookie(Cookie.of("cookie", "foo"))
+     *            .cookie(Cookie.ofSecure("cookie", "foo"))
      *            .build();
      * }</pre>
      *
@@ -369,8 +371,8 @@ public abstract class AbstractHttpRequestBuilder {
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
-     *            .cookies(Cookies.of(Cookie.of("cookie1", "foo"),
-     *                                Cookie.of("cookie2", "bar")))
+     *            .cookies(Cookies.ofSecure(Cookie.ofSecure("cookie1", "foo"),
+     *                                      Cookie.ofSecure("cookie2", "bar")))
      *            .build();
      * }</pre>
      *
@@ -390,27 +392,30 @@ public abstract class AbstractHttpRequestBuilder {
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
+        final Publisher<? extends HttpData> publisher = publisher();
+        final HttpHeadersBuilder httpTrailersBuilder = httpTrailers();
         if (publisher != null) {
-            if (httpTrailers == null) {
+            if (httpTrailersBuilder == null) {
                 return HttpRequest.of(requestHeaders, publisher);
             } else {
                 return HttpRequest.of(requestHeaders,
-                                      StreamMessage.concat(publisher, StreamMessage.of(httpTrailers.build())));
+                                      StreamMessage.concat(publisher,
+                                                           StreamMessage.of(httpTrailersBuilder.build())));
             }
         }
-        if (content == null || content.isEmpty()) {
-            if (content != null) {
-                content.close();
-            }
-            if (httpTrailers == null) {
-                return new EmptyFixedHttpRequest(requestHeaders);
-            }
-            return new OneElementFixedHttpRequest(requestHeaders, httpTrailers.build());
+        final HttpData content = firstNonNull(content(), HttpData.empty());
+        final HttpHeaders httpTrailers;
+        if (httpTrailersBuilder != null) {
+            httpTrailers = httpTrailersBuilder.build();
+        } else {
+            httpTrailers = HttpHeaders.of();
         }
-        if (httpTrailers == null) {
-            return new OneElementFixedHttpRequest(requestHeaders, content);
-        }
-        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers.build());
+        return HttpRequest.of(requestHeaders, content, httpTrailers);
+    }
+
+    @Override
+    final HttpHeadersBuilder headersBuilder() {
+        return requestHeadersBuilder;
     }
 
     private RequestHeaders requestHeaders() {
@@ -418,8 +423,11 @@ public abstract class AbstractHttpRequestBuilder {
         if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
+        final HttpData content = content();
         if (content == null || content.isEmpty()) {
-            requestHeadersBuilder.remove(CONTENT_LENGTH);
+            if (publisher() == null) {
+                requestHeadersBuilder.remove(CONTENT_LENGTH);
+            }
         } else {
             requestHeadersBuilder.contentLength(content.length());
         }

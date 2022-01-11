@@ -1266,6 +1266,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
             if (rpcResponse.cause() != null) {
                 responseCause = rpcResponse.cause();
+                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }
         }
 
