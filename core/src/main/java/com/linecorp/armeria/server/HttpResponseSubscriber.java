@@ -255,15 +255,23 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
         // 3. After successfully flushing, the listener requests next data and
         //    the subscriber attempts to write the next data to the stream closed at 2).
-        if (!responseEncoder.isWritable(req.id(), req.streamId())) {
-            if (reqCtx.sessionProtocol().isMultiplex()) {
-                fail(ClosedStreamException.get());
-            } else {
-                fail(ClosedSessionException.get());
+        if (!isWritable()) {
+            Throwable cause = CapturedServiceException.get(reqCtx);
+            if (cause == null) {
+                if (reqCtx.sessionProtocol().isMultiplex()) {
+                    cause = ClosedSessionException.get();
+                } else {
+                    cause = ClosedStreamException.get();
+                }
             }
+            fail(cause);
             return true;
         }
         return false;
+    }
+
+    private boolean isWritable() {
+        return responseEncoder.isWritable(req.id(), req.streamId());
     }
 
     private State setDone(boolean cancel) {
@@ -280,6 +288,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     @Override
     public void onError(Throwable cause) {
         isSubscriptionCompleted = true;
+        if (!isWritable()) {
+            // A session or stream is currently being closing or is closed already.
+            fail(cause);
+            return;
+        }
+
         if (cause instanceof HttpResponseException) {
             // Timeout may occur when the aggregation of the error response takes long.
             // If timeout occurs, the response is sent by newCancellationTask().
@@ -298,7 +312,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         } else if (cause instanceof HttpStatusException) {
             final HttpStatus status = ((HttpStatusException) cause).httpStatus();
             final Throwable cause0 = firstNonNull(cause.getCause(), cause);
-            failAndRespond(cause0, AggregatedHttpResponse.of(status), Http2Error.CANCEL, false);
+            final ServiceConfig serviceConfig = reqCtx.config();
+            final AggregatedHttpResponse res =
+                    serviceConfig.server().config().errorHandler()
+                                 .renderStatus(serviceConfig, status, null, cause0);
+            assert res != null;
+            failAndRespond(cause0, res, Http2Error.CANCEL, false);
         } else if (Exceptions.isStreamCancelling(cause)) {
             failAndReset(cause);
         } else {
@@ -527,8 +546,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             if (endOfStream) {
                 if (tryComplete()) {
-                    logBuilder().endRequest();
-                    logBuilder().endResponse();
+                    final Throwable capturedException = CapturedServiceException.get(reqCtx);
+                    if (capturedException != null) {
+                        logBuilder().endRequest(capturedException);
+                        logBuilder().endResponse(capturedException);
+                    } else {
+                        logBuilder().endRequest();
+                        logBuilder().endResponse();
+                    }
                     final ServiceConfig config = reqCtx.config();
                     if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);

@@ -61,7 +61,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
         final HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method),
                                                        headers.path(), false);
         final io.netty.handler.codec.http.HttpHeaders nettyHeaders = req.headers();
-        ArmeriaHttpUtil.toNettyHttp1ClientHeader(headers, nettyHeaders, http1HeaderNaming);
+        ArmeriaHttpUtil.toNettyHttp1ClientHeaders(headers, nettyHeaders, http1HeaderNaming);
 
         if (!nettyHeaders.contains(HttpHeaderNames.USER_AGENT)) {
             nettyHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
@@ -109,7 +109,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
     @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        ArmeriaHttpUtil.toNettyHttp1ClientTrailer(inputHeaders, outputHeaders, http1HeaderNaming);
+        ArmeriaHttpUtil.toNettyHttp1ClientTrailers(inputHeaders, outputHeaders, http1HeaderNaming);
     }
 
     @Override

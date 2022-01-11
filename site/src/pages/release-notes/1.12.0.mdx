@@ -1,0 +1,320 @@
+---
+date: 2021-10-07
+---
+
+## 🌸 Highlight
+
+- You can now enable [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding)
+  in your <type://GrpcService>. #3786
+  ```java
+  GrpcService.builder()
+             .addService(helloService)
+             .enableHttpJsonTranscoding(true) // 👈👈👈
+             .build();
+  ```
+  <Tip>
+
+    HTTP/JSON transcoding is currently experimental. We're looking forward to your feedback.
+
+  </Tip>
+
+## 🌟 New features
+
+- You can now bind a virtual host to a specific port. #3798 #3833
+  ```java
+  Server.builder()
+        .http(8080)
+        .http(18080)
+        // Bind the virtual host to 18080 port.
+        .virtualHost(18080).service("/health", healthCheckService) // 👈👈👈
+                           .serviceUnder("/secret/", secretService)
+        .and()
+        ...
+  ```
+- You can now customize any HTTP error status responses including a decoder-level error and
+  <type://HttpStatusException>. #3822 #3853
+  ```java
+  ServerBuilder sb = ...
+  sb.errorHandler(new ServerErrorHandler() {
+      @Override
+      public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
+          // Convert an error that is raised in a service or a decorator.
+          if (cause instanceof IllegalArgumentException) {
+              return HttpResponse.of(HttpStatus.BAD_REQUEST);
+          }
+          ...
+      }
+
+      @Override
+      public AggregatedHttpResponse onProtocolViolation(ServiceConfig config,
+                                                        HttpStatus status,
+                                                        @Nullable String description,
+                                                        @Nullable Throwable cause) {
+          // Convert the decoder-level error.
+          if (status == HttpStatus.REQUEST_ENTITY_TOO_LARGE) {
+              return AggregatedHttpResponse.of(HttpStatus.BAD_REQUEST);
+          }
+          ...
+      }
+
+      @Override
+      public AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                                 HttpStatus status,
+                                                 @Nullable String description,
+                                                 @Nullable Throwable cause) {
+          // Convert the given error status and cause.
+          ...
+      }
+  })
+  ```
+- You can now share <type://ConcurrencyLimit> between <type://ConcurrencyLimitingClient>. #3478 #3753 #3860
+  ```java
+  ConcurrencyLimit limit = ConcurrencyLimit.of(64); // Can send 64 requests concurrently.
+
+  WebClient client1 = WebClient
+    .builder(...)
+    .decorator(ConcurrencyLimitingClient.newDecorator(limit))
+    .build(...);
+
+  WebClient client2 = WebClient
+    .builder(...)
+    .decorator(ConcurrencyLimitingClient.newDecorator(limit))
+    // different options
+    ...
+    .build(...);
+  ```
+- You can now allow all headers in `Access-Control-Request-Headers` from a
+  [preflight request](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request) using
+  <type://CorsServiceBuilder#allowAllRequestHeaders(boolean)>. #3839 #3843
+  ```java
+  ServerBuilder sb = ...
+  sb.service("/cors", myService.decorate(CorsService.builder("http://example.com")
+                                                    .allowRequestMethods(HttpMethod.GET)
+                                                    .allowAllRequestHeaders(true) // 👈👈👈
+                                                    .newDecorator()));
+  ```
+  - Specifying `*` in `Access-Control-Allow-Headers` does not work with
+    [certain browsers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers#browser_compatibility)
+    so you should use <type://CorsServiceBuilder#allowAllRequestHeaders(boolean)> to allow all headers.
+- You can now sanitize the preview of a request or a response. #3791 #3795
+  ```java
+  ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
+                          .requestPreviewSanitizer(requestPreviewSanitizer) // 👈👈👈
+                          .responsePreviewSanitizer(responsePreviewSanitizer) // 👈👈👈
+                          .newDecorator();
+  ```
+- A compressed file is automatically decompressed if <type://FileServiceBuilder#autoDecompress(boolean)>
+  is set to `true`. #3804 #3810
+  ```java
+  FileService.builder(FileServiceBuilderTest.class.getClassLoader(), "/")
+             .serveCompressedFiles(true) // This should be set to true to serve compressed files.
+             .autoDecompress(true) // 👈👈👈
+             .build();
+  ```
+- You can now send a delayed <type://HttpResponse> using <type://HttpResponse#delayed(Supplier,Duration)>.
+  #3698 #3770
+  ```java
+  Supplier<HttpResponse> responseSupplier = ...
+  HttpResponse.delayed(responseSupplier, Duration.ofSeconds(5)); // 👈👈👈
+  ```
+- You can now specify different blocking task executors for different <type://HttpService> using
+  <type://ServiceBindingBuilder>. #3740 #3754
+  ```java
+  Server.builder()
+        .route()
+        .get("/foo")
+        .blockingTaskExecutor(fooExecutor) // 👈👈👈
+        .build(fooService)
+        .route()
+        .get("/bar")
+        .blockingTaskExecutor(barExecutor) // 👈👈👈
+        .build(barService)
+        .build()
+  ```
+- You can now specify an <type://AuthToken> when building a <type://HealthCheckedEndpointGroup>. #3809
+  ```java
+  HealthCheckedEndpointGroup.builder(endpointGroup, "/health")
+                            .auth(AuthToken.ofOAuth2("..."))
+                            .build();
+  ```
+- You can now export different properties for different <typeplural://RequestContextExportingAppender> to log
+  with [Logback](http://logback.qos.ch). #3775 #3769
+  ```xml
+  // logback.xml
+  <appender name="RCEA1" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    ...
+    <export>remote.ip</export>
+  </appender>
+
+  <appender name="RCEA2" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    ...
+    <export>remote.port</export>
+  </appender>
+  ```
+- You can now log HTTP/2 frames using the frame loggers. #3817
+  ```xml
+  <!-- logback.xml -->
+  <logger name="com.linecorp.armeria.logging.traffic.server.http2" level="TRACE" />
+  <logger name="com.linecorp.armeria.logging.traffic.client.http2" level="TRACE" />
+  ```
+
+### gRPC
+
+- You can now use <type://UnframedGrpcErrorHandler> to map a non-OK gRPC status to an <type://HttpResponse>
+  in an unframed gRPC service. #3777 #3782
+  ```java
+  GrpcService.builder()
+             .addService(grpcService)
+             .enableUnframedRequests(true) // This should be set to true to enable UnframedGrpcService.
+             .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of()) // 👈👈👈
+             .build();
+  ```
+
+### Kotlin
+
+- You can now use Kotlin [Flow](https://kotlinlang.org/docs/flow.html) as a return type in an annotated service.
+  #3756 #3768
+  ```kotlin
+  @Get("/members")
+  @ProducesJson
+  fun listMembers() = flow { // 👈👈👈
+      emit(Member(name = "foo", age = 10))
+      emit(Member(name = "bar", age = 20))
+      emit(Member(name = "baz", age = 30))
+  }
+  ```
+
+### Spring integration
+
+- You can now configure an internal port with a Spring property file. #3798 #3833
+  ```yaml
+  armeria:
+    ports:
+      - port: 8080
+    internal-services:
+      # Prometheus exposition and health check service will be
+      # exposed to 18080 port. The requests to 8080 port will return 404 Not Found.
+      include: metrics, health
+      port: 18080 # 👈👈👈
+      protocols: http
+  ```
+- You can now specify all parameters of <type://ServerBuilder> with a Spring property file. #3705 #3735
+  ```yaml
+  armeria:
+    ports:
+      - port: 0
+    max-num-connections: 8
+    idle-timeout: 2s
+    ping-interval: 1s
+    max-connection-age: 4s
+    max-num-requests-per-connection: 4
+    http2-initial-connection-window-size: 2mb
+    http2-initial-stream-window-size: 4mb
+    http2-max-streams-per-connection: 1
+    ...
+  ```
+
+### GraphQL
+
+- You can now specify a `GraphQLSchema` or `schemaUrls` when building a <type://GraphQlService>. #3708 #3815
+  ```java
+  GraphQLSchema schema = ...
+  sb.service("/graphql", GraphqlService.builder()
+                                       .schema(schema) // 👈👈👈
+                                       ...
+                                       .build());
+  ```
+## 📃 Documentation
+
+- You can now learn [how to write a streaming response](https://armeria.dev/docs/advanced-streaming-backpressure)
+  using backpressure. #3397 #3847
+
+## 📈 Improvements
+
+- <type://ServiceRequestContext> is now automatically propagated to other dispatchers
+  over [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) when
+  using annotated and gRPC services. #3745 #3849
+- <type://JettyService> and <type://TomcatService> can now run the Servlets that
+  depends on the TLS attributes. #3850
+
+## 🛠️ Bug fixes
+
+- <type://ServerConfig#server()> doesn't raise an `IllegalStateException` anymore
+  after <type://Server#reconfigure(ServerConfigurator)> is called. #3853
+- The <type://RequestLog> is complete on the server-side even when an exception is raised and deferred values
+  are not set. #3823
+- <type://ResponseConverterFunctionProvider> now correctly works for suspending functions whose return type is
+  <type://HttpResult> in Kotlin. #3844
+- `%2F` and `%2f` are no longer converted to `/` when decoding a request path. #3855
+- <type://ExceptionHandlerFunction> of an annotated service now correctly handles exceptions raised by
+  service decorators. #3835
+- You can now correctly send additional response headers even if the request has failed. #3836
+- The <type://RequestLog> is complete on the server-side even when an exception is raised and deferred values
+  are not set. #3823
+- The failed request to a <type://TransientService> is now logged properly. #3818
+- You no longer see a pseudo request header in a response headers. #3801
+- You no longer see a <type://ClosedSessionException> when a server gracefully shut down an HTTP/2 connection.
+  #3825
+- A response headers of a <type://GrpcService> is now correctly sent when the first response frame
+  is sent. #3856
+- <type://GrpcService> now correctly invokes `Server.Listener` in order. #3805
+- gRPC client calls are now closed exactly once. #3799 #3800
+- Throwing an <type://ArmeriaStatusException> now overrides the gRPC status code and description as expected.
+  #3838
+
+## 🏚️ Deprecations
+
+- <type://SamlAssertionConsumerConfigBuilder#endpoint(SamlEndpoint)> is deprecated. #3813
+  - Use <type://SamlServiceProviderBuilder#acs(SamlEndpoint)> instead.
+
+## ☢️ Breaking changes
+
+- `ExceptionHandler` is now gone. #3853
+  - Use <type://ServerErrorHandler> instead.
+
+## ⛓ Dependencies
+
+- Bucket4j 6.2.0 → 6.3.0
+- Dropwizard 2.0.24 → 2.0.25
+- Dropwizard metrics 4.2.3 → 4.2.4
+- GraphQL-Java 17.1 → 17.3
+- gRPC-Java 1.40.1 → 1.41.0
+- Jackson 2.12.4 → 2.13.0
+- java-jwt 3.18.1 → 3.18.2
+- Kotlin 1.5.10 → 1.5.21
+- Kafka 2.8.0 -> 3.0.0
+- Kotlin 1.5.21 → 1.5.31
+- Kotlin Coroutines 1.5.1 → 1.5.2
+- Logback 1.2.5 → 1.2.6
+- Micrometer 1.7.3 → 1.7.4
+- Netty 4.1.66 → 4.1.68
+- netty-tcnative-boringssl-static 2.0.40 → 2.0.43
+- Prometheus simpleclient 0.11.0 → 0.12.0
+- Reactor 3.4.9 → 3.4.10
+- RESTEasy 4.7.1 → 4.7.2
+- RxJava 3.1.0 → 3.1.1
+- scala-java8-compat 1.0.0 → 1.0.1
+- Spring 5.3.9 → 5.3.10
+- Spring Boot 2.5.4 → 2.5.5
+- Thrift 0.14.2 → 0.15.0
+- Tomcat 9.0.46 → 9.0.53
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'anuraaga',
+  'berry120',
+  'fantayeneh',
+  'freevie',
+  'ghkim3221',
+  'heowc',
+  'ikhoon',
+  'jasper-vandemalle',
+  'jrhee17',
+  'kezhenxu94',
+  'ks-yim',
+  'minwoox',
+  'TheWeaVer',
+  'trustin',
+  'vivekkothari'
+]} />

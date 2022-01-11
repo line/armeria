@@ -114,6 +114,7 @@ dependencies {
         api "io.netty:$it"
     }
     implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-bom']}:osx-x86_64"
+    implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-bom']}:osx-aarch_64"
     implementation "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-bom']}:linux-x86_64"
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-bom']}:linux-x86_64"
     implementation 'io.netty:netty-tcnative-boringssl-static'
@@ -130,7 +131,7 @@ dependencies {
     // Do not upgrade to Scala 2.13.x that causes 'java.lang.ClassNotFoundException: scala.Serializable'
     // See https://github.com/scala/bug/issues/11832#issuecomment-568185023
     // If needed, you should consider to add 'armeria-scala' module.
-    optionalImplementation 'org.scala-lang:scala-library:2.12.14'
+    optionalImplementation 'org.scala-lang:scala-library:2.12.15'
 
     // Bouncy Castle
     implementation 'org.bouncycastle:bcpkix-jdk15on'

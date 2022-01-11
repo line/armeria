@@ -45,6 +45,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.grpc.BindableService;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -111,8 +112,9 @@ class UnframedGrpcServiceTest {
         });
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpResponse res = response.aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().isEmpty()).isTrue();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.contentUtf8())
+                .isEqualTo("grpc-code: CANCELLED, Completed without a response");
     }
 
     @Test
@@ -128,7 +130,69 @@ class UnframedGrpcServiceTest {
         assertThat(byteBuf.refCnt()).isZero();
     }
 
+    @Test
+    void unframedGrpcStatusFunction() throws Exception {
+        final TestService spyTestService = spy(testService);
+        doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
+                .when(spyTestService)
+                .emptyCall(any(), any());
+        final UnframedGrpcStatusMappingFunction statusFunction = (ctx, status, cause) -> {
+            if (status.getCode() == Code.UNKNOWN) {
+                // not INTERNAL_SERVER_ERROR
+                return HttpStatus.UNKNOWN;
+            }
+            return null;
+        };
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(
+                spyTestService,
+                UnframedGrpcErrorHandler.ofPlainText(statusFunction));
+        final HttpResponse response = unframedGrpcService.serve(ctx, request);
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.UNKNOWN);
+        assertThat(res.contentUtf8())
+                .isEqualTo("grpc-code: UNKNOWN, grpc error message");
+    }
+
+    @Test
+    void unframedGrpcStatusFunction_default() throws Exception {
+        final TestService spyTestService = spy(testService);
+        doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
+                .when(spyTestService)
+                .emptyCall(any(), any());
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(
+                spyTestService,
+                UnframedGrpcErrorHandler.ofPlainText());
+        final HttpResponse response = unframedGrpcService.serve(ctx, request);
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.contentUtf8())
+                .isEqualTo("grpc-code: UNKNOWN, grpc error message");
+    }
+
+    @Test
+    void unframedGrpcStatusFunction_orElse() throws Exception {
+        final TestService spyTestService = spy(testService);
+        doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
+                .when(spyTestService)
+                .emptyCall(any(), any());
+        final UnframedGrpcStatusMappingFunction statusFunction = (ctx, status, cause) -> null; // return null
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(
+                spyTestService,
+                UnframedGrpcErrorHandler.ofPlainText(
+                        statusFunction.orElse(UnframedGrpcStatusMappingFunction.of())));
+        final HttpResponse response = unframedGrpcService.serve(ctx, request);
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.contentUtf8())
+                .isEqualTo("grpc-code: UNKNOWN, grpc error message");
+    }
+
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
+        return buildUnframedGrpcService(bindableService, UnframedGrpcErrorHandler.ofPlainText());
+    }
+
+    private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService,
+                                                                UnframedGrpcErrorHandler errorHandler) {
         return (UnframedGrpcService) GrpcService.builder()
                                                 .addService(bindableService)
                                                 .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
@@ -136,8 +200,7 @@ class UnframedGrpcServiceTest {
                                                 .supportedSerializationFormats(
                                                         GrpcSerializationFormats.values())
                                                 .enableUnframedRequests(true)
-                                                .unframedGrpcErrorHandler(
-                                                        UnframedGrpcErrorHandler.ofPlainText())
+                                                .unframedGrpcErrorHandler(errorHandler)
                                                 .build();
     }
 

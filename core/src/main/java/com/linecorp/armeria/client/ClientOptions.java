@@ -121,7 +121,7 @@ public final class ClientOptions
             HttpHeaderNames.STATUS,
             HttpHeaderNames.TRANSFER_ENCODING,
             HttpHeaderNames.UPGRADE,
-            ArmeriaHttpUtil.HEADER_NAME_KEEP_ALIVE,
+            HttpHeaderNames.KEEP_ALIVE,
             ArmeriaHttpUtil.HEADER_NAME_PROXY_CONNECTION,
             ExtensionHeaderNames.PATH.text(),
             ExtensionHeaderNames.SCHEME.text(),

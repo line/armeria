@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
@@ -63,12 +64,16 @@ import io.netty.channel.EventLoopGroup;
  *     mime-types: text/*, application/json
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
+ *   internal-services:
+ *     - port: 18080
+ *     - include: docs, health, metrics
  * }</pre>
- * TODO(ide) Adds virtualhost settings
  */
 @ConfigurationProperties(prefix = "armeria")
 @Validated
 public class ArmeriaSettings {
+
+    // TODO(ide) Adds virtualhost settings
 
     /**
      * Port and protocol settings.
@@ -257,6 +262,67 @@ public class ArmeriaSettings {
     }
 
     /**
+     * Properties for internal services such as {@link DocService}, {@link PrometheusExpositionService}, and
+     * {@link HealthCheckService}.
+     */
+    public static class InternalServiceProperties extends Port {
+
+        /**
+         * The {@code include} properties to secure the internal services from normal
+         * {@linkplain #getPorts() ports}.
+         */
+        @Nullable
+        private List<InternalServiceId> include = InternalServiceId.defaultServiceIds();
+
+        /**
+         * Returns the {@code include} property to secure the HTTP endpoints from normal
+         * {@linkplain #getPorts() ports}.
+         */
+        @Nullable
+        public List<InternalServiceId> getInclude() {
+            return include;
+        }
+
+        /**
+         * Sets the IDs of the {@link HttpService}s to secure from normal {@linkplain #getPorts() ports}.
+         *
+         * <table>
+         * <caption>Supported service IDs</caption>
+         *   <tbody>
+         *     <tr>
+         *       <th>ID</th>
+         *       <th>Service</th>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code docs}</td>
+         *       <td>{@link DocService}</td>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code metrics}</td>
+         *       <td>{@link PrometheusExpositionService}</td>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code health}</td>
+         *       <td>{@link HealthCheckService}</td>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code actuator}</td>
+         *       <td>To bind {@code WebOperationService}. Note that this option is only valid when
+         *           {@code "armeria-spring-boot2-actuator-autoconfigure"} is activated.</td>
+         *     </tr>
+         *   </tbody>
+         * </table>
+         *
+         * <p>{@link InternalServiceId#ALL} can be used to include all internal {@link HttpService}s.
+         *
+         * @see InternalServiceId
+         */
+        public void setInclude(List<InternalServiceId> include) {
+            this.include = include;
+        }
+    }
+
+    /**
      * Configurations for the access log.
      */
     public static class AccessLog {
@@ -328,7 +394,7 @@ public class ArmeriaSettings {
     private String healthCheckPath = "/internal/healthcheck";
 
     /**
-     * The path to serve thrift service documentation on. Should not be exposed
+     * The path to serve the documentation service on. Should not be exposed
      * to the external network. If not set, documentation service will not be
      * registered.
      */
@@ -342,6 +408,14 @@ public class ArmeriaSettings {
      */
     @Nullable
     private String metricsPath = "/internal/metrics";
+
+    /**
+     * The properties for internal services that should not be exposed to the external network.
+     * If not specified, the paths such as {@link #getDocsPath()}, {@link #getMetricsPath()} and
+     * {@link #getHealthCheckPath()} will be served on the normal service {@linkplain #getPorts() ports}.
+     */
+    @Nullable
+    private InternalServiceProperties internalServices;
 
     /**
      * The number of milliseconds to wait after the last processed request to
@@ -560,6 +634,21 @@ public class ArmeriaSettings {
      */
     public void setMetricsPath(@Nullable String metricsPath) {
         this.metricsPath = metricsPath;
+    }
+
+    /**
+     * Sets the properties of internal services that should not be exposed to the external network.
+     */
+    public void setInternalServices(InternalServiceProperties internalServices) {
+        this.internalServices = internalServices;
+    }
+
+    /**
+     * Returns the properties of internal services that should not be exposed to the external network.
+     */
+    @Nullable
+    public InternalServiceProperties getInternalServices() {
+        return internalServices;
     }
 
     /**

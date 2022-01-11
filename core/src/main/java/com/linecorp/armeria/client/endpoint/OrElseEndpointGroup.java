@@ -24,18 +24,15 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
-final class OrElseEndpointGroup
-        extends AbstractListenable<List<Endpoint>>
-        implements EndpointGroup, ListenableAsyncCloseable {
+final class OrElseEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
 
     private final EndpointGroup first;
     private final EndpointGroup second;
 
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new CompletableFuture<>();
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
     private final EndpointSelector selector;
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
@@ -46,15 +43,9 @@ final class OrElseEndpointGroup
         first.addListener(unused -> notifyListeners(endpoints()));
         second.addListener(unused -> notifyListeners(endpoints()));
 
-        CompletableFuture.anyOf(first.whenReady(), second.whenReady())
-                         .handle((unused, cause) -> {
-                             if (cause != null) {
-                                 initialEndpointsFuture.completeExceptionally(cause);
-                             } else {
-                                initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
-                             }
-                             return null;
-                         });
+        initialEndpointsFuture = CompletableFuture
+                .anyOf(first.whenReady(), second.whenReady())
+                .thenApply(unused -> endpoints());
 
         selector = first.selectionStrategy().newSelector(this);
     }

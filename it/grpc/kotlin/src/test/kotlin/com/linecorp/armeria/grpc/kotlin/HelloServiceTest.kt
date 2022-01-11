@@ -85,12 +85,27 @@ class HelloServiceTest {
             repeat(30) {
                 launch {
                     var sequence = 0
-                    helloService.shortBlockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                    helloService.shortBlockingLotsOfReplies(
+                        HelloRequest.newBuilder().setName("Armeria").build()
+                    )
                         .collect {
                             assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                         }
                     assertThat(sequence).isEqualTo(5)
                 }
+            }
+        }
+    }
+
+    @Test
+    fun serverShouldSendAdditionalResponseHeaders() {
+        runBlocking {
+            Clients.newContextCaptor().use { captor ->
+                val response = helloService.shortBlockingHello(HelloRequest.newBuilder().setName("Armeria").build())
+                assertThat(response.message).isEqualTo("Hello, Armeria!")
+                val ctx = captor.get()
+                val log = ctx.log().whenComplete().join()
+                assertThat(log.responseHeaders().get("foo")).isEqualTo("bar")
             }
         }
     }

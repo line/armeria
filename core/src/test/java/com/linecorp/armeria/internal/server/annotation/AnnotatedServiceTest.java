@@ -132,6 +132,9 @@ class AnnotatedServiceTest {
 
             sb.annotatedService("/12", new MyAnnotatedService12(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/13", new MyAnnotatedService13(),
+                                LoggingService.newDecorator());
         }
     };
 
@@ -717,6 +720,20 @@ class AnnotatedServiceTest {
         }
     }
 
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    public static class MyAnnotatedService13 {
+
+        @Get("/wildcard1")
+        public String wildcard(@Param List<? extends String> param) {
+            return String.join(":", param);
+        }
+
+        @Get("/wildcard2")
+        public <T extends String> String wildcard2(@Param List<T> param) {
+            return String.join(":", param);
+        }
+    }
+
     @Test
     void testAnnotatedService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -1061,6 +1078,14 @@ class AnnotatedServiceTest {
             testStatusCode(hc, post("/12/getMapping"), 405);
             testStatusCode(hc, get("/12/postMapping"), 405);
             testBody(hc, post("/12/postMapping"), "/12/postMapping");
+        }
+    }
+
+    @Test
+    void testWildcard() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testBody(hc, get("/13/wildcard1?param=Hello&param=World"), "Hello:World");
+            testBody(hc, get("/13/wildcard2?param=Hello&param=World"), "Hello:World");
         }
     }
 

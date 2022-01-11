@@ -53,16 +53,22 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
     private static final class WeightedRoundRobinSelector extends AbstractEndpointSelector {
 
         private final AtomicInteger sequence = new AtomicInteger();
+        @Nullable
         private volatile EndpointsAndWeights endpointsAndWeights;
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            endpointsAndWeights = new EndpointsAndWeights(endpointGroup.endpoints());
-            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
+            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints),
+                                      true);
         }
 
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
+            final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
+            if (endpointsAndWeights == null) {
+                // 'endpointGroup' has not been initialized yet.
+                return null;
+            }
             final int currentSequence = sequence.getAndIncrement();
             return endpointsAndWeights.selectEndpoint(currentSequence);
         }

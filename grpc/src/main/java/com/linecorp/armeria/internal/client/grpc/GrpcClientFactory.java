@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientDecoration;
@@ -50,6 +51,8 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.Channel;
+import io.grpc.ClientInterceptor;
+import io.grpc.ClientInterceptors;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.stub.AbstractStub;
@@ -133,7 +136,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             jsonMarshaller = null;
         }
 
-        final ArmeriaChannel channel = new ArmeriaChannel(
+        Channel channel = new ArmeriaChannel(
                 newParams,
                 httpClient,
                 meterRegistry(),
@@ -141,7 +144,11 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 serializationFormat,
                 jsonMarshaller,
                 simpleMethodNames);
-
+        final Iterable<? extends ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
+        if (!Iterables.isEmpty(interceptors)) {
+            channel = ClientInterceptors.intercept(channel, Iterables.toArray(interceptors,
+                                                                              ClientInterceptor.class));
+        }
         final Object clientStub = clientStubFactory.newClientStub(clientType, channel);
         requireNonNull(clientStub, "clientStubFactory.newClientStub() returned null");
         checkState(clientType.isAssignableFrom(clientStub.getClass()),
@@ -167,7 +174,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         boolean foundRetryingClient = false;
         final HttpClient noopClient = (ctx, req) -> null;
-        for (Function<? super HttpClient, ? extends HttpClient> decorator: decorators) {
+        for (Function<? super HttpClient, ? extends HttpClient> decorator : decorators) {
             final HttpClient decorated = decorator.apply(noopClient);
             if (decorated instanceof RetryingClient) {
                 foundRetryingClient = true;

@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.operators.ConditionalSubscriber;
 
 final class RequestContextFlowable<T> extends Flowable<T> {
 

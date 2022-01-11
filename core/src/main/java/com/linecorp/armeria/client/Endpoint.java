@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -237,6 +238,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     @Override
     public List<Endpoint> endpoints() {
         return endpoints;
+    }
+
+    @Override
+    public void addListener(Consumer<? super List<Endpoint>> listener, boolean notifyLatestEndpoints) {
+        if (notifyLatestEndpoints) {
+            // Endpoint will notify only once when a listener is attached.
+            listener.accept(endpoints);
+        }
     }
 
     @Override
@@ -477,7 +486,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Returns a new host endpoint with the {@linkplain InetAddress#getHostAddress()} IP address} of
+     * Returns a new host endpoint with the {@linkplain InetAddress#getHostAddress() IP address} of
      * the specified {@link InetAddress}.
      *
      * @return the new endpoint with the specified {@link InetAddress}.

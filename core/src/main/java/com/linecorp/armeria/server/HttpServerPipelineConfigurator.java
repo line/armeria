@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
@@ -67,12 +68,24 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http2.DefaultHttp2Connection;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
+import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
+import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
+import io.netty.handler.codec.http2.Http2FrameLogger;
+import io.netty.handler.codec.http2.Http2FrameReader;
+import io.netty.handler.codec.http2.Http2FrameWriter;
+import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SniHandler;
@@ -95,8 +108,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
     private static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
 
-    private static final int UPGRADE_REQUEST_MAX_LENGTH = 16384;
-
     private static final byte[] PROXY_V1_MAGIC_BYTES = {
             (byte) 'P', (byte) 'R', (byte) 'O', (byte) 'X', (byte) 'Y'
     };
@@ -106,9 +117,12 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
     };
 
+    private static final Http2FrameLogger frameLogger =
+            new Http2FrameLogger(LogLevel.TRACE, "com.linecorp.armeria.logging.traffic.server.http2");
+
     private final ServerPort port;
     private final ServerConfigHolder configHolder;
-    private volatile ServerConfig config;
+    private final ServerConfig config;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
@@ -191,7 +205,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler,
-                config.isDateHeaderEnabled(), config.isServerHeaderEnabled()
+                config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
+                config.http1HeaderNaming()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
@@ -215,11 +230,29 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
         final Timer keepAliveTimer = newKeepAliveTimer(scheme == SCHEME_HTTP ? H2C : H2);
+
+        final Http2Connection connection = new DefaultHttp2Connection(/* server */ true);
+        final Http2ConnectionEncoder encoder = encoder(connection);
+        final Http2ConnectionDecoder decoder = decoder(connection, encoder);
         return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
                                                        gracefulShutdownSupport, scheme.toString())
-                .server(true)
+                .codec(decoder, encoder)
                 .initialSettings(http2Settings())
                 .build();
+    }
+
+    private static Http2ConnectionEncoder encoder(Http2Connection connection) {
+        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
+        writer = new Http2OutboundFrameLogger(writer, frameLogger);
+        return new DefaultHttp2ConnectionEncoder(connection, writer);
+    }
+
+    private Http2ConnectionDecoder decoder(Http2Connection connection, Http2ConnectionEncoder encoder) {
+        final ArmeriaHttp2HeadersDecoder headersDecoder = new ArmeriaHttp2HeadersDecoder(
+                /* validateHeaders */ true, config.http2MaxHeaderListSize());
+        Http2FrameReader reader = new DefaultHttp2FrameReader(headersDecoder);
+        reader = new Http2InboundFrameLogger(reader, frameLogger);
+        return new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
     }
 
     private Http2Settings http2Settings() {
@@ -465,16 +498,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
             }
 
-            final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
-                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled());
+            final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
+                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
+                    config.http1HeaderNaming());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
-            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
+            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder));
             p.addLast(new HttpServerHandler(configHolder,
                                             gracefulShutdownSupport,
-                                            writer, H1, proxiedAddresses));
+                                            encoder, H1, proxiedAddresses));
         }
 
         @Override
@@ -563,15 +597,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             baseName = addAfter(p, baseName, http1codec);
             baseName = addAfter(p, baseName, new HttpServerUpgradeHandler(
                     http1codec,
-                    protocol -> {
-                        if (!AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-                            return null;
-                        }
-
-                        return new Http2ServerUpgradeCodec(
-                                newHttp2ConnectionHandler(p, SCHEME_HTTP));
-                    },
-                    UPGRADE_REQUEST_MAX_LENGTH));
+                    () -> new Http2ServerUpgradeCodec(newHttp2ConnectionHandler(p, SCHEME_HTTP))));
 
             addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder));
         }

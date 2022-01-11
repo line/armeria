@@ -59,7 +59,7 @@ configure(scala212) {
     dependencies {
         implementation('org.scala-lang:scala-library') {
             version {
-                strictly '2.12.14'
+                strictly '2.12.15'
             }
         }
         testImplementation 'org.scalameta:munit_2.12'

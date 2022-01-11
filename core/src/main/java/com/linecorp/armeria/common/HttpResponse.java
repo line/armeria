@@ -26,8 +26,10 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -50,6 +52,7 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.HttpMessageAggregator;
@@ -112,6 +115,26 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} provided by the {@link Supplier}.
+     *
+     * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
+     * @param executor the {@link Executor} that executes the {@link Supplier}.
+     */
+    static HttpResponse from(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(executor, "executor");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.execute(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        });
+        return res;
+    }
+
+    /**
      * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
      * publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
      */
@@ -156,8 +179,11 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Invokes the specified {@link Supplier} and creates a new HTTP response that
-     * delegates to the provided {@link HttpResponse} by {@link Supplier},
-     * beginning publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
+     * delegates to the provided {@link HttpResponse} by {@link Supplier}.
+     *
+     * <p>The {@link Supplier} is invoked from the current thread-local {@link RequestContext}'s event loop.
+     * If there's no thread local {@link RequestContext} is set, one of the threads
+     * from {@code CommonPools.workerGroup().next()} will be used.
      */
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");
@@ -179,7 +205,13 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.schedule(() -> res.delegate(responseSupplier.get()), delay.toNanos(), TimeUnit.NANOSECONDS);
+        executor.schedule(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        }, delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }
 
@@ -304,8 +336,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse of(HttpStatus status, MediaType mediaType,
                            @FormatString String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
-        return of(status, mediaType,
-                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
+        return of(status, mediaType, HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
     }
 
     /**
@@ -587,6 +618,14 @@ public interface HttpResponse extends Response, HttpMessage {
         return new AbortedHttpResponse(cause);
     }
 
+    /**
+     * Returns a new {@link HttpResponseBuilder}.
+     */
+    @UnstableApi
+    static HttpResponseBuilder builder() {
+        return new HttpResponseBuilder();
+    }
+
     @Override
     CompletableFuture<Void> whenComplete();
 
@@ -734,7 +773,7 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
+     * Transforms the {@link HttpData}s emitted by this {@link HttpResponse} by applying the specified
      * {@link Function}.
      *
      * <p>For example:<pre>{@code
@@ -793,6 +832,27 @@ public interface HttpResponse extends Response, HttpMessage {
     default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return of(HttpMessage.super.mapError(function));
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the non-informational {@link ResponseHeaders}
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
+     * HttpResponse result = response.peekHeaders(headers -> {
+     *      assert headers.status() == HttpStatus.OK;
+     * });
+     * }</pre>
+     */
+    default HttpResponse peekHeaders(Consumer<? super ResponseHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(headers -> {
+            if (!headers.status().isInformational()) {
+                action.accept(headers);
+            }
+        }, ResponseHeaders.class);
+        return of(stream);
     }
 
     /**

@@ -20,32 +20,25 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
-import java.nio.charset.StandardCharsets;
-
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2EventAdapter;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -58,43 +51,38 @@ import io.netty.util.collection.IntObjectMap;
 
 final class Http2RequestDecoder extends Http2EventAdapter {
 
-    private static final ByteBuf DATA_MISSING_METHOD =
-            Unpooled.copiedBuffer(HttpResponseStatus.BAD_REQUEST + "\nMissing method",
-                                  StandardCharsets.UTF_8).asReadOnly();
-    private static final ByteBuf DATA_UNSUPPORTED_METHOD =
-            Unpooled.copiedBuffer(HttpResponseStatus.METHOD_NOT_ALLOWED + "\nUnsupported method",
-                                  StandardCharsets.UTF_8).asReadOnly();
-    private static final ByteBuf DATA_INVALID_CONTENT_LENGTH =
-            Unpooled.copiedBuffer(HttpResponseStatus.BAD_REQUEST + "\nInvalid content length",
-                                  StandardCharsets.UTF_8).asReadOnly();
+    private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
     private final ServerConfig cfg;
     private final Channel channel;
-    private final Http2ConnectionEncoder writer;
     private final String scheme;
+    @Nullable
+    private ServerHttp2ObjectEncoder encoder;
 
     private final InboundTrafficController inboundTrafficController;
+    private final KeepAliveHandler keepAliveHandler;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
-    private final KeepAliveHandler keepAliveHandler;
     private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme,
-                        KeepAliveHandler keepAliveHandler) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, String scheme, KeepAliveHandler keepAliveHandler) {
         this.cfg = cfg;
         this.channel = channel;
-        this.writer = writer;
         this.scheme = scheme;
-        assert keepAliveHandler instanceof Http2ServerKeepAliveHandler ||
-               keepAliveHandler instanceof NoopKeepAliveHandler;
-        this.keepAliveHandler = keepAliveHandler;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
+        this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }
 
     Http2GoAwayHandler goAwayHandler() {
         return goAwayHandler;
+    }
+
+    void initEncoder(ServerHttp2ObjectEncoder encoder) {
+        if (this.encoder == null) {
+            this.encoder = encoder;
+        }
     }
 
     @Override
@@ -108,10 +96,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         keepAliveChannelRead(true);
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
+            assert encoder != null;
+
             // Validate the method.
             final CharSequence methodText = headers.method();
             if (methodText == null) {
-                writeErrorResponse(ctx, streamId, HttpResponseStatus.BAD_REQUEST, DATA_MISSING_METHOD);
+                writeErrorResponse(streamId, HttpStatus.BAD_REQUEST, "Missing method", null);
                 return;
             }
 
@@ -121,8 +111,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             final HttpMethod method = HttpMethod.tryParse(methodText.toString());
             if (method == null ||
                 method == HttpMethod.CONNECT && !headers.contains(HttpHeaderNames.PROTOCOL)) {
-                writeErrorResponse(ctx, streamId, HttpResponseStatus.METHOD_NOT_ALLOWED,
-                                   DATA_UNSUPPORTED_METHOD);
+                writeErrorResponse(streamId, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
                 return;
             }
 
@@ -130,14 +119,13 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L);
                 if (contentLength < 0) {
-                    writeErrorResponse(ctx, streamId, HttpResponseStatus.BAD_REQUEST,
-                                       DATA_INVALID_CONTENT_LENGTH);
+                    writeErrorResponse(streamId, HttpStatus.BAD_REQUEST, "Invalid content length", null);
                     return;
                 }
             }
 
-            if (!handle100Continue(ctx, streamId, headers)) {
-                writeErrorResponse(ctx, streamId, HttpResponseStatus.EXPECTATION_FAILED, null);
+            if (!handle100Continue(streamId, headers)) {
+                writeErrorResponse(streamId, HttpStatus.EXPECTATION_FAILED, null, null);
                 return;
             }
 
@@ -178,7 +166,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
-    private boolean handle100Continue(ChannelHandlerContext ctx, int streamId, Http2Headers headers) {
+    private boolean handle100Continue(int streamId, Http2Headers headers) {
         final CharSequence expectValue = headers.get(HttpHeaderNames.EXPECT);
         if (expectValue == null) {
             // No 'expect' header.
@@ -191,10 +179,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
 
         // Send a '100 Continue' response.
-        writer.writeHeaders(
-                ctx, streamId,
-                new DefaultHttp2Headers(false).status(HttpStatus.CONTINUE.codeAsText()),
-                0, false, ctx.voidPromise());
+        assert encoder != null;
+        encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         headers.remove(HttpHeaderNames.EXPECT);
@@ -239,16 +225,21 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         final long maxContentLength = decodedReq.maxRequestLength();
         final long transferredLength = decodedReq.transferredBytes();
         if (maxContentLength > 0 && transferredLength > maxContentLength) {
-            final Http2Stream stream = writer.connection().stream(streamId);
+            assert encoder != null;
+            final Http2Stream stream = encoder.findStream(streamId);
             if (isWritable(stream)) {
-                writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null);
-                writer.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.voidPromise());
+                final ContentTooLargeException cause =
+                        ContentTooLargeException.builder()
+                                                .maxContentLength(maxContentLength)
+                                                .contentLength(req.headers())
+                                                .transferred(transferredLength)
+                                                .build();
+
+                final HttpStatus entityTooLarge = HttpStatus.REQUEST_ENTITY_TOO_LARGE;
+                writeErrorResponse(streamId, entityTooLarge, null, cause);
+
                 if (decodedReq.isOpen()) {
-                    decodedReq.close(ContentTooLargeException.builder()
-                                                             .maxContentLength(maxContentLength)
-                                                             .contentLength(req.headers())
-                                                             .transferred(transferredLength)
-                                                             .build());
+                    decodedReq.close(HttpStatusException.of(entityTooLarge, cause));
                 }
             } else {
                 // The response has been started already. Abort the request and let the response continue.
@@ -268,7 +259,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         return dataLength + padding;
     }
 
-    private static boolean isWritable(Http2Stream stream) {
+    private static boolean isWritable(@Nullable Http2Stream stream) {
+        if (stream == null) {
+            return false;
+        }
         switch (stream.state()) {
             case OPEN:
             case HALF_CLOSED_REMOTE:
@@ -278,28 +272,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
     }
 
-    private void writeErrorResponse(ChannelHandlerContext ctx, int streamId, HttpResponseStatus status,
-                                    @Nullable ByteBuf content) throws Http2Exception {
-        final ByteBuf data =
-                content != null ? content
-                                : Unpooled.wrappedBuffer(status.toString().getBytes(StandardCharsets.UTF_8));
-
-        writer.writeHeaders(
-                ctx, streamId,
-                new DefaultHttp2Headers(false)
-                        .status(status.codeAsText())
-                        .set(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8.toString())
-                        .setInt(HttpHeaderNames.CONTENT_LENGTH, data.readableBytes()),
-                0, false, ctx.voidPromise());
-
-        writer.writeData(ctx, streamId, data, 0, true, ctx.voidPromise());
-
-        final Http2Stream stream = writer.connection().stream(streamId);
-        if (stream != null && writer.flowController().hasFlowControlled(stream)) {
-            // Ensure to flush the error response if it's flow-controlled so that it is sent
-            // before an RST_STREAM frame.
-            writer.flowController().writePendingBytes();
-        }
+    private void writeErrorResponse(
+            int streamId, HttpStatus status, @Nullable String message, @Nullable Throwable cause) {
+        assert encoder != null;
+        encoder.writeErrorResponse(0 /* unused */, streamId,
+                                   cfg.defaultVirtualHost().fallbackServiceConfig(),
+                                   status, message, cause);
     }
 
     @Override
