@@ -146,7 +146,22 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the path for the endpoint.
+     * Sets the context path for the gRPC endpoint.
+     * This method will be useful if your gRPC service is bound to a context path.
+     * For example:
+     * <pre>{@code
+     * Server.builder()
+     *        // A gRPC service is bound to "/grpc/com.example.MyGrpcService/"
+     *       .service("/grpc", GrpcService.builder()
+     *                                    .addService(new MyGrpcService())
+     *                                    .build())
+     *       .build();
+     *
+     * GrpcClient.builder("https://api.example.com")
+     *           // "/grpc" is prefixed to the gRPC service path.
+     *           .path("/grpc")
+     *           .build(MyGrpcServiceGrpc.XXXStub.class)
+     * }</pre>
      */
     public GrpcClientBuilder path(String path) {
         requireNonNull(path, "path");
