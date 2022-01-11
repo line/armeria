@@ -13,6 +13,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -43,11 +45,17 @@ class BlogServiceTest {
     };
 
     static BlogServiceBlockingStub client;
+    static BlogServiceBlockingStub decoratedClient;
 
     @BeforeAll
     static void beforeAll() {
         client = Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
                                    BlogServiceBlockingStub.class);
+
+        decoratedClient = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
+                .decorator(LoggingClient.newDecorator())
+                .options(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(10000))
+                .build(BlogServiceBlockingStub.class);
     }
 
     @Test
