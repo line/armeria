@@ -902,5 +902,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         Descriptor recursiveTypeDescriptor() {
             return recursiveTypeDescriptor;
         }
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
     }
 }
