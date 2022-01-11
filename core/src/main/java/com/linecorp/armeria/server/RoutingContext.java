@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -86,6 +87,7 @@ public interface RoutingContext {
     /**
      * Returns the {@link RoutingStatus} of the request.
      */
+    @UnstableApi
     RoutingStatus status();
 
     /**

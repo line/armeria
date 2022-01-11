@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
@@ -140,7 +141,11 @@ enum HeapDumpService implements HttpService {
 
     @Override
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        return ExchangeType.RESPONSE_STREAMING;
+        if (headers.method() == HttpMethod.GET) {
+            return ExchangeType.RESPONSE_STREAMING;
+        } else {
+            return ExchangeType.BIDI_STREAMING;
+        }
     }
 
     private static File createTempFile(String fileName) throws IOException {

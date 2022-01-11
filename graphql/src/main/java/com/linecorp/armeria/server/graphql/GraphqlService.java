@@ -49,6 +49,7 @@ public interface GraphqlService extends HttpService {
 
     @Override
     default ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        return ExchangeType.RESPONSE_STREAMING;
+        // Response stream will be supported via WebSocket.
+        return ExchangeType.UNARY;
     }
 }

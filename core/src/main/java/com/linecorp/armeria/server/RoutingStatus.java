@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A routing status of an incoming HTTP request.
  */
+@UnstableApi
 public enum RoutingStatus {
     /**
      * The routing completed successfully.

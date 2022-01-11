@@ -32,7 +32,7 @@ public enum ExchangeType {
      */
     REQUEST_STREAMING(true, false),
     /**
-     * A non-streaming {@link HttpRequest} with streaming {@link HttpResponse}.
+     * A non-streaming {@link HttpRequest} with a streaming {@link HttpResponse}.
      */
     RESPONSE_STREAMING(false, true),
     /**
