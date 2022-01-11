@@ -38,7 +38,7 @@ jobs:
 
       - name: Publish and close repository
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=1 clean publish closeAndReleaseStagingRepository
+          ./gradlew --no-daemon --stacktrace --max-workers=1 publish closeAndReleaseStagingRepository
         env:
           # Should not use '-P' option with 'secrets' that can cause unexpected results
           # if secret values contains white spaces or new lines.

@@ -1,13 +1,19 @@
-1. Build the web site:
+1. Wait until the publish job is finished and the artifacts are up in the Maven Central.
+
+   - Publish job: https://github.com/line/armeria/actions/workflows/publish-release.yml
+   - Sonatype repository: https://oss.sonatype.org/
+   - Maven Central: https://repo.maven.apache.org/maven2/com/linecorp/armeria/armeria-bom/${releaseVersion}/
+
+2. Build the web site:
 
    git checkout ${tag} && \
    ./gradlew --no-daemon clean site
 
-2. Close the milestone and set its due date with the date of the release at:
+3. Close the milestone and set its due date with the date of the release at:
 
    https://github.com/line/armeria/milestones
 
-3. Copy the generated web site to the 'gh-pages' branch, e.g.
+4. Copy the generated web site to the 'gh-pages' branch, e.g.
 
    cd ../site-armeria && \
    git checkout gh-pages && \
@@ -17,11 +23,11 @@
    git commit --amend -m 'Deploy the web site' && \
    git push --force
 
-4. Update the release note at:
+5. Update the release note at:
 
    https://github.com/line/armeria/releases/tag/${tag}
 
-5. Copy the examples to armeria-examples using the script:
+6. Copy the examples to armeria-examples using the script:
 
    cd ../armeria-examples && \
    ./update-examples.sh ${releaseVersion} ../upstream-armeria && \
@@ -29,7 +35,7 @@
    git commit -m 'Update Armeria to ${releaseVersion}' && \
    git push
 
-6. Announce the release via Twitter.
+7. Announce the release via Twitter.
 
-7. Send an update pull request to https://github.com/TechEmpower/FrameworkBenchmarks
+8. Send an update pull request to https://github.com/TechEmpower/FrameworkBenchmarks
    if we made performance improvements.
