@@ -26,6 +26,7 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
@@ -41,6 +42,7 @@ import MethodPage from '../MethodPage';
 import StructPage from '../StructPage';
 
 import {
+  packageName,
   simpleName,
   Specification,
   SpecificationData,
@@ -190,11 +192,24 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   button
                   onClick={() => handleServiceCollapse(service.name)}
                 >
-                  <ListItemText>
-                    <Typography variant="subtitle1">
-                      <code>{simpleName(service.name)}</code>
-                    </Typography>
-                  </ListItemText>
+                  {specification.hasUniqueServiceNames() ? (
+                    <ListItemText>
+                      <Typography display="inline" variant="subtitle1">
+                        <Tooltip title={service.name} placement="top">
+                          <code>{simpleName(service.name)}</code>
+                        </Tooltip>
+                      </Typography>
+                    </ListItemText>
+                  ) : (
+                    <ListItemText>
+                      <Typography display="inline" variant="body2">
+                        <code>{packageName(service.name)}</code>
+                      </Typography>
+                      <Typography display="inline" variant="subtitle1">
+                        <code>{simpleName(service.name)}</code>
+                      </Typography>
+                    </ListItemText>
+                  )}
                   {openServices[service.name] ? <ExpandLess /> : <ExpandMore />}
                 </ListItem>
                 <Collapse in={openServices[service.name]} timeout="auto">
@@ -257,7 +272,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>{simpleName(enm.name)}</code>
+                  {specification.hasUniqueEnumNames() ? (
+                    <Tooltip title={enm.name} placement="top">
+                      <code>{simpleName(enm.name)}</code>
+                    </Tooltip>
+                  ) : (
+                    <code>{enm.name}</code>
+                  )}
                 </ListItemText>
               </ListItem>
             ))}
@@ -286,7 +307,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>{simpleName(struct.name)}</code>
+                  {specification.hasUniqueStructNames() ? (
+                    <Tooltip title={struct.name} placement="top">
+                      <code>{simpleName(struct.name)}</code>
+                    </Tooltip>
+                  ) : (
+                    <code>{struct.name}</code>
+                  )}
                 </ListItemText>
               </ListItem>
             ))}
@@ -315,7 +342,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                     variant: 'body2',
                   }}
                 >
-                  <code>{simpleName(struct.name)}</code>
+                  {specification.hasUniqueStructNames() ? (
+                    <Tooltip title={struct.name} placement="top">
+                      <code>{simpleName(struct.name)}</code>
+                    </Tooltip>
+                  ) : (
+                    <code>{struct.name}</code>
+                  )}
                 </ListItemText>
               </ListItem>
             ))}

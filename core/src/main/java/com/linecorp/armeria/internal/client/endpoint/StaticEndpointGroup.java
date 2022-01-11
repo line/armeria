@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.internal.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,15 +25,18 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * A static immutable {@link EndpointGroup}.
  */
-final class StaticEndpointGroup implements EndpointGroup {
+public final class StaticEndpointGroup implements EndpointGroup {
 
-    static final StaticEndpointGroup EMPTY =
+    public static final StaticEndpointGroup EMPTY =
             new StaticEndpointGroup(new EmptyEndpointSelectionStrategy(), ImmutableList.of());
 
     private final List<Endpoint> endpoints;
@@ -41,8 +44,8 @@ final class StaticEndpointGroup implements EndpointGroup {
     private final EndpointSelectionStrategy selectionStrategy;
     private final EndpointSelector selector;
 
-    StaticEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                        Iterable<Endpoint> endpoints) {
+    public StaticEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                               Iterable<Endpoint> endpoints) {
         this.endpoints = ImmutableList.copyOf(requireNonNull(endpoints, "endpoints"));
         initialEndpointsFuture = CompletableFuture.completedFuture(this.endpoints);
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");

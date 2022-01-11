@@ -73,8 +73,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
 
         logger.info("{} user '{}' has been logged in.", ctx, username);
 
-        final Cookie cookie = Cookie.builder("username", username)
-                                    .httpOnly(true)
+        final Cookie cookie = Cookie.secureBuilder("username", username)
                                     .domain("localhost")
                                     .maxAge(60)
                                     .path("/")

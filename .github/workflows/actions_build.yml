@@ -161,15 +161,16 @@ jobs:
 
   site:
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    # ubuntu-latest is preferred for site job.
+    # node_modules need complicated dependencies that are difficult to install on self-hosted runners.
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
 
       - name: Install svgbob_cli
-        # The latest version(0.6.0) of svgbob_cli fails to install in self-hosted runners
         run: |
-          sudo yum -y install cargo && cargo install svgbob_cli --version 0.5.4
+          sudo apt-get -y install cargo && cargo install svgbob_cli
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - id: setup-jdk-16
@@ -179,9 +180,21 @@ jobs:
           distribution: 'adopt'
           java-version: '16'
 
+      - name: Restore the cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+          key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
+          restore-keys: |
+            build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
+            build-${{ matrix.java }}-${{ runner.os }}-
+
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel site
+          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel site
+        shell: bash
 
       - name: Clean up the cache
         run: |

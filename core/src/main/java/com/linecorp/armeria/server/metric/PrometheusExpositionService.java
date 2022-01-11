@@ -18,13 +18,14 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -34,16 +35,16 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
 
 /**
  * Exposes Prometheus metrics in <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">text
- * format 0.0.4</a>.
+ * format 0.0.4 or OpenMetrics format</a>.
  */
 public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
-
-    private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
 
     /**
      * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from the specified
@@ -85,11 +86,20 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
-            TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
+        final String accept = req.headers().get(HttpHeaderNames.ACCEPT);
+        final String format = TextFormat.chooseContentType(accept);
+        final ByteBuf buffer = ctx.alloc().buffer();
+        boolean success = false;
+        try (ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(buffer);
+            OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
+            TextFormat.writeFormat(format, writer, collectorRegistry.metricFamilySamples());
+            success = true;
+        } finally {
+            if (!success) {
+                buffer.release();
+            }
         }
-        return HttpResponse.of(HttpStatus.OK, CONTENT_TYPE_004, stream.toByteArray());
+        return HttpResponse.of(HttpStatus.OK, MediaType.parse(format), HttpData.wrap(buffer));
     }
 
     @Override

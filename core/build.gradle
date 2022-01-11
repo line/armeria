@@ -114,6 +114,7 @@ dependencies {
         api "io.netty:$it"
     }
     implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-bom']}:osx-x86_64"
+    implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-bom']}:osx-aarch_64"
     implementation "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-bom']}:linux-x86_64"
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-bom']}:linux-x86_64"
     implementation 'io.netty:netty-tcnative-boringssl-static'

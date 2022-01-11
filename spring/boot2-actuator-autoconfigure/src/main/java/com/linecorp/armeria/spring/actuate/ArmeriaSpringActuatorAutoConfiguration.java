@@ -25,7 +25,9 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -78,7 +80,9 @@ import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.ArmeriaSettings.InternalServiceProperties;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
+import com.linecorp.armeria.spring.InternalServiceId;
 
 /**
  * A {@link Configuration} to enable actuator endpoints on an Armeria server. Corresponds to
@@ -162,7 +166,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             CorsEndpointProperties corsProperties,
             ConfigurableEnvironment environment,
             ManagementServerProperties serverProperties,
-            BeanFactory beanFactory) {
+            BeanFactory beanFactory,
+            ArmeriaSettings armeriaSettings) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
@@ -171,7 +176,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
             }
-
+            final Integer internalServicePort = getExposedInternalServicePort(beanFactory, armeriaSettings);
             final CorsServiceBuilder cors;
             if (!corsProperties.getAllowedOrigins().isEmpty()) {
                 cors = CorsService.builder(corsProperties.getAllowedOrigins());
@@ -203,7 +208,9 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             } else {
                 cors = null;
             }
-
+            final List<Integer> exposedPorts = Stream.of(managementPort, internalServicePort)
+                                                     .filter(Objects::nonNull)
+                                                     .collect(toImmutableList());
             endpoints.stream()
                      .flatMap(endpoint -> endpoint.getOperations().stream())
                      .forEach(operation -> {
@@ -213,12 +220,13 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                    path,
                                                    predicate.getConsumes(),
                                                    predicate.getProduces());
-                         if (managementPort != null) {
-                             // Bind a WebOperationService to "management.server.port"
-                             sb.virtualHost(managementPort)
-                               .service(route, new WebOperationService(operation, statusMapper));
+                         final WebOperationService webOperationService =
+                                 new WebOperationService(operation, statusMapper);
+                         if (exposedPorts.isEmpty()) {
+                             sb.service(route, webOperationService);
                          } else {
-                             sb.service(route, new WebOperationService(operation, statusMapper));
+                             exposedPorts.forEach(port -> sb.virtualHost(port)
+                                                            .service(route, webOperationService));
                          }
                          if (cors != null) {
                              cors.route(path);
@@ -237,13 +245,12 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.ofJson(ACTUATOR_MEDIA_TYPE, ImmutableMap.of("_links", links));
                 };
-                if (managementPort != null) {
-                    sb.virtualHost(managementPort)
-                      .route().addRoute(route).defaultServiceName("LinksService").build(linksService);
-                } else {
+                if (exposedPorts.isEmpty()) {
                     sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
+                } else {
+                    exposedPorts.forEach(port -> sb.virtualHost(port).route().addRoute(route)
+                                                   .defaultServiceName("LinksService").build(linksService));
                 }
-
                 if (cors != null) {
                     cors.route(endpointMapping.getPath());
                 }
@@ -286,6 +293,25 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         } catch (IllegalAccessException | InvocationTargetException e) {
             return null;
         }
+    }
+
+    @Nullable
+    private static Integer getExposedInternalServicePort(BeanFactory beanFactory,
+                                                         ArmeriaSettings armeriaSettings) {
+        final Object internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
+        if (internalServices == null) {
+            return null;
+        }
+        final InternalServiceProperties internalServiceProperties = armeriaSettings.getInternalServices();
+        boolean actuatorEnabled = false;
+        if (internalServiceProperties != null && internalServiceProperties.getInclude() != null) {
+            actuatorEnabled = internalServiceProperties.getInclude().contains(InternalServiceId.ACTUATOR) ||
+                              internalServiceProperties.getInclude().contains(InternalServiceId.ALL);
+        }
+        if (!actuatorEnabled) {
+            return null;
+        }
+        return internalServiceProperties.getPort();
     }
 
     @Nullable
