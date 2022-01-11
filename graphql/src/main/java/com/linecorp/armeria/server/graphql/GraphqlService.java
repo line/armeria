@@ -18,11 +18,8 @@ package com.linecorp.armeria.server.graphql;
 
 import org.dataloader.DataLoaderRegistry;
 
-import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
 
 import graphql.GraphQL;
 
@@ -45,11 +42,5 @@ public interface GraphqlService extends HttpService {
      */
     static GraphqlService of(GraphQL graphQL) {
         return new DefaultGraphqlService(graphQL, new DataLoaderRegistry(), false);
-    }
-
-    @Override
-    default ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        // Response stream will be supported via WebSocket.
-        return ExchangeType.UNARY;
     }
 }
