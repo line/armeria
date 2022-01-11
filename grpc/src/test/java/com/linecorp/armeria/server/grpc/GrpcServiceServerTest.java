@@ -1029,6 +1029,9 @@ class GrpcServiceServerTest {
             final Base64Decoder decoder = new Base64Decoder(UnpooledByteBufAllocator.DEFAULT);
             return HttpData.wrap(decoder.decode(buf));
         }).aggregate().join();
+        // Make sure that a pooled HttpData was created while mapping is released.
+        assertThat(response.content().isPooled()).isFalse();
+
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
                 new byte[]{ TRAILERS_FRAME_HEADER },
