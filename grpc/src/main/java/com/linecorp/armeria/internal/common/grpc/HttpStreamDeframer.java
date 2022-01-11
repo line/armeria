@@ -54,8 +54,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             RequestContext ctx,
             TransportStatusListener transportStatusListener,
             @Nullable GrpcStatusFunction statusFunction,
-            int maxMessageSizeBytes) {
-        super(maxMessageSizeBytes);
+            int maxMessageLength) {
+        super(maxMessageLength);
         this.ctx = requireNonNull(ctx, "ctx");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");

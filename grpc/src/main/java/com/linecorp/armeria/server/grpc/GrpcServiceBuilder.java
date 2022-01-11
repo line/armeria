@@ -775,11 +775,10 @@ public final class GrpcServiceBuilder {
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
                 statusFunction,
-                maxOutboundMessageSizeBytes,
+                maxRequestMessageLength, maxResponseMessageLength,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                maxInboundMessageSizeBytes,
                 enableUnframedRequests || enableHttpJsonTranscoding);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
