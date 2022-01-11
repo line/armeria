@@ -818,7 +818,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Transforms an error emitted by this {@link HttpResponse} by applying the specified {@link Function}.
      *
      * <p>For example:<pre>{@code
-     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong."));
      * HttpResponse transformed = response.mapError(cause -> {
      *     if (cause instanceof IllegalStateException) {
      *         return new MyDomainException(cause);
@@ -840,7 +840,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
-     * HttpResponse result = response.peekHeaders(headers -> {
+     * HttpResponse peeked = response.peekHeaders(headers -> {
      *      assert headers.status() == HttpStatus.OK;
      * });
      * }</pre>
@@ -862,7 +862,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.of("data1,data2");
-     * HttpResponse result = response.peekData(data -> {
+     * HttpResponse peeked = response.peekData(data -> {
      *     assert data.toStringUtf8().equals("data1,data2");
      * });
      * }</pre>
@@ -882,7 +882,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
      *                                         HttpData.ofUtf8("..."),
      *                                         HttpHeaders.of("trailer", "foo"));
-     * HttpResponse result = response.peekTrailers(trailers -> {
+     * HttpResponse peeked = response.peekTrailers(trailers -> {
      *     assert trailers.get("trailer").equals("foo");
      * });
      * }</pre>
@@ -902,8 +902,8 @@ public interface HttpResponse extends Response, HttpMessage {
      * Applies the specified {@link Consumer} to an error emitted by this {@link HttpResponse}.
      *
      * <p>For example:<pre>{@code
-     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
-     * HttpResponse result = response.peekError(cause -> {
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong."));
+     * HttpResponse peeked = response.peekError(cause -> {
      *     assert cause instanceof IllegalStateException;
      * });
      * }</pre>

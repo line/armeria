@@ -591,7 +591,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * Transforms an error emitted by this {@link HttpRequest} by applying the specified {@link Function}.
      *
      * <p>For example:<pre>{@code
-     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
      * HttpRequest transformed = request.mapError(cause -> {
      *     if (cause instanceof IllegalStateException) {
      *         return new MyDomainException(cause);
@@ -614,7 +614,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * <p>For example:<pre>{@code
      * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
      *                                      HttpData.ofUtf8("data1,data2"));
-     * HttpRequest result = request.peekData(data -> {
+     * HttpRequest peeked = request.peekData(data -> {
      *     assert data.toStringUtf8().equals("data1,data2");
      * });
      * }</pre>
@@ -634,7 +634,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
      *                                      HttpData.ofUtf8("..."),
      *                                      HttpHeaders.of("trailer", "foo"));
-     * HttpRequest result = request.peekTrailers(trailers -> {
+     * HttpRequest peeked = request.peekTrailers(trailers -> {
      *     assert trailers.get("trailer").equals("foo");
      * });
      * }</pre>
@@ -650,8 +650,8 @@ public interface HttpRequest extends Request, HttpMessage {
      * Applies the specified {@link Consumer} to an error emitted by this {@link HttpRequest}.
      *
      * <p>For example:<pre>{@code
-     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
-     * HttpRequest result = request.peekError(cause -> {
+     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
+     * HttpRequest peeked = request.peekError(cause -> {
      *     assert cause instanceof IllegalStateException;
      * });
      * }</pre>
