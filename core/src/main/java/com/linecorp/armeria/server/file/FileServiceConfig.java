@@ -146,7 +146,7 @@ public final class FileServiceConfig {
     }
 
     /**
-     * Returns {@link MimeTypeFunction} that used for resolves {@link MediaType} from file path.
+     * Returns {@link MimeTypeFunction} that's used for resolving the {@link MediaType} of a file.
      */
     public MimeTypeFunction mimeTypeFunction() {
         return mimeTypeFunction;
