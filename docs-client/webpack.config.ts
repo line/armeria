@@ -101,10 +101,10 @@ const config: Configuration = {
     }),
     new CompressionWebpackPlugin({
       test: /\.js(\?.*)?$/i,
-      deleteOriginalAssets: true,
+      deleteOriginalAssets: !isDev,
       algorithm: 'gzip',
       filename: '[path].gz',
-    }),
+    })
   ],
   devServer: {
     historyApiFallback: true,

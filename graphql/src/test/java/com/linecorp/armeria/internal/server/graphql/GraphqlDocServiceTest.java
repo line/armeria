@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.server.graphql;
 
+import static com.linecorp.armeria.internal.server.graphql.GraphqlDocServicePlugin.DEFAULT_METHOD_NAME;
 import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -81,7 +82,7 @@ class GraphqlDocServiceTest {
                                       .build());
             sb.serviceUnder("/excludeAll2",
                             DocService.builder()
-                                      .exclude(DocServiceFilter.ofMethodName("doPost"))
+                                      .exclude(DocServiceFilter.ofMethodName(DEFAULT_METHOD_NAME))
                                       .build());
         }
     };
@@ -103,7 +104,7 @@ class GraphqlDocServiceTest {
         assertThatJson(res.contentUtf8())
                 .when(IGNORING_ARRAY_ORDER)
                 .node("services[0].name").isEqualTo("com.linecorp.armeria.server.graphql.DefaultGraphqlService")
-                .node("services[0].methods[0].name").isEqualTo("doPost")
+                .node("services[0].methods[0].name").isEqualTo(DEFAULT_METHOD_NAME)
                 .node("services[0].methods[0].returnTypeSignature").isEqualTo("json")
                 .node("services[0].methods[0].parameters[0]").matches(
                         new CustomTypeSafeMatcher<Map<String, Object>>("query") {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -58,6 +58,8 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static final TypeSignature JSON = TypeSignature.ofBase("json");
 
+    static final String DEFAULT_METHOD_NAME = "doPost";
+
     @Override
     public String name() {
         return "graphql";
@@ -80,7 +82,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
             final AbstractGraphqlService service = sc.service().as(AbstractGraphqlService.class);
             if (service != null) {
                 final String className = service.getClass().getName();
-                final String methodName = "doPost";
+                final String methodName = DEFAULT_METHOD_NAME;
                 if (!filter.test(name(), className, methodName)) {
                     return;
                 }
@@ -94,7 +96,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
                                       String hostnamePattern, AbstractGraphqlService service, Route route) {
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
-        final String name = "doPost";
+        final String name = DEFAULT_METHOD_NAME;
         final List<FieldInfo> fieldInfos = fieldInfos();
         final Class<?> clazz = service.getClass();
         final MethodInfo methodInfo = new MethodInfo(
@@ -144,6 +146,6 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
                 })
                 .collect(toImmutableSet());
 
-        return ServiceSpecification.generate(serviceInfos, typeSignature -> null);
+        return ServiceSpecification.generate(serviceInfos, unused -> null);
     }
 }
