@@ -58,8 +58,7 @@ public final class FileServiceBuilder {
     boolean canSetEntryCacheSpec = true;
     @Nullable
     HttpHeadersBuilder headers;
-    @Nullable
-    MimeTypeFunction mimeTypeFunction;
+    MimeTypeFunction mimeTypeFunction = MimeTypeFunction.ofDefault();
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -246,12 +245,10 @@ public final class FileServiceBuilder {
             throw new IllegalStateException("Should enable serveCompressedFiles when autoDecompress is set");
         }
 
-        final MimeTypeFunction mimeTypeFunction = this.mimeTypeFunction == null ? MimeTypeFunction.ofDefault()
-                                                  : this.mimeTypeFunction.orElse(MimeTypeFunction.ofDefault());
-
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(), mimeTypeFunction));
+                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(),
+                mimeTypeFunction.orElse(MimeTypeFunction.ofDefault())));
     }
 
     @Override

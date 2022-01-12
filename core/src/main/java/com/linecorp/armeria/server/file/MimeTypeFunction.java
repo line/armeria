@@ -69,6 +69,9 @@ public interface MimeTypeFunction {
    */
   default MimeTypeFunction orElse(MimeTypeFunction other) {
     requireNonNull(other, "other");
+    if (this == other) {
+      return this;
+    }
     return new MimeTypeFunction() {
       @Override
       public @Nullable MediaType guessFromPath(String path) {
