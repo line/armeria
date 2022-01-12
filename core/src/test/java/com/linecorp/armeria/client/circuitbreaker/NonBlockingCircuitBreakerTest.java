@@ -24,8 +24,12 @@ import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class NonBlockingCircuitBreakerTest {
 
@@ -54,7 +58,7 @@ class NonBlockingCircuitBreakerTest {
                                                          .build();
     }
 
-    private static CircuitBreaker closedState(long minimumRequestThreshold, double failureRateThreshold) {
+    private static NonBlockingCircuitBreaker closedState(long minimumRequestThreshold, double failureRateThreshold) {
         final NonBlockingCircuitBreaker cb = create(minimumRequestThreshold, failureRateThreshold);
         assertThat(cb.state().isClosed()).isTrue();
         assertThat(cb.canRequest()).isTrue();
@@ -85,6 +89,13 @@ class NonBlockingCircuitBreakerTest {
         assertThat(cb.state().isHalfOpen()).isTrue();
         assertThat(cb.canRequest()).isFalse(); // seconds request is refused
         return cb;
+    }
+
+    private static Stream<Arguments> circuitStatePairArguments() {
+        return Stream.of(CircuitState.values()).flatMap(
+                state1 -> Stream.of(CircuitState.values())
+                                .filter(state2 -> state1 != state2)
+                                .map(state2 -> Arguments.of(state1, state2)));
     }
 
     @Test
@@ -182,6 +193,45 @@ class NonBlockingCircuitBreakerTest {
         assertThat(cb.canRequest()).isTrue(); // first request is allowed
         assertThat(cb.state().isHalfOpen()).isTrue();
         assertThat(cb.canRequest()).isFalse(); // seconds request is refused
+    }
+
+    @Test
+    void testClosedOpenClosed() {
+        final NonBlockingCircuitBreaker cb = closedState(2, 0.5);
+
+        cb.onFailure();
+        cb.onFailure();
+
+        ticker.addAndGet(counterUpdateInterval.toNanos());
+        assertThat(cb.canRequest()).isTrue();
+        cb.onFailure();
+        assertThat(cb.state().isOpen()).isTrue();
+
+        assertThat(cb.canRequest()).isFalse();
+        ticker.addAndGet(trialRequestInterval.toNanos());
+
+        assertThat(cb.canRequest()).isTrue();
+        cb.onSuccess();
+        assertThat(cb.state().isClosed()).isTrue();
+    }
+
+    @ParameterizedTest
+    @MethodSource("circuitStatePairArguments")
+    void testTransitionOpenToClosed(CircuitState from, CircuitState to) throws Exception {
+        final NonBlockingCircuitBreaker cb = create(2, 0.5);
+        final String name = cb.name();
+
+        reset(listener);
+        cb.transitionTo(from);
+        assertThat(cb.state().circuitState()).isEqualTo(from);
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(name, from);
+
+        reset(listener);
+        cb.transitionTo(to);
+        assertThat(cb.state().circuitState()).isEqualTo(to);
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(name, to);
     }
 
     @Test
