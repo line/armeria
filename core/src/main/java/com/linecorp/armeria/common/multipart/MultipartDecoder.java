@@ -290,7 +290,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         }
 
         private void requestUpstreamForBodyPartData0() {
-            // No more upstream request and bodyPartPublisher still needs data
             // If it's closed(cancelled), let next body part request handle it.
             if (currentExposedBodyPartPublisher != null && currentExposedBodyPartPublisher.isOpen()) {
                 decoded.askUpstreamForElement();
