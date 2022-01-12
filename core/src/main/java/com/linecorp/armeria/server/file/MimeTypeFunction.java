@@ -28,6 +28,23 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface MimeTypeFunction {
 
   /**
+   * Returns the default {@link MimeTypeFunction}.
+   */
+  static MimeTypeFunction ofDefault() {
+    return new MimeTypeFunction() {
+      @Override
+      public @Nullable MediaType guessFromPath(String path) {
+        return MimeTypeUtil.guessFromPath(path);
+      }
+
+      @Override
+      public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+        return MimeTypeUtil.guessFromPath(path, contentEncoding);
+      }
+    };
+  }
+
+  /**
    * Resolves the {@link MediaType} of the file referred by the given {@code path}.
    * @param path the path to the file to resolve its {@link MediaType}, e.g. {@code "/foo/bar.txt"}
    * or {@code "bar.txt"}.
@@ -69,23 +86,6 @@ public interface MimeTypeFunction {
           return mediaType;
         }
         return other.guessFromPath(path, contentEncoding);
-      }
-    };
-  }
-
-  /**
-   * Returns the default {@link MimeTypeFunction}.
-   */
-  static MimeTypeFunction ofDefault() {
-    return new MimeTypeFunction() {
-      @Override
-      public @Nullable MediaType guessFromPath(String path) {
-        return MimeTypeUtil.guessFromPath(path);
-      }
-
-      @Override
-      public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-        return MimeTypeUtil.guessFromPath(path, contentEncoding);
       }
     };
   }
