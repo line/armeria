@@ -24,8 +24,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -39,6 +43,8 @@ public abstract class ServerRuleDelegate {
 
     private final AtomicReference<Server> server = new AtomicReference<>();
     private final boolean autoStart;
+
+    private final AtomicReference<WebClient> webClient = new AtomicReference<>();
 
     /**
      * Creates a new instance.
@@ -90,6 +96,9 @@ public abstract class ServerRuleDelegate {
         server.start().join();
 
         this.server.set(server);
+
+        final WebClient webClient = webClientBuilder().build();
+        this.webClient.set(webClient);
         return server;
     }
 
@@ -97,6 +106,12 @@ public abstract class ServerRuleDelegate {
      * Configures the {@link Server} with the given {@link ServerBuilder}.
      */
     public abstract void configure(ServerBuilder sb) throws Exception;
+
+    /**
+     * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     * You can get the configured {@link WebClient} using {@link #webClient()}.
+     */
+    public abstract void configureWebClient(WebClientBuilder webClientBuilder) throws Exception;
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -324,8 +339,40 @@ public abstract class ServerRuleDelegate {
         return socketAddress(HTTPS);
     }
 
+    /**
+     * Returns the {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    public WebClient webClient() {
+        return webClient.get();
+    }
+
+    /**
+     * Returna a newly created {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}
+     * and then the specified customizer.
+     */
+    public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        final WebClientBuilder builder = webClientBuilder();
+        webClientCustomizer.accept(builder);
+        return builder.build();
+    }
+
     private void ensureStarted() {
         // This will ensure that the server has started.
         server();
+    }
+
+    private WebClientBuilder webClientBuilder() {
+        final boolean hasHttps = hasHttps();
+        final WebClientBuilder webClientBuilder = WebClient.builder(hasHttps ? httpsUri() : httpUri());
+        if (hasHttps) {
+            webClientBuilder.factory(ClientFactory.insecure());
+        }
+        try {
+            configureWebClient(webClientBuilder);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to configure a WebClient", e);
+        }
+        return webClientBuilder;
     }
 }

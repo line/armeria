@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
@@ -110,7 +112,7 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
     }
 
     /**
-     * Converts the content of the {@link HttpResponse} into {@link String}.
+     * Converts the content of the {@link HttpResponse} into a {@link String}.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
@@ -124,6 +126,39 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
     @UnstableApi
     public FutureTransformingRequestPreparation<ResponseEntity<String>> asString() {
         return asEntity(ResponseAs.string());
+    }
+
+    /**
+     * Converts the content of the {@link HttpResponse} into a {@link Path}.
+     * For example:
+     * <pre>{@code
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<Path>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asPath(Paths.get("..."))
+     *           .execute();
+     * }</pre>
+     */
+    public FutureTransformingRequestPreparation<ResponseEntity<Path>> asPath(Path path) {
+        return asEntity(ResponseAs.path(path));
+    }
+
+    /**
+     * Converts the content of the {@link HttpResponse} into a {@link File}.
+     * For example:
+     * <pre>{@code
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<File>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asFile(new File("..."))
+     *           .execute();
+     * }</pre>
+     */
+    public FutureTransformingRequestPreparation<ResponseEntity<Path>> asFile(File file) {
+        requireNonNull(file, "file");
+        return asEntity(ResponseAs.path(file.toPath()));
     }
 
     /**
