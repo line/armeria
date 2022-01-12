@@ -555,6 +555,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
      * }</pre>
      */
+    @Override
     default HttpRequest mapData(Function<? super HttpData, ? extends HttpData> function) {
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream =
@@ -575,6 +576,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
      * }</pre>
      */
+    @Override
     default HttpRequest mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
 
@@ -619,6 +621,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * });
      * }</pre>
      */
+    @Override
     @UnstableApi
     default HttpRequest peekData(Consumer<? super HttpData> action) {
         requireNonNull(action, "action");
@@ -639,6 +642,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * });
      * }</pre>
      */
+    @Override
     @UnstableApi
     default HttpRequest peekTrailers(Consumer<? super HttpHeaders> action) {
         requireNonNull(action, "action");
