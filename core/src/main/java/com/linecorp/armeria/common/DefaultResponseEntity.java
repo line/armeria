@@ -53,5 +53,4 @@ final class DefaultResponseEntity<T> implements ResponseEntity<T> {
     public HttpHeaders trailers() {
         return trailers;
     }
-
 }

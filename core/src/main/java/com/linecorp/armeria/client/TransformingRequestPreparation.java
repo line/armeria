@@ -78,7 +78,6 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
         return (TransformingRequestPreparation<T, U>) this;
     }
 
-
     @Override
     public TransformingRequestPreparation<T, R> get(String path) {
         delegate.get(path);
@@ -257,12 +256,10 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
     }
 
     @Override
-    public TransformingRequestPreparation<T, R> cookies(
-            Iterable<? extends Cookie> cookies) {
+    public TransformingRequestPreparation<T, R> cookies(Iterable<? extends Cookie> cookies) {
         delegate.cookies(cookies);
         return this;
     }
-
 
     @Override
     public TransformingRequestPreparation<T, R> responseTimeout(Duration responseTimeout) {
@@ -271,8 +268,7 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
     }
 
     @Override
-    public TransformingRequestPreparation<T, R> responseTimeoutMillis(
-            long responseTimeoutMillis) {
+    public TransformingRequestPreparation<T, R> responseTimeoutMillis(long responseTimeoutMillis) {
         delegate.responseTimeoutMillis(responseTimeoutMillis);
         return this;
     }
@@ -284,8 +280,7 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
     }
 
     @Override
-    public TransformingRequestPreparation<T, R> writeTimeoutMillis(
-            long writeTimeoutMillis) {
+    public TransformingRequestPreparation<T, R> writeTimeoutMillis(long writeTimeoutMillis) {
         delegate.writeTimeoutMillis(writeTimeoutMillis);
         return this;
     }
@@ -297,8 +292,7 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
     }
 
     @Override
-    public <V> TransformingRequestPreparation<T, R> attr(AttributeKey<V> key,
-                                                         @Nullable V value) {
+    public <V> TransformingRequestPreparation<T, R> attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
         return this;
     }

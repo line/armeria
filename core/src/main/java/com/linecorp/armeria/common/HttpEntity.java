@@ -39,7 +39,7 @@ public interface HttpEntity<T> {
     @Nullable
     T content();
 
-     /**
+    /**
      * Returns true if the {@link #content()} is null.
      */
     boolean hasContent();

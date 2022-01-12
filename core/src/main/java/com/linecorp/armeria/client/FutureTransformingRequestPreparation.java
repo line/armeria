@@ -159,7 +159,6 @@ public final class FutureTransformingRequestPreparation<T>
         return this;
     }
 
-
     @Override
     public FutureTransformingRequestPreparation<T> get(String path) {
         delegate.get(path);

@@ -58,7 +58,6 @@ final class AggregatedResponseAs {
         }
     }
 
-
     private static InvalidHttpResponseException newInvalidHttpResponseException(
             AggregatedHttpResponse response) {
         return new InvalidHttpResponseException(response, "status: " + response.status() +

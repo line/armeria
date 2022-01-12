@@ -206,7 +206,8 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
-    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(TypeReference<? extends T> typeRef) {
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef) {
         return asEntity(ResponseAs.json(typeRef));
     }
 
