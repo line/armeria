@@ -166,6 +166,12 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
         @Override
         protected void onRequest(long n) {
             whenConsumed().thenRun(() -> {
+                // It's safe to call upstream multiple times.
+                // Because DecodedHttpStreamMessage#askUpstreamForElement only allows one upstream request
+                // at the same time.
+                // If the subscriber of BodyPartPublisher request multiple elements,
+                // HttpMessageSubscriber#onNext calls MimeParser#parse and MimeParser will
+                // ask for next element from upstream when parsing BODY.
                 if (demand() > 0) {
                     requestUpstreamForBodyPartData();
                 }
