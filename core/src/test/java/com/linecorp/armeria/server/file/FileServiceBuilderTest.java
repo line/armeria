@@ -32,36 +32,37 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 class FileServiceBuilderTest {
 
     private static final String BASE_RESOURCE_DIR =
-      FileServiceBuilderTest.class.getPackage().getName().replace('.', '/') + '/';
+            FileServiceBuilderTest.class.getPackage().getName().replace('.', '/') + '/';
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.serviceUnder(
-              "/mimeTypeFunction",
-              FileService.builder(getClass().getClassLoader(), BASE_RESOURCE_DIR + "bar")
-                .mimeTypeFunction(new MimeTypeFunction() {
-                    @Override
-                    public MediaType guessFromPath(String path) {
-                        if (path.endsWith(".custom-json-extension")) {
-                            return MediaType.JSON_UTF_8;
-                        }
-                        if (path.endsWith(".custom-txt-extension")) {
-                            return MediaType.PLAIN_TEXT_UTF_8;
-                        }
-                        return null;
-                    }
+                    "/mimeTypeFunction",
+                    FileService.builder(getClass().getClassLoader(), BASE_RESOURCE_DIR + "bar")
+                               .mimeTypeFunction(new MimeTypeFunction() {
+                                   @Override
+                                   public MediaType guessFromPath(String path) {
+                                       if (path.endsWith(".custom-json-extension")) {
+                                           return MediaType.JSON_UTF_8;
+                                       }
+                                       if (path.endsWith(".custom-txt-extension")) {
+                                           return MediaType.PLAIN_TEXT_UTF_8;
+                                       }
+                                       return null;
+                                   }
 
-                    @Override
-                    public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-                        if (contentEncoding == null) {
-                            return guessFromPath(path);
-                        }
-                        return null;
-                    }
-                })
-                .build());
+                                   @Override
+                                   public MediaType guessFromPath(String path,
+                                                                  @Nullable String contentEncoding) {
+                                       if (contentEncoding == null) {
+                                           return guessFromPath(path);
+                                       }
+                                       return null;
+                                   }
+                               })
+                               .build());
         }
     };
 
@@ -83,24 +84,26 @@ class FileServiceBuilderTest {
     @Test
     void testCustomMimeTypeFunctionGuessFromPathCustomJsonExtension() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-          .get("/mimeTypeFunction/bar.custom-json-extension").aggregate()
-          .join();
+                                                         .get("/mimeTypeFunction/bar.custom-json-extension")
+                                                         .aggregate()
+                                                         .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.JSON_UTF_8);
     }
 
     @Test
     void testCustomMimeTypeFunctionGuessFromPathCustomTextExtension() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-          .get("/mimeTypeFunction/bar.custom-txt-extension").aggregate()
-          .join();
+                                                         .get("/mimeTypeFunction/bar.custom-txt-extension")
+                                                         .aggregate()
+                                                         .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
     }
 
     @Test
     void testCustomMimeTypeFunctionNotMatchThenDefaultIsUsed() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-          .get("/mimeTypeFunction/bar.xhtml").aggregate()
-          .join();
+                                                         .get("/mimeTypeFunction/bar.xhtml").aggregate()
+                                                         .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.XHTML_UTF_8);
     }
 }
