@@ -163,6 +163,17 @@ public interface BodyPart {
                                     ExecutorService blockingTaskExecutor, OpenOption... options);
 
     /**
+     * Write this {@link BodyPart} to the given {@link Path} with {@link OpenOption}.
+     * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
+     * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
+     *
+     * @param path the {@link Path} to write to
+     * @param options the {@link OpenOption} specifying how the file is opened
+     * @return a {@link CompletableFuture} to handle asynchronous result
+     */
+    CompletableFuture<Void> writeTo(Path path, OpenOption... options);
+
+    /**
      * Aggregates this {@link BodyPart}. The returned {@link CompletableFuture} will be notified when
      * the {@link BodyPart} is received fully.
      */

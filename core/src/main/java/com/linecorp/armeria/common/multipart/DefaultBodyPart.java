@@ -63,6 +63,12 @@ final class DefaultBodyPart implements BodyPart {
     }
 
     @Override
+    public CompletableFuture<Void> writeTo(Path path,
+                                           OpenOption... options) {
+        return StreamMessages.writeTo(content, path, options);
+    }
+
+    @Override
     public CompletableFuture<AggregatedBodyPart> aggregate() {
         return aggregate0(content().defaultSubscriberExecutor(), null);
     }

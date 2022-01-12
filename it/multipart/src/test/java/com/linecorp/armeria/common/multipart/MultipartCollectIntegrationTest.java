@@ -25,8 +25,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,15 +43,33 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class BodyPartsIntegrationTest {
+class MultipartCollectIntegrationTest {
+
+    private static class Entry {
+        private final String name;
+        private final Object value;
+
+        Entry(String name, Object value) {
+            this.name = name;
+            this.value = value;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Object getValue() {
+            return value;
+        }
+    }
 
     @TempDir
     static Path tempDir;
@@ -61,54 +79,76 @@ class BodyPartsIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/multipart/file", (ctx, req) -> HttpResponse.from(
-                      BodyParts.collect(Multipart.from(req), tempDir::resolve)
+                      Multipart.from(req).collect(bodyPart -> {
+                                   if (bodyPart.filename() != null) {
+                                       final Path path = tempDir.resolve(bodyPart.name());
+                                       return bodyPart.writeTo(path)
+                                                      .thenApply(ignore -> new Entry(bodyPart.name(), path));
+                                   }
+                                   return bodyPart.aggregate().thenApply(
+                                           aggregatedBodyPart -> new Entry(bodyPart.name(),
+                                                                           aggregatedBodyPart.contentUtf8()));
+                               })
+                               .thenApply(aggregated -> aggregated.stream().collect(
+                                       Collectors.toMap(Entry::getName, Entry::getValue)))
                                .thenApply(aggregated -> {
                                    final StringBuilder responseStringBuilder = new StringBuilder();
-                                   final QueryParams queryParams = aggregated.queryParams();
                                    responseStringBuilder.append("param1/")
-                                                        .append(queryParams.get("param1")).append('\n');
+                                                        .append(aggregated.get("param1")).append('\n');
                                    responseStringBuilder.append("param2/")
-                                                        .append(queryParams.get("param2")).append('\n');
+                                                        .append(aggregated.get("param2")).append('\n');
                                    responseStringBuilder.append("param3/")
-                                                        .append(queryParams.get("param3")).append('\n');
-                                   final Map<String, List<Path>> files = aggregated.files();
+                                                        .append(aggregated.get("param3")).append('\n');
                                    try {
+                                       final List<String> file1Content =
+                                               Files.readLines(((Path) aggregated.get("file1")).toFile(),
+                                                               StandardCharsets.UTF_8);
                                        responseStringBuilder
                                                .append("file1/")
-                                               .append(Files.readLines(files.get("file1").get(0).toFile(),
-                                                                       StandardCharsets.UTF_8))
+                                               .append(file1Content)
                                                .append('\n');
+                                       final List<String> file2Content =
+                                               Files.readLines(((Path) aggregated.get("file2")).toFile(),
+                                                               StandardCharsets.UTF_8);
                                        responseStringBuilder
                                                .append("file2/")
-                                               .append(Files.readLines(files.get("file2").get(0).toFile(),
-                                                                       StandardCharsets.UTF_8))
+                                               .append(file2Content)
                                                .append('\n');
+                                       final List<String> file3Content =
+                                               Files.readLines(((Path) aggregated.get("file3")).toFile(),
+                                                               StandardCharsets.UTF_8);
                                        responseStringBuilder
                                                .append("file3/")
-                                               .append(Files.readLines(files.get("file3").get(0).toFile(),
-                                                                       StandardCharsets.UTF_8));
+                                               .append(file3Content);
                                        return HttpResponse.of(responseStringBuilder.toString());
                                    } catch (IOException e) {
                                        throw new UncheckedIOException(e);
                                    }
                                })))
               .service("/multipart/large-file", (ctx, req) -> HttpResponse.from(
-                      BodyParts.collect(Multipart.from(req), tempDir::resolve)
+                      Multipart.from(req).collect(bodyPart -> {
+                                   final Path path = tempDir.resolve(bodyPart.name());
+                                   return bodyPart.writeTo(path)
+                                                  .thenApply(ignore -> new Entry(bodyPart.name(), path));
+                               })
+                               .thenApply(aggregated -> aggregated.stream().collect(
+                                       Collectors.toMap(Entry::getName, Entry::getValue)))
                                .thenApply(aggregated -> {
-                                   final Map<String, List<Path>> files = aggregated.files();
                                    final StringBuilder responseStringBuilder = new StringBuilder();
                                    try {
+                                       final HashCode file1Hash =
+                                               Files.asByteSource(((Path) aggregated.get("file1")).toFile())
+                                                    .hash(Hashing.sha256());
                                        responseStringBuilder
                                                .append("file1/")
-                                               .append(Files.asByteSource(files.get("file1").get(0)
-                                                                               .toFile())
-                                                            .hash(Hashing.sha256()))
+                                               .append(file1Hash)
                                                .append('\n');
+                                       final HashCode file2Hash =
+                                               Files.asByteSource(((Path) aggregated.get("file2")).toFile())
+                                                    .hash(Hashing.sha256());
                                        responseStringBuilder
                                                .append("file2/")
-                                               .append(Files.asByteSource(files.get("file2").get(0)
-                                                                               .toFile())
-                                                            .hash(Hashing.sha256()));
+                                               .append(file2Hash);
                                    } catch (Exception e) {
                                        throw new RuntimeException(e);
                                    }

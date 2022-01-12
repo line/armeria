@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -30,6 +31,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.io.BaseEncoding;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -114,6 +117,22 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
         return aggregate0(executor, alloc);
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> collect(
+            Function<? super BodyPart, CompletableFuture<? extends T>> function,
+            SubscriptionOption... options) {
+        requireNonNull(function, "function");
+        final RequestContext ctx = RequestContext.currentOrNull();
+        EventExecutor eventExecutor = null;
+        if (ctx != null) {
+            eventExecutor = ctx.eventLoop();
+        }
+        if (eventExecutor == null) {
+            eventExecutor = CommonPools.workerGroup().next();
+        }
+        return new ContentAwareMultipartCollector<>(bodyParts(), function, eventExecutor, options).future();
     }
 
     private CompletableFuture<AggregatedMultipart> aggregate0(@Nullable EventExecutor executor,
