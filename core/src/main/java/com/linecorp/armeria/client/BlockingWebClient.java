@@ -57,8 +57,6 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
         return execute(req, RequestOptions.of());
     }
 
-    // TODO(ikhoon): Add a test to make sure `BlockingWebClient` has the same APIs with `WebClient`.
-
     /**
      * Sends the specified HTTP request with the specified {@link RequestOptions}.
      */

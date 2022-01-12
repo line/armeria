@@ -49,8 +49,15 @@ public interface RequestEntity<T> extends HttpEntity<T> {
     }
 
     /**
-     * Returns the {@link RequestHeaders} of this entity.
+     * Returns the {@link RequestHeaders} of this request.
      */
     @Override
     RequestHeaders headers();
+
+    /**
+     * Returns the {@link HttpMethod} of this request.
+     */
+    default HttpMethod method() {
+        return headers().method();
+    }
 }

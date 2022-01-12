@@ -51,11 +51,19 @@ public interface ResponseAs<T, R> {
      * Aggregates an {@link HttpResponse} and waits the result of {@link HttpResponse#aggregate()}.
      */
     static ResponseAs<HttpResponse, AggregatedHttpResponse> blocking() {
-        return response -> {
-            try {
-                return response.aggregate().join();
-            } catch (Exception ex) {
-                return Exceptions.throwUnsafely(Exceptions.peel(ex));
+        return new ResponseAs<HttpResponse, AggregatedHttpResponse>() {
+            @Override
+            public AggregatedHttpResponse as(HttpResponse response) {
+                try {
+                    return response.aggregate().join();
+                } catch (Exception ex) {
+                    return Exceptions.throwUnsafely(Exceptions.peel(ex));
+                }
+            }
+
+            @Override
+            public boolean aggregationRequired() {
+                return true;
             }
         };
     }
@@ -124,10 +132,32 @@ public interface ResponseAs<T, R> {
     R as(T response);
 
     /**
+     * Returns whether the response should be aggregated.
+     */
+    default boolean aggregationRequired() {
+        return false;
+    }
+
+    /**
      * Returns a composed {@link ResponseAs} that first applies this {@link ResponseAs} to
      * its input, and then applies the {@code after} {@link ResponseAs} to the result.
      */
     default <V> ResponseAs<T, V> andThen(ResponseAs<R, V> after) {
-        return response -> after.as(as(response));
+        return new ResponseAs<T, V>() {
+
+            @Override
+            public V as(T response) {
+                return after.as(ResponseAs.this.as(response));
+            }
+
+            @Override
+            public boolean aggregationRequired() {
+                if (ResponseAs.this.aggregationRequired()) {
+                    // The response was aggregated already.
+                    return true;
+                }
+                return after.aggregationRequired();
+            }
+        };
     }
 }

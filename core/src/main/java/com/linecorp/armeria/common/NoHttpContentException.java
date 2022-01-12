@@ -21,33 +21,33 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A {@link RuntimeException} that is raised when attempted to access a null request or response content.
  */
-public final class NoContentException extends RuntimeException {
+public final class NoHttpContentException extends RuntimeException {
 
     private static final long serialVersionUID = 8264452803561735504L;
 
     /**
      * Creates a new instance.
      */
-    public NoContentException() {}
+    public NoHttpContentException() {}
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public NoContentException(@Nullable String message, @Nullable Throwable cause) {
+    public NoHttpContentException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public NoContentException(@Nullable String message) {
+    public NoHttpContentException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public NoContentException(@Nullable Throwable cause) {
+    public NoHttpContentException(@Nullable Throwable cause) {
         super(cause);
     }
 }

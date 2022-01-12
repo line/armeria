@@ -18,39 +18,14 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class DefaultResponseEntity<T> implements ResponseEntity<T> {
-
-    private final ResponseHeaders headers;
-    @Nullable
-    private final T content;
-    private final HttpHeaders trailers;
+final class DefaultResponseEntity<T> extends AbstractHttpEntity<T> implements ResponseEntity<T> {
 
     DefaultResponseEntity(ResponseHeaders headers, @Nullable T content, HttpHeaders trailers) {
-        this.headers = headers;
-        this.content = content;
-        this.trailers = trailers;
+        super(headers, content, trailers);
     }
 
     @Override
     public ResponseHeaders headers() {
-        return headers;
-    }
-
-    @Override
-    public T content() {
-        if (content == null) {
-            throw new NoContentException("content is empty.");
-        }
-        return content;
-    }
-
-    @Override
-    public boolean hasContent() {
-        return content != null;
-    }
-
-    @Override
-    public HttpHeaders trailers() {
-        return trailers;
+        return (ResponseHeaders) super.headers();
     }
 }

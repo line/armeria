@@ -58,6 +58,7 @@ public final class BlockingWebClientRequestPreparation
      */
     @Override
     public AggregatedHttpResponse execute() {
+        // TODO(ikhoon): Specify ExchangeType.UNARY or ExchangeType.REQUEST_STREAMING
         return ResponseAs.blocking().as(delegate.execute());
     }
 

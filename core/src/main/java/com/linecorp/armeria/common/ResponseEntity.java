@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -37,6 +39,7 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
      * {@code content}.
      */
     static <T> ResponseEntity<T> of(ResponseHeaders headers, T content) {
+        requireNonNull(content, "content");
         return of(headers, content, HttpHeaders.of());
     }
 
@@ -45,17 +48,19 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
      * {@code content} and {@linkplain HttpHeaders trailers}.
      */
     static <T> ResponseEntity<T> of(ResponseHeaders headers, @Nullable T content, HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(trailers, "trailers");
         return new DefaultResponseEntity<>(headers, content, trailers);
     }
 
     /**
-     * Returns the {@link ResponseHeaders} of this entity.
+     * Returns the {@link ResponseHeaders} of this response.
      */
     @Override
     ResponseHeaders headers();
 
     /**
-     * Returns the {@link HttpStatus} of this entity.
+     * Returns the {@link HttpStatus} of this response.
      */
     default HttpStatus status() {
         return headers().status();

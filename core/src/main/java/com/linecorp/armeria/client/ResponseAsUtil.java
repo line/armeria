@@ -16,13 +16,25 @@
 
 package com.linecorp.armeria.client;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpResponse;
 
 final class ResponseAsUtil {
 
-    static <T> FutureResponseAs<T> aggregateAndConvert(
-            ResponseAs<AggregatedHttpResponse, T> responseAs) {
-        return response -> response.aggregate().thenApply(responseAs::as);
+    static <T> FutureResponseAs<T> aggregateAndConvert(ResponseAs<AggregatedHttpResponse, T> responseAs) {
+        return new FutureResponseAs<T>() {
+            @Override
+            public CompletableFuture<T> as(HttpResponse response) {
+                return response.aggregate().thenApply(responseAs::as);
+            }
+
+            @Override
+            public boolean aggregationRequired() {
+                return true;
+            }
+        };
     }
 
     private ResponseAsUtil() {}

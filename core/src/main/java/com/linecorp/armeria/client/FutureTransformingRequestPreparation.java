@@ -44,7 +44,7 @@ import io.netty.util.AttributeKey;
 
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}, and asynchronously transforms a
- * {@link HttpResponse} into a {@code ResponseEntity<T>}.
+ * {@link HttpResponse} into a {@code T} type object.
  */
 @UnstableApi
 public final class FutureTransformingRequestPreparation<T>
@@ -64,7 +64,14 @@ public final class FutureTransformingRequestPreparation<T>
 
     @Override
     public CompletableFuture<T> execute() {
-        final CompletableFuture<T> response = responseAs.as(delegate.execute());
+        CompletableFuture<T> response;
+        try {
+            response = responseAs.as(delegate.execute());
+        } catch (Exception ex) {
+            response = new CompletableFuture<>();
+            response.completeExceptionally(ex);
+        }
+
         if (errorHandler == null) {
             return response;
         }
@@ -226,8 +233,7 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
-    public FutureTransformingRequestPreparation<T> content(MediaType contentType,
-                                                           CharSequence content) {
+    public FutureTransformingRequestPreparation<T> content(MediaType contentType, CharSequence content) {
         delegate.content(contentType, content);
         return this;
     }

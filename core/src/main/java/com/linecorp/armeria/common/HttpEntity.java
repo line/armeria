@@ -34,9 +34,8 @@ public interface HttpEntity<T> {
     /**
      * Returns the content of this entity.
      *
-     * @throws NoContentException if the content is null.
+     * @throws NoHttpContentException if the content is null.
      */
-    @Nullable
     T content();
 
     /**
