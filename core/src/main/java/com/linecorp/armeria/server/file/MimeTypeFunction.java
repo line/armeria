@@ -28,17 +28,21 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface MimeTypeFunction {
 
   /**
-   * Resolve MIME types {@link MediaType} with given {@code path}.
-   * @param path of file to resolved. For example "/foo/bar.txt" or "bar.txt"
-   * @return the {@link MediaType}
+   * Resolves the {@link MediaType} of the file referred by the given {@code path}.
+   * @param path the path to the file to resolve its {@link MediaType}, e.g. {@code "/foo/bar.txt"}
+   * or {@code "bar.txt"}.
+   * @return the resolved {@link MediaType}
    */
   @Nullable MediaType guessFromPath(String path);
 
   /**
-   * Resolve MIME types {@link MediaType} with given {@code path} and {@code contentEncoding}.
-   * @param path of zipped file to resolved. For example "/foo/bar.txt.gz" or "bar.txt.br"
-   * @param contentEncoding compress encoded type
-   * @return the {@link MediaType}
+   * Resolves the {@link MediaType} of the file referred by the given {@code path} assuming
+   * the file is encoded in the given {@code contentEncoding}.
+   * @param path the path of the file to resolve its {@link MediaType}, usually in a compressed form,
+   * e.g. {@code "/foo/bar.txt.gz"} or {@code "bar.txt.br"}.
+   * @param contentEncoding the content encoding, such as {@code "gzip"} and {@code "br"}, as defined in
+   * <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.5">the section 3.5, RFC 2616</a>.
+   * @return the resolved {@link MediaType}
    */
   @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding);
 
