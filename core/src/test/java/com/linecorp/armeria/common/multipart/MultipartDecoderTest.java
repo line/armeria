@@ -44,6 +44,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -67,16 +69,16 @@ public class MultipartDecoderTest {
 
     // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartDecoderTest.java
 
-    @Test
-    void testAbortBeforeSubscribe() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testAbortBeforeSubscribe(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
                                '\n' +
                                "body 1\n" +
                                "--" + boundary + "--").getBytes();
-
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, null);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, null);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         final MultipartDecoder decoder = (MultipartDecoder) partsPublisher(boundary, chunk1,
                                                                            upstreamRequestCount);
@@ -86,8 +88,9 @@ public class MultipartDecoderTest {
                 .hasRootCauseInstanceOf(AbortedStreamException.class));
     }
 
-    @Test
-    void testOnePartInOneChunk() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testOnePartInOneChunk(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -98,7 +101,7 @@ public class MultipartDecoderTest {
         final AtomicInteger counter = new AtomicInteger(2);
         final List<String> bodies = new CopyOnWriteArrayList<>();
         final List<String> headers = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             counter.getAndDecrement();
             headers.add(part.headers().get("Content-Id"));
             final HttpDataAggregator subscriber = new HttpDataAggregator();
@@ -108,7 +111,7 @@ public class MultipartDecoderTest {
                 bodies.add(body);
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
@@ -118,8 +121,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
-    @Test
-    void testTwoPartsInOneChunk() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testTwoPartsInOneChunk(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -134,7 +138,7 @@ public class MultipartDecoderTest {
         final AtomicInteger counter = new AtomicInteger(4);
         final List<String> bodies = new CopyOnWriteArrayList<>();
         final List<String> headers = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             headers.add(part.headers().get("Content-Id"));
             if (counter.decrementAndGet() == 3) {
                 final HttpDataAggregator subscriber = new HttpDataAggregator();
@@ -152,7 +156,7 @@ public class MultipartDecoderTest {
                 });
             }
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
@@ -162,8 +166,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(1);
     }
 
-    @Test
-    void testFourPartsInOneChunk() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testFourPartsInOneChunk(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -190,7 +195,7 @@ public class MultipartDecoderTest {
         final AtomicInteger counter = new AtomicInteger(5);
         final List<String> bodies = new CopyOnWriteArrayList<>();
         final List<String> contentIds = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             contentIds.add(part.headers().get("Content-Id"));
             final HttpDataAggregator subscriber = new HttpDataAggregator();
             part.content().subscribe(subscriber);
@@ -199,7 +204,7 @@ public class MultipartDecoderTest {
                 counter.decrementAndGet();
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2), upstreamRequestCount).subscribe(
                 testSubscriber);
@@ -210,8 +215,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(3);
     }
 
-    @Test
-    void testContentAcrossChunks() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testContentAcrossChunks(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -225,7 +231,7 @@ public class MultipartDecoderTest {
         final AtomicInteger counter = new AtomicInteger(2);
         final List<String> contentIds = new CopyOnWriteArrayList<>();
         final List<String> bodies = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             counter.decrementAndGet();
             contentIds.add(part.headers().get("Content-Id"));
             final HttpDataAggregator subscriber = new HttpDataAggregator();
@@ -235,7 +241,7 @@ public class MultipartDecoderTest {
                 bodies.add(body);
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4),
                        upstreamRequestCount).subscribe(testSubscriber);
@@ -250,8 +256,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(5);
     }
 
-    @Test
-    void testBodyPartContentRequestMultipleTimes() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testBodyPartContentRequestMultipleTimes(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -269,17 +276,17 @@ public class MultipartDecoderTest {
             contentIds.add(part.headers().get("Content-Id"));
             part.content().subscribe(new Subscriber<HttpData>() {
                 @Override
-                public void onSubscribe(Subscription subscription) {
+                public void onSubscribe(Subscription contentSubscription) {
                     CompletableFuture.supplyAsync(() -> {
                         try {
                             Thread.sleep(100);
-                            subscription.request(1);
+                            contentSubscription.request(1);
                             Thread.sleep(100);
-                            subscription.request(1);
+                            contentSubscription.request(1);
                             Thread.sleep(200);
-                            subscription.request(2);
+                            contentSubscription.request(2);
                             Thread.sleep(100);
-                            subscription.request(2);
+                            contentSubscription.request(2);
                         } catch (InterruptedException ignored) {
                         }
                         return null;
@@ -301,7 +308,7 @@ public class MultipartDecoderTest {
                 }
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4),
                        upstreamRequestCount).subscribe(testSubscriber);
@@ -314,12 +321,12 @@ public class MultipartDecoderTest {
                 "f-the-body\nthis-is-the-3rd-slice-o",
                 "f-the-body\nthis-is-the-4th-slice-of-the-body");
         // If we have delayed flux(complete comes late), then we will have 5th request.
-        System.out.println(upstreamRequestCount.get());
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(5);
     }
 
-    @Test
-    void testMultipleChunksOfPartsBeforeContent() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testMultipleChunksOfPartsBeforeContent(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n").getBytes();
@@ -339,7 +346,7 @@ public class MultipartDecoderTest {
 
         final AtomicInteger counter = new AtomicInteger(4);
         final List<String> bodies = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             if (counter.decrementAndGet() == 3) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
                 assertThat(part.headers().get("Content-Type")).contains("text/plain");
@@ -362,7 +369,7 @@ public class MultipartDecoderTest {
                 });
             }
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5,
                                                   chunk6, chunk7, chunk8, chunk9, chunk10),
@@ -374,8 +381,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(11);
     }
 
-    @Test
-    void testMultipleChunksBeforeContent() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testMultipleChunksBeforeContent(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n").getBytes();
@@ -389,7 +397,7 @@ public class MultipartDecoderTest {
         final AtomicInteger counter = new AtomicInteger(2);
         final List<String> bodies = new CopyOnWriteArrayList<>();
         final List<String> headers = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             counter.decrementAndGet();
             headers.add(part.headers().get("Content-Id"));
             headers.add(part.headers().get("Content-Type"));
@@ -401,7 +409,7 @@ public class MultipartDecoderTest {
                 counter.decrementAndGet();
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5), upstreamRequestCount)
                 .subscribe(testSubscriber);
@@ -412,8 +420,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(6);
     }
 
-    @Test
-    void testMultipleChunksBeforeContentWithDelayedSubscriber() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testMultipleChunksBeforeContentWithDelayedSubscriber(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n").getBytes();
@@ -426,14 +435,14 @@ public class MultipartDecoderTest {
         final AtomicInteger counter = new AtomicInteger(2);
         final List<String> bodies = new CopyOnWriteArrayList<>();
         final List<String> headers = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             counter.decrementAndGet();
             headers.add(part.headers().get("Content-Id"));
             headers.add(part.headers().get("Content-Type"));
             headers.addAll(part.headers().getAll("Set-Cookie"));
             part.content().subscribe(new Subscriber<HttpData>() {
                 @Override
-                public void onSubscribe(Subscription s) {
+                public void onSubscribe(Subscription contentSubscription) {
                     // Wait for MimeParser's body need more's whenConsumed complete.
                     // This test is testing BodyPartPublisher#onRequest's behavior
                     CompletableFuture.supplyAsync(() -> {
@@ -441,7 +450,7 @@ public class MultipartDecoderTest {
                             Thread.sleep(100);
                         } catch (InterruptedException ignored) {
                         }
-                        s.request(1);
+                        contentSubscription.request(1);
                         return null;
                     });
                 }
@@ -461,7 +470,7 @@ public class MultipartDecoderTest {
                 }
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5), upstreamRequestCount)
                 .subscribe(testSubscriber);
@@ -472,8 +481,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(6);
     }
 
-    @Test
-    void testMultiplePartsWithOneByOneSubscriber() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testMultiplePartsWithOneByOneSubscriber(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -487,7 +497,7 @@ public class MultipartDecoderTest {
 
         final AtomicInteger counter = new AtomicInteger(4);
         final List<String> bodies = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             if (counter.decrementAndGet() == 3) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
                 final HttpDataAggregator subscriber = new HttpDataAggregator();
@@ -506,7 +516,7 @@ public class MultipartDecoderTest {
                 });
             }
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
         await().forever().untilAtomic(counter, is(0));
@@ -530,14 +540,14 @@ public class MultipartDecoderTest {
 
         final AtomicInteger counter = new AtomicInteger(2);
         final List<String> bodies = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             if (counter.decrementAndGet() == 1) {
                 assertThat(part.headers().get("Content-Id")).contains("part1");
                 final HttpDataAggregator subscriber1 = new HttpDataAggregator();
                 part.content().subscribe(subscriber1);
                 subscriber1.content().thenAccept(body -> {
                     counter.decrementAndGet();
-                    subscription.cancel();
+                    bodyPartSubscription.cancel();
                     bodies.add(body);
                 });
             }
@@ -553,8 +563,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
-    @Test
-    void testNoClosingBoundary() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testNoClosingBoundary(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Type: text/xml; charset=UTF-8\n" +
@@ -563,7 +574,7 @@ public class MultipartDecoderTest {
                                "<foo>bar</foo>\n").getBytes();
 
         final BodyPartSubscriber testSubscriber =
-                new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, null);
+                new BodyPartSubscriber(subscriberType, null);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, chunk1, upstreamRequestCount).subscribe(testSubscriber);
         await().untilAsserted(() -> {
@@ -575,7 +586,7 @@ public class MultipartDecoderTest {
     }
 
     @Test
-    void testPartContentSubscriberThrottling() throws InterruptedException {
+    void testPartContentSubscriberThrottling() {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -629,12 +640,13 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(2);
     }
 
-    @Test
-    void testUpstreamError() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testUpstreamError(SubscriberType subscriberType) {
         final Flux<HttpData> source = Flux.error(new IllegalStateException("oops"));
         final MultipartDecoder decoder = new MultipartDecoder(StreamMessage.of(source), "boundary",
                                                               ByteBufAllocator.DEFAULT);
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, null);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, null);
         decoder.subscribe(testSubscriber);
 
         await().untilAsserted(() -> {
@@ -644,8 +656,9 @@ public class MultipartDecoderTest {
         });
     }
 
-    @Test
-    void testUpstreamErrorDuringBody() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testUpstreamErrorDuringBody(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -663,7 +676,7 @@ public class MultipartDecoderTest {
 
         final AtomicInteger counter = new AtomicInteger(2);
         final AtomicReference<Throwable> thrown = new AtomicReference<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             counter.decrementAndGet();
             final HttpDataAggregator subscriber = new HttpDataAggregator();
             part.content().subscribe(subscriber);
@@ -673,7 +686,7 @@ public class MultipartDecoderTest {
                 return null;
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         decoder.subscribe(testSubscriber);
         await().untilAtomic(counter, is(0));
         await().untilAsserted(() -> {
@@ -687,8 +700,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(3);
     }
 
-    @Test
-    void testBodyPartSubscriberCancelled() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testBodyPartSubscriberCancelled(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -699,22 +713,22 @@ public class MultipartDecoderTest {
                                "--" + boundary + "--").getBytes();
 
         final AtomicInteger counter = new AtomicInteger(2);
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             counter.decrementAndGet();
             final StreamMessage<HttpData> content = part.content();
             content.subscribe(new Subscriber<HttpData>() {
                 @Nullable
-                private Subscription subscription;
+                private Subscription contentSubscription;
 
                 @Override
-                public void onSubscribe(Subscription subscription) {
-                    this.subscription = subscription;
-                    subscription.request(1);
+                public void onSubscribe(Subscription contentSubscription) {
+                    this.contentSubscription = contentSubscription;
+                    contentSubscription.request(1);
                 }
 
                 @Override
                 public void onNext(HttpData httpData) {
-                    subscription.cancel();
+                    contentSubscription.cancel();
                 }
 
                 @Override
@@ -731,7 +745,7 @@ public class MultipartDecoderTest {
                 return null;
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3), upstreamRequestCount).subscribe(
                 testSubscriber);
@@ -742,8 +756,9 @@ public class MultipartDecoderTest {
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(5);
     }
 
-    @Test
-    void testSomeBodyPartSubscribersCancelled() {
+    @ParameterizedTest
+    @EnumSource(value = SubscriberType.class, names = { "INFINITE", "ONE_BY_ONE" })
+    void testSomeBodyPartSubscribersCancelled(SubscriberType subscriberType) {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
                                "Content-Id: part1\n" +
@@ -770,17 +785,17 @@ public class MultipartDecoderTest {
         final AtomicInteger completeCounter = new AtomicInteger(4);
         final List<String> headers = new CopyOnWriteArrayList<>();
         final List<String> bodies = new CopyOnWriteArrayList<>();
-        final BiConsumer<Subscription, BodyPart> consumer = (subscription, part) -> {
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
             final int remain = counter.decrementAndGet();
             headers.add(part.headers().get("Content-Id"));
             final StreamMessage<HttpData> content = part.content();
             content.subscribe(new Subscriber<HttpData>() {
                 @Nullable
-                private Subscription subscription;
+                private Subscription contentSubscription;
 
                 @Override
                 public void onSubscribe(Subscription subscription) {
-                    this.subscription = subscription;
+                    this.contentSubscription = subscription;
                     subscription.request(1);
                 }
 
@@ -789,9 +804,9 @@ public class MultipartDecoderTest {
                     bodies.add(httpData.toStringUtf8());
                     // Skip 2nd Item in 1st and 2nd Multipart.
                     if (remain == 3 || remain == 1) {
-                        subscription.cancel();
+                        contentSubscription.cancel();
                     } else {
-                        subscription.request(1);
+                        contentSubscription.request(1);
                     }
                 }
 
@@ -807,7 +822,7 @@ public class MultipartDecoderTest {
                 completeCounter.decrementAndGet();
             });
         };
-        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, consumer);
+        final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(subscriberType, consumer);
         final AtomicLong upstreamRequestCount = new AtomicLong();
         partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5, chunk6, chunk7),
                        upstreamRequestCount)
@@ -818,6 +833,75 @@ public class MultipartDecoderTest {
         assertThat(bodies).containsExactly("this-is-the-1st-slice-o", "body 2",
                                            "this-is-the-1st-slice-of", "body 4");
         assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(8);
+    }
+
+    @Test
+    void testRequestMultipleHttpDataAtFirst() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id: part1\n\n").getBytes();
+        final byte[] chunk2 = "this-is-the-1st-slice-of-the-body\n".getBytes();
+        final byte[] chunk3 = "this-is-the-2nd-slice-of-the-body\n".getBytes();
+        final byte[] chunk4 = "this-is-the-3rd-slice-of-the-body\n".getBytes();
+        final byte[] chunk5 = "this-is-the-4th-slice-of-the-body\n".getBytes();
+        final byte[] chunk6 = "this-is-the-5th-slice-of-the-body\n".getBytes();
+        final byte[] chunk7 = ("--" + boundary + "--").getBytes();
+
+        final AtomicInteger completeCounter = new AtomicInteger(1);
+        final AtomicInteger bodyPartCounter = new AtomicInteger(4);
+        final List<String> headers = new CopyOnWriteArrayList<>();
+        final List<String> bodies = new CopyOnWriteArrayList<>();
+        final BiConsumer<Subscription, BodyPart> consumer = (bodyPartSubscription, part) -> {
+            headers.add(part.headers().get("Content-Id"));
+            final StreamMessage<HttpData> content = part.content();
+            content.subscribe(new Subscriber<HttpData>() {
+                @Nullable
+                private Subscription contentSubscription;
+
+                @Override
+                public void onSubscribe(Subscription subscription) {
+                    contentSubscription = subscription;
+                    subscription.request(4);
+                }
+
+                @Override
+                public void onNext(HttpData httpData) {
+                    bodies.add(httpData.toStringUtf8());
+                    // Request after getting 4 times which is requested at onSubscribe.
+                    if (bodyPartCounter.decrementAndGet() <= 0) {
+                        contentSubscription.request(1);
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                }
+
+                @Override
+                public void onComplete() {
+                }
+            });
+            content.whenComplete().whenComplete((unused, throwable) -> {
+                completeCounter.decrementAndGet();
+            });
+        };
+        final BodyPartSubscriber testSubscriber =
+                new BodyPartSubscriber(SubscriberType.REQUEST_MANUALLY, consumer);
+        final AtomicLong upstreamRequestCount = new AtomicLong();
+        partsPublisher(boundary, ImmutableList.of(chunk1, chunk2, chunk3, chunk4, chunk5, chunk6, chunk7),
+                       upstreamRequestCount)
+                .subscribe(testSubscriber);
+        await().untilAtomic(completeCounter, is(0));
+        assertThat(testSubscriber.completionFuture).isDone();
+        assertThat(headers).containsExactly("part1");
+        assertThat(bodies).containsExactly("this-is-the-1st-slice-o",
+                                           "f-the-body\nthis-is-the-2nd-slice-o",
+                                           "f-the-body\nthis-is-the-3rd-slice-o",
+                                           "f-the-body\nthis-is-the-4th-slice-o",
+                                           "f-the-body\nthis-is-the-5th-slice-o",
+                                           "f-the-body"
+        );
+        assertThat(upstreamRequestCount.get()).isLessThanOrEqualTo(7);
     }
 
     /**
