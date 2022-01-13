@@ -136,18 +136,18 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             jsonMarshaller = null;
         }
 
-        Channel channel = new ArmeriaChannel(
-                newParams,
-                httpClient,
-                meterRegistry(),
-                scheme.sessionProtocol(),
-                serializationFormat,
-                jsonMarshaller,
-                simpleMethodNames);
+        final ArmeriaChannel armeriaChannel =
+                new ArmeriaChannel(newParams, httpClient, meterRegistry(), scheme.sessionProtocol(),
+                                   serializationFormat, jsonMarshaller, simpleMethodNames);
         final Iterable<? extends ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
+        final Channel channel;
         if (!Iterables.isEmpty(interceptors)) {
-            channel = ClientInterceptors.intercept(channel, Iterables.toArray(interceptors,
-                                                                              ClientInterceptor.class));
+            final Channel intercepted =
+                    ClientInterceptors.intercept(armeriaChannel,
+                                                 Iterables.toArray(interceptors, ClientInterceptor.class));
+            channel = new UnwrappableChannel(intercepted, armeriaChannel);
+        } else {
+            channel = armeriaChannel;
         }
         final Object clientStub = clientStubFactory.newClientStub(clientType, channel);
         requireNonNull(clientStub, "clientStubFactory.newClientStub() returned null");
