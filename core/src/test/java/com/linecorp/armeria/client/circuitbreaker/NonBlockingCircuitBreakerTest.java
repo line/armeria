@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import com.linecorp.armeria.client.circuitbreaker.NonBlockingCircuitBreaker.State;
 
 class NonBlockingCircuitBreakerTest {
 
@@ -94,7 +97,6 @@ class NonBlockingCircuitBreakerTest {
     private static Stream<Arguments> circuitStatePairArguments() {
         return Stream.of(CircuitState.values()).flatMap(
                 state1 -> Stream.of(CircuitState.values())
-                                .filter(state2 -> state1 != state2)
                                 .map(state2 -> Arguments.of(state1, state2)));
     }
 
@@ -221,17 +223,74 @@ class NonBlockingCircuitBreakerTest {
         final NonBlockingCircuitBreaker cb = create(2, 0.5);
         final String name = cb.name();
 
+        CircuitState prevState = cb.state().circuitState();
         reset(listener);
-        cb.transitionTo(from);
+        assertThat(cb.transitionTo(from)).isEqualTo(from == prevState);
         assertThat(cb.state().circuitState()).isEqualTo(from);
-        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
-        verify(listener, times(1)).onStateChanged(name, from);
+        if (prevState != cb.state().circuitState()) {
+            verify(listener).onEventCountUpdated(name, EventCount.ZERO);
+            verify(listener).onStateChanged(name, from);
+        } else {
+            verify(listener, never()).onEventCountUpdated(name, EventCount.ZERO);
+            verify(listener, never()).onStateChanged(name, from);
+        }
+
+        prevState = cb.state().circuitState();
+        reset(listener);
+        assertThat(cb.transitionTo(to)).isEqualTo(to == prevState);
+        assertThat(cb.state().circuitState()).isEqualTo(to);
+        if (prevState != cb.state().circuitState()) {
+            verify(listener).onEventCountUpdated(name, EventCount.ZERO);
+            verify(listener).onStateChanged(name, from);
+        } else {
+            verify(listener, never()).onEventCountUpdated(name, EventCount.ZERO);
+            verify(listener, never()).onStateChanged(name, from);
+        }
+    }
+
+    @Test
+    void testClosedCounterResetOnTransition() throws Exception {
+        final NonBlockingCircuitBreaker cb = create(2, 0.5);
+        final String name = cb.name();
 
         reset(listener);
-        cb.transitionTo(to);
-        assertThat(cb.state().circuitState()).isEqualTo(to);
-        verify(listener, times(1)).onEventCountUpdated(name, EventCount.ZERO);
-        verify(listener, times(1)).onStateChanged(name, to);
+        cb.onFailure();
+        assertThat(cb.state().isClosed()).isTrue();
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.of(0, 1));
+        reset(listener);
+
+        // transition closed -> open -> closed
+        assertThat(cb.transitionTo(CircuitState.OPEN)).isTrue();
+        assertThat(cb.transitionTo(CircuitState.CLOSED)).isTrue();
+
+        // verify counter is reset
+        reset(listener);
+        cb.onFailure();
+        assertThat(cb.state().isClosed()).isTrue();
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.of(0, 1));
+        reset(listener);
+    }
+
+    @Test
+    void testTimeoutResetOnTransition() throws Exception {
+        final NonBlockingCircuitBreaker cb = openState(2, 0.5);
+        final String name = cb.name();
+
+        reset(listener);
+        cb.onFailure();
+        assertThat(cb.state().isOpen()).isTrue();
+        ticker.addAndGet(circuitOpenWindow.toNanos() - 1);
+        assertThat(cb.canRequest()).isFalse();
+
+        // transition open -> closed -> open
+        assertThat(cb.transitionTo(CircuitState.CLOSED)).isTrue();
+        assertThat(cb.transitionTo(CircuitState.OPEN)).isTrue();
+
+        // verify window is reset
+        cb.onFailure();
+        assertThat(cb.state().isOpen()).isTrue();
+        ticker.addAndGet(circuitOpenWindow.toNanos() - 1);
+        assertThat(cb.canRequest()).isFalse();
     }
 
     @Test
