@@ -183,7 +183,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     }
 
     /**
-     * Return true if path parameter contains capture the rest path pattern {@code "{*foo}"}" or {@code ":*foo"}.
+     * Return true if path parameter contains capture the rest path pattern
+     * ({@code "{*foo}"}" or {@code ":*foo"}).
      */
     private static boolean isCaptureRestPathMatching(String token) {
         return (token.startsWith("{*") && token.endsWith("}")) || token.startsWith(":*");
