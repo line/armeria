@@ -375,9 +375,6 @@ public interface Multipart {
      * <p>Note that if this {@link Multipart} was subscribed by other {@link Subscriber} already,
      * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
      *
-     * @param function A {@link Function} that processes the {@link BodyPart} and returns a future that will
-     *                 complete with the process result. The {@link Function} must consume the {@link BodyPart}.
-     *                 And If not, collect method will stop processing next {@link BodyPart}.
      * <p>For example:
      * <pre>{@code
      * Path tempDir = ...;
@@ -391,6 +388,10 @@ public interface Multipart {
      *                      return bodyPart.aggregate().thenApply(AggregatedHttpObject::contentUtf8);
      *                  });
      * }</pre>
+     *
+     * @param function A {@link Function} that processes the {@link BodyPart} and returns a future that will
+     *                 complete with the process result. The {@link Function} must consume the {@link BodyPart}.
+     *                 And If not, collect method will stop processing next {@link BodyPart}.
      */
     @UnstableApi
     default <T> CompletableFuture<List<T>> collect(
@@ -406,8 +407,9 @@ public interface Multipart {
      * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
      */
     @UnstableApi
-    default <T> CompletableFuture<List<T>> collect(Function<? super BodyPart, CompletableFuture<? extends T>> function,
-                                           SubscriptionOption... options) {
+    default <T> CompletableFuture<List<T>> collect(
+            Function<? super BodyPart, CompletableFuture<? extends T>> function,
+            SubscriptionOption... options) {
         return bodyParts().mapAsync(function).collect(options);
     }
 }
