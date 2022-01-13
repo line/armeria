@@ -70,6 +70,18 @@ final class MimeTypeUtil {
         EXTENSION_TO_MEDIA_TYPE = Collections.unmodifiableMap(map);
     }
 
+    private static final MimeTypeFunction DEFAULT_MIME_TYPE_FUNCTION = new MimeTypeFunction() {
+        @Override
+        public @Nullable MediaType guessFromPath(String path) {
+            return MimeTypeUtil.guessFromPath(path);
+        }
+
+        @Override
+        public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+            return MimeTypeUtil.guessFromPath(path, contentEncoding);
+        }
+    };
+
     private static void add(Map<String, MediaType> extensionToMediaType,
                             MediaType mediaType, String... extensions) {
 
@@ -77,6 +89,13 @@ final class MimeTypeUtil {
             assert Ascii.toLowerCase(e).equals(e);
             extensionToMediaType.put(e, mediaType);
         }
+    }
+
+    /**
+     * Returns the default {@link MimeTypeFunction}.
+     */
+    static MimeTypeFunction getDefaultMimeTypeFunction() {
+        return DEFAULT_MIME_TYPE_FUNCTION;
     }
 
     @Nullable

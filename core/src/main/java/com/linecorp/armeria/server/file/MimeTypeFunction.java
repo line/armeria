@@ -31,17 +31,7 @@ public interface MimeTypeFunction {
      * Returns the default {@link MimeTypeFunction}.
      */
     static MimeTypeFunction ofDefault() {
-        return new MimeTypeFunction() {
-            @Override
-            public @Nullable MediaType guessFromPath(String path) {
-                return MimeTypeUtil.guessFromPath(path);
-            }
-
-            @Override
-            public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-                return MimeTypeUtil.guessFromPath(path, contentEncoding);
-            }
-        };
+        return MimeTypeUtil.getDefaultMimeTypeFunction();
     }
 
     /**
