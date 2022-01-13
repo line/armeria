@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,7 +57,8 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
      */
     @Override
     public R execute() {
-        // TODO(ikhoon): Use ResponseAs.aggregationRequired() to specify a proper ExchangeType to RequestOptions.
+        // TODO(ikhoon): Use ResponseAs.aggregationRequired() to specify a proper ExchangeType
+        //               to RequestOptions.
         return responseAs.as(delegate.execute());
     }
 
@@ -75,6 +78,7 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
      */
     @SuppressWarnings("unchecked")
     public <U> TransformingRequestPreparation<T, U> as(ResponseAs<R, U> responseAs) {
+        requireNonNull(responseAs, "responseAs");
         this.responseAs = (ResponseAs<T, R>) this.responseAs.andThen(responseAs);
         return (TransformingRequestPreparation<T, U>) this;
     }

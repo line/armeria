@@ -111,7 +111,7 @@ public final class FutureTransformingRequestPreparation<T>
     public FutureTransformingRequestPreparation<T> recover(
             Function<? super Throwable, ? extends @Nullable T> function) {
         requireNonNull(function, "function");
-        errorHandler(function, true);
+        errorHandler(function);
         return this;
     }
 
@@ -124,11 +124,11 @@ public final class FutureTransformingRequestPreparation<T>
     public FutureTransformingRequestPreparation<T> mapError(
             Function<? super Throwable, ? extends @Nullable Throwable> function) {
         requireNonNull(function, "function");
-        errorHandler(function, false);
+        errorHandler(function);
         return this;
     }
 
-    private void errorHandler(Function<? super Throwable, ?> errorHandler, boolean recover) {
+    private void errorHandler(Function<? super Throwable, ?> errorHandler) {
         if (this.errorHandler == null) {
             this.errorHandler = errorHandler;
         } else {
@@ -140,13 +140,8 @@ public final class FutureTransformingRequestPreparation<T>
                             return result;
                         }
 
-                        if (!recover) {
-                            // `mapError()` disallows returning null.
-                            return new NullPointerException("function.apply() returned null");
-                        } else {
-                            // Not handled.
-                            return obj;
-                        }
+                        // Not handled.
+                        return obj;
                     } catch (Throwable ex) {
                         // Pass the new Throwable to the next chain.
                         return ex;

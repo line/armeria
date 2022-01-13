@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
@@ -58,15 +60,16 @@ public final class BlockingWebClientRequestPreparation
      */
     @Override
     public AggregatedHttpResponse execute() {
-        // TODO(ikhoon): Specify ExchangeType.UNARY or ExchangeType.REQUEST_STREAMING
+        // TODO(ikhoon): Specify ExchangeType.UNARY or ExchangeType.REQUEST_STREAMING to RequestOptions.
         return ResponseAs.blocking().as(delegate.execute());
     }
 
     /**
-     * Sets the specified {@link ResponseAs} that convert the {@link AggregatedHttpResponse} into another.
+     * Sets the specified {@link ResponseAs} that converts the {@link AggregatedHttpResponse} into another.
      */
     public <U> TransformingRequestPreparation<AggregatedHttpResponse, U> as(
             ResponseAs<AggregatedHttpResponse, U> responseAs) {
+        requireNonNull(responseAs, "responseAs");
         return new TransformingRequestPreparation<>(this, responseAs);
     }
 
@@ -75,15 +78,14 @@ public final class BlockingWebClientRequestPreparation
      * For example:
      * <pre>{@code
      * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
-     * ResponseEntity<byte[]> response =
-     *     client.prepare()
-     *           .get("/v1/items/1")
-     *           .asBytes()
-     *           .execute();
+     * ResponseEntity<byte[]> response = client.prepare()
+     *                                         .get("/v1/items/1")
+     *                                         .asBytes()
+     *                                         .execute();
      * }</pre>
      */
     public TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<byte[]>> asBytes() {
-        return new TransformingRequestPreparation<>(this, AggregatedResponseAs.bytes());
+        return as(AggregatedResponseAs.bytes());
     }
 
     /**
@@ -91,28 +93,26 @@ public final class BlockingWebClientRequestPreparation
      * For example:
      * <pre>{@code
      * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
-     * ResponseEntity<String> response =
-     *     client.prepare()
-     *           .get("/v1/items/1")
-     *           .asString()
-     *           .execute();
+     * ResponseEntity<String> response = client.prepare()
+     *                                         .get("/v1/items/1")
+     *                                         .asString()
+     *                                         .execute();
      * }</pre>
      */
     public TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<String>> asString() {
-        return new TransformingRequestPreparation<>(this, AggregatedResponseAs.string());
+        return as(AggregatedResponseAs.string());
     }
 
     /**
-     * Deserializes the {@link AggregatedHttpResponse#content()} into the specified non-container type using the
-     * default {@link ObjectMapper}.
+     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified non-container type
+     * using the default {@link ObjectMapper}.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
-     * ResponseEntity<MyObject> response =
-     *     client.prepare()
-     *           .get("/v1/items/1")
-     *           .asJson(MyObject.class)
-     *           .execute();
+     * ResponseEntity<MyObject> response = client.prepare()
+     *                                           .get("/v1/items/1")
+     *                                           .asJson(MyObject.class)
+     *                                           .execute();
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
@@ -125,12 +125,13 @@ public final class BlockingWebClientRequestPreparation
      */
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             Class<? extends T> clazz) {
-        return new TransformingRequestPreparation<>(this, AggregatedResponseAs.json(clazz));
+        requireNonNull(clazz, "clazz");
+        return as(AggregatedResponseAs.json(clazz));
     }
 
     /**
-     * Deserializes the {@link AggregatedHttpResponse#content()} into the specified Java type using the default
-     * {@link ObjectMapper}.
+     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified Java type using
+     * the default {@link ObjectMapper}.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
@@ -148,7 +149,8 @@ public final class BlockingWebClientRequestPreparation
      */
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef) {
-        return new TransformingRequestPreparation<>(this, AggregatedResponseAs.json(typeRef));
+        requireNonNull(typeRef, "typeRef");
+        return as(AggregatedResponseAs.json(typeRef));
     }
 
     @Override

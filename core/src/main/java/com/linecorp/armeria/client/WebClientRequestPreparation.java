@@ -81,6 +81,7 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      */
     @UnstableApi
     public <T> TransformingRequestPreparation<HttpResponse, T> as(ResponseAs<HttpResponse, T> responseAs) {
+        requireNonNull(responseAs, "responseAs");
         return new TransformingRequestPreparation<>(this, responseAs);
     }
 
@@ -91,6 +92,7 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asEntity(
             FutureResponseAs<ResponseEntity<T>> responseAs) {
+        requireNonNull(responseAs, "responseAs");
         return new FutureTransformingRequestPreparation<>(this, responseAs);
     }
 
@@ -141,6 +143,7 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      * }</pre>
      */
     public FutureTransformingRequestPreparation<ResponseEntity<Path>> asPath(Path path) {
+        requireNonNull(path, "path");
         return asEntity(ResponseAs.path(path));
     }
 
@@ -158,12 +161,12 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      */
     public FutureTransformingRequestPreparation<ResponseEntity<Path>> asFile(File file) {
         requireNonNull(file, "file");
-        return asEntity(ResponseAs.path(file.toPath()));
+        return asPath(file.toPath());
     }
 
     /**
-     * Deserializes the content of the {@link HttpResponse} into the specified non-container type using the
-     * default {@link ObjectMapper}.
+     * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
+     * the default {@link ObjectMapper}.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
@@ -184,11 +187,12 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz) {
+        requireNonNull(clazz, "");
         return asEntity(ResponseAs.json(clazz));
     }
 
     /**
-     * Deserializes the content of the {@link HttpResponse} into the specified Java type using the default
+     * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the default
      * {@link ObjectMapper}.
      * For example:
      * <pre>{@code
@@ -208,6 +212,7 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef) {
+        requireNonNull(typeRef, "typeRef");
         return asEntity(ResponseAs.json(typeRef));
     }
 

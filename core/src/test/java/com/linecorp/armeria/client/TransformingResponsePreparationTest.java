@@ -190,13 +190,18 @@ class TransformingResponsePreparationTest {
                       .get("/json_list")
                       .<MyResponse>asJson(MyMessage.class)
                       .mapError(cause -> {
-                          // Not transformed
+                          if (cause instanceof InvalidHttpResponseException) {
+                              return cause.getCause();
+                          }
+                          return null;
+                      }).mapError(cause -> {
+                          // Not handled.
                           return null;
                       })
                       .execute();
         assertThatThrownBy(future2::join)
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(InvalidHttpResponseException.class);
+                .hasCauseInstanceOf(JsonProcessingException.class);
     }
 
     interface MyResponse {}
