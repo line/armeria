@@ -406,6 +406,8 @@ public interface Multipart {
      * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
      */
     @UnstableApi
-    <T> CompletableFuture<List<T>> collect(Function<? super BodyPart, CompletableFuture<? extends T>> function,
-                                           SubscriptionOption... options);
+    default <T> CompletableFuture<List<T>> collect(Function<? super BodyPart, CompletableFuture<? extends T>> function,
+                                           SubscriptionOption... options) {
+        return bodyParts().mapAsync(function).collect(options);
+    }
 }

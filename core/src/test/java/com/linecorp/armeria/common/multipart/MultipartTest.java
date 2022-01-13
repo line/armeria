@@ -97,11 +97,10 @@ public class MultipartTest {
             return bodyPart.aggregate().thenApply(AggregatedHttpObject::contentUtf8);
         });
 
-        final List<Object> bodyParts = collect.join();
-        assertThat(bodyParts.get(0)).isEqualTo("hello1");
-        assertThat(bodyParts.get(1)).isNull();
-        assertThat((Path) bodyParts.get(2)).isEqualTo(tempDir.resolve("name3"));
-        assertThat(bodyParts.get(3)).isNull();
+        await().untilAsserted(() -> {
+            assertThatThrownBy(collect::join)
+                    .hasCauseInstanceOf(NullPointerException.class);
+        });
     }
 
     @Test
