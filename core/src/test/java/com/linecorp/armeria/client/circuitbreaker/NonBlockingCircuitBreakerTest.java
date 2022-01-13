@@ -32,8 +32,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.linecorp.armeria.client.circuitbreaker.NonBlockingCircuitBreaker.State;
-
 class NonBlockingCircuitBreakerTest {
 
     private static final String remoteServiceName = "testService";
@@ -225,7 +223,7 @@ class NonBlockingCircuitBreakerTest {
 
         CircuitState prevState = cb.state().circuitState();
         reset(listener);
-        assertThat(cb.transitionTo(from)).isEqualTo(from == prevState);
+        assertThat(cb.transitionTo(from)).isEqualTo(from != prevState);
         assertThat(cb.state().circuitState()).isEqualTo(from);
         if (prevState != cb.state().circuitState()) {
             verify(listener).onEventCountUpdated(name, EventCount.ZERO);
@@ -237,14 +235,14 @@ class NonBlockingCircuitBreakerTest {
 
         prevState = cb.state().circuitState();
         reset(listener);
-        assertThat(cb.transitionTo(to)).isEqualTo(to == prevState);
+        assertThat(cb.transitionTo(to)).isEqualTo(to != prevState);
         assertThat(cb.state().circuitState()).isEqualTo(to);
         if (prevState != cb.state().circuitState()) {
             verify(listener).onEventCountUpdated(name, EventCount.ZERO);
-            verify(listener).onStateChanged(name, from);
+            verify(listener).onStateChanged(name, to);
         } else {
             verify(listener, never()).onEventCountUpdated(name, EventCount.ZERO);
-            verify(listener, never()).onStateChanged(name, from);
+            verify(listener, never()).onStateChanged(name, to);
         }
     }
 
@@ -254,6 +252,8 @@ class NonBlockingCircuitBreakerTest {
         final String name = cb.name();
 
         reset(listener);
+        cb.onFailure();
+        ticker.addAndGet(counterUpdateInterval.toNanos());
         cb.onFailure();
         assertThat(cb.state().isClosed()).isTrue();
         verify(listener, times(1)).onEventCountUpdated(name, EventCount.of(0, 1));
@@ -265,6 +265,8 @@ class NonBlockingCircuitBreakerTest {
 
         // verify counter is reset
         reset(listener);
+        cb.onFailure();
+        ticker.addAndGet(counterUpdateInterval.toNanos());
         cb.onFailure();
         assertThat(cb.state().isClosed()).isTrue();
         verify(listener, times(1)).onEventCountUpdated(name, EventCount.of(0, 1));

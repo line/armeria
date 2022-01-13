@@ -73,4 +73,19 @@ public interface CircuitBreaker {
      * Decides whether a request should be sent or failed depending on the current circuit state.
      */
     boolean canRequest();
+
+    /**
+     * Transitions to open circuit state.
+     */
+    void transitionToOpen();
+
+    /**
+     * Transitions to half-open circuit state.
+     */
+    void transitionToHalfOpen();
+
+    /**
+     * Transitions to closed circuit state.
+     */
+    void transitionToClosed();
 }
