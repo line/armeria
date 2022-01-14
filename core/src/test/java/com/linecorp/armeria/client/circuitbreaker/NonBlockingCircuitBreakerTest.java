@@ -320,7 +320,6 @@ class NonBlockingCircuitBreakerTest {
         reset(listener);
         assertThat(cb.canRequest()).isFalse();
         verify(listener).onRequestRejected(name);
-
     }
 
     @Test
