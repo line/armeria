@@ -127,6 +127,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         }
 
         if (currentState.isForcedOpen()) {
+            notifyRequestRejected();
             return false;
         }
 

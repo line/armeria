@@ -304,17 +304,23 @@ class NonBlockingCircuitBreakerTest {
         reset(listener);
         assertThat(cb.transitionTo(CircuitState.FORCED_OPEN)).isTrue();
         assertThat(cb.state().isForcedOpen()).isTrue();
-        assertThat(cb.canRequest()).isFalse();
-
         verify(listener).onEventCountUpdated(name, EventCount.ZERO);
         verify(listener).onStateChanged(name, CircuitState.FORCED_OPEN);
+
+        // rejected requests should be notified
+        reset(listener);
+        assertThat(cb.canRequest()).isFalse();
+        verify(listener).onRequestRejected(name);
 
         // even when circuitOpenWindow passes, the state isn't changed
         ticker.addAndGet(circuitOpenWindow.toNanos());
         assertThat(cb.state().isForcedOpen()).isTrue();
 
         // canRequest should still be false
+        reset(listener);
         assertThat(cb.canRequest()).isFalse();
+        verify(listener).onRequestRejected(name);
+
     }
 
     @Test
