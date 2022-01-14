@@ -118,7 +118,10 @@ public interface RoutingContext {
 
     /**
      * Returns {@code true} if this context is for a CORS preflight request.
+     *
+     * @deprecated Use {@link #status()} and {@link RoutingStatus#CORS_PREFLIGHT}.
      */
+    @Deprecated
     boolean isCorsPreflight();
 
     /**

@@ -118,7 +118,7 @@ class RouterTest {
     private static DefaultRoutingContext routingCtx(String path) {
         return new DefaultRoutingContext(virtualHost(), "example.com",
                                          RequestHeaders.of(HttpMethod.GET, path),
-                                         path, null, null, false, RoutingStatus.OK);
+                                         path, null, null, RoutingStatus.OK);
     }
 
     static Stream<Arguments> generateRouteMatchData() {

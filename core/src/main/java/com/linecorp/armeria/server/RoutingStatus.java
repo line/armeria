@@ -34,5 +34,9 @@ public enum RoutingStatus {
     /**
      * The request specified an invalid path.
      */
-    INVALID_PATH
+    INVALID_PATH,
+    /**
+     * A <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS">CORS</a> preflight request.
+     */
+    CORS_PREFLIGHT
 }

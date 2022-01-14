@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -56,5 +57,19 @@ class ServiceRouteUtilTest {
                                                      .build();
         final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(config, channel, headers);
         assertThat(routingContext.status()).isEqualTo(RoutingStatus.INVALID_PATH);
+    }
+
+    @Test
+    void cors() {
+        final RequestHeaders headers =
+                RequestHeaders.builder(HttpMethod.OPTIONS, "/foo")
+                              .authority("foo.com")
+                              .add(HttpHeaderNames.ORIGIN, "https://bar.com")
+                              .addObject(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST)
+                              .addObject(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS,
+                                         "X-PINGOTHER, Content-Type")
+                              .build();
+        final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(config, channel, headers);
+        assertThat(routingContext.status()).isEqualTo(RoutingStatus.CORS_PREFLIGHT);
     }
 }

@@ -24,19 +24,23 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public enum ExchangeType {
     /**
-     * No streaming.
+     * No streaming. A {@link HttpRequest} and a {@link HttpResponse} will be buffered
+     * when they are sent or received.
      */
     UNARY(false, false),
     /**
      * A streaming {@link HttpRequest} with a non-streaming {@link HttpResponse}.
+     * The {@link HttpResponse} will be buffered when it is sent or received.
      */
     REQUEST_STREAMING(true, false),
     /**
      * A non-streaming {@link HttpRequest} with a streaming {@link HttpResponse}.
+     * The {@link HttpRequest} will be buffered when it is sent or received.
      */
     RESPONSE_STREAMING(false, true),
     /**
      * Bidirectional streaming.
+     * Neither a {@link HttpRequest} nor a {@link HttpResponse} is buffered.
      */
     BIDI_STREAMING(true, true);
 

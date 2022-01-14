@@ -100,11 +100,20 @@ abstract class AbstractHttpResponseHandler {
         final int id = req.id();
         final int streamId = req.streamId();
 
-        final ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
+        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
         final HttpData content = res.content();
         final boolean contentEmpty = content.isEmpty();
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
         final boolean trailersEmpty = trailers.isEmpty();
+
+        if (reqCtx.sessionProtocol().isMultiplex() && !contentEmpty && headers.contentLength() == -1) {
+            // If a trailers is set, a content-length is automatically removed by
+            // `ArmeriaHttpUtil.setOrRemoveContentLength()` when creating `AggregatedHttpResponse`.
+            // However, in HTTP/2, a content-length could be set with a trailers.
+            headers = headers.toBuilder()
+                             .contentLength(content.length())
+                             .build();
+        }
 
         if (!res.informationals().isEmpty()) {
             for (ResponseHeaders informational : res.informationals()) {

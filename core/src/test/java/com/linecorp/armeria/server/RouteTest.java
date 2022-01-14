@@ -375,33 +375,30 @@ class RouteTest {
 
     private static RoutingContext withMethod(HttpMethod method) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        PATH, null, RequestHeaders.of(method, PATH), false, RoutingStatus.OK);
+                                        PATH, null, RequestHeaders.of(method, PATH), RoutingStatus.OK);
     }
 
     private static RoutingContext withConsumeType(HttpMethod method, MediaType contentType) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.CONTENT_TYPE, contentType);
-        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, false,
-                                        RoutingStatus.OK);
+        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, RoutingStatus.OK);
     }
 
     private static RoutingContext withAcceptHeader(HttpMethod method, String acceptHeader) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.ACCEPT, acceptHeader);
-        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, false,
-                                        RoutingStatus.OK);
+        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, RoutingStatus.OK);
     }
 
     private static RoutingContext withPath(String path) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        path, null, RequestHeaders.of(HttpMethod.GET, path), false,
-                                        RoutingStatus.OK);
+                                        path, null, RequestHeaders.of(HttpMethod.GET, path), RoutingStatus.OK);
     }
 
     private static RoutingContext withRequestHeaders(RequestHeaders headers) {
         final String[] pathAndQuery = headers.path().split("\\?", 2);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
                                         pathAndQuery[0], pathAndQuery.length == 2 ? pathAndQuery[1] : null,
-                                        headers, false, RoutingStatus.OK);
+                                        headers, RoutingStatus.OK);
     }
 }
