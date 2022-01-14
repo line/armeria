@@ -1,11 +1,13 @@
-1. Upload the artifacts to the staging repository and prepare the web site:
+1. Wait until the publish job is finished and the artifacts are up in the Maven Central.
+
+   - Publish job: https://github.com/line/armeria/actions/workflows/publish-release.yml
+   - Sonatype repository: https://oss.sonatype.org/
+   - Maven Central: https://repo.maven.apache.org/maven2/com/linecorp/armeria/armeria-bom/${releaseVersion}/
+
+2. Build the web site:
 
    git checkout ${tag} && \
-   ./gradlew --no-daemon clean publish site
-
-2. Close and release the staging repository at:
-
-   https://oss.sonatype.org/
+   ./gradlew --no-daemon clean site
 
 3. Close the milestone and set its due date with the date of the release at:
 

@@ -32,7 +32,6 @@ import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
@@ -40,9 +39,7 @@ import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
  */
-public class DynamicEndpointGroup
-        extends AbstractListenable<List<Endpoint>>
-        implements EndpointGroup, ListenableAsyncCloseable {
+public class DynamicEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
 
     // An empty list of endpoints we also use as a marker that we have not initialized endpoints yet.
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
@@ -198,7 +195,7 @@ public class DynamicEndpointGroup
 
     private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+            initialEndpointsFuture.complete(endpoints);
         }
     }
 

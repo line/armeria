@@ -38,6 +38,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -86,7 +87,7 @@ class GrpcWebServiceTest {
         final String serverUri = serializationFormat.uriText() + "+http://127.0.0.1:" +
                                  serverBinding.localAddress().getPort();
         final GreeterServiceBlockingStub blockingStub =
-                Clients.newClient(serverUri, GreeterServiceBlockingStub.class);
+                GrpcClients.newClient(serverUri, GreeterServiceBlockingStub.class);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final HelloReply armeria =
                     blockingStub.sayHello(HelloRequest.newBuilder().setName("Armeria").build());

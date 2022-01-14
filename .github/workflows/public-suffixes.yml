@@ -10,12 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-15
-        name: Set up JDK 15
+      - id: setup-jdk-16
+        name: Set up JDK 16
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '15'
+          java-version: '16'
 
       - name: Restore Gradle Cache
         uses: actions/cache@v2
@@ -38,6 +38,7 @@ jobs:
         uses: crazy-max/ghaction-import-gpg@v3
         with:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSWORD }}
           git-user-signingkey: true
           git-commit-gpgsign: true
 

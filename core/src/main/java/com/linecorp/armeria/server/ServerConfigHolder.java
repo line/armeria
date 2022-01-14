@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import javax.annotation.Nonnull;
+
 import com.linecorp.armeria.common.util.AbstractListenable;
 
 final class ServerConfigHolder extends AbstractListenable<ServerConfig> {
@@ -31,6 +33,12 @@ final class ServerConfigHolder extends AbstractListenable<ServerConfig> {
     }
 
     ServerConfig getConfig() {
+        return config;
+    }
+
+    @Nonnull
+    @Override
+    protected ServerConfig latestValue() {
         return config;
     }
 }
