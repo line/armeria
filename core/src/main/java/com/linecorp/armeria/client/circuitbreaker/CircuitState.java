@@ -33,5 +33,10 @@ public enum CircuitState {
      * If it doesn't complete within a certain time, another trial request will be sent again.
      * All other requests fails immediately same as OPEN.
      */
-    HALF_OPEN
+    HALF_OPEN,
+    /**
+     * The circuit is tripped. All requests fail immediately without calling the remote service.
+     * State transition will not occur from this state unless explicitly called by the user.
+     */
+    FORCED_OPEN,
 }

@@ -126,6 +126,10 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             return true;
         }
 
+        if (currentState.isForcedOpen()) {
+            return false;
+        }
+
         if (currentState.isHalfOpen() || currentState.isOpen()) {
             if (currentState.checkTimeout() && state.compareAndSet(currentState, newHalfOpenState())) {
                 // changes to HALF_OPEN if OPEN state has timed out
@@ -156,6 +160,11 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         transitionTo(CircuitState.CLOSED);
     }
 
+    @Override
+    public void transitionToForcedOpen() {
+        transitionTo(CircuitState.FORCED_OPEN);
+    }
+
     private State newOpenState() {
         return new State(CircuitState.OPEN, config.circuitOpenWindow(), NoOpCounter.INSTANCE);
     }
@@ -170,6 +179,10 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
                 Duration.ZERO,
                 new SlidingWindowCounter(ticker, config.counterSlidingWindow(),
                                          config.counterUpdateInterval()));
+    }
+
+    private State newForcedOpenState() {
+        return new State(CircuitState.FORCED_OPEN, Duration.ZERO, NoOpCounter.INSTANCE);
     }
 
     private void logStateTransition(CircuitState circuitState, @Nullable EventCount count) {
@@ -267,6 +280,8 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             state = newHalfOpenState();
         } else if (circuitState == CircuitState.CLOSED) {
             state = newClosedState();
+        } else if (circuitState == CircuitState.FORCED_OPEN) {
+            state = newForcedOpenState();
         } else {
             // shouldn't reach here
             throw new Error();
@@ -321,6 +336,10 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
 
         boolean isClosed() {
             return circuitState == CircuitState.CLOSED;
+        }
+
+        boolean isForcedOpen() {
+            return circuitState == CircuitState.FORCED_OPEN;
         }
 
         CircuitState circuitState() {

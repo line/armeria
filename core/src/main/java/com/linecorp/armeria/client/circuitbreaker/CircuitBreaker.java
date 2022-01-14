@@ -75,17 +75,22 @@ public interface CircuitBreaker {
     boolean canRequest();
 
     /**
-     * Transitions to open circuit state.
+     * Transitions to {@link CircuitState#OPEN}.
      */
     void transitionToOpen();
 
     /**
-     * Transitions to half-open circuit state.
+     * Transitions to {@link CircuitState#HALF_OPEN}.
      */
     void transitionToHalfOpen();
 
     /**
-     * Transitions to closed circuit state.
+     * Transitions to {@link CircuitState#CLOSED}.
      */
     void transitionToClosed();
+
+    /**
+     * Transitions to {@link CircuitState#FORCED_OPEN}.
+     */
+    void transitionToForcedOpen();
 }

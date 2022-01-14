@@ -297,6 +297,27 @@ class NonBlockingCircuitBreakerTest {
     }
 
     @Test
+    void testForcedOpen() throws Exception {
+        final NonBlockingCircuitBreaker cb = create(2, 0.5);
+        final String name = cb.name();
+
+        reset(listener);
+        assertThat(cb.transitionTo(CircuitState.FORCED_OPEN)).isTrue();
+        assertThat(cb.state().isForcedOpen()).isTrue();
+        assertThat(cb.canRequest()).isFalse();
+
+        verify(listener).onEventCountUpdated(name, EventCount.ZERO);
+        verify(listener).onStateChanged(name, CircuitState.FORCED_OPEN);
+
+        // even when circuitOpenWindow passes, the state isn't changed
+        ticker.addAndGet(circuitOpenWindow.toNanos());
+        assertThat(cb.state().isForcedOpen()).isTrue();
+
+        // canRequest should still be false
+        assertThat(cb.canRequest()).isFalse();
+    }
+
+    @Test
     void testNotification() throws Exception {
         reset(listener);
 
