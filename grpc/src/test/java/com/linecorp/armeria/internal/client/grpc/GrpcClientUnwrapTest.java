@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.encoding.DecodingClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryingClient;
@@ -35,11 +36,11 @@ class GrpcClientUnwrapTest {
     @Test
     void test() {
         final TestServiceBlockingStub client =
-                Clients.builder("gproto+http://127.0.0.1:1/")
-                       .decorator(LoggingClient.newDecorator())
-                       .decorator(RetryingClient.newDecorator(
-                               (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.noRetry())))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder("http://127.0.0.1:1/")
+                           .decorator(LoggingClient.newDecorator())
+                           .decorator(RetryingClient.newDecorator(
+                                   (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.noRetry())))
+                           .build(TestServiceBlockingStub.class);
 
         assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).isSameAs(client);
 

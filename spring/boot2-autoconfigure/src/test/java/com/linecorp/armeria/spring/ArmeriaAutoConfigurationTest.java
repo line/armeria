@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -353,9 +354,9 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testMetrics() {
-        Clients.newClient(newUrl("gproto+h2c") + '/', HelloServiceBlockingStub.class)
-               .hello(HelloRequest.getDefaultInstance())
-               .getMessage();
+        GrpcClients.newClient(newUrl("h2c") + '/', HelloServiceBlockingStub.class)
+                   .hello(HelloRequest.getDefaultInstance())
+                   .getMessage();
 
         final String metricReport = WebClient.of(newUrl("http"))
                                              .get("/internal/metrics")

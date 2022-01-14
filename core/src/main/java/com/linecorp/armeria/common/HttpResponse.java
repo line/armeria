@@ -29,6 +29,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -617,6 +618,14 @@ public interface HttpResponse extends Response, HttpMessage {
         return new AbortedHttpResponse(cause);
     }
 
+    /**
+     * Returns a new {@link HttpResponseBuilder}.
+     */
+    @UnstableApi
+    static HttpResponseBuilder builder() {
+        return new HttpResponseBuilder();
+    }
+
     @Override
     CompletableFuture<Void> whenComplete();
 
@@ -764,7 +773,7 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
+     * Transforms the {@link HttpData}s emitted by this {@link HttpResponse} by applying the specified
      * {@link Function}.
      *
      * <p>For example:<pre>{@code
@@ -823,6 +832,27 @@ public interface HttpResponse extends Response, HttpMessage {
     default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return of(HttpMessage.super.mapError(function));
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the non-informational {@link ResponseHeaders}
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
+     * HttpResponse result = response.peekHeaders(headers -> {
+     *      assert headers.status() == HttpStatus.OK;
+     * });
+     * }</pre>
+     */
+    default HttpResponse peekHeaders(Consumer<? super ResponseHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(headers -> {
+            if (!headers.status().isInformational()) {
+                action.accept(headers);
+            }
+        }, ResponseHeaders.class);
+        return of(stream);
     }
 
     /**

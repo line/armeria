@@ -37,8 +37,8 @@ import io.netty.util.concurrent.EventExecutor;
 public interface HealthChecker {
 
     /**
-     * Returns a newly created {@link HealthChecker} that invokes the specified health checker
-     * repetitively on an arbitrary {@link EventExecutor} from {@link CommonPools#workerGroup()}.
+     * Returns a newly created {@link ListenableHealthChecker} that invokes the specified health checker
+     * function repetitively on an arbitrary {@link EventExecutor} from {@link CommonPools#workerGroup()}.
      *
      * @param healthChecker A {@link Supplier} that performs a health check asynchronously and
      *                      returns a future that will complete with a {@link HealthCheckStatus}.
@@ -55,14 +55,14 @@ public interface HealthChecker {
      * @see #of(Supplier, Duration, EventExecutor)
      */
     @UnstableApi
-    static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
-                            Duration fallbackTtl) {
+    static ListenableHealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
+                                      Duration fallbackTtl) {
         return of(healthChecker, fallbackTtl, CommonPools.workerGroup().next());
     }
 
     /**
-     * Returns a newly created {@link HealthChecker} that invokes the specified health checker
-     * repetitively on the specified {@link EventExecutor}.
+     * Returns a newly created {@link ListenableHealthChecker} that invokes the specified health checker
+     * function repetitively on the specified {@link EventExecutor}.
      *
      * @param healthChecker A {@link Supplier} that performs a health check asynchronously and
      *                      returns a future that will complete with a {@link HealthCheckStatus}.
@@ -78,8 +78,8 @@ public interface HealthChecker {
      * @param eventExecutor The {@link EventExecutor} that will invoke the specified {@code healthChecker}.
      */
     @UnstableApi
-    static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
-                            Duration fallbackTtl, EventExecutor eventExecutor) {
+    static ListenableHealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
+                                      Duration fallbackTtl, EventExecutor eventExecutor) {
         requireNonNull(fallbackTtl, "fallbackTtl");
         checkArgument(!fallbackTtl.isNegative() && !fallbackTtl.isZero(), "fallbackTtl: %s (expected: > 0)",
                       fallbackTtl);

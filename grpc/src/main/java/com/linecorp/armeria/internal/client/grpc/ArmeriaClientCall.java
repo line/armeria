@@ -124,6 +124,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
+    private final Compressor compressor;
 
     private boolean endpointInitialized;
     @Nullable
@@ -152,6 +153,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             int maxOutboundMessageSizeBytes,
             int maxInboundMessageSizeBytes,
             CallOptions callOptions,
+            Compressor compressor,
             CompressorRegistry compressorRegistry,
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
@@ -165,6 +167,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.method = method;
         this.simpleMethodNames = simpleMethodNames;
         this.callOptions = callOptions;
+        this.compressor = compressor;
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
         this.serializationFormat = serializationFormat;
@@ -210,7 +213,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 return;
             }
         } else {
-            compressor = Identity.NONE;
+            compressor = this.compressor;
         }
         requestFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         listener = responseListener;

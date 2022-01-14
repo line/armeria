@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
@@ -55,6 +56,14 @@ public final class StaticEndpointGroup implements EndpointGroup {
     @Override
     public List<Endpoint> endpoints() {
         return endpoints;
+    }
+
+    @Override
+    public void addListener(Consumer<? super List<Endpoint>> listener, boolean notifyLatestEndpoints) {
+        if (notifyLatestEndpoints) {
+            // StaticEndpointGroup will notify only once when a listener is attached.
+            listener.accept(endpoints);
+        }
     }
 
     @Override

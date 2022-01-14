@@ -94,7 +94,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
     @Nullable
     private final GrpcStatusFunction statusFunction;
-    private final int maxOutboundMessageSizeBytes;
+    private final int maxResponseMessageLength;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
@@ -103,7 +103,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     @Nullable
     private final GrpcHealthCheckService grpcHealthCheckService;
 
-    private int maxInboundMessageSizeBytes;
+    private int maxRequestMessageLength;
     private boolean lookupMethodFromAttribute;
 
     FramedGrpcService(HandlerRegistry registry,
@@ -114,11 +114,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
                       @Nullable GrpcStatusFunction statusFunction,
-                      int maxOutboundMessageSizeBytes,
+                      int maxRequestMessageLength, int maxResponseMessageLength,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
-                      int maxInboundMessageSizeBytes,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService) {
         this.registry = requireNonNull(registry, "registry");
@@ -138,10 +137,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.statusFunction = statusFunction;
-        this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        this.maxRequestMessageLength = maxRequestMessageLength;
+        this.maxResponseMessageLength = maxResponseMessageLength;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
-        this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
@@ -252,8 +251,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 compressorRegistry,
                 decompressorRegistry,
                 res,
-                maxInboundMessageSizeBytes,
-                maxOutboundMessageSizeBytes,
+                maxRequestMessageLength,
+                maxResponseMessageLength,
                 ctx,
                 serializationFormat,
                 jsonMarshallers.get(methodDescriptor.getServiceName()),
@@ -271,7 +270,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
-                    " - this is likely a bug in the stub implementation.");
+                    " - this is likely a bug in the stub implementation.", t);
             return null;
         }
         if (listener == null) {
@@ -286,8 +285,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public void serviceAdded(ServiceConfig cfg) {
-        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
-            maxInboundMessageSizeBytes = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
+        if (maxRequestMessageLength == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
+            maxRequestMessageLength = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
         }
 
         if (protoReflectionServiceInterceptor != null) {

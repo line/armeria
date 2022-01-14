@@ -143,11 +143,10 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     }
 
     @VisibleForTesting
-    static void deframeAndRespond(
-            ServiceRequestContext ctx,
-            AggregatedHttpResponse grpcResponse,
-            CompletableFuture<HttpResponse> res,
-            UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+    static void deframeAndRespond(ServiceRequestContext ctx,
+                                  AggregatedHttpResponse grpcResponse,
+                                  CompletableFuture<HttpResponse> res,
+                                  UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -159,7 +158,11 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
         if (grpcStatus.getCode() != Code.OK) {
             PooledObjects.close(grpcResponse.content());
-            res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse));
+            try {
+                res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse));
+            } catch (Exception e) {
+                res.completeExceptionally(e);
+            }
             return;
         }
 

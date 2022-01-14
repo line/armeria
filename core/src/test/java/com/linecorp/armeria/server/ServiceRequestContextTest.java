@@ -178,8 +178,8 @@ class ServiceRequestContextTest {
                                                        "Param1", "Value3",
                                                        "PARAM1", "VALUE4");
         final String pathAndQuery = path + '?' + queryParams.toQueryString();
-        final ServiceRequestContext ctx =  ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET,
-                                                                                   pathAndQuery));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET,
+                                                                                  pathAndQuery));
 
         assertThat(ctx.queryParams()).isEqualTo(queryParams);
 

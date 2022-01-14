@@ -34,8 +34,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationRequest;
@@ -187,8 +186,8 @@ class HttpJsonTranscodingTest {
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     final HttpJsonTranscodingTestServiceBlockingStub grpcClient =
-            Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                   .build(HttpJsonTranscodingTestServiceBlockingStub.class);
+            GrpcClients.builder(server.httpUri())
+                       .build(HttpJsonTranscodingTestServiceBlockingStub.class);
     final WebClient webClient = WebClient.builder(server.httpUri()).build();
 
     @Test
