@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -127,7 +125,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> serverHealthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
-    private final Multimap<String, WatcherEntry> watchers = HashMultimap.create();
+    private final Multimap<String, StreamObserver<HealthCheckResponse>> watchers = HashMultimap.create();
     @Nullable
     private Server server;
 
@@ -178,7 +176,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             final ServingStatus status = checkServingStatus(service);
             final HealthCheckResponse response = getHealthCheckResponse(status);
             responseObserver.onNext(response);
-            watchers.put(service, new WatcherEntry(responseObserver, status));
+            watchers.put(service, responseObserver);
         }
         ((ServerCallStreamObserver<HealthCheckResponse>) responseObserver).setOnCancelHandler(() -> {
             synchronized (watchers) {
@@ -209,7 +207,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                 // NOT_SERVING will be sent to clients by changing a healthiness of a server
                 serverHealth.setHealthy(false);
                 synchronized (watchers) {
-                    watchers.values().forEach(entry -> entry.responseObserver().onCompleted());
+                    watchers.values().forEach(StreamObserver::onCompleted);
                     watchers.clear();
                 }
             }
@@ -254,35 +252,11 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private Consumer<String> watcherHealthUpdater() {
         return serviceName -> {
             synchronized (watchers) {
-                final ServingStatus currentStatus = checkServingStatus(serviceName);
-                final HealthCheckResponse healthCheckResponse = getHealthCheckResponse(currentStatus);
-                if (serviceName.isEmpty()) {
-                    notifyStreamObservers(EMPTY_SERVICE, healthCheckResponse, currentStatus);
-                    return;
-                }
-                notifyStreamObservers(serviceName, healthCheckResponse, currentStatus);
+                final ServingStatus status = checkServingStatus(serviceName);
+                final HealthCheckResponse healthCheckResponse = getHealthCheckResponse(status);
+                watchers.get(serviceName).forEach(streamObserver -> streamObserver.onNext(healthCheckResponse));
             }
         };
-    }
-
-    private void notifyStreamObservers(
-            String serviceName,
-            HealthCheckResponse healthCheckResponse,
-            ServingStatus currentStatus) {
-        final List<Entry<WatcherEntry, WatcherEntry>> updated = new ArrayList<>();
-        for (WatcherEntry watcherEntry : watchers.get(serviceName)) {
-            final StreamObserver<HealthCheckResponse> streamObserver = watcherEntry.responseObserver();
-            final ServingStatus previousStatus = watcherEntry.currentStatus();
-            if (previousStatus != currentStatus) {
-                streamObserver.onNext(healthCheckResponse);
-                updated.add(Maps.immutableEntry(new WatcherEntry(streamObserver, previousStatus),
-                                                new WatcherEntry(streamObserver, currentStatus)));
-            }
-        }
-        updated.forEach(entry -> {
-            watchers.get(serviceName).remove(entry.getKey());
-            watchers.put(serviceName, entry.getValue());
-        });
     }
 
     private boolean isServerHealthy() {
@@ -292,23 +266,5 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             }
         }
         return true;
-    }
-
-    private static class WatcherEntry {
-        private final StreamObserver<HealthCheckResponse> responseObserver;
-        private final ServingStatus currentStatus;
-
-        WatcherEntry(StreamObserver<HealthCheckResponse> responseObserver, ServingStatus currentStatus) {
-            this.responseObserver = responseObserver;
-            this.currentStatus = currentStatus;
-        }
-
-        StreamObserver<HealthCheckResponse> responseObserver() {
-            return responseObserver;
-        }
-
-        ServingStatus currentStatus() {
-            return currentStatus;
-        }
     }
 }
