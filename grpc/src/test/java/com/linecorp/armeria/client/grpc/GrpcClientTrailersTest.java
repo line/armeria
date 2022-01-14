@@ -26,8 +26,6 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -59,8 +57,8 @@ class GrpcClientTrailersTest {
 
     @Test
     void requestOneAndReceiveMessageAndTrailers() {
-        final TestServiceStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                              .build(TestServiceStub.class);
+        final TestServiceStub client = GrpcClients.builder(server.httpUri())
+                                                  .build(TestServiceStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> unaryCall =
                 client.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
 

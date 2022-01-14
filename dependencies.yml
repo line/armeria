@@ -8,7 +8,7 @@ boms:
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.41.1
+  - io.grpc:grpc-bom:1.43.2
   - io.micrometer:micrometer-bom:1.7.6
   - io.netty:netty-bom:4.1.70.Final
   - io.zipkin.brave:brave-bom:5.13.3
@@ -128,7 +128,7 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protobuf-java: { version: &PROTOBUF_VERSION '3.17.3' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.19.2' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:

@@ -159,8 +159,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       CompressorRegistry compressorRegistry,
                       DecompressorRegistry decompressorRegistry,
                       HttpResponseWriter res,
-                      int maxInboundMessageSizeBytes,
-                      int maxOutboundMessageSizeBytes,
+                      int maxRequestMessageLength,
+                      int maxResponseMessageLength,
                       ServiceRequestContext ctx,
                       SerializationFormat serializationFormat,
                       @Nullable GrpcJsonMarshaller jsonMarshaller,
@@ -182,11 +182,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
                 new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
-                                       maxInboundMessageSizeBytes)
+                                       maxRequestMessageLength)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc, byteBufConverter(alloc, grpcWebText));
         requestDeframer.setDeframedStreamMessage(deframedRequest);
-        responseFramer = new ArmeriaMessageFramer(alloc, maxOutboundMessageSizeBytes, grpcWebText);
+        responseFramer = new ArmeriaMessageFramer(alloc, maxResponseMessageLength, grpcWebText);
 
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
