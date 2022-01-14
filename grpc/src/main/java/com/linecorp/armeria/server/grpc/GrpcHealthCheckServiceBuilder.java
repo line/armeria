@@ -67,8 +67,8 @@ public final class GrpcHealthCheckServiceBuilder {
      * For example, If the proto package that defines `HelloService` belongs to `com.example`,
      * the service name is `com.example.HelloService`
      */
-    public GrpcHealthCheckServiceBuilder checkerForGrpcService(String serviceName,
-                                                               ListenableHealthChecker healthChecker) {
+    public GrpcHealthCheckServiceBuilder serviceCheckers(String serviceName,
+                                                         ListenableHealthChecker healthChecker) {
         grpcHealthCheckers.put(requireNonNull(serviceName, "serviceName"),
                                requireNonNull(healthChecker, "healthChecker"));
         return this;

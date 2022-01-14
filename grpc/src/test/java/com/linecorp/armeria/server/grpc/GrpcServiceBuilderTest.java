@@ -275,7 +275,7 @@ class GrpcServiceBuilderTest {
     void enableDefaultGrpcHealthCheckService() {
         final GrpcService grpcService =
                 GrpcService.builder()
-                           .enableGrpcHealthCheckService(true)
+                           .enableHealthCheckService(true)
                            .build();
         assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
                 .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
@@ -289,7 +289,7 @@ class GrpcServiceBuilderTest {
                                                     ImmutableMap.of(),
                                                     ImmutableList.of()
                                             ))
-                                            .enableGrpcHealthCheckService(true)
+                                            .enableHealthCheckService(true)
                                             .build())
                 .isInstanceOf(IllegalStateException.class);
     }

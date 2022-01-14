@@ -616,7 +616,7 @@ public final class GrpcServiceBuilder {
      *
      * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
      */
-    public GrpcServiceBuilder enableGrpcHealthCheckService(boolean enableHealthCheckService) {
+    public GrpcServiceBuilder enableHealthCheckService(boolean enableHealthCheckService) {
         if (grpcHealthCheckService != null && enableHealthCheckService) {
             throw new IllegalStateException("gRPC health check service is set already.");
         }

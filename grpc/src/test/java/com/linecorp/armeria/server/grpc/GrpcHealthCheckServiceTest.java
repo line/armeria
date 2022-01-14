@@ -62,8 +62,8 @@ class GrpcHealthCheckServiceTest {
     static final GrpcHealthCheckService service = GrpcHealthCheckService
             .builder()
             .checkers(serverHealth)
-            .checkerForGrpcService("com.linecorp.armeria.grpc.testing.TestService",
-                                   new SettableHealthChecker(true))
+            .serviceCheckers("com.linecorp.armeria.grpc.testing.TestService",
+                             new SettableHealthChecker(true))
             .build();
 
     @RegisterExtension
