@@ -59,7 +59,8 @@ class NonBlockingCircuitBreakerTest {
                                                          .build();
     }
 
-    private static NonBlockingCircuitBreaker closedState(long minimumRequestThreshold, double failureRateThreshold) {
+    private static NonBlockingCircuitBreaker closedState(long minimumRequestThreshold,
+                                                         double failureRateThreshold) {
         final NonBlockingCircuitBreaker cb = create(minimumRequestThreshold, failureRateThreshold);
         assertThat(cb.state().isClosed()).isTrue();
         assertThat(cb.canRequest()).isTrue();
