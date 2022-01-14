@@ -260,12 +260,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
 
     @VisibleForTesting
     boolean transitionTo(CircuitState circuitState) {
-        final State oldState = state.getAndUpdate(st -> {
-            if (st.circuitState() != circuitState) {
-                return newState(circuitState);
-            }
-            return st;
-        });
+        final State oldState = state.getAndUpdate(st -> newState(circuitState));
         if (oldState.circuitState() == circuitState) {
             return false;
         }
