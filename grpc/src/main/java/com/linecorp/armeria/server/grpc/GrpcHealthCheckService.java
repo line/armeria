@@ -127,8 +127,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> serverHealthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
-    private final Multimap<String, Entry<StreamObserver<HealthCheckResponse>, ServingStatus>> watchers =
-            HashMultimap.create();
+    private final Multimap<String, WatcherEntry> watchers = HashMultimap.create();
     @Nullable
     private Server server;
 
@@ -179,7 +178,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             final ServingStatus status = checkServingStatus(service);
             final HealthCheckResponse response = getHealthCheckResponse(status);
             responseObserver.onNext(response);
-            watchers.put(service, Maps.immutableEntry(responseObserver, status));
+            watchers.put(service, new WatcherEntry(responseObserver, status));
         }
         ((ServerCallStreamObserver<HealthCheckResponse>) responseObserver).setOnCancelHandler(() -> {
             synchronized (watchers) {
@@ -210,7 +209,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                 // NOT_SERVING will be sent to clients by changing a healthiness of a server
                 serverHealth.setHealthy(false);
                 synchronized (watchers) {
-                    watchers.values().forEach(entry -> entry.getKey().onCompleted());
+                    watchers.values().forEach(entry -> entry.responseObserver().onCompleted());
                     watchers.clear();
                 }
             }
@@ -270,22 +269,14 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             String serviceName,
             HealthCheckResponse healthCheckResponse,
             ServingStatus currentStatus) {
-        final List<Entry<Entry<StreamObserver<HealthCheckResponse>, ServingStatus>,
-                Entry<StreamObserver<HealthCheckResponse>, ServingStatus>>> updated = new ArrayList<>();
-        for (Entry<StreamObserver<HealthCheckResponse>, ServingStatus> streamObserver
-                : watchers.get(serviceName)) {
-            if (streamObserver.getValue() != currentStatus) {
-                streamObserver.getKey().onNext(healthCheckResponse);
-                updated.add(Maps.immutableEntry(
-                        Maps.immutableEntry(
-                                streamObserver.getKey(),
-                                streamObserver.getValue()
-                        ),
-                        Maps.immutableEntry(
-                                streamObserver.getKey(),
-                                currentStatus
-                        )
-                ));
+        final List<Entry<WatcherEntry, WatcherEntry>> updated = new ArrayList<>();
+        for (WatcherEntry watcherEntry : watchers.get(serviceName)) {
+            final StreamObserver<HealthCheckResponse> streamObserver = watcherEntry.responseObserver();
+            final ServingStatus previousStatus = watcherEntry.currentStatus();
+            if (previousStatus != currentStatus) {
+                streamObserver.onNext(healthCheckResponse);
+                updated.add(Maps.immutableEntry(new WatcherEntry(streamObserver, previousStatus),
+                                                new WatcherEntry(streamObserver, currentStatus)));
             }
         }
         updated.forEach(entry -> {
@@ -301,5 +292,23 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             }
         }
         return true;
+    }
+
+    private static class WatcherEntry {
+        private final StreamObserver<HealthCheckResponse> responseObserver;
+        private final ServingStatus currentStatus;
+
+        WatcherEntry(StreamObserver<HealthCheckResponse> responseObserver, ServingStatus currentStatus) {
+            this.responseObserver = responseObserver;
+            this.currentStatus = currentStatus;
+        }
+
+        StreamObserver<HealthCheckResponse> responseObserver() {
+            return responseObserver;
+        }
+
+        ServingStatus currentStatus() {
+            return currentStatus;
+        }
     }
 }
