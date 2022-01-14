@@ -155,14 +155,14 @@ class HttpHeaderCachedValuesTest {
     void cookies() {
         // Initialize with the shortcut method
         final RequestHeadersBuilder builder = RequestHeaders.builder(HttpMethod.GET, "/foo");
-        final Cookie foo = Cookie.of("foo", "1");
+        final Cookie foo = Cookie.ofSecure("foo", "1");
         builder.cookies(foo);
         assertThat(builder.cookies()).hasSize(1);
         assertThat(builder.cookies().toArray()[0]).isSameAs(foo);
 
         // Mutate with the non-shortcut method
-        final Cookie bar = Cookie.of("bar", "2");
-        final Cookie baz = Cookie.of("baz", "3");
+        final Cookie bar = Cookie.ofSecure("bar", "2");
+        final Cookie baz = Cookie.ofSecure("baz", "3");
         final List<String> cookies2 = ImmutableList.of(bar.toCookieHeader(),
                                                        baz.toCookieHeader());
         builder.add(HttpHeaderNames.COOKIE, cookies2);
@@ -175,10 +175,10 @@ class HttpHeaderCachedValuesTest {
         assertThat(cookies3.get(2)).isEqualTo(baz);
 
         assertThat(builder.getAll(HttpHeaderNames.COOKIE))
-                .containsExactly(foo.toCookieHeader(), bar.toSetCookieHeader(), baz.toCookieHeader());
+                .containsExactly(foo.toCookieHeader(), bar.toCookieHeader(), baz.toCookieHeader());
 
         // Mutate with the shortcut method
-        final Cookie qux = Cookie.of("qux", "4");
+        final Cookie qux = Cookie.ofSecure("qux", "4");
         builder.cookies(qux);
         // Make sure that the container value is updated
         assertThat(builder.get(HttpHeaderNames.COOKIE))
