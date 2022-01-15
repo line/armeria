@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.google.common.collect.Maps;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
@@ -52,24 +54,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class MultipartCollectIntegrationTest {
-
-    private static class Entry {
-        private final String name;
-        private final Object value;
-
-        Entry(String name, Object value) {
-            this.name = name;
-            this.value = value;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public Object getValue() {
-            return value;
-        }
-    }
 
     @TempDir
     static Path tempDir;
@@ -83,14 +67,14 @@ class MultipartCollectIntegrationTest {
                                    if (bodyPart.filename() != null) {
                                        final Path path = tempDir.resolve(bodyPart.name());
                                        return bodyPart.writeTo(path)
-                                                      .thenApply(ignore -> new Entry(bodyPart.name(), path));
+                                                      .thenApply(ignore -> Maps.immutableEntry(bodyPart.name(), path));
                                    }
                                    return bodyPart.aggregate().thenApply(
-                                           aggregatedBodyPart -> new Entry(bodyPart.name(),
-                                                                           aggregatedBodyPart.contentUtf8()));
+                                           aggregatedBodyPart -> Maps.immutableEntry(bodyPart.name(),
+                                                                                     aggregatedBodyPart.contentUtf8()));
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
-                                       Collectors.toMap(Entry::getName, Entry::getValue)))
+                                       Collectors.toMap(Entry::getKey, Entry::getValue)))
                                .thenApply(aggregated -> {
                                    final StringBuilder responseStringBuilder = new StringBuilder();
                                    responseStringBuilder.append("param1/")
@@ -129,22 +113,22 @@ class MultipartCollectIntegrationTest {
                       Multipart.from(req).collect(bodyPart -> {
                                    final Path path = tempDir.resolve(bodyPart.name());
                                    return bodyPart.writeTo(path)
-                                                  .thenApply(ignore -> new Entry(bodyPart.name(), path));
+                                                  .thenApply(ignore -> Maps.immutableEntry(bodyPart.name(), path));
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
-                                       Collectors.toMap(Entry::getName, Entry::getValue)))
+                                       Collectors.toMap(Entry::getKey, Entry::getValue)))
                                .thenApply(aggregated -> {
                                    final StringBuilder responseStringBuilder = new StringBuilder();
                                    try {
                                        final HashCode file1Hash =
-                                               Files.asByteSource(((Path) aggregated.get("file1")).toFile())
+                                               Files.asByteSource(aggregated.get("file1").toFile())
                                                     .hash(Hashing.sha256());
                                        responseStringBuilder
                                                .append("file1/")
                                                .append(file1Hash)
                                                .append('\n');
                                        final HashCode file2Hash =
-                                               Files.asByteSource(((Path) aggregated.get("file2")).toFile())
+                                               Files.asByteSource(aggregated.get("file2").toFile())
                                                     .hash(Hashing.sha256());
                                        responseStringBuilder
                                                .append("file2/")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
- * under the License.
+ * under the Licenses
  */
 package com.linecorp.armeria.common.multipart;
 
@@ -148,27 +148,27 @@ public interface BodyPart {
     StreamMessage<HttpData> content();
 
     /**
-     * Write this {@link BodyPart} to the given {@link Path} with {@link OpenOption}.
-     * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
+     * Writes this {@link BodyPart} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption}s are not specified, they default to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
      * @param path the {@link Path} to write to
      * @param eventExecutor the {@link EventExecutor} to subscribe to this given publisher
      * @param blockingTaskExecutor the {@link ExecutorService} to which blocking tasks are submitted to handle
      *                             file I/O events and write operations
-     * @param options the {@link OpenOption} specifying how the file is opened
+     * @param options the {@link OpenOption}s specifying how the file is opened
      * @return a {@link CompletableFuture} to handle asynchronous result
      */
     CompletableFuture<Void> writeTo(Path path, EventExecutor eventExecutor,
                                     ExecutorService blockingTaskExecutor, OpenOption... options);
 
     /**
-     * Write this {@link BodyPart} to the given {@link Path} with {@link OpenOption}.
-     * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
+     * Writes this {@link BodyPart} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption}s are not specified, they default to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
      * @param path the {@link Path} to write to
-     * @param options the {@link OpenOption} specifying how the file is opened
+     * @param options the {@link OpenOption}s specifying how the file is opened
      * @return a {@link CompletableFuture} to handle asynchronous result
      */
     CompletableFuture<Void> writeTo(Path path, OpenOption... options);
