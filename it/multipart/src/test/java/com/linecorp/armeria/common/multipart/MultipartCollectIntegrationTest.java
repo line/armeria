@@ -63,15 +63,17 @@ class MultipartCollectIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/multipart/file", (ctx, req) -> HttpResponse.from(
-                      Multipart.from(req).collect(bodyPart -> {
+                      Multipart.from(req)
+                               .collect(bodyPart -> {
                                    if (bodyPart.filename() != null) {
                                        final Path path = tempDir.resolve(bodyPart.name());
                                        return bodyPart.writeTo(path)
-                                                      .thenApply(ignore -> Maps.immutableEntry(bodyPart.name(), path));
+                                                      .thenApply(ignore -> Maps.immutableEntry(
+                                                              bodyPart.name(), path));
                                    }
                                    return bodyPart.aggregate().thenApply(
-                                           aggregatedBodyPart -> Maps.immutableEntry(bodyPart.name(),
-                                                                                     aggregatedBodyPart.contentUtf8()));
+                                           aggregatedBodyPart -> Maps.immutableEntry(
+                                                   bodyPart.name(), aggregatedBodyPart.contentUtf8()));
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
                                        Collectors.toMap(Entry::getKey, Entry::getValue)))
@@ -113,7 +115,8 @@ class MultipartCollectIntegrationTest {
                       Multipart.from(req).collect(bodyPart -> {
                                    final Path path = tempDir.resolve(bodyPart.name());
                                    return bodyPart.writeTo(path)
-                                                  .thenApply(ignore -> Maps.immutableEntry(bodyPart.name(), path));
+                                                  .thenApply(ignore -> Maps.immutableEntry(
+                                                          bodyPart.name(), path));
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
                                        Collectors.toMap(Entry::getKey, Entry::getValue)))
