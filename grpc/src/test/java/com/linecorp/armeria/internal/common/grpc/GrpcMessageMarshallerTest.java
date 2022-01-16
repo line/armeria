@@ -19,11 +19,14 @@ package com.linecorp.armeria.internal.common.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
+import java.util.stream.Stream;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -34,37 +37,47 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 
-public class GrpcMessageMarshallerTest {
+class GrpcMessageMarshallerTest {
 
-    private static final DefaultJsonMarshaller DEFAULT_JSON_MARSHALLER =
-            new DefaultJsonMarshaller(MessageMarshaller.builder()
-                                                       .register(SimpleRequest.getDefaultInstance())
-                                                       .register(SimpleResponse.getDefaultInstance())
-                                                       .build());
-
-    private GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller;
-
-    @Before
-    public void setUp() {
-
-        marshaller = new GrpcMessageMarshaller<>(
-                ByteBufAllocator.DEFAULT,
-                GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.getUnaryCallMethod(),
-                DEFAULT_JSON_MARSHALLER,
-                false);
+    private static Stream<GrpcJsonMarshaller> grpcJsonMarshallerStream() {
+        final ProtobufJacksonJsonMarshaller defaultJsonMarshaller =
+                new ProtobufJacksonJsonMarshaller(MessageMarshaller.builder()
+                                                           .register(SimpleRequest.getDefaultInstance())
+                                                           .register(SimpleResponse.getDefaultInstance())
+                                                           .build());
+        return Stream.of(defaultJsonMarshaller, UpstreamJsonMarshaller.INSTANCE);
     }
 
-    @Test
-    public void serializeRequest() throws Exception {
+    private static Stream<Arguments> jsonMarshallerArgs() {
+        return grpcJsonMarshallerStream().map(Arguments::of);
+    }
+
+    static GrpcMessageMarshaller<SimpleRequest, SimpleResponse> messageMarshaller(
+            GrpcJsonMarshaller grpcJsonMarshaller) {
+        return new GrpcMessageMarshaller<>(ByteBufAllocator.DEFAULT,
+                                           GrpcSerializationFormats.PROTO,
+                                           TestServiceGrpc.getUnaryCallMethod(),
+                                           grpcJsonMarshaller,
+                                           false);
+    }
+
+    private static Stream<Arguments> messageMarshallerArgs() {
+        return grpcJsonMarshallerStream().map(GrpcMessageMarshallerTest::messageMarshaller)
+                                         .map(Arguments::of);
+    }
+
+    @ParameterizedTest
+    @MethodSource("messageMarshallerArgs")
+    void serializeRequest(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
         final ByteBuf serialized = marshaller.serializeRequest(GrpcTestUtil.REQUEST_MESSAGE);
         assertThat(ByteBufUtil.getBytes(serialized))
                 .containsExactly(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
         serialized.release();
     }
 
-    @Test
-    public void deserializeRequest_byteBuf() throws Exception {
+    @ParameterizedTest
+    @MethodSource("messageMarshallerArgs")
+    void deserializeRequest_byteBuf(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.REQUEST_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.writeBytes(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
@@ -73,14 +86,15 @@ public class GrpcMessageMarshallerTest {
         assertThat(buf.refCnt()).isEqualTo(0);
     }
 
-    @Test
-    public void deserializeRequest_wrappedByteBuf() throws Exception {
-        marshaller = new GrpcMessageMarshaller<>(
-                ByteBufAllocator.DEFAULT,
-                GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.getUnaryCallMethod(),
-                DEFAULT_JSON_MARSHALLER,
-                true);
+    @ParameterizedTest
+    @MethodSource("jsonMarshallerArgs")
+    void deserializeRequest_wrappedByteBuf(GrpcJsonMarshaller grpcJsonMarshaller) throws Exception {
+        final GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller =
+                new GrpcMessageMarshaller<>(ByteBufAllocator.DEFAULT,
+                                            GrpcSerializationFormats.PROTO,
+                                            TestServiceGrpc.getUnaryCallMethod(),
+                                            grpcJsonMarshaller,
+                                            true);
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.REQUEST_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.writeBytes(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
@@ -90,24 +104,27 @@ public class GrpcMessageMarshallerTest {
         buf.release();
     }
 
-    @Test
-    public void deserializeRequest_stream() throws Exception {
+    @ParameterizedTest
+    @MethodSource("messageMarshallerArgs")
+    void deserializeRequest_stream(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
         final SimpleRequest request = marshaller.deserializeRequest(
                 new DeframedMessage(new ByteArrayInputStream(GrpcTestUtil.REQUEST_MESSAGE.toByteArray()), 0),
                 false);
         assertThat(request).isEqualTo(GrpcTestUtil.REQUEST_MESSAGE);
     }
 
-    @Test
-    public void serializeResponse() throws Exception {
+    @ParameterizedTest
+    @MethodSource("messageMarshallerArgs")
+    void serializeResponse(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
         final ByteBuf serialized = marshaller.serializeResponse(GrpcTestUtil.RESPONSE_MESSAGE);
         assertThat(ByteBufUtil.getBytes(serialized))
                 .containsExactly(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray());
         serialized.release();
     }
 
-    @Test
-    public void deserializeResponse_bytebuf() throws Exception {
+    @ParameterizedTest
+    @MethodSource("messageMarshallerArgs")
+    void deserializeResponse_bytebuf(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.RESPONSE_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.writeBytes(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray());
@@ -116,14 +133,15 @@ public class GrpcMessageMarshallerTest {
         assertThat(buf.refCnt()).isEqualTo(0);
     }
 
-    @Test
-    public void deserializeResponse_wrappedByteBuf() throws Exception {
-        marshaller = new GrpcMessageMarshaller<>(
-                ByteBufAllocator.DEFAULT,
-                GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.getUnaryCallMethod(),
-                DEFAULT_JSON_MARSHALLER,
-                true);
+    @ParameterizedTest
+    @MethodSource("jsonMarshallerArgs")
+    void deserializeResponse_wrappedByteBuf(GrpcJsonMarshaller grpcJsonMarshaller) throws Exception {
+        final GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller =
+                new GrpcMessageMarshaller<>(ByteBufAllocator.DEFAULT,
+                                            GrpcSerializationFormats.PROTO,
+                                            TestServiceGrpc.getUnaryCallMethod(),
+                                            grpcJsonMarshaller,
+                                            true);
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.RESPONSE_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.writeBytes(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray());
@@ -133,8 +151,9 @@ public class GrpcMessageMarshallerTest {
         buf.release();
     }
 
-    @Test
-    public void deserializeResponse_stream() throws Exception {
+    @ParameterizedTest
+    @MethodSource("messageMarshallerArgs")
+    void deserializeResponse_stream(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
         final SimpleResponse response = marshaller.deserializeResponse(
                 new DeframedMessage(new ByteArrayInputStream(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray()), 0),
                 false);

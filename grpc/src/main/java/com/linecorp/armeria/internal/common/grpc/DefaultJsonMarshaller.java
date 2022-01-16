@@ -19,37 +19,44 @@ package com.linecorp.armeria.internal.common.grpc;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.function.Consumer;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
-import com.google.protobuf.Message;
+import com.google.protobuf.Descriptors.FileDescriptor.Syntax;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 
 import io.grpc.MethodDescriptor.Marshaller;
-import io.grpc.MethodDescriptor.PrototypeMarshaller;
+import io.grpc.ServiceDescriptor;
+import io.grpc.protobuf.ProtoFileDescriptorSupplier;
 
 public final class DefaultJsonMarshaller implements GrpcJsonMarshaller {
 
-    private final MessageMarshaller delegate;
+    private final GrpcJsonMarshaller delegate;
 
-    public DefaultJsonMarshaller(MessageMarshaller delegate) {
-        this.delegate = delegate;
+    public DefaultJsonMarshaller(ServiceDescriptor serviceDescriptor,
+                                 @Nullable Consumer<Builder> jsonMarshallerCustomizer) {
+        final Object schemaDescriptor = serviceDescriptor.getSchemaDescriptor();
+        if (schemaDescriptor instanceof ProtoFileDescriptorSupplier) {
+            final Syntax syntax =
+                    ((ProtoFileDescriptorSupplier) schemaDescriptor).getFileDescriptor().getSyntax();
+            if (syntax == Syntax.PROTO2) {
+                delegate = UpstreamJsonMarshaller.INSTANCE;
+                return;
+            }
+        }
+        delegate = GrpcJsonUtil.protobufJacksonJsonMarshaller(serviceDescriptor, jsonMarshallerCustomizer);
     }
 
     @Override
     public <T> void serializeMessage(Marshaller<T> marshaller, T message, OutputStream os) throws IOException {
-        delegate.writeValue((Message) message, os);
+        delegate.serializeMessage(marshaller, message, os);
     }
 
     @Override
     public <T> T deserializeMessage(Marshaller<T> marshaller, InputStream is) throws IOException {
-        final PrototypeMarshaller<T> prototypeMarshaller = (PrototypeMarshaller<T>) marshaller;
-        final Message prototype = (Message) prototypeMarshaller.getMessagePrototype();
-        final Message.Builder builder = prototype.newBuilderForType();
-        delegate.mergeValue(is, builder);
-        @SuppressWarnings("unchecked")
-        final T cast = (T) builder.build();
-        return cast;
+        return delegate.deserializeMessage(marshaller, is);
     }
 }

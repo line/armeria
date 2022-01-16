@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,13 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc;
+package com.linecorp.armeria.internal.common.grpc;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -28,17 +30,18 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.Marshaller;
 import io.grpc.MethodDescriptor.PrototypeMarshaller;
+import io.grpc.ServiceDescriptor;
 
 /**
  * Utilities for dealing with JSON marshalling in server/client.
  */
-final class GrpcJsonUtil {
+public final class GrpcJsonUtil {
 
     /**
      * Returns a {@link MessageMarshaller} with the request/response {@link Message}s of all the {@code methods}
      * registered.
      */
-    public static MessageMarshaller jsonMarshaller(
+    private static MessageMarshaller jsonMarshaller(
             List<MethodDescriptor<?, ?>> methods,
             @Nullable Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
         final MessageMarshaller.Builder builder = MessageMarshaller.builder()
@@ -71,6 +74,13 @@ final class GrpcJsonUtil {
             }
         }
         return null;
+    }
+
+    public static ProtobufJacksonJsonMarshaller protobufJacksonJsonMarshaller(
+            ServiceDescriptor serviceDescriptor, @Nullable Consumer<Builder> jsonMarshallerCustomizer) {
+        return new ProtobufJacksonJsonMarshaller(
+                jsonMarshaller(ImmutableList.copyOf(serviceDescriptor.getMethods()),
+                               jsonMarshallerCustomizer));
     }
 
     private GrpcJsonUtil() {}

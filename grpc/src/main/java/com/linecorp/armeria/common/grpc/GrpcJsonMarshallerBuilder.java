@@ -23,11 +23,12 @@ import java.util.function.Consumer;
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
-import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
+import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
+import com.linecorp.armeria.internal.common.grpc.UpstreamJsonMarshaller;
 
 import io.grpc.ServiceDescriptor;
 
@@ -39,6 +40,8 @@ public final class GrpcJsonMarshallerBuilder {
 
     @Nullable
     private Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer;
+
+    private GrpcJsonMarshallType grpcJsonMarshallType = GrpcJsonMarshallType.DEFAULT;
 
     GrpcJsonMarshallerBuilder() {}
 
@@ -62,12 +65,25 @@ public final class GrpcJsonMarshallerBuilder {
     }
 
     /**
+     * Specifies the {@link GrpcJsonMarshallType} that should be created.
+     */
+    public void grpcJsonMarshallType(GrpcJsonMarshallType grpcJsonMarshallType) {
+        this.grpcJsonMarshallType = requireNonNull(grpcJsonMarshallType);
+    }
+
+    /**
      * Returns a newly-created {@link GrpcJsonMarshaller} with the specified {@link ServiceDescriptor}.
      */
     public GrpcJsonMarshaller build(ServiceDescriptor serviceDescriptor) {
         requireNonNull(serviceDescriptor, "serviceDescriptor");
-        return new DefaultJsonMarshaller(
-                GrpcJsonUtil.jsonMarshaller(ImmutableList.copyOf(serviceDescriptor.getMethods()),
-                                            jsonMarshallerCustomizer));
+        if (grpcJsonMarshallType == GrpcJsonMarshallType.DEFAULT) {
+            return new DefaultJsonMarshaller(serviceDescriptor, jsonMarshallerCustomizer);
+        } else if (grpcJsonMarshallType == GrpcJsonMarshallType.PROTOBUF_JACKSON) {
+            return GrpcJsonUtil.protobufJacksonJsonMarshaller(serviceDescriptor, jsonMarshallerCustomizer);
+        } else if (grpcJsonMarshallType == GrpcJsonMarshallType.UPSTREAM) {
+            return UpstreamJsonMarshaller.INSTANCE;
+        } else {
+            throw new Error();
+        }
     }
 }
