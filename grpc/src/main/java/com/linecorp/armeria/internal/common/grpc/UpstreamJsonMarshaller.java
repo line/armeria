@@ -53,7 +53,8 @@ public final class UpstreamJsonMarshaller implements GrpcJsonMarshaller {
         final Message prototype = (Message) prototypeMarshaller.getMessagePrototype();
         assert prototype != null;
         final Message.Builder builder = prototype.newBuilderForType();
-        JsonFormat.parser().merge(new InputStreamReader(is, StandardCharsets.UTF_8), builder);
+        JsonFormat.parser().ignoringUnknownFields()
+                  .merge(new InputStreamReader(is, StandardCharsets.UTF_8), builder);
         @SuppressWarnings("unchecked")
         final T cast = (T) builder.build();
         return cast;
