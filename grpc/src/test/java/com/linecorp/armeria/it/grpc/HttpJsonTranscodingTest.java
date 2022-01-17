@@ -33,7 +33,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -406,7 +405,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptWrappers2() throws JsonProcessingException, JsonMappingException {
+    void shouldAcceptWrappers2() throws JsonProcessingException {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("doubleVal", String.valueOf(123.456d))
              .add("int64Val", String.valueOf(Long.MAX_VALUE))
@@ -428,7 +427,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptStruct() throws JsonProcessingException, JsonMappingException {
+    void shouldAcceptStruct() throws JsonProcessingException {
         final String jsonContent = "{\"intVal\": 1, \"stringVal\": \"1\"}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -439,7 +438,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptListValue_String() throws JsonProcessingException, JsonMappingException {
+    void shouldAcceptListValue_String() throws JsonProcessingException {
         final String jsonContent = "[\"1\", \"2\"]";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -450,7 +449,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptListValue_Number() throws JsonProcessingException, JsonMappingException {
+    void shouldAcceptListValue_Number() throws JsonProcessingException {
         final String jsonContent = "[1, 2]";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -461,7 +460,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptValue_String() throws JsonProcessingException, JsonMappingException {
+    void shouldAcceptValue_String() throws JsonProcessingException {
         final String jsonContent = "\"1\"";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -469,7 +468,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptValue_Number() throws JsonProcessingException, JsonMappingException {
+    void shouldAcceptValue_Number() throws JsonProcessingException {
         final String jsonContent = "1";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
@@ -477,7 +476,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptAny() throws JsonProcessingException, JsonMappingException {
+    void shouldAcceptAny() throws JsonProcessingException {
         final String jsonContent =
                 '{' +
                 "  \"@type\": \"type.googleapis.com/google.protobuf.Duration\"," +
