@@ -25,13 +25,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A function used for determining the {@link MediaType} of a file based on its path.
  */
 @UnstableApi
-public interface MimeTypeFunction {
+public interface MediaTypeResolver {
 
     /**
-     * Returns the default {@link MimeTypeFunction}.
+     * Returns the default {@link MediaTypeResolver}.
      */
-    static MimeTypeFunction ofDefault() {
-        return MimeTypeUtil.getDefaultMimeTypeFunction();
+    static MediaTypeResolver ofDefault() {
+        return MimeTypeUtil.getDefaultMediaTypeResolver();
     }
 
     /**
@@ -57,18 +57,18 @@ public interface MimeTypeFunction {
     @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding);
 
     /**
-     * Returns a newly created {@link MimeTypeFunction} that tries this {@link MimeTypeFunction} first and
+     * Returns a newly created {@link MediaTypeResolver} that tries this {@link MediaTypeResolver} first and
      * then the specified {@code other} when the first call returns {@code null}.
      */
-    default MimeTypeFunction orElse(MimeTypeFunction other) {
+    default MediaTypeResolver orElse(MediaTypeResolver other) {
         requireNonNull(other, "other");
         if (this == other) {
             return this;
         }
-        return new MimeTypeFunction() {
+        return new MediaTypeResolver() {
             @Override
             public @Nullable MediaType guessFromPath(String path) {
-                final @Nullable MediaType mediaType = MimeTypeFunction.this.guessFromPath(path);
+                final @Nullable MediaType mediaType = MediaTypeResolver.this.guessFromPath(path);
                 if (mediaType != null) {
                     return mediaType;
                 }
@@ -77,8 +77,8 @@ public interface MimeTypeFunction {
 
             @Override
             public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-                final @Nullable MediaType mediaType = MimeTypeFunction.this.guessFromPath(path,
-                                                                                          contentEncoding);
+                final @Nullable MediaType mediaType = MediaTypeResolver.this.guessFromPath(path,
+                                                                                           contentEncoding);
                 if (mediaType != null) {
                     return mediaType;
                 }

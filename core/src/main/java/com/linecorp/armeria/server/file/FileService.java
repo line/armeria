@@ -324,7 +324,7 @@ public final class FileService extends AbstractHttpService {
         final String contentEncoding = encoding != null ? encoding.headerValue : null;
         final HttpFile uncachedFile = config.vfs().get(readExecutor, path, config.clock(),
                                                        contentEncoding, config.headers(),
-                                                       config.mimeTypeFunction());
+                                                       config.mediaTypeResolver());
 
         return uncachedFile.readAttributes(readExecutor).thenApply(uncachedAttrs -> {
             if (cache == null) {
@@ -332,7 +332,7 @@ public final class FileService extends AbstractHttpService {
                     if (decompress && encoding != null) {
                         // The compressed data will be decompressed while being served.
                         return new DecompressingHttpFile(uncachedFile, encoding,
-                                                         config.mimeTypeFunction()
+                                                         config.mediaTypeResolver()
                                                                .guessFromPath(path, encoding.headerValue));
                     } else {
                         return uncachedFile;

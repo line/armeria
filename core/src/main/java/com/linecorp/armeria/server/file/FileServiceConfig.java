@@ -45,11 +45,11 @@ public final class FileServiceConfig {
     private final boolean autoDecompress;
     private final boolean autoIndex;
     private final HttpHeaders headers;
-    private final MimeTypeFunction mimeTypeFunction;
+    private final MediaTypeResolver mediaTypeResolver;
 
     FileServiceConfig(HttpVfs vfs, Clock clock, @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                       boolean serveCompressedFiles, boolean autoDecompress, boolean autoIndex,
-                      HttpHeaders headers, MimeTypeFunction mimeTypeFunction) {
+                      HttpHeaders headers, MediaTypeResolver mediaTypeResolver) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.entryCacheSpec = validateEntryCacheSpec(entryCacheSpec);
@@ -58,7 +58,7 @@ public final class FileServiceConfig {
         this.autoDecompress = autoDecompress;
         this.autoIndex = autoIndex;
         this.headers = requireNonNull(headers, "headers");
-        this.mimeTypeFunction = requireNonNull(mimeTypeFunction, "mimeTypeFunction");
+        this.mediaTypeResolver = requireNonNull(mediaTypeResolver, "mediaTypeResolver");
     }
 
     @Nullable
@@ -146,23 +146,23 @@ public final class FileServiceConfig {
     }
 
     /**
-     * Returns {@link MimeTypeFunction} that's used for resolving the {@link MediaType} of a file.
+     * Returns {@link MediaTypeResolver} that's used for resolving the {@link MediaType} of a file.
      */
-    public MimeTypeFunction mimeTypeFunction() {
-        return mimeTypeFunction;
+    public MediaTypeResolver mediaTypeResolver() {
+        return mediaTypeResolver;
     }
 
     @Override
     public String toString() {
         return toString(this, vfs(), clock(), entryCacheSpec(), maxCacheEntrySizeBytes(),
-                        serveCompressedFiles(), autoIndex(), headers(), mimeTypeFunction());
+                        serveCompressedFiles(), autoIndex(), headers(), mediaTypeResolver());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
                            @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                            boolean serveCompressedFiles, boolean autoIndex,
                            @Nullable Iterable<Entry<AsciiString, String>> headers,
-                           MimeTypeFunction mimeTypeFunction) {
+                           MediaTypeResolver mediaTypeResolver) {
 
         return MoreObjects.toStringHelper(holder).omitNullValues()
                           .add("vfs", vfs)
@@ -172,7 +172,7 @@ public final class FileServiceConfig {
                           .add("serveCompressedFiles", serveCompressedFiles)
                           .add("autoIndex", autoIndex)
                           .add("headers", headers)
-                          .add("mimeTypeFunction", mimeTypeFunction)
+                          .add("mediaTypeResolver", mediaTypeResolver)
                           .toString();
     }
 }

@@ -70,7 +70,7 @@ final class MimeTypeUtil {
         EXTENSION_TO_MEDIA_TYPE = Collections.unmodifiableMap(map);
     }
 
-    private static final MimeTypeFunction DEFAULT_MIME_TYPE_FUNCTION = new MimeTypeFunction() {
+    private static final MediaTypeResolver DEFAULT_MEDIA_TYPE_RESOLVER = new MediaTypeResolver() {
         @Override
         public @Nullable MediaType guessFromPath(String path) {
             return MimeTypeUtil.guessFromPath(path);
@@ -92,10 +92,10 @@ final class MimeTypeUtil {
     }
 
     /**
-     * Returns the default {@link MimeTypeFunction}.
+     * Returns the default {@link MediaTypeResolver}.
      */
-    static MimeTypeFunction getDefaultMimeTypeFunction() {
-        return DEFAULT_MIME_TYPE_FUNCTION;
+    static MediaTypeResolver getDefaultMediaTypeResolver() {
+        return DEFAULT_MEDIA_TYPE_RESOLVER;
     }
 
     @Nullable

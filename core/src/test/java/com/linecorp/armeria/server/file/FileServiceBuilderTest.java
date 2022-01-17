@@ -39,9 +39,9 @@ class FileServiceBuilderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.serviceUnder(
-                    "/mimeTypeFunction",
+                    "/mediaTypeResolver",
                     FileService.builder(getClass().getClassLoader(), BASE_RESOURCE_DIR + "bar")
-                               .mimeTypeFunction(new MimeTypeFunction() {
+                               .mediaTypeResolver(new MediaTypeResolver() {
                                    @Override
                                    public MediaType guessFromPath(String path) {
                                        if (path.endsWith(".custom-json-extension")) {
@@ -82,27 +82,27 @@ class FileServiceBuilderTest {
     }
 
     @Test
-    void testCustomMimeTypeFunctionGuessFromPathCustomJsonExtension() {
+    void testCustomMediaTypeResolverGuessFromPathCustomJsonExtension() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .get("/mimeTypeFunction/bar.custom-json-extension")
+                                                         .get("/mediaTypeResolver/bar.custom-json-extension")
                                                          .aggregate()
                                                          .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.JSON_UTF_8);
     }
 
     @Test
-    void testCustomMimeTypeFunctionGuessFromPathCustomTextExtension() {
+    void testCustomMediaTypeResolverGuessFromPathCustomTextExtension() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .get("/mimeTypeFunction/bar.custom-txt-extension")
+                                                         .get("/mediaTypeResolver/bar.custom-txt-extension")
                                                          .aggregate()
                                                          .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
     }
 
     @Test
-    void testCustomMimeTypeFunctionNotMatchThenDefaultIsUsed() {
+    void testCustomMediaTypeResolverNotMatchThenDefaultIsUsed() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .get("/mimeTypeFunction/bar.xhtml").aggregate()
+                                                         .get("/mediaTypeResolver/bar.xhtml").aggregate()
                                                          .join();
         assertThat(response.headers().contentType()).isSameAs(MediaType.XHTML_UTF_8);
     }

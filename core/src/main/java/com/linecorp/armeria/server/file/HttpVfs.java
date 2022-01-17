@@ -69,7 +69,7 @@ public interface HttpVfs {
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
      * @return the {@link HttpFile} at the specified {@code path}
      *
-     * @deprecated Use {@link #get(Executor, String, Clock, String, HttpHeaders, MimeTypeFunction)} instead.
+     * @deprecated Use {@link #get(Executor, String, Clock, String, HttpHeaders, MediaTypeResolver)} instead.
      */
     @Deprecated
     HttpFile get(Executor fileReadExecutor, String path, Clock clock,
@@ -84,12 +84,12 @@ public interface HttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
-     * @param mimeTypeFunction the {@link MimeTypeFunction} to determined {@link MediaType}.
+     * @param mediaTypeResolver the {@link MediaTypeResolver} to determined {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
     default HttpFile get(Executor fileReadExecutor, String path, Clock clock,
                  @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-                 MimeTypeFunction mimeTypeFunction) {
+                 MediaTypeResolver mediaTypeResolver) {
         return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders);
     }
 

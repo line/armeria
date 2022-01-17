@@ -56,19 +56,19 @@ final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
             Executor fileReadExecutor, String path, Clock clock,
             @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
         return blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
-                           MimeTypeFunction.ofDefault());
+                           MediaTypeResolver.ofDefault());
     }
 
     @Override
     protected HttpFile blockingGet(
             Executor fileReadExecutor, String path, Clock clock,
             @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-            MimeTypeFunction mimeTypeFunction) {
+            MediaTypeResolver mediaTypeResolver) {
 
         path = normalizePath(path);
 
         final HttpFileBuilder builder = HttpFile.builder(Paths.get(rootDir + path));
-        return build(builder, clock, path, contentEncoding, additionalHeaders, mimeTypeFunction);
+        return build(builder, clock, path, contentEncoding, additionalHeaders, mediaTypeResolver);
     }
 
     @Override
@@ -108,13 +108,13 @@ final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
                           Clock clock,
                           String pathOrUri,
                           @Nullable String contentEncoding,
-                          HttpHeaders additionalHeaders, MimeTypeFunction mimeTypeFunction) {
+                          HttpHeaders additionalHeaders, MediaTypeResolver mediaTypeResolver) {
 
         builder.autoDetectedContentType(false);
         builder.clock(clock);
         builder.setHeaders(additionalHeaders);
 
-        final @Nullable MediaType contentType = mimeTypeFunction.guessFromPath(pathOrUri, contentEncoding);
+        final @Nullable MediaType contentType = mediaTypeResolver.guessFromPath(pathOrUri, contentEncoding);
         if (contentType != null) {
             builder.contentType(contentType);
         }

@@ -70,7 +70,7 @@ import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.file.HttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpVfs;
-import com.linecorp.armeria.server.file.MimeTypeFunction;
+import com.linecorp.armeria.server.file.MediaTypeResolver;
 
 /**
  * An {@link HttpService} that provides information about the {@link Service}s running in a
@@ -397,14 +397,14 @@ public final class DocService extends SimpleDecoratingHttpService {
                 Executor fileReadExecutor, String path, Clock clock,
                 @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
             return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
-                       MimeTypeFunction.ofDefault());
+                       MediaTypeResolver.ofDefault());
         }
 
         @Override
         public HttpFile get(
           Executor fileReadExecutor, String path, Clock clock,
           @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-          MimeTypeFunction mimeTypeFunction) {
+          MediaTypeResolver mediaTypeResolver) {
 
             final AggregatedHttpFile file = files.get(path);
             if (file != null) {
@@ -426,7 +426,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             headers.set(HttpHeaderNames.CACHE_CONTROL, ServerCacheControl.REVALIDATED.asHeaderValue());
 
             return staticFiles.get(fileReadExecutor, path, clock, contentEncoding,
-                                   headers.build(), MimeTypeFunction.ofDefault());
+                                   headers.build(), MediaTypeResolver.ofDefault());
         }
 
         @Override

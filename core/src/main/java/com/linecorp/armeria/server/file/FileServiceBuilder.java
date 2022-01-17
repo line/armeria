@@ -58,7 +58,7 @@ public final class FileServiceBuilder {
     boolean canSetEntryCacheSpec = true;
     @Nullable
     HttpHeadersBuilder headers;
-    MimeTypeFunction mimeTypeFunction = MimeTypeFunction.ofDefault();
+    MediaTypeResolver mediaTypeResolver = MediaTypeResolver.ofDefault();
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -229,11 +229,11 @@ public final class FileServiceBuilder {
     }
 
     /**
-     * Sets {@link MimeTypeFunction} that provides files extension to {@link MediaType} resolver.
-     * if not set, {@link MimeTypeFunction#ofDefault()} is used by default.
+     * Sets {@link MediaTypeResolver} that provides files extension to {@link MediaType} resolver.
+     * if not set, {@link MediaTypeResolver#ofDefault()} is used by default.
      */
-    public FileServiceBuilder mimeTypeFunction(MimeTypeFunction mimeTypeFunction) {
-        this.mimeTypeFunction = requireNonNull(mimeTypeFunction, "mimeTypeFunction");
+    public FileServiceBuilder mediaTypeResolver(MediaTypeResolver mediaTypeResolver) {
+        this.mediaTypeResolver = requireNonNull(mediaTypeResolver, "mediaTypeResolver");
         return this;
     }
 
@@ -248,12 +248,12 @@ public final class FileServiceBuilder {
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
                 serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(),
-                mimeTypeFunction.orElse(MimeTypeFunction.ofDefault())));
+                mediaTypeResolver.orElse(MediaTypeResolver.ofDefault())));
     }
 
     @Override
     public String toString() {
         return FileServiceConfig.toString(this, vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                                          serveCompressedFiles, autoIndex, headers, mimeTypeFunction);
+                                          serveCompressedFiles, autoIndex, headers, mediaTypeResolver);
     }
 }
