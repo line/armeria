@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.FileDescriptor.Syntax;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -35,15 +36,26 @@ import io.grpc.protobuf.ProtoFileDescriptorSupplier;
 
 public final class DefaultJsonMarshaller implements GrpcJsonMarshaller {
 
+    /**
+     * Recursively goes through dependencies and look if any files are defined with proto2.
+     * It seems like protobuf doesn't allow circular imports for now.
+     */
+    private static boolean hasProto2(FileDescriptor fileDescriptor) {
+        if (fileDescriptor.getSyntax() == Syntax.PROTO2) {
+            return true;
+        }
+        return fileDescriptor.getDependencies().stream().anyMatch(DefaultJsonMarshaller::hasProto2);
+    }
+
     private final GrpcJsonMarshaller delegate;
 
     public DefaultJsonMarshaller(ServiceDescriptor serviceDescriptor,
                                  @Nullable Consumer<Builder> jsonMarshallerCustomizer) {
         final Object schemaDescriptor = serviceDescriptor.getSchemaDescriptor();
         if (schemaDescriptor instanceof ProtoFileDescriptorSupplier) {
-            final Syntax syntax =
-                    ((ProtoFileDescriptorSupplier) schemaDescriptor).getFileDescriptor().getSyntax();
-            if (syntax == Syntax.PROTO2) {
+            final FileDescriptor fileDescriptor =
+                    ((ProtoFileDescriptorSupplier) schemaDescriptor).getFileDescriptor();
+            if (hasProto2(fileDescriptor)) {
                 delegate = UpstreamJsonMarshaller.INSTANCE;
                 return;
             }

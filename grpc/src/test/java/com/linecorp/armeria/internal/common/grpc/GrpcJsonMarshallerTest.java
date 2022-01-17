@@ -25,21 +25,30 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 
 import example.armeria.grpc.Proto2ServiceGrpc;
 import example.armeria.grpc.Proto3ServiceGrpc;
+import example.armeria.grpc.Proto3WithProto2ServiceGrpc;
 
 class GrpcJsonMarshallerTest {
 
     @Test
     void testDefaultMarshallerDelegate() {
+        // only proto2
         GrpcJsonMarshaller grpcJsonMarshaller =
                 GrpcJsonMarshaller.of(Proto2ServiceGrpc.getServiceDescriptor());
         assertThat(grpcJsonMarshaller).isInstanceOf(DefaultJsonMarshaller.class);
         DefaultJsonMarshaller defaultJsonMarshaller = (DefaultJsonMarshaller) grpcJsonMarshaller;
         assertThat(defaultJsonMarshaller.delegate()).isInstanceOf(UpstreamJsonMarshaller.class);
 
+        // only proto3
         grpcJsonMarshaller = GrpcJsonMarshaller.of(Proto3ServiceGrpc.getServiceDescriptor());
         assertThat(grpcJsonMarshaller).isInstanceOf(DefaultJsonMarshaller.class);
         defaultJsonMarshaller = (DefaultJsonMarshaller) grpcJsonMarshaller;
         assertThat(defaultJsonMarshaller.delegate()).isInstanceOf(ProtobufJacksonJsonMarshaller.class);
+
+        // proto3 including proto2
+        grpcJsonMarshaller = GrpcJsonMarshaller.of(Proto3WithProto2ServiceGrpc.getServiceDescriptor());
+        assertThat(grpcJsonMarshaller).isInstanceOf(DefaultJsonMarshaller.class);
+        defaultJsonMarshaller = (DefaultJsonMarshaller) grpcJsonMarshaller;
+        assertThat(defaultJsonMarshaller.delegate()).isInstanceOf(UpstreamJsonMarshaller.class);
     }
 
     @Test

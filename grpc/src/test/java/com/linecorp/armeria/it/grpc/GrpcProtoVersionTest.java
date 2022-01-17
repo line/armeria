@@ -37,6 +37,8 @@ import example.armeria.grpc.Proto3.Foo3;
 import example.armeria.grpc.Proto3.Proto3Message;
 import example.armeria.grpc.Proto3ServiceGrpc.Proto3ServiceBlockingStub;
 import example.armeria.grpc.Proto3ServiceGrpc.Proto3ServiceImplBase;
+import example.armeria.grpc.Proto3WithProto2ServiceGrpc.Proto3WithProto2ServiceBlockingStub;
+import example.armeria.grpc.Proto3WithProto2ServiceGrpc.Proto3WithProto2ServiceImplBase;
 import io.grpc.stub.StreamObserver;
 
 class GrpcProtoVersionTest {
@@ -63,32 +65,53 @@ class GrpcProtoVersionTest {
                             responseObserver.onCompleted();
                         }
                     }).build();
+            final GrpcService proto3WithProto2Service =
+                    GrpcService.builder().addService(new Proto3WithProto2ServiceImplBase() {
+                        @Override
+                        public void echo(Proto2Message request,
+                                         StreamObserver<Proto2Message> responseObserver) {
+                            responseObserver.onNext(request);
+                            responseObserver.onCompleted();
+                        }
+                    }).build();
             sb.idleTimeout(Duration.ZERO)
               .requestTimeout(Duration.ZERO)
               .service(proto2Service)
-              .service(proto3Service);
+              .service(proto3Service)
+              .service(proto3WithProto2Service);
         }
     };
 
     @Test
-    void testProto2EnumForGrpcService() {
+    void testProto3() {
         final Proto3ServiceBlockingStub proto3Service =
                 Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
                        .writeTimeout(Duration.ZERO)
                        .responseTimeout(Duration.ZERO)
                        .build(Proto3ServiceBlockingStub.class);
-        final Proto3Message message = Proto3Message.newBuilder().setFoo(Foo3.B).build();
+        final Proto3Message message = Proto3Message.newBuilder().setFoo(Foo3.B3).build();
         assertThat(proto3Service.echo(message)).isEqualTo(message);
     }
 
     @Test
-    void testProto2EnumWithJsonMarshalling() {
+    void testProto2() {
         final Proto2ServiceBlockingStub proto2Service =
                 Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
                        .writeTimeout(Duration.ZERO)
                        .responseTimeout(Duration.ZERO)
                        .build(Proto2ServiceBlockingStub.class);
-        final Proto2Message message = Proto2Message.newBuilder().setFoo(Foo2.B).build();
+        final Proto2Message message = Proto2Message.newBuilder().setFoo(Foo2.B2).build();
+        assertThat(proto2Service.echo(message)).isEqualTo(message);
+    }
+
+    @Test
+    void testProto3WithProto2() {
+        final Proto3WithProto2ServiceBlockingStub proto2Service =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
+                       .writeTimeout(Duration.ZERO)
+                       .responseTimeout(Duration.ZERO)
+                       .build(Proto3WithProto2ServiceBlockingStub.class);
+        final Proto2Message message = Proto2Message.newBuilder().setFoo(Foo2.B2).build();
         assertThat(proto2Service.echo(message)).isEqualTo(message);
     }
 }

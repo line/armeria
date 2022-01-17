@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package example.grpc.proto3;
+package example.grpc.protoversion;
 option java_package = "example.armeria.grpc";
 
 service Proto3Service {
@@ -8,8 +8,8 @@ service Proto3Service {
 }
 
 enum Foo3 {
-  A = 0;
-  B = 1;
+  A3 = 0;
+  B3 = 1;
 }
 
 message Proto3Message {
