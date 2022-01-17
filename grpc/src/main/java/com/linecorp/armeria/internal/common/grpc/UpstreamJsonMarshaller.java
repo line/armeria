@@ -44,7 +44,8 @@ public final class UpstreamJsonMarshaller implements GrpcJsonMarshaller {
 
     @Override
     public <T> void serializeMessage(Marshaller<T> marshaller, T message, OutputStream os) throws IOException {
-        os.write(JsonFormat.printer().print((MessageOrBuilder) message).getBytes(StandardCharsets.UTF_8));
+        os.write(JsonFormat.printer().omittingInsignificantWhitespace()
+                           .print((MessageOrBuilder) message).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
