@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package example.grpc.proto3;
+option java_package = "example.armeria.grpc";
+
+service Proto3Service {
+  rpc echo (Proto3Message) returns (Proto3Message) {}
+}
+
+enum Foo3 {
+  A = 0;
+  B = 1;
+}
+
+message Proto3Message {
+  Foo3 foo = 2;
+}

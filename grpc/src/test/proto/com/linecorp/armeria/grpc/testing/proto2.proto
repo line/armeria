@@ -4,14 +4,14 @@ package example.grpc.proto2;
 option java_package = "example.armeria.grpc";
 
 service Proto2Service {
-  rpc simple (MessageWithEnum) returns (MessageWithEnum) {}
+  rpc echo (Proto2Message) returns (Proto2Message) {}
 }
 
-enum Foo {
+enum Foo2 {
   A = 1;
   B = 2;
 }
 
-message MessageWithEnum {
-  optional Foo foo = 2;
+message Proto2Message {
+  optional Foo2 foo = 2;
 }

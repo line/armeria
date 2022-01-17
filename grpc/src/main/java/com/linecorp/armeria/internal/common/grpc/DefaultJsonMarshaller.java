@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors.FileDescriptor.Syntax;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -58,5 +59,10 @@ public final class DefaultJsonMarshaller implements GrpcJsonMarshaller {
     @Override
     public <T> T deserializeMessage(Marshaller<T> marshaller, InputStream is) throws IOException {
         return delegate.deserializeMessage(marshaller, is);
+    }
+
+    @VisibleForTesting
+    GrpcJsonMarshaller delegate() {
+        return delegate;
     }
 }

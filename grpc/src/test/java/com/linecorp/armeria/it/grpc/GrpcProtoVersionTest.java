@@ -29,42 +29,56 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import example.armeria.grpc.Proto2.Foo;
-import example.armeria.grpc.Proto2.MessageWithEnum;
+import example.armeria.grpc.Proto2.Foo2;
+import example.armeria.grpc.Proto2.Proto2Message;
 import example.armeria.grpc.Proto2ServiceGrpc.Proto2ServiceBlockingStub;
 import example.armeria.grpc.Proto2ServiceGrpc.Proto2ServiceImplBase;
+import example.armeria.grpc.Proto3.Foo3;
+import example.armeria.grpc.Proto3.Proto3Message;
+import example.armeria.grpc.Proto3ServiceGrpc.Proto3ServiceBlockingStub;
+import example.armeria.grpc.Proto3ServiceGrpc.Proto3ServiceImplBase;
 import io.grpc.stub.StreamObserver;
 
-class GrpcProto2Test {
+class GrpcProtoVersionTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final GrpcService service =
+            final GrpcService proto2Service =
                     GrpcService.builder().addService(new Proto2ServiceImplBase() {
-                                   @Override
-                                   public void simple(MessageWithEnum request,
-                                                      StreamObserver<MessageWithEnum> responseObserver) {
-                                       responseObserver.onNext(request);
-                                       responseObserver.onCompleted();
-                                   }
-                               }).build();
+                        @Override
+                        public void echo(Proto2Message request,
+                                         StreamObserver<Proto2Message> responseObserver) {
+                            responseObserver.onNext(request);
+                            responseObserver.onCompleted();
+                        }
+                    }).build();
+            final GrpcService proto3Service =
+                    GrpcService.builder().addService(new Proto3ServiceImplBase() {
+                        @Override
+                        public void echo(Proto3Message request,
+                                         StreamObserver<Proto3Message> responseObserver) {
+                            responseObserver.onNext(request);
+                            responseObserver.onCompleted();
+                        }
+                    }).build();
             sb.idleTimeout(Duration.ZERO)
               .requestTimeout(Duration.ZERO)
-              .service(service);
+              .service(proto2Service)
+              .service(proto3Service);
         }
     };
 
     @Test
     void testProto2EnumForGrpcService() {
-        final Proto2ServiceBlockingStub proto2Service =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
+        final Proto3ServiceBlockingStub proto3Service =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
                        .writeTimeout(Duration.ZERO)
                        .responseTimeout(Duration.ZERO)
-                       .build(Proto2ServiceBlockingStub.class);
-        final MessageWithEnum message = MessageWithEnum.newBuilder().setFoo(Foo.B).build();
-        assertThat(proto2Service.simple(message)).isEqualTo(message);
+                       .build(Proto3ServiceBlockingStub.class);
+        final Proto3Message message = Proto3Message.newBuilder().setFoo(Foo3.B).build();
+        assertThat(proto3Service.echo(message)).isEqualTo(message);
     }
 
     @Test
@@ -74,7 +88,7 @@ class GrpcProto2Test {
                        .writeTimeout(Duration.ZERO)
                        .responseTimeout(Duration.ZERO)
                        .build(Proto2ServiceBlockingStub.class);
-        final MessageWithEnum message = MessageWithEnum.newBuilder().setFoo(Foo.B).build();
-        assertThat(proto2Service.simple(message)).isEqualTo(message);
+        final Proto2Message message = Proto2Message.newBuilder().setFoo(Foo2.B).build();
+        assertThat(proto2Service.echo(message)).isEqualTo(message);
     }
 }

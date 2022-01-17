@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.util.stream.Stream;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -33,6 +34,8 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 
+import example.armeria.grpc.Proto2ServiceGrpc;
+import example.armeria.grpc.Proto3ServiceGrpc;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -40,12 +43,13 @@ import io.netty.buffer.ByteBufUtil;
 class GrpcMessageMarshallerTest {
 
     private static Stream<GrpcJsonMarshaller> grpcJsonMarshallerStream() {
-        final ProtobufJacksonJsonMarshaller defaultJsonMarshaller =
+        final ProtobufJacksonJsonMarshaller protobufJacksonJsonMarshaller =
                 new ProtobufJacksonJsonMarshaller(MessageMarshaller.builder()
                                                            .register(SimpleRequest.getDefaultInstance())
                                                            .register(SimpleResponse.getDefaultInstance())
                                                            .build());
-        return Stream.of(defaultJsonMarshaller, UpstreamJsonMarshaller.INSTANCE);
+        return Stream.of(protobufJacksonJsonMarshaller, UpstreamJsonMarshaller.INSTANCE,
+                         new DefaultJsonMarshaller(TestServiceGrpc.getServiceDescriptor(), null));
     }
 
     private static Stream<Arguments> jsonMarshallerArgs() {
@@ -77,7 +81,8 @@ class GrpcMessageMarshallerTest {
 
     @ParameterizedTest
     @MethodSource("messageMarshallerArgs")
-    void deserializeRequest_byteBuf(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
+    void deserializeRequest_byteBuf(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller)
+            throws Exception {
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.REQUEST_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.writeBytes(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
@@ -106,7 +111,8 @@ class GrpcMessageMarshallerTest {
 
     @ParameterizedTest
     @MethodSource("messageMarshallerArgs")
-    void deserializeRequest_stream(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
+    void deserializeRequest_stream(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller)
+            throws Exception {
         final SimpleRequest request = marshaller.deserializeRequest(
                 new DeframedMessage(new ByteArrayInputStream(GrpcTestUtil.REQUEST_MESSAGE.toByteArray()), 0),
                 false);
@@ -124,7 +130,8 @@ class GrpcMessageMarshallerTest {
 
     @ParameterizedTest
     @MethodSource("messageMarshallerArgs")
-    void deserializeResponse_bytebuf(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
+    void deserializeResponse_bytebuf(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller)
+            throws Exception {
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(GrpcTestUtil.RESPONSE_MESSAGE.getSerializedSize());
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.writeBytes(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray());
@@ -153,10 +160,25 @@ class GrpcMessageMarshallerTest {
 
     @ParameterizedTest
     @MethodSource("messageMarshallerArgs")
-    void deserializeResponse_stream(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller) throws Exception {
+    void deserializeResponse_stream(GrpcMessageMarshaller<SimpleRequest, SimpleResponse> marshaller)
+            throws Exception {
         final SimpleResponse response = marshaller.deserializeResponse(
                 new DeframedMessage(new ByteArrayInputStream(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray()), 0),
                 false);
         assertThat(response).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
+    }
+
+    @Test
+    void testDefaultMarshallerDelegate() {
+        GrpcJsonMarshaller grpcJsonMarshaller =
+                GrpcJsonMarshaller.of(Proto2ServiceGrpc.getServiceDescriptor());
+        assertThat(grpcJsonMarshaller).isInstanceOf(DefaultJsonMarshaller.class);
+        DefaultJsonMarshaller defaultJsonMarshaller = (DefaultJsonMarshaller) grpcJsonMarshaller;
+        assertThat(defaultJsonMarshaller.delegate()).isInstanceOf(UpstreamJsonMarshaller.class);
+
+        grpcJsonMarshaller = GrpcJsonMarshaller.of(Proto3ServiceGrpc.getServiceDescriptor());
+        assertThat(grpcJsonMarshaller).isInstanceOf(DefaultJsonMarshaller.class);
+        defaultJsonMarshaller = (DefaultJsonMarshaller) grpcJsonMarshaller;
+        assertThat(defaultJsonMarshaller.delegate()).isInstanceOf(ProtobufJacksonJsonMarshaller.class);
     }
 }
