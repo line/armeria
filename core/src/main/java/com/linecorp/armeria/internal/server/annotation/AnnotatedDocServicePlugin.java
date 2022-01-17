@@ -156,11 +156,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();
         final String name = method.getName();
-        final TypeSignature returnTypeSignature =
-                isKFunction(method) && !isReturnTypeNothing(method) ? toTypeSignature(
-                        kFunctionGenericReturnType(method))
-                                                                    : toTypeSignature(
-                        method.getGenericReturnType());
+        final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
         final Class<?> clazz = service.object().getClass();
         route.methods().forEach(
@@ -171,6 +167,13 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                     .findDescription(method));
                     methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
                 });
+    }
+
+    private static TypeSignature getReturnTypeSignature(Method method) {
+        if (isKFunction(method) && !isReturnTypeNothing(method)) {
+            return toTypeSignature(kFunctionGenericReturnType(method));
+        }
+        return toTypeSignature(method.getGenericReturnType());
     }
 
     @VisibleForTesting

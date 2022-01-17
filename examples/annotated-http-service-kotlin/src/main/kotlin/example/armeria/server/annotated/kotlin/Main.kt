@@ -48,9 +48,6 @@ fun configureServices(sb: ServerBuilder) {
         .pathPrefix("/decorating")
         .applyCommonDecorator()
         .build(DecoratingService())
-        .annotatedService()
-        .pathPrefix("/throw")
-        .build(ThrowErrorService())
         // DocService
         .serviceUnder("/docs", DocService())
 }

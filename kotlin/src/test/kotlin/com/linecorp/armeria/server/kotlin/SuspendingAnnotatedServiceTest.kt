@@ -19,25 +19,11 @@ package com.linecorp.armeria.server.kotlin
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.AggregatedHttpResponse
-import com.linecorp.armeria.common.HttpHeaders
-import com.linecorp.armeria.common.HttpResponse
-import com.linecorp.armeria.common.HttpStatus
-import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.common.ResponseHeaders
+import com.linecorp.armeria.common.*
 import com.linecorp.armeria.common.stream.AbortedStreamException
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
-import com.linecorp.armeria.server.annotation.Blocking
-import com.linecorp.armeria.server.annotation.Delete
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
-import com.linecorp.armeria.server.annotation.Get
-import com.linecorp.armeria.server.annotation.HttpResult
-import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction
-import com.linecorp.armeria.server.annotation.Param
-import com.linecorp.armeria.server.annotation.ProducesJson
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider
+import com.linecorp.armeria.server.annotation.*
 import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.CancellationException
@@ -144,6 +130,13 @@ class SuspendingAnnotatedServiceTest {
             assertThat(status()).isEqualTo(HttpStatus.BAD_REQUEST)
             assertThat(headers().get("x-custom-header")).isEqualTo("value")
             assertThat(contentUtf8()).isEqualTo("hello, bar!")
+        }
+    }
+
+    @Test
+    fun test_returnType_nothing() {
+        get("/return-nothing-suspend-fun/throw-error").run {
+            assertThat(status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
         }
     }
 
@@ -264,6 +257,12 @@ class SuspendingAnnotatedServiceTest {
                         suspend fun barInHttpResult() = HttpResult.of(
                             ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"), Bar()
                         )
+                    })
+                    .annotatedService("/return-nothing-suspend-fun", object {
+                        @Get("/throw-error")
+                        suspend fun returnNothingSuspendFun(): Nothing {
+                            throw NotImplementedError()
+                        }
                     })
                     .decorator(LoggingService.newDecorator())
                     .requestTimeoutMillis(500L) // to test cancellation
