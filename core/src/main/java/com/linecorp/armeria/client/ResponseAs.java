@@ -128,7 +128,8 @@ public interface ResponseAs<T, R> {
      * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
      * the specified Java type using the specified {@link ObjectMapper}.
      */
-    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef, ObjectMapper mapper) {
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                        ObjectMapper mapper) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper));

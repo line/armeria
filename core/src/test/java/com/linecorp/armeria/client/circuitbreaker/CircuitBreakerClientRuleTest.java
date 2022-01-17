@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.Maps;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
@@ -64,14 +65,15 @@ class CircuitBreakerClientRuleTest {
                         })
                         .thenFailure();
 
-        final WebClient client =
+        final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
-                         .build();
+                         .build()
+                         .blocking();
 
-        assertThat(client.get("/").aggregate().join().contentUtf8()).isEqualTo("Hello, Armeria!");
+        assertThat(client.get("/").contentUtf8()).isEqualTo("Hello, Armeria!");
         await().untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get("/").aggregate().join())
+            assertThatThrownBy(() -> client.get("/"))
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(FailFastException.class);
         });

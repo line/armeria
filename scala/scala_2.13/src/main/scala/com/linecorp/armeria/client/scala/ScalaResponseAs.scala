@@ -77,6 +77,6 @@ object ScalaResponseAs {
     ResponseAs
       .path(file.toPath)
       .as(_)
-      .thenApply(entity => ResponseEntity.of(entity.headers(), file, entity.trailers()))
+      .thenApply[ResponseEntity[File]](entity => ResponseEntity.of(entity.headers(), file, entity.trailers()))
       .toScala
 }

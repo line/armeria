@@ -44,7 +44,7 @@ class HttpEntityTest {
                 .isInstanceOf(NoHttpContentException.class)
                 .hasMessageContaining("No content present");
     }
-    
+
     @Test
     void responseEntity() {
         final ResponseEntity<String> request1 =

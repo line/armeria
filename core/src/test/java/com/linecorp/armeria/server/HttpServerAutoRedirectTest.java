@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
@@ -66,36 +66,36 @@ class HttpServerAutoRedirectTest {
 
     @Test
     void redirection() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         AggregatedHttpResponse res;
 
-        res = client.get("/a").aggregate().join();
+        res = client.get("/a");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/a/");
 
-        res = client.get("/b").aggregate().join();
+        res = client.get("/b");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/b/");
 
-        res = client.get("/c/1").aggregate().join();
+        res = client.get("/c/1");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/c/1/");
 
-        res = client.get("/d").aggregate().join();
+        res = client.get("/d");
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
-        res = client.get("/e").aggregate().join();
+        res = client.get("/e");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/e/");
 
-        res = client.delete("/e").aggregate().join();
+        res = client.delete("/e");
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
 
-        res = client.get("/f").aggregate().join();
+        res = client.get("/f");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/f/");
 
-        res = client.get("/f/").aggregate().join();
+        res = client.get("/f/");
         assertThat(res.status()).isSameAs(HttpStatus.ACCEPTED);
     }
 }

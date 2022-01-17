@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseEntity;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class ResponseAsTest {
 
@@ -141,6 +143,15 @@ class ResponseAsTest {
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(content).containsExactly(myObject);
+    }
+
+    @Test
+    void blocking() {
+        // A CompletionException should be peeled.
+        assertThatThrownBy(() -> {
+            ResponseAs.blocking().as(HttpResponse.ofFailure(new AnticipatedException("expected")));
+        }).isInstanceOf(AnticipatedException.class)
+          .hasMessageContaining("expected");
     }
 
     static class MyObject {

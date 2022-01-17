@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.Maps;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -108,18 +109,18 @@ class CustomServerErrorHandlerTest {
 
     @Test
     void exceptionTranslated() {
-        final WebClient client = WebClient.of(server.httpUri());
-        AggregatedHttpResponse response = client.get("/timeout").aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        AggregatedHttpResponse response = client.get("/timeout");
         assertThat(response.headers().status()).isSameAs(HttpStatus.GATEWAY_TIMEOUT);
         assertThat(response.contentUtf8()).isEqualTo("timeout!");
         assertThat(response.trailers().get("trailer-exists")).isEqualTo("true");
 
-        response = client.get("/throw-exception").aggregate().join();
+        response = client.get("/throw-exception");
         assertThat(response.headers().status()).isSameAs(HttpStatus.BAD_REQUEST);
         assertThat(response.contentUtf8()).isEqualTo("Illegal Argument!");
         assertThat(response.trailers().get("trailer-exists")).isEqualTo("true");
 
-        response = client.get("/responseSubscriber").aggregate().join();
+        response = client.get("/responseSubscriber");
         assertThat(response.headers().status()).isSameAs(HttpStatus.NOT_IMPLEMENTED);
         assertThat(response.contentUtf8()).isEqualTo("Unsupported!");
         assertThat(response.trailers().get("trailer-exists")).isEqualTo("true");
@@ -127,8 +128,8 @@ class CustomServerErrorHandlerTest {
 
     @Test
     void logIsCompleteEvenIfResponseContentIsDeferred() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
-        client.get("/throw-exception").aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        client.get("/throw-exception");
         final ServiceRequestContext ctx = server.requestContextCaptor().poll();
         assertThat(ctx).isNotNull();
         await().until(() -> ctx.log().whenComplete().isDone());

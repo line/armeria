@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -112,24 +113,24 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
     public void testOk() throws Exception {
         try (Server server = resourceServer.start()) {
 
-            final WebClient client = WebClient.of(resourceServer.httpUri());
+            final BlockingWebClient client = BlockingWebClient.of(resourceServer.httpUri());
 
             final RequestHeaders requestHeaders1 = RequestHeaders.of(
                     HttpMethod.GET, "/resource-read-write/",
                     HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-            final AggregatedHttpResponse response1 = client.execute(requestHeaders1).aggregate().join();
+            final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
             assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
             final RequestHeaders requestHeaders2 = RequestHeaders.of(
                     HttpMethod.GET, "/resource-read/",
                     HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-            final AggregatedHttpResponse response2 = client.execute(requestHeaders2).aggregate().join();
+            final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
             assertThat(response2.status()).isEqualTo(HttpStatus.OK);
 
             final RequestHeaders requestHeaders3 = RequestHeaders.of(
                     HttpMethod.GET, "/resource-read-write-update/",
                     HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-            final AggregatedHttpResponse response3 = client.execute(requestHeaders3).aggregate().join();
+            final AggregatedHttpResponse response3 = client.execute(requestHeaders3);
             assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
         }
     }
@@ -138,12 +139,12 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
     public void testUnauthorized() throws Exception {
         try (Server server = resourceServer.start()) {
 
-            final WebClient client = WebClient.of(resourceServer.httpUri());
+            final BlockingWebClient client = BlockingWebClient.of(resourceServer.httpUri());
 
             final RequestHeaders requestHeaders1 = RequestHeaders.of(
                     HttpMethod.GET, "/resource-read-write/",
                     HttpHeaderNames.AUTHORIZATION, "Bearer XYZ");
-            final AggregatedHttpResponse response1 = client.execute(requestHeaders1).aggregate().join();
+            final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
             assertThat(response1.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
             assertThat(response1.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
                     .isEqualTo("Bearer realm=\"protected resource read-write\", " +
@@ -153,7 +154,7 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
             final RequestHeaders requestHeaders2 = RequestHeaders.of(
                     HttpMethod.GET, "/resource-read-write/",
                     HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
-            final AggregatedHttpResponse response2 = client.execute(requestHeaders2).aggregate().join();
+            final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
             assertThat(response2.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
             assertThat(response2.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
                     .isEqualTo("Bearer realm=\"protected resource read-write\", scope=\"read write\"");

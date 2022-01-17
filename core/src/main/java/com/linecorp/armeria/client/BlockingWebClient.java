@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -77,6 +78,19 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
         return WebClient.builder(uri).build().blocking();
     }
 
+    /**
+     * Returns a new {@link BlockingWebClient} that connects to the specified {@link URI} using the default
+     * options.
+     *
+     * @param uri the URI of the server endpoint
+     *
+     * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
+     *                                  in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    static BlockingWebClient of(URI uri) {
+        return WebClient.builder(uri).build().blocking();
+    }
 
     /**
      * Sends the specified HTTP request.

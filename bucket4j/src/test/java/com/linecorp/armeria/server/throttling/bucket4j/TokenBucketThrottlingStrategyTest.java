@@ -24,7 +24,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.BlockingWebClient;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -91,7 +90,7 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void serve1() throws Exception {
-        final BlockingWebClient client = WebClient.of(serverRule.httpUri()).blocking();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response = client.get("/http-serve");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
@@ -109,7 +108,7 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle1() throws Exception {
-        final BlockingWebClient client = WebClient.of(serverRule.httpUri()).blocking();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle1");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
@@ -139,7 +138,7 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle2() throws Exception {
-        final BlockingWebClient client = WebClient.of(serverRule.httpUri()).blocking();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle2");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
@@ -165,7 +164,7 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle3() throws Exception {
-        final BlockingWebClient client = WebClient.of(serverRule.httpUri()).blocking();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle3");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
@@ -189,7 +188,7 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle4() throws Exception {
-        final BlockingWebClient client = WebClient.of(serverRule.httpUri()).blocking();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle4");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 

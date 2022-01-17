@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
@@ -131,7 +131,8 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
         // Checks sample endpoints created when initialized.
         await().atMost(10, TimeUnit.SECONDS)
                .untilAsserted(() ->
-                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
+                                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(
+                                              sampleEndpoints));
 
         // When we close one server then the listener deregister it automatically from consul agent.
         servers.get(0).stop().join();
@@ -147,7 +148,8 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
 
         await().atMost(10, TimeUnit.SECONDS)
                .untilAsserted(() ->
-                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
+                                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(
+                                              sampleEndpoints));
     }
 
     @Test
@@ -160,26 +162,27 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
 
         // Make a service to produce 503 error for checking by consul.
         final Endpoint firstEndpoint = sampleEndpoints.get(0);
-        final WebClient webClient = WebClient.of(firstEndpoint.toUri(SessionProtocol.HTTP));
-        webClient.post("echo", "503").aggregate().join();
+        final BlockingWebClient webClient = BlockingWebClient.of(firstEndpoint.toUri(SessionProtocol.HTTP));
+        webClient.post("echo", "503");
 
         // And then, consul marks the service to an unhealthy state.
-        await().atMost(10, TimeUnit.SECONDS)
-               .untilAsserted(() ->
-                                      assertThat(client().healthyEndpoints(serviceName).join())
-                                              .hasSize(sampleEndpoints.size() - 1));
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+            assertThat(client().healthyEndpoints(serviceName).join())
+                    .hasSize(sampleEndpoints.size() - 1);
+        });
 
         // But, the size of endpoints does not changed.
-        await().atMost(10, TimeUnit.SECONDS)
-               .untilAsserted(() ->
-                      assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+            assertThat(client().endpoints(serviceName).join())
+                    .hasSameSizeAs(sampleEndpoints);
+        });
 
         // Make a service to produce 200 OK for checking by consul.
-        webClient.post("echo", "200").aggregate().join();
-        await().atMost(10, TimeUnit.SECONDS)
-               .untilAsserted(() ->
-                                      assertThat(client().healthyEndpoints(serviceName).join())
-                                              .hasSameSizeAs(sampleEndpoints));
+        webClient.post("echo", "200");
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+            assertThat(client().healthyEndpoints(serviceName).join())
+                    .hasSameSizeAs(sampleEndpoints);
+        });
     }
 
     @Test
