@@ -35,7 +35,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,10 +62,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
 import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
-import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
-import com.linecorp.armeria.internal.common.grpc.ProtobufJacksonJsonMarshaller;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 

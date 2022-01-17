@@ -67,8 +67,9 @@ public final class GrpcJsonMarshallerBuilder {
     /**
      * Specifies the {@link GrpcJsonMarshallType} that should be created.
      */
-    public void grpcJsonMarshallType(GrpcJsonMarshallType grpcJsonMarshallType) {
+    public GrpcJsonMarshallerBuilder grpcJsonMarshallType(GrpcJsonMarshallType grpcJsonMarshallType) {
         this.grpcJsonMarshallType = requireNonNull(grpcJsonMarshallType);
+        return this;
     }
 
     /**

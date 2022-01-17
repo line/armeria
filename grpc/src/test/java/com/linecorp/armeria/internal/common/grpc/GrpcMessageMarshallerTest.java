@@ -22,7 +22,6 @@ import java.io.ByteArrayInputStream;
 import java.util.stream.Stream;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -34,8 +33,6 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 
-import example.armeria.grpc.Proto2ServiceGrpc;
-import example.armeria.grpc.Proto3ServiceGrpc;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -166,19 +163,5 @@ class GrpcMessageMarshallerTest {
                 new DeframedMessage(new ByteArrayInputStream(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray()), 0),
                 false);
         assertThat(response).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
-    }
-
-    @Test
-    void testDefaultMarshallerDelegate() {
-        GrpcJsonMarshaller grpcJsonMarshaller =
-                GrpcJsonMarshaller.of(Proto2ServiceGrpc.getServiceDescriptor());
-        assertThat(grpcJsonMarshaller).isInstanceOf(DefaultJsonMarshaller.class);
-        DefaultJsonMarshaller defaultJsonMarshaller = (DefaultJsonMarshaller) grpcJsonMarshaller;
-        assertThat(defaultJsonMarshaller.delegate()).isInstanceOf(UpstreamJsonMarshaller.class);
-
-        grpcJsonMarshaller = GrpcJsonMarshaller.of(Proto3ServiceGrpc.getServiceDescriptor());
-        assertThat(grpcJsonMarshaller).isInstanceOf(DefaultJsonMarshaller.class);
-        defaultJsonMarshaller = (DefaultJsonMarshaller) grpcJsonMarshaller;
-        assertThat(defaultJsonMarshaller.delegate()).isInstanceOf(ProtobufJacksonJsonMarshaller.class);
     }
 }
