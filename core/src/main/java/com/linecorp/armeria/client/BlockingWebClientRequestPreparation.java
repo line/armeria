@@ -40,12 +40,14 @@ import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link BlockingWebClient}.
  */
+@UnstableApi
 public final class BlockingWebClientRequestPreparation
         implements RequestPreparationSetters<AggregatedHttpResponse> {
 
@@ -77,7 +79,7 @@ public final class BlockingWebClientRequestPreparation
      * Converts the {@link AggregatedHttpResponse#content()} into bytes.
      * For example:
      * <pre>{@code
-     * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<byte[]> response = client.prepare()
      *                                         .get("/v1/items/1")
      *                                         .asBytes()
@@ -92,7 +94,7 @@ public final class BlockingWebClientRequestPreparation
      * Converts the {@link AggregatedHttpResponse#content()} into {@link String}.
      * For example:
      * <pre>{@code
-     * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<String> response = client.prepare()
      *                                         .get("/v1/items/1")
      *                                         .asString()
@@ -108,7 +110,7 @@ public final class BlockingWebClientRequestPreparation
      * using the default {@link ObjectMapper}.
      * For example:
      * <pre>{@code
-     * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<MyObject> response = client.prepare()
      *                                           .get("/v1/items/1")
      *                                           .asJson(MyObject.class)
@@ -130,11 +132,38 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
+     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified non-container type
+     * using the specified {@link ObjectMapper}.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<MyObject> response = client.prepare()
+     *                                           .get("/v1/items/1")
+     *                                           .asJson(MyObject.class, mapper)
+     *                                           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     *                                      the response body into the result type.
+     */
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, ObjectMapper mapper) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        return as(AggregatedResponseAs.json(clazz, mapper));
+    }
+
+    /**
      * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified Java type using
      * the default {@link ObjectMapper}.
      * For example:
      * <pre>{@code
-     * BlockingWebClient client = WebClient.of("https://api.example.com").blocking();
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<List<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
@@ -151,6 +180,31 @@ public final class BlockingWebClientRequestPreparation
             TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
         return as(AggregatedResponseAs.json(typeRef));
+    }
+
+    /**
+     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified Java type using
+     * the specified {@link ObjectMapper}.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<List<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper)
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     *                                      the response body into the result type.
+     */
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        return as(AggregatedResponseAs.json(typeRef, mapper));
     }
 
     @Override

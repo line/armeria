@@ -38,8 +38,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Prepares and executes a new {@link HttpRequest} for {@link WebClient}, and transforms a
- * {@link HttpResponse} into the {@code T} type object.
+ * Prepares and executes a new {@link HttpRequest} for a {@link WebClient} or {@link BlockingWebClient}, and
+ * transforms a {@link HttpResponse} into the {@code T} type object.
  */
 @UnstableApi
 public class TransformingRequestPreparation<T, R> implements RequestPreparationSetters<R> {

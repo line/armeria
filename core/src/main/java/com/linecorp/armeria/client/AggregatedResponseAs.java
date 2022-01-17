@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import java.io.IOException;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ResponseEntity;
@@ -40,8 +41,18 @@ final class AggregatedResponseAs {
         return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz));
     }
 
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
+                                                                          ObjectMapper mapper) {
+        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz));
+    }
+
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
         return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef));
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                                          ObjectMapper mapper) {
+        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef));
     }
 
     private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,

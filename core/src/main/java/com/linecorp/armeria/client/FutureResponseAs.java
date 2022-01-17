@@ -22,16 +22,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Asynchronously transforms an {@link HttpResponse} into a {@link ResponseEntity}.
+ * Asynchronously transforms an {@link HttpResponse} into a {@code T} type object.
  */
 @UnstableApi
 @FunctionalInterface
-public interface FutureResponseAs<T>
-        extends ResponseAs<HttpResponse, CompletableFuture<T>> {
+public interface FutureResponseAs<T> extends ResponseAs<HttpResponse, CompletableFuture<T>> {
 
     /**
      * Transforms the {@code T} type object into another by applying the {@link Function}.

@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessages;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * Transforms a response into another.
@@ -51,21 +50,7 @@ public interface ResponseAs<T, R> {
      * Aggregates an {@link HttpResponse} and waits the result of {@link HttpResponse#aggregate()}.
      */
     static ResponseAs<HttpResponse, AggregatedHttpResponse> blocking() {
-        return new ResponseAs<HttpResponse, AggregatedHttpResponse>() {
-            @Override
-            public AggregatedHttpResponse as(HttpResponse response) {
-                try {
-                    return response.aggregate().join();
-                } catch (Exception ex) {
-                    return Exceptions.throwUnsafely(Exceptions.peel(ex));
-                }
-            }
-
-            @Override
-            public boolean aggregationRequired() {
-                return true;
-            }
-        };
+        return ResponseAsUtil.BLOCKING;
     }
 
     /**
@@ -84,7 +69,7 @@ public interface ResponseAs<T, R> {
     }
 
     /**
-     * Converts the content of an {@link HttpResponse} into a {@link Path}.
+     * Writes the content of an {@link HttpResponse} into the specified {@link Path}.
      */
     static FutureResponseAs<ResponseEntity<Path>> path(Path path) {
         requireNonNull(path, "path");
@@ -117,6 +102,19 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
+     * the specified non-container type using the specified {@link ObjectMapper}.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
+     * {@link Map}.
+     */
+    static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper));
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
      * the specified Java type using the default {@link ObjectMapper}.
      *
      * @see JacksonObjectMapperProvider
@@ -124,6 +122,16 @@ public interface ResponseAs<T, R> {
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef));
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
+     * the specified Java type using the specified {@link ObjectMapper}.
+     */
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef, ObjectMapper mapper) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper));
     }
 
     /**

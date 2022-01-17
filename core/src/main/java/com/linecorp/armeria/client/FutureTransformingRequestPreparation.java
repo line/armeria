@@ -93,7 +93,7 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     /**
-     * Sets a {@link ResponseAs} that converts the {@link ResponseEntity} into another {@link ResponseEntity}.
+     * Sets a {@link ResponseAs} that converts the {@code T} type object into another.
      */
     @UnstableApi
     @SuppressWarnings("unchecked")
@@ -104,8 +104,8 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     /**
-     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link ResponseEntity}.
-     * If a {@code null} value is returned, the cause will not be recovered.
+     * Recovers a failed {@link HttpResponse} by switching to a returned fallback object returned by the
+     * {@code function}. If a {@code null} value is returned, the cause will not be recovered.
      */
     @UnstableApi
     public FutureTransformingRequestPreparation<T> recover(
@@ -116,9 +116,8 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     /**
-     * Transforms a {@link Throwable} caused while receiving the response by applying the specified
-     * {@link Function}.
-     * If a {@code null} value is returned, the original cause will be used as it is.
+     * Transforms a {@link Throwable} raised while receiving the response by applying the specified
+     * {@link Function}. If a {@code null} value is returned, the original cause will be used as is.
      */
     @UnstableApi
     public FutureTransformingRequestPreparation<T> mapError(

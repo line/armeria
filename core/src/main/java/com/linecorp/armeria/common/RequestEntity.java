@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Represent an entity of an HTTP request.
+ * An entity of an HTTP request.
  */
 @UnstableApi
 public interface RequestEntity<T> extends HttpEntity<T> {

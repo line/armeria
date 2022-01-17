@@ -314,7 +314,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP OPTIONS request, accepts query parameters to append to the path.
+     * Sends an HTTP OPTIONS request, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse options(String path, QueryParams params) {
@@ -330,7 +330,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP GET request, accepts query parameters to append to the path.
+     * Sends an HTTP GET request, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse get(String path, QueryParams params) {
@@ -346,7 +346,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP HEAD request, accepts query parameters to append to the path.
+     * Sends an HTTP HEAD request, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse head(String path, QueryParams params) {
@@ -362,7 +362,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse post(String path, QueryParams params, HttpData content) {
@@ -378,7 +378,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse post(String path, QueryParams params, byte[] content) {
@@ -394,7 +394,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse post(String path, QueryParams params, String content) {
@@ -410,7 +410,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse post(String path, QueryParams params, String content, Charset charset) {
@@ -427,7 +427,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse put(String path, QueryParams params, HttpData content) {
@@ -444,7 +444,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse put(String path, QueryParams params, byte[] content) {
@@ -461,7 +461,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse put(String path, QueryParams params, String content) {
@@ -478,7 +478,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse put(String path, QueryParams params, String content, Charset charset) {
@@ -513,7 +513,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse patch(String path, QueryParams params, byte[] content) {
@@ -530,7 +530,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse patch(String path, QueryParams params, String content) {
@@ -547,7 +547,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse patch(String path, QueryParams params, String content, Charset charset) {
@@ -564,7 +564,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP DELETE request, accepts query parameters to append to the path.
+     * Sends an HTTP DELETE request, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse delete(String path, QueryParams params) {
@@ -580,7 +580,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Sends an HTTP TRACE request, accepts query parameters to append to the path.
+     * Sends an HTTP TRACE request, appending the given query parameters to the path.
      */
     @CheckReturnValue
     default HttpResponse trace(String path, QueryParams params) {
@@ -592,9 +592,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Note that a blocking request should be sent in a non-{@link EventLoop} thread such
      * {@link BlockingTaskExecutor}.
      */
-    default BlockingWebClient blocking() {
-        return new DefaultBlockingWebClient(this);
-    }
+    BlockingWebClient blocking();
 
     @Override
     HttpClient unwrap();

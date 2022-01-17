@@ -40,7 +40,7 @@ public final class InvalidHttpResponseException extends InvalidResponseException
     }
 
     /**
-     * Creates a new instance with the specified {@link AggregatedHttpResponse} and {@code cause}.
+     * Creates a new instance with the specified {@link AggregatedHttpResponse} and {@link Throwable}.
      */
     public InvalidHttpResponseException(AggregatedHttpResponse response, @Nullable Throwable cause) {
         super(requireNonNull(response, "response").toString(), cause);
@@ -49,7 +49,7 @@ public final class InvalidHttpResponseException extends InvalidResponseException
 
     /**
      * Creates a new instance with the specified {@link AggregatedHttpResponse}, {@code message} and
-     * {@code cause}.
+     * {@link Throwable}.
      */
     public InvalidHttpResponseException(AggregatedHttpResponse response, String message,
                                         @Nullable Throwable cause) {

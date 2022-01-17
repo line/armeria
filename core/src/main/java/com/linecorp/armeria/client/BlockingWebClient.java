@@ -27,6 +27,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
@@ -35,6 +37,17 @@ import io.netty.channel.EventLoop;
 
 /**
  * A blocking web client that waits for a {@link HttpRequest} to be fully aggregated.
+ * If you want to create a {@link BlockingWebClient} with various options, create a {@link WebClient} first
+ * and convert it into a {@link BlockingWebClient} via {@link WebClient#blocking()}.
+ * <pre>{@code
+ * BlockingWebClient client =
+ *     WebClient.builder("https://api.example.com")
+ *              .responseTimeout(Duration.ofSeconds(10))
+ *              .decorator(LoggingClient.newDecorator())
+ *              ...
+ *              .build()
+ *              .blocking();
+ * }</pre>
  *
  * <p>Note that a blocking request should be sent in a non-{@link EventLoop} thread such
  * {@link BlockingTaskExecutor}.
@@ -49,6 +62,21 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     static BlockingWebClient of() {
         return DefaultBlockingWebClient.DEFAULT;
     }
+
+    /**
+     * Returns a new {@link BlockingWebClient} that connects to the specified {@code uri} using the default
+     * options.
+     *
+     * @param uri the URI of the server endpoint
+     *
+     * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
+     *                                  in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    static BlockingWebClient of(String uri) {
+        return WebClient.builder(uri).build().blocking();
+    }
+
 
     /**
      * Sends the specified HTTP request.
@@ -123,13 +151,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP OPTIONS request.
      */
     default AggregatedHttpResponse options(String path) {
-        return execute(RequestHeaders.of(HttpMethod.OPTIONS, path));
+        return options(path, null);
     }
 
     /**
-     * Sends an HTTP OPTIONS request, accepts query parameters to append to the path.
+     * Sends an HTTP OPTIONS request, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse options(String path, QueryParams params) {
+    default AggregatedHttpResponse options(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.OPTIONS, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -137,13 +165,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP GET request.
      */
     default AggregatedHttpResponse get(String path) {
-        return execute(RequestHeaders.of(HttpMethod.GET, path));
+        return get(path, null);
     }
 
     /**
-     * Sends an HTTP GET request, accepts query parameters to append to the path.
+     * Sends an HTTP GET request, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse get(String path, QueryParams params) {
+    default AggregatedHttpResponse get(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.GET, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -151,13 +179,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP HEAD request.
      */
     default AggregatedHttpResponse head(String path) {
-        return execute(RequestHeaders.of(HttpMethod.HEAD, path));
+        return head(path, null);
     }
 
     /**
-     * Sends an HTTP HEAD request, accepts query parameters to append to the path.
+     * Sends an HTTP HEAD request, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse head(String path, QueryParams params) {
+    default AggregatedHttpResponse head(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.HEAD, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -165,13 +193,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content.
      */
     default AggregatedHttpResponse post(String path, HttpData content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, path), content);
+        return post(path, null, content);
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse post(String path, QueryParams params, HttpData content) {
+    default AggregatedHttpResponse post(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)), content);
     }
 
@@ -179,13 +207,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content.
      */
     default AggregatedHttpResponse post(String path, byte[] content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, path), content);
+        return post(path, null, content);
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse post(String path, QueryParams params, byte[] content) {
+    default AggregatedHttpResponse post(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)), content);
     }
 
@@ -193,13 +221,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content.
      */
     default AggregatedHttpResponse post(String path, String content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, path), HttpData.ofUtf8(content));
+        return post(path, null, content);
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse post(String path, QueryParams params, String content) {
+    default AggregatedHttpResponse post(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)), content);
     }
 
@@ -207,13 +235,14 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content.
      */
     default AggregatedHttpResponse post(String path, String content, Charset charset) {
-        return execute(RequestHeaders.of(HttpMethod.POST, path), content, charset);
+        return post(path, null, content, charset);
     }
 
     /**
-     * Sends an HTTP POST request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse post(String path, QueryParams params, String content, Charset charset) {
+    default AggregatedHttpResponse post(String path, @Nullable QueryParams params,
+                                        String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.POST,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
@@ -222,13 +251,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     default AggregatedHttpResponse put(String path, HttpData content) {
-        return execute(RequestHeaders.of(HttpMethod.PUT, path), content);
+        return put(path, null, content);
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse put(String path, QueryParams params, HttpData content) {
+    default AggregatedHttpResponse put(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -237,13 +266,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     default AggregatedHttpResponse put(String path, byte[] content) {
-        return execute(RequestHeaders.of(HttpMethod.PUT, path), content);
+        return put(path, null, content);
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse put(String path, QueryParams params, byte[] content) {
+    default AggregatedHttpResponse put(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -252,13 +281,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     default AggregatedHttpResponse put(String path, String content) {
-        return execute(RequestHeaders.of(HttpMethod.PUT, path), HttpData.ofUtf8(content));
+        return put(path, null, content);
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse put(String path, QueryParams params, String content) {
+    default AggregatedHttpResponse put(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -267,13 +296,14 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     default AggregatedHttpResponse put(String path, String content, Charset charset) {
-        return execute(RequestHeaders.of(HttpMethod.PUT, path), content, charset);
+        return put(path, null, content, charset);
     }
 
     /**
-     * Sends an HTTP PUT request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse put(String path, QueryParams params, String content, Charset charset) {
+    default AggregatedHttpResponse put(String path, @Nullable QueryParams params, String content,
+                                       Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
@@ -282,14 +312,14 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     default AggregatedHttpResponse patch(String path, HttpData content) {
-        return execute(RequestHeaders.of(HttpMethod.PATCH, path), content);
+        return patch(path, null, content);
     }
 
     /**
      * Sends an HTTP PATCH request with the specified content by appending the provided
      * query params to the path.
      */
-    default AggregatedHttpResponse patch(String path, QueryParams params, HttpData content) {
+    default AggregatedHttpResponse patch(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -298,13 +328,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     default AggregatedHttpResponse patch(String path, byte[] content) {
-        return execute(RequestHeaders.of(HttpMethod.PATCH, path), content);
+        return patch(path, null, content);
     }
 
     /**
-     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse patch(String path, QueryParams params, byte[] content) {
+    default AggregatedHttpResponse patch(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -313,13 +343,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     default AggregatedHttpResponse patch(String path, String content) {
-        return execute(RequestHeaders.of(HttpMethod.PATCH, path), HttpData.ofUtf8(content));
+        return patch(path, null, content);
     }
 
     /**
-     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse patch(String path, QueryParams params, String content) {
+    default AggregatedHttpResponse patch(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -328,13 +358,14 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     default AggregatedHttpResponse patch(String path, String content, Charset charset) {
-        return execute(RequestHeaders.of(HttpMethod.PATCH, path), content, charset);
+        return patch(path, null, content, charset);
     }
 
     /**
-     * Sends an HTTP PATCH request with the specified content, accepts query parameters to append to the path.
+     * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse patch(String path, QueryParams params, String content, Charset charset) {
+    default AggregatedHttpResponse patch(String path, @Nullable QueryParams params, String content,
+                                         Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
@@ -343,13 +374,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP DELETE request.
      */
     default AggregatedHttpResponse delete(String path) {
-        return execute(RequestHeaders.of(HttpMethod.DELETE, path));
+        return delete(path, null);
     }
 
     /**
-     * Sends an HTTP DELETE request, accepts query parameters to append to the path.
+     * Sends an HTTP DELETE request, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse delete(String path, QueryParams params) {
+    default AggregatedHttpResponse delete(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.DELETE, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -357,13 +388,13 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP TRACE request.
      */
     default AggregatedHttpResponse trace(String path) {
-        return execute(RequestHeaders.of(HttpMethod.TRACE, path));
+        return trace(path, null);
     }
 
     /**
-     * Sends an HTTP TRACE request, accepts query parameters to append to the path.
+     * Sends an HTTP TRACE request, appending the given query parameters to the path.
      */
-    default AggregatedHttpResponse trace(String path, QueryParams params) {
+    default AggregatedHttpResponse trace(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.TRACE, WebClientUtil.addQueryParams(path, params)));
     }
 

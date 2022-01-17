@@ -138,11 +138,11 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      * CompletableFuture<ResponseEntity<Path>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asPath(Paths.get("..."))
+     *           .asFile(Paths.get("..."))
      *           .execute();
      * }</pre>
      */
-    public FutureTransformingRequestPreparation<ResponseEntity<Path>> asPath(Path path) {
+    public FutureTransformingRequestPreparation<ResponseEntity<Path>> asFile(Path path) {
         requireNonNull(path, "path");
         return asEntity(ResponseAs.path(path));
     }
@@ -161,7 +161,7 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      */
     public FutureTransformingRequestPreparation<ResponseEntity<Path>> asFile(File file) {
         requireNonNull(file, "file");
-        return asPath(file.toPath());
+        return asFile(file.toPath());
     }
 
     /**
@@ -187,7 +187,36 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz) {
-        requireNonNull(clazz, "");
+        requireNonNull(clazz, "clazz");
+        return asEntity(ResponseAs.json(clazz));
+    }
+
+    /**
+     * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
+     * the specified {@link ObjectMapper}.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(MyObject.class, mapper)
+     *           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as
+     * {@link Collection} or {@link Map}.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              ObjectMapper mapper) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
         return asEntity(ResponseAs.json(clazz));
     }
 
@@ -214,6 +243,32 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
             TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
         return asEntity(ResponseAs.json(typeRef));
+    }
+
+    /**
+     * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
+     * specified {@link ObjectMapper}.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * WebClient client = WebClient.of("https://api.example.com");
+     * CompletableFuture<ResponseEntity<List<MyObject>>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>> {}, mapper)
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        return asEntity(ResponseAs.json(typeRef, mapper));
     }
 
     /**

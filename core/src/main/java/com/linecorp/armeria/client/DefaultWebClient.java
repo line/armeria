@@ -38,6 +38,9 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
+    @Nullable
+    private BlockingWebClient blockingWebClient;
+
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
               HttpResponse::from, (ctx, cause) -> HttpResponse.ofFailure(cause));
@@ -117,6 +120,14 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             HttpRequest req, IllegalArgumentException cause) {
         req.abort(cause);
         return HttpResponse.ofFailure(cause);
+    }
+
+    @Override
+    public BlockingWebClient blocking() {
+        if (blockingWebClient != null) {
+            return blockingWebClient;
+        }
+        return blockingWebClient = new DefaultBlockingWebClient(this);
     }
 
     @Override

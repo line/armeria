@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Represent an entity of an HTTP message.
+ * An entity of an HTTP message.
  */
 @UnstableApi
 @Nullable
@@ -39,7 +39,7 @@ public interface HttpEntity<T> {
     T content();
 
     /**
-     * Returns true if the {@link #content()} is null.
+     * Returns true if the {@link #content()} is not null.
      */
     boolean hasContent();
 
