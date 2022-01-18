@@ -50,8 +50,8 @@ public interface MediaTypeResolver {
      * @param path the path of the file to resolve its {@link MediaType}, usually in a compressed form,
      *             e.g. {@code "/foo/bar.txt.gz"} or {@code "bar.txt.br"}.
      * @param contentEncoding the content encoding, such as {@code "gzip"} and {@code "br"}, as defined
-     *                        in <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.5">
-     *                        the section 3.5, RFC 2616</a>.
+     *                        in <a href="https://datatracker.ietf.org/doc/rfc2616/"> the section 3.5,
+     *                        RFC 2616</a>.
      * @return the resolved {@link MediaType}
      */
     @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding);
