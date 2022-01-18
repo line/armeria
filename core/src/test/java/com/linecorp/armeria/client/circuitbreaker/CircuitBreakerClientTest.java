@@ -388,8 +388,7 @@ class CircuitBreakerClientTest {
 
         await().untilAsserted(() -> assertThat(circuitBreaker.canRequest()).isFalse());
         // OPEN
-        assertThatThrownBy(() -> client.get("/unavailable"))
-                .hasCauseExactlyInstanceOf(FailFastException.class);
+        assertThatThrownBy(() -> client.get("/unavailable")).isInstanceOf(FailFastException.class);
     }
 
     private static void failFastInvocation(

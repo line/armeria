@@ -73,9 +73,7 @@ class CircuitBreakerClientRuleTest {
 
         assertThat(client.get("/").contentUtf8()).isEqualTo("Hello, Armeria!");
         await().untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get("/"))
-                    .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(FailFastException.class);
+            assertThatThrownBy(() -> client.get("/")).isInstanceOf(FailFastException.class);
         });
     }
 
