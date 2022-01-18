@@ -73,7 +73,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      *
      * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"
      *
-     * @see {@link Route#paths()}.
+     * {@link Route#paths()}.
      */
     private final String skeleton;
 

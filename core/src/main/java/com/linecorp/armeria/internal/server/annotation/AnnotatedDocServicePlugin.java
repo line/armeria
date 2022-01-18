@@ -207,10 +207,19 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
         final StringBuilder sb = new StringBuilder();
         for (String paramName : route.paramNames()) {
-            final int colonIndex = path.indexOf(':', beginIndex);
+            int colonIndex = path.indexOf(':', beginIndex);
+            boolean restPathsPattern = false;
+            if (colonIndex == -1) {
+                colonIndex = path.indexOf('*', beginIndex);
+                restPathsPattern = colonIndex != -1;
+            }
             assert colonIndex != -1;
             sb.append(path, beginIndex, colonIndex);
             sb.append('{');
+            if (restPathsPattern) {
+                // Set a parameterized rest paths pattern "{*foo}".
+                sb.append('*');
+            }
             sb.append(paramName);
             sb.append('}');
             beginIndex = colonIndex + 1;
