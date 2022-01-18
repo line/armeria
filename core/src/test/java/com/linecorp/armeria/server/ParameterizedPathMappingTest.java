@@ -104,6 +104,13 @@ class ParameterizedPathMappingTest {
                 new ParameterizedPathMapping("/service/{value}/test/:value2/something/{value3}");
 
         assertThat(ppm.skeleton()).isEqualTo("/service/:/test/:/something/:");
+
+        final ParameterizedPathMapping ppm2 = new ParameterizedPathMapping("/service/{*value}");
+        assertThat(ppm2.skeleton()).isEqualTo("/service/*");
+
+        final ParameterizedPathMapping ppm3 =
+                new ParameterizedPathMapping("/service/{value1}/:value2/{*value3}");
+        assertThat(ppm3.skeleton()).isEqualTo("/service/:/:/*");
     }
 
     @Test
