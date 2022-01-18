@@ -147,23 +147,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     }
 
     @Override
-    public void transitionToOpen() {
-        transitionTo(CircuitState.OPEN);
-    }
-
-    @Override
-    public void transitionToHalfOpen() {
-        transitionTo(CircuitState.HALF_OPEN);
-    }
-
-    @Override
-    public void transitionToClosed() {
-        transitionTo(CircuitState.CLOSED);
-    }
-
-    @Override
-    public void transitionToForcedOpen() {
-        transitionTo(CircuitState.FORCED_OPEN);
+    public boolean enterState(CircuitState circuitState) {
+        final State oldState = state.getAndUpdate(st -> newState(circuitState));
+        if (oldState.circuitState() == circuitState) {
+            return false;
+        }
+        notifyStateChanged(circuitState);
+        return true;
     }
 
     private State newOpenState() {
@@ -256,16 +246,6 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     @VisibleForTesting
     CircuitBreakerConfig config() {
         return config;
-    }
-
-    @VisibleForTesting
-    boolean transitionTo(CircuitState circuitState) {
-        final State oldState = state.getAndUpdate(st -> newState(circuitState));
-        if (oldState.circuitState() == circuitState) {
-            return false;
-        }
-        notifyStateChanged(circuitState);
-        return true;
     }
 
     private State newState(CircuitState circuitState) {

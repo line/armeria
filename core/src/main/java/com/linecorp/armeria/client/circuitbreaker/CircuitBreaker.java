@@ -75,22 +75,9 @@ public interface CircuitBreaker {
     boolean canRequest();
 
     /**
-     * Transitions to {@link CircuitState#OPEN}.
+     * Transitions to the specified {@link CircuitState}.
+     * No transition will occur if the previous state is equal to the specified {@link CircuitState}.
+     * @return true if the state was changed.
      */
-    void transitionToOpen();
-
-    /**
-     * Transitions to {@link CircuitState#HALF_OPEN}.
-     */
-    void transitionToHalfOpen();
-
-    /**
-     * Transitions to {@link CircuitState#CLOSED}.
-     */
-    void transitionToClosed();
-
-    /**
-     * Transitions to {@link CircuitState#FORCED_OPEN}.
-     */
-    void transitionToForcedOpen();
+    boolean enterState(CircuitState circuitState);
 }
