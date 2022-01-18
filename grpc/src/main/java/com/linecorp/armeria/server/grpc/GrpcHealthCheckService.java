@@ -54,11 +54,11 @@ import io.grpc.stub.StreamObserver;
  * An implementation of {@code HealthImplBase} that determines a healthiness of a {@link Server}
  * and a healthiness of each gPRC service.
  *
- * <p>This class is implemented based on GRPC Health Checking Protocol.
+ * <p>This class is implemented based on gRPC Health Checking Protocol.
  * You can set a service name (an empty service name indicates a status of a server) to a request and check
- * the status of the gRPC service from the response by registering it to grpcServiceHealthCheckers.
- * Note: The suggested format of service name is package_names.ServiceName
- * If a server is healthy, returns SERVING.
+ * the status of the gRPC service from the response by registering it to gRPC Service {@link HealthChecker}s.
+ * Note: The suggested format of service name is {@code package_names.ServiceName}
+ * If a server is healthy, returns {@code ServingStatus.SERVING}.
  * For more details, please refer to the following URL.
  *
  * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
@@ -146,10 +146,9 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         final Consumer<String> healthCheckUpdateListener = watcherHealthUpdater();
         serverHealthCheckers.forEach(
                 lhc -> lhc.addListener(healthChecker -> healthCheckUpdateListener.accept(EMPTY_SERVICE)));
-        grpcServiceHealthCheckers.forEach((serviceName, lhc) ->
-                                                  lhc.addListener(
-                                                          healthChecker -> healthCheckUpdateListener.accept(
-                                                                  serviceName)));
+        grpcServiceHealthCheckers.forEach((serviceName, lhc) -> {
+            lhc.addListener(healthChecker -> healthCheckUpdateListener.accept(serviceName));
+        });
     }
 
     @Override
