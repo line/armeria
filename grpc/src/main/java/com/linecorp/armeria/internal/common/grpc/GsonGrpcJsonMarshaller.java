@@ -22,7 +22,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-import com.google.gson.JsonParser;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
@@ -32,20 +31,19 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import io.grpc.MethodDescriptor.Marshaller;
 import io.grpc.MethodDescriptor.PrototypeMarshaller;
 
-/**
- * A {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}
- * to and from JSON using the upstream {@link JsonParser} and {@link JsonFormat} utilities.
- */
-public final class UpstreamJsonMarshaller implements GrpcJsonMarshaller {
+public final class GsonGrpcJsonMarshaller implements GrpcJsonMarshaller {
 
-    private UpstreamJsonMarshaller() {}
+    final JsonFormat.Printer printer;
+    final JsonFormat.Parser parser;
 
-    public static final UpstreamJsonMarshaller INSTANCE = new UpstreamJsonMarshaller();
+    public GsonGrpcJsonMarshaller(JsonFormat.Printer printer, JsonFormat.Parser parser) {
+        this.printer = printer;
+        this.parser = parser;
+    }
 
     @Override
     public <T> void serializeMessage(Marshaller<T> marshaller, T message, OutputStream os) throws IOException {
-        os.write(JsonFormat.printer().omittingInsignificantWhitespace()
-                           .print((MessageOrBuilder) message).getBytes(StandardCharsets.UTF_8));
+        os.write(printer.print((MessageOrBuilder) message).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -54,8 +52,7 @@ public final class UpstreamJsonMarshaller implements GrpcJsonMarshaller {
         final Message prototype = (Message) prototypeMarshaller.getMessagePrototype();
         assert prototype != null;
         final Message.Builder builder = prototype.newBuilderForType();
-        JsonFormat.parser().ignoringUnknownFields()
-                  .merge(new InputStreamReader(is, StandardCharsets.UTF_8), builder);
+        parser.merge(new InputStreamReader(is, StandardCharsets.UTF_8), builder);
         @SuppressWarnings("unchecked")
         final T cast = (T) builder.build();
         return cast;

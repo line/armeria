@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -55,7 +57,7 @@ class GrpcProtoVersionTest {
                             responseObserver.onNext(request);
                             responseObserver.onCompleted();
                         }
-                    }).build();
+                    }).jsonMarshallerFactory(sd -> GrpcJsonMarshaller.ofGson()).build();
             final GrpcService proto3Service =
                     GrpcService.builder().addService(new Proto3ServiceImplBase() {
                         @Override
@@ -73,7 +75,7 @@ class GrpcProtoVersionTest {
                             responseObserver.onNext(request);
                             responseObserver.onCompleted();
                         }
-                    }).build();
+                    }).jsonMarshallerFactory(sd -> GrpcJsonMarshaller.ofGson()).build();
             sb.idleTimeout(Duration.ZERO)
               .requestTimeout(Duration.ZERO)
               .service(proto2Service)
@@ -96,10 +98,11 @@ class GrpcProtoVersionTest {
     @Test
     void testProto2() {
         final Proto2ServiceBlockingStub proto2Service =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
-                       .writeTimeout(Duration.ZERO)
-                       .responseTimeout(Duration.ZERO)
-                       .build(Proto2ServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri(GrpcSerializationFormats.JSON))
+                           .jsonMarshallerFactory(sd -> GrpcJsonMarshaller.ofGson())
+                           .writeTimeout(Duration.ZERO)
+                           .responseTimeout(Duration.ZERO)
+                           .build(Proto2ServiceBlockingStub.class);
         final Proto2Message message = Proto2Message.newBuilder().setFoo(Foo2.B2).build();
         assertThat(proto2Service.echo(message)).isEqualTo(message);
     }
@@ -107,10 +110,11 @@ class GrpcProtoVersionTest {
     @Test
     void testProto3WithProto2() {
         final Proto3WithProto2ServiceBlockingStub proto2Service =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
-                       .writeTimeout(Duration.ZERO)
-                       .responseTimeout(Duration.ZERO)
-                       .build(Proto3WithProto2ServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri(GrpcSerializationFormats.JSON))
+                           .jsonMarshallerFactory(sd -> GrpcJsonMarshaller.ofGson())
+                           .writeTimeout(Duration.ZERO)
+                           .responseTimeout(Duration.ZERO)
+                           .build(Proto3WithProto2ServiceBlockingStub.class);
         final Proto2Message message = Proto2Message.newBuilder().setFoo(Foo2.B2).build();
         assertThat(proto2Service.echo(message)).isEqualTo(message);
     }

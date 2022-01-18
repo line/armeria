@@ -19,62 +19,37 @@ package com.linecorp.armeria.internal.common.grpc;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.function.Consumer;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Descriptors.FileDescriptor;
-import com.google.protobuf.Descriptors.FileDescriptor.Syntax;
+import com.google.protobuf.Message;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 
 import io.grpc.MethodDescriptor.Marshaller;
-import io.grpc.ServiceDescriptor;
-import io.grpc.protobuf.ProtoFileDescriptorSupplier;
+import io.grpc.MethodDescriptor.PrototypeMarshaller;
 
 public final class DefaultJsonMarshaller implements GrpcJsonMarshaller {
 
-    /**
-     * Recursively goes through dependencies and look if any files are defined with proto2.
-     * It seems like protobuf doesn't allow circular imports for now.
-     */
-    private static boolean hasProto2(FileDescriptor fileDescriptor) {
-        if (fileDescriptor.getSyntax() == Syntax.PROTO2) {
-            return true;
-        }
-        return fileDescriptor.getDependencies().stream().anyMatch(DefaultJsonMarshaller::hasProto2);
-    }
+    private final MessageMarshaller delegate;
 
-    private final GrpcJsonMarshaller delegate;
-
-    public DefaultJsonMarshaller(ServiceDescriptor serviceDescriptor,
-                                 @Nullable Consumer<Builder> jsonMarshallerCustomizer) {
-        final Object schemaDescriptor = serviceDescriptor.getSchemaDescriptor();
-        if (schemaDescriptor instanceof ProtoFileDescriptorSupplier) {
-            final FileDescriptor fileDescriptor =
-                    ((ProtoFileDescriptorSupplier) schemaDescriptor).getFileDescriptor();
-            if (hasProto2(fileDescriptor)) {
-                delegate = UpstreamJsonMarshaller.INSTANCE;
-                return;
-            }
-        }
-        delegate = GrpcJsonUtil.protobufJacksonJsonMarshaller(serviceDescriptor, jsonMarshallerCustomizer);
+    public DefaultJsonMarshaller(MessageMarshaller delegate) {
+        this.delegate = delegate;
     }
 
     @Override
     public <T> void serializeMessage(Marshaller<T> marshaller, T message, OutputStream os) throws IOException {
-        delegate.serializeMessage(marshaller, message, os);
+        delegate.writeValue((Message) message, os);
     }
 
     @Override
     public <T> T deserializeMessage(Marshaller<T> marshaller, InputStream is) throws IOException {
-        return delegate.deserializeMessage(marshaller, is);
-    }
-
-    @VisibleForTesting
-    GrpcJsonMarshaller delegate() {
-        return delegate;
+        final PrototypeMarshaller<T> prototypeMarshaller = (PrototypeMarshaller<T>) marshaller;
+        final Message prototype = (Message) prototypeMarshaller.getMessagePrototype();
+        final Message.Builder builder = prototype.newBuilderForType();
+        delegate.mergeValue(is, builder);
+        @SuppressWarnings("unchecked")
+        final T cast = (T) builder.build();
+        return cast;
     }
 }

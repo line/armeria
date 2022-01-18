@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -39,17 +39,52 @@ public interface GrpcJsonMarshaller {
 
     /**
      * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}
-     * served by the {@linkplain ServiceDescriptor service}.
+     * served by the {@linkplain ServiceDescriptor service}. This implementation internally uses
+     * {@code protobuf-jackson} to serialize and deserialize messages.
      */
     static GrpcJsonMarshaller of(ServiceDescriptor serviceDescriptor) {
-        return builder().build(serviceDescriptor);
+        return ofJackson(serviceDescriptor);
     }
 
     /**
-     * Returns a new {@link GrpcJsonMarshallerBuilder}.
+     * Returns a new {@link GrpcJsonMarshallerBuilder}. This implementation internally uses
+     * {@code protobuf-jackson} to serialize and deserialize messages.
      */
     static GrpcJsonMarshallerBuilder builder() {
+        return builderForJackson();
+    }
+
+    /**
+     * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}
+     * served by the {@linkplain ServiceDescriptor service}. This implementation internally uses
+     * {@code protobuf-jackson} to serialize and deserialize messages.
+     */
+    static GrpcJsonMarshaller ofJackson(ServiceDescriptor serviceDescriptor) {
+        return builderForJackson().build(serviceDescriptor);
+    }
+
+    /**
+     * Returns a new {@link GrpcJsonMarshallerBuilder}. This implementation internally uses
+     * {@code protobuf-jackson} to serialize and deserialize messages.
+     */
+    static GrpcJsonMarshallerBuilder builderForJackson() {
         return new GrpcJsonMarshallerBuilder();
+    }
+
+    /**
+     * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes {@link Message}.
+     * This implementation internally uses {@code gson} to serialize and deserialize messages.
+     */
+    static GrpcJsonMarshaller ofGson() {
+        return builderForGson().build();
+    }
+
+    /**
+     * Returns a new {@link GrpcJsonMarshallerBuilder}. This implementation internally uses
+     * {@code gson} to serialize and deserialize messages.
+     */
+    static GsonGrpcJsonMarshallerBuilder builderForGson() {
+        return new GsonGrpcJsonMarshallerBuilder();
     }
 
     /**

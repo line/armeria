@@ -40,13 +40,12 @@ import io.netty.buffer.ByteBufUtil;
 class GrpcMessageMarshallerTest {
 
     private static Stream<GrpcJsonMarshaller> grpcJsonMarshallerStream() {
-        final ProtobufJacksonJsonMarshaller protobufJacksonJsonMarshaller =
-                new ProtobufJacksonJsonMarshaller(MessageMarshaller.builder()
+        final DefaultJsonMarshaller protobufJacksonJsonMarshaller =
+                new DefaultJsonMarshaller(MessageMarshaller.builder()
                                                            .register(SimpleRequest.getDefaultInstance())
                                                            .register(SimpleResponse.getDefaultInstance())
                                                            .build());
-        return Stream.of(protobufJacksonJsonMarshaller, UpstreamJsonMarshaller.INSTANCE,
-                         new DefaultJsonMarshaller(TestServiceGrpc.getServiceDescriptor(), null));
+        return Stream.of(protobufJacksonJsonMarshaller, GrpcJsonMarshaller.ofGson());
     }
 
     private static Stream<Arguments> jsonMarshallerArgs() {
