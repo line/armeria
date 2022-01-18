@@ -147,13 +147,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     }
 
     @Override
-    public boolean enterState(CircuitState circuitState) {
+    public void enterState(CircuitState circuitState) {
         final State oldState = state.getAndUpdate(st -> newState(circuitState));
         if (oldState.circuitState() == circuitState) {
-            return false;
+            return;
         }
         notifyStateChanged(circuitState);
-        return true;
+        return;
     }
 
     private State newOpenState() {

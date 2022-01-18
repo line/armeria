@@ -76,8 +76,7 @@ public interface CircuitBreaker {
 
     /**
      * Transitions to the specified {@link CircuitState}.
-     * No transition will occur if the previous state is equal to the specified {@link CircuitState}.
-     * @return true if the state was changed.
+     * Note that this method will always re-initialize the internal state.
      */
-    boolean enterState(CircuitState circuitState);
+    void enterState(CircuitState circuitState);
 }

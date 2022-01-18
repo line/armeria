@@ -224,7 +224,7 @@ class NonBlockingCircuitBreakerTest {
 
         CircuitState prevState = cb.state().circuitState();
         reset(listener);
-        assertThat(cb.transitionTo(from)).isEqualTo(from != prevState);
+        cb.enterState(from);
         assertThat(cb.state().circuitState()).isEqualTo(from);
         if (prevState != cb.state().circuitState()) {
             verify(listener).onEventCountUpdated(name, EventCount.ZERO);
@@ -236,7 +236,7 @@ class NonBlockingCircuitBreakerTest {
 
         prevState = cb.state().circuitState();
         reset(listener);
-        assertThat(cb.transitionTo(to)).isEqualTo(to != prevState);
+        cb.enterState(to);
         assertThat(cb.state().circuitState()).isEqualTo(to);
         if (prevState != cb.state().circuitState()) {
             verify(listener).onEventCountUpdated(name, EventCount.ZERO);
@@ -261,8 +261,8 @@ class NonBlockingCircuitBreakerTest {
         reset(listener);
 
         // transition closed -> open -> closed
-        assertThat(cb.transitionTo(CircuitState.OPEN)).isTrue();
-        assertThat(cb.transitionTo(CircuitState.CLOSED)).isTrue();
+        cb.enterState(CircuitState.OPEN);
+        cb.enterState(CircuitState.CLOSED);
 
         // verify counter is reset
         reset(listener);
@@ -286,8 +286,8 @@ class NonBlockingCircuitBreakerTest {
         assertThat(cb.canRequest()).isFalse();
 
         // transition open -> closed -> open
-        assertThat(cb.transitionTo(CircuitState.CLOSED)).isTrue();
-        assertThat(cb.transitionTo(CircuitState.OPEN)).isTrue();
+        cb.enterState(CircuitState.CLOSED);
+        cb.enterState(CircuitState.OPEN);
 
         // verify window is reset
         cb.onFailure();
@@ -302,7 +302,7 @@ class NonBlockingCircuitBreakerTest {
         final String name = cb.name();
 
         reset(listener);
-        assertThat(cb.transitionTo(CircuitState.FORCED_OPEN)).isTrue();
+        cb.enterState(CircuitState.FORCED_OPEN);
         assertThat(cb.state().isForcedOpen()).isTrue();
         verify(listener).onEventCountUpdated(name, EventCount.ZERO);
         verify(listener).onStateChanged(name, CircuitState.FORCED_OPEN);
