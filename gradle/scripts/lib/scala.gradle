@@ -12,6 +12,11 @@ configure(scala212 + scala213) {
         scalaCompileOptions.with {
             // Disable incremental compilation to avoid intermittent compile errors.
             force = true
+            // A workaround for 'jvm-1.16' is not a valid choice for '-target'. bad option: '-target:jvm-1.16'
+            // Toolchain passes a wrong target parameter to the Scala compiler.
+            // - https://github.com/gradle/gradle/issues/19456
+            // - https://github.com/gradle/gradle/pull/18347
+            additionalParameters = [ '-target:jvm-1.8']
         }
     }
 
