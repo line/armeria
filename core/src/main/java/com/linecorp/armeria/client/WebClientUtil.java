@@ -27,10 +27,7 @@ final class WebClientUtil {
      */
     static String addQueryParams(String path, @Nullable QueryParams params) {
         requireNonNull(path, "path");
-        if (params == null) {
-            return path;
-        }
-        if (params.isEmpty()) {
+        if (params == null || params.isEmpty()) {
             return path;
         }
 

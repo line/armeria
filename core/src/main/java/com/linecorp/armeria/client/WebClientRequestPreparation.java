@@ -22,6 +22,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.reactivestreams.Publisher;
@@ -178,7 +179,7 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as
-     * {@link Collection} or {@link Map}.
+     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
@@ -206,7 +207,8 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as
-     * {@link Collection} or {@link Map}.
+     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container
+     * type.
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
@@ -222,7 +224,8 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
 
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the default
-     * {@link ObjectMapper}.
+     * {@link ObjectMapper}. This method is useful when you want to deserialize the content into a container
+     * type such as {@link List} and {@link Map}.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
@@ -247,7 +250,8 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
 
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
-     * specified {@link ObjectMapper}.
+     * specified {@link ObjectMapper}. This method is useful when you want to deserialize the content into a
+     * container type such as {@link List} and {@link Map}.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;

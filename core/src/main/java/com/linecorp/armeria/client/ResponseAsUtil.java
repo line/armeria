@@ -36,7 +36,7 @@ final class ResponseAsUtil {
                 }
 
                 @Override
-                public boolean aggregationRequired() {
+                public boolean requiresAggregation() {
                     return true;
                 }
             };
@@ -49,7 +49,7 @@ final class ResponseAsUtil {
             }
 
             @Override
-            public boolean aggregationRequired() {
+            public boolean requiresAggregation() {
                 return true;
             }
         };

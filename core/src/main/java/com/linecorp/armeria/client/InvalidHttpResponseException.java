@@ -16,15 +16,18 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link InvalidResponseException} raised when a client received an invalid {@link HttpResponse}.
  */
+@UnstableApi
 public final class InvalidHttpResponseException extends InvalidResponseException {
 
     private static final long serialVersionUID = 3883287492432644897L;
@@ -33,27 +36,34 @@ public final class InvalidHttpResponseException extends InvalidResponseException
 
     /**
      * Creates a new instance with the specified {@link AggregatedHttpResponse}.
+     *
+     * @throws IllegalArgumentException if the {@link AggregatedHttpResponse} has a pooled content.
      */
     public InvalidHttpResponseException(AggregatedHttpResponse response) {
-        super(requireNonNull(response, "response").toString());
-        this.response = response;
+        this(response, null);
     }
 
     /**
      * Creates a new instance with the specified {@link AggregatedHttpResponse} and {@link Throwable}.
+     *
+     * @throws IllegalArgumentException if the {@link AggregatedHttpResponse} has a pooled content.
      */
     public InvalidHttpResponseException(AggregatedHttpResponse response, @Nullable Throwable cause) {
         super(requireNonNull(response, "response").toString(), cause);
+        ensureNonPooledObject(response);
         this.response = response;
     }
 
     /**
      * Creates a new instance with the specified {@link AggregatedHttpResponse}, {@code message} and
      * {@link Throwable}.
+     *
+     * @throws IllegalArgumentException if the {@link AggregatedHttpResponse} has a pooled content.
      */
     public InvalidHttpResponseException(AggregatedHttpResponse response, String message,
                                         @Nullable Throwable cause) {
         super(requireNonNull(message, "message"), cause);
+        ensureNonPooledObject(response);
         this.response = response;
     }
 
@@ -62,5 +72,11 @@ public final class InvalidHttpResponseException extends InvalidResponseException
      */
     public AggregatedHttpResponse response() {
         return response;
+    }
+
+    private static void ensureNonPooledObject(AggregatedHttpResponse response) {
+        checkArgument(!response.content().isPooled(),
+                      "Cannot create an %s with the pooled content: %s (expected: a non-pooled content)",
+                      InvalidHttpResponseException.class.getSimpleName(), response);
     }
 }

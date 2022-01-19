@@ -17,10 +17,12 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link RuntimeException} that is raised when attempted to access a null request or response content.
  */
+@UnstableApi
 public final class NoHttpContentException extends RuntimeException {
 
     private static final long serialVersionUID = 8264452803561735504L;

@@ -44,7 +44,7 @@ class ResponseAsTest {
     @Test
     void defaultAggregationRequired() {
         final ResponseAs<HttpResponse, Integer> responseAs = response -> 1;
-        assertThat(responseAs.aggregationRequired()).isFalse();
+        assertThat(responseAs.requiresAggregation()).isFalse();
     }
 
     @Test
@@ -58,17 +58,17 @@ class ResponseAsTest {
                     }
 
                     @Override
-                    public boolean aggregationRequired() {
+                    public boolean requiresAggregation() {
                         return true;
                     }
                 };
-        assertThat(noAggregation.aggregationRequired()).isFalse();
-        assertThat(aggregation.aggregationRequired()).isTrue();
-        // 'aggregationRequired()' should be overwritten
-        assertThat(noAggregation.andThen(aggregation).aggregationRequired()).isTrue();
+        assertThat(noAggregation.requiresAggregation()).isFalse();
+        assertThat(aggregation.requiresAggregation()).isTrue();
+        // 'requiresAggregation()' should be overwritten
+        assertThat(noAggregation.andThen(aggregation).requiresAggregation()).isTrue();
 
-        // The response was aggregated already. 'aggregationRequired()' should be preserved.
-        assertThat(aggregation.andThen(noAggregation).aggregationRequired()).isTrue();
+        // The response was aggregated already. 'requiresAggregation()' should be preserved.
+        assertThat(aggregation.andThen(noAggregation).requiresAggregation()).isTrue();
     }
 
     @Test

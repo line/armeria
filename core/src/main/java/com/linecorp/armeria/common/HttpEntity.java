@@ -34,12 +34,12 @@ public interface HttpEntity<T> {
     /**
      * Returns the content of this entity.
      *
-     * @throws NoHttpContentException if the content is null.
+     * @throws NoHttpContentException if this entity doesn't have any content.
      */
     T content();
 
     /**
-     * Returns true if the {@link #content()} is not null.
+     * Returns {@code true} if this entity has content.
      */
     boolean hasContent();
 

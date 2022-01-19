@@ -50,8 +50,8 @@ import io.netty.channel.EventLoop;
  *              .blocking();
  * }</pre>
  *
- * <p>Note that a blocking request should be sent in a non-{@link EventLoop} thread such
- * {@link BlockingTaskExecutor}.
+ * <p>Note that you should never use this client in an {@link EventLoop} thread.
+ * Use it from a non-{@link EventLoop} thread such as {@link BlockingTaskExecutor}.
  */
 @UnstableApi
 public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {

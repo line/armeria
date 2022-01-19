@@ -143,7 +143,7 @@ public interface ResponseAs<T, R> {
     /**
      * Returns whether the response should be aggregated.
      */
-    default boolean aggregationRequired() {
+    default boolean requiresAggregation() {
         return false;
     }
 
@@ -160,12 +160,12 @@ public interface ResponseAs<T, R> {
             }
 
             @Override
-            public boolean aggregationRequired() {
-                if (ResponseAs.this.aggregationRequired()) {
+            public boolean requiresAggregation() {
+                if (ResponseAs.this.requiresAggregation()) {
                     // The response was aggregated already.
                     return true;
                 }
-                return after.aggregationRequired();
+                return after.requiresAggregation();
             }
         };
     }

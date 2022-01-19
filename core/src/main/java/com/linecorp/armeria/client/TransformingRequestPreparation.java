@@ -57,7 +57,7 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
      */
     @Override
     public R execute() {
-        // TODO(ikhoon): Use ResponseAs.aggregationRequired() to specify a proper ExchangeType
+        // TODO(ikhoon): Use ResponseAs.requiresAggregation() to specify a proper ExchangeType
         //               to RequestOptions.
         return responseAs.as(delegate.execute());
     }

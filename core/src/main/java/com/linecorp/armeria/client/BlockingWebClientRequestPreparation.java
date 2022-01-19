@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -76,7 +77,7 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
-     * Converts the {@link AggregatedHttpResponse#content()} into bytes.
+     * Converts the response content into bytes.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
@@ -91,7 +92,7 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
-     * Converts the {@link AggregatedHttpResponse#content()} into {@link String}.
+     * Converts the response content into {@link String}.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
@@ -106,7 +107,7 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
-     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified non-container type
+     * Deserializes the JSON response content into the specified non-container type
      * using the default {@link ObjectMapper}.
      * For example:
      * <pre>{@code
@@ -118,7 +119,7 @@ public final class BlockingWebClientRequestPreparation
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
-     * or {@link Map}.
+     * or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
@@ -132,7 +133,7 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
-     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified non-container type
+     * Deserializes the JSON response content into the specified non-container type
      * using the specified {@link ObjectMapper}.
      * For example:
      * <pre>{@code
@@ -145,7 +146,7 @@ public final class BlockingWebClientRequestPreparation
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
-     * or {@link Map}.
+     * or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container type.
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
@@ -159,8 +160,9 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
-     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified Java type using
-     * the default {@link ObjectMapper}.
+     * Deserializes the JSON response content into the specified Java type using
+     * the default {@link ObjectMapper}. This method is useful when you want to deserialize
+     * the content into a container type such as {@link List} and {@link Map}.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
@@ -183,7 +185,7 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
-     * Deserializes the JSON {@link AggregatedHttpResponse#content()} into the specified Java type using
+     * Deserializes the JSON response content into the specified Java type using
      * the specified {@link ObjectMapper}.
      * For example:
      * <pre>{@code

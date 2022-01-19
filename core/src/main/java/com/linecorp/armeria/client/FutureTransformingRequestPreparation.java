@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import io.netty.util.AttributeKey;
 
 /**
- * Prepares and executes a new {@link HttpRequest} for {@link WebClient}, and asynchronously transforms a
+ * Prepares and executes a new {@link HttpRequest} for {@link WebClient}, and asynchronously transforms an
  * {@link HttpResponse} into a {@code T} type object.
  */
 @UnstableApi
