@@ -211,9 +211,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             boolean restPathsPattern = false;
             if (colonIndex == -1) {
                 colonIndex = path.indexOf('*', beginIndex);
-                restPathsPattern = colonIndex != -1;
+                assert colonIndex != -1;
+                restPathsPattern = true;
             }
-            assert colonIndex != -1;
             sb.append(path, beginIndex, colonIndex);
             sb.append('{');
             if (restPathsPattern) {
