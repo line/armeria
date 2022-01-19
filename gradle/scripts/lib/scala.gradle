@@ -16,18 +16,6 @@ configure(scala212 + scala213 + scala3) {
         }
     }
 
-    // Delete the generated source directory on clean.
-    ext {
-        genSrcDir = "${projectDir}/gen-src"
-    }
-    clean {
-        delete project.ext.genSrcDir
-    }
-    // Add the generated source directories to the source sets.
-    project.sourceSets.all { sourceSet ->
-        sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/scala")
-    }
-
     tasks.withType(Test) {
         useJUnitPlatform {
             // A workaround for 'java.lang.InternalError: Malformed class name'
