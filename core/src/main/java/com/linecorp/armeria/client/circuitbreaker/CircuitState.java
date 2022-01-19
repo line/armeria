@@ -36,7 +36,8 @@ public enum CircuitState {
     HALF_OPEN,
     /**
      * The circuit is tripped. All requests fail immediately without calling the remote service.
-     * State transition will not occur from this state unless explicitly called by the user.
+     * State transition will not occur from this state unless explicitly changed by the user
+     * via {@link CircuitBreaker#enterState(CircuitState)}.
      */
     FORCED_OPEN,
 }

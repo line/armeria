@@ -75,8 +75,11 @@ public interface CircuitBreaker {
     boolean canRequest();
 
     /**
-     * Transitions to the specified {@link CircuitState}.
-     * Note that this method will always re-initialize the internal state.
+     * Enters the specified {@link CircuitState}. Note that even if the {@link CircuitBreaker}
+     * is already in the specified {@link CircuitState}, timeouts such as
+     * {@link CircuitBreakerConfig#circuitOpenWindow()} and {@link CircuitBreakerConfig#trialRequestInterval()}
+     * will be reinitialized. This method should be only used if users want extra control over the
+     * {@link CircuitBreaker}'s state. Normally state transitions are handled internally.
      */
     void enterState(CircuitState circuitState);
 }
