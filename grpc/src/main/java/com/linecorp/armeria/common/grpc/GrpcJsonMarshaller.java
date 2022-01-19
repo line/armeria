@@ -44,7 +44,7 @@ public interface GrpcJsonMarshaller {
      * to serialize and deserialize messages.
      */
     static GrpcJsonMarshaller of(ServiceDescriptor serviceDescriptor) {
-        return ofJackson(serviceDescriptor);
+        return builder().build(serviceDescriptor);
     }
 
     /**
@@ -53,25 +53,6 @@ public interface GrpcJsonMarshaller {
      * to serialize and deserialize messages.
      */
     static GrpcJsonMarshallerBuilder builder() {
-        return builderForJackson();
-    }
-
-    /**
-     * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}
-     * served by the {@linkplain ServiceDescriptor service}. This implementation internally uses
-     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>
-     * to serialize and deserialize messages.
-     */
-    static GrpcJsonMarshaller ofJackson(ServiceDescriptor serviceDescriptor) {
-        return builderForJackson().build(serviceDescriptor);
-    }
-
-    /**
-     * Returns a new {@link GrpcJsonMarshallerBuilder}.  This implementation internally uses
-     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>
-     * to serialize and deserialize messages.
-     */
-    static GrpcJsonMarshallerBuilder builderForJackson() {
         return new GrpcJsonMarshallerBuilder();
     }
 
@@ -80,6 +61,8 @@ public interface GrpcJsonMarshaller {
      * This implementation internally uses
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
      * and {@code Gson} to serialize and deserialize messages.
+     * Note that using {@link GrpcJsonMarshaller#of(ServiceDescriptor)} yields better performance in general
+     * and should be preferred.
      */
     static GrpcJsonMarshaller ofGson() {
         return builderForGson().build();
@@ -89,6 +72,8 @@ public interface GrpcJsonMarshaller {
      * Returns a new {@link GsonGrpcJsonMarshallerBuilder}. This implementation internally uses
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
      * and {@code Gson} to serialize and deserialize messages.
+     * Note that using {@link GrpcJsonMarshaller#builder()} yields better performance in general
+     * and should be preferred.
      */
     static GsonGrpcJsonMarshallerBuilder builderForGson() {
         return new GsonGrpcJsonMarshallerBuilder();
