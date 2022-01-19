@@ -61,8 +61,11 @@ public interface GrpcJsonMarshaller {
      * This implementation internally uses
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
      * and {@code Gson} to serialize and deserialize messages.
-     * Note that using {@link GrpcJsonMarshaller#of(ServiceDescriptor)} yields better performance in general
-     * and should be preferred.
+     * Note:
+     * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
+     * has a known performance issue. Use this method only when
+     * 1) you're using Protobuf 2 or 2) you have an issue with
+     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>.
      */
     static GrpcJsonMarshaller ofGson() {
         return builderForGson().build();
@@ -72,8 +75,11 @@ public interface GrpcJsonMarshaller {
      * Returns a new {@link GsonGrpcJsonMarshallerBuilder}. This implementation internally uses
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
      * and {@code Gson} to serialize and deserialize messages.
-     * Note that using {@link GrpcJsonMarshaller#builder()} yields better performance in general
-     * and should be preferred.
+     * Note:
+     * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
+     * has a known performance issue. Use this method only when
+     * 1) you're using Protobuf 2 or 2) you have an issue with
+     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>.
      */
     static GsonGrpcJsonMarshallerBuilder builderForGson() {
         return new GsonGrpcJsonMarshallerBuilder();
