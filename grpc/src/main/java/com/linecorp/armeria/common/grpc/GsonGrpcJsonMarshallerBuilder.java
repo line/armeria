@@ -24,7 +24,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.grpc.GsonGrpcJsonMarshaller;
 
 /**
  * A builder for creating a new {@link GrpcJsonMarshaller} that serializes and deserializes a {@link Message}
@@ -41,8 +40,8 @@ public final class GsonGrpcJsonMarshallerBuilder {
     GsonGrpcJsonMarshallerBuilder() {}
 
     /**
-     * Sets a {@link Consumer} that can customize the {@link JsonFormat.Parser} for {@link Message}
-     * used when handling JSON payloads in the service.
+     * Adds a {@link Consumer} that can customize the {@link JsonFormat.Parser}
+     * used when deserializing a JSON payload into a {@link Message}.
      */
     public GsonGrpcJsonMarshallerBuilder jsonParserCustomizer(
             Consumer<? super JsonFormat.Parser> jsonParserCustomizer) {
@@ -58,8 +57,8 @@ public final class GsonGrpcJsonMarshallerBuilder {
     }
 
     /**
-     * Sets a {@link Consumer} that can customize the {@link JsonFormat.Printer} for {@link Message}
-     * used when handling JSON payloads in the service.
+     * Adds a {@link Consumer} that can customize the {@link JsonFormat.Printer}
+     * used when serializing a {@link Message} into a JSON payload.
      */
     public GsonGrpcJsonMarshallerBuilder jsonPrinterCustomizer(
             Consumer<? super JsonFormat.Printer> jsonPrinterCustomizer) {
@@ -75,7 +74,7 @@ public final class GsonGrpcJsonMarshallerBuilder {
     }
 
     /**
-     * Returns a newly-created {@link GsonGrpcJsonMarshaller}.
+     * Returns a newly-created {@link GrpcJsonMarshaller}.
      */
     public GrpcJsonMarshaller build() {
         final JsonFormat.Printer printer = JsonFormat.printer().omittingInsignificantWhitespace();

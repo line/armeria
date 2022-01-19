@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Message;
 
@@ -33,6 +35,8 @@ import io.grpc.MethodDescriptor.PrototypeMarshaller;
  * Utilities for dealing with JSON marshalling in server/client.
  */
 final class GrpcJsonUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcJsonUtil.class);
 
     /**
      * Returns a {@link MessageMarshaller} with the request/response {@link Message}s of all the {@code methods}
@@ -59,7 +63,13 @@ final class GrpcJsonUtil {
             jsonMarshallerCustomizer.accept(builder);
         }
 
-        return builder.build();
+        try {
+            return builder.build();
+        } catch (RuntimeException e) {
+            logger.warn("Failed to instantiate a json marshaller for {}." +
+                        " Consider using GrpcJsonMarshaller.ofGson instead.", methods);
+            throw e;
+        }
     }
 
     @Nullable

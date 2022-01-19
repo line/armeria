@@ -40,7 +40,8 @@ public interface GrpcJsonMarshaller {
     /**
      * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}
      * served by the {@linkplain ServiceDescriptor service}. This implementation internally uses
-     * {@code protobuf-jackson} to serialize and deserialize messages.
+     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>
+     * to serialize and deserialize messages.
      */
     static GrpcJsonMarshaller of(ServiceDescriptor serviceDescriptor) {
         return ofJackson(serviceDescriptor);
@@ -48,7 +49,8 @@ public interface GrpcJsonMarshaller {
 
     /**
      * Returns a new {@link GrpcJsonMarshallerBuilder}. This implementation internally uses
-     * {@code protobuf-jackson} to serialize and deserialize messages.
+     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>
+     * to serialize and deserialize messages.
      */
     static GrpcJsonMarshallerBuilder builder() {
         return builderForJackson();
@@ -57,15 +59,17 @@ public interface GrpcJsonMarshaller {
     /**
      * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}
      * served by the {@linkplain ServiceDescriptor service}. This implementation internally uses
-     * {@code protobuf-jackson} to serialize and deserialize messages.
+     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>
+     * to serialize and deserialize messages.
      */
     static GrpcJsonMarshaller ofJackson(ServiceDescriptor serviceDescriptor) {
         return builderForJackson().build(serviceDescriptor);
     }
 
     /**
-     * Returns a new {@link GrpcJsonMarshallerBuilder}. This implementation internally uses
-     * {@code protobuf-jackson} to serialize and deserialize messages.
+     * Returns a new {@link GrpcJsonMarshallerBuilder}.  This implementation internally uses
+     * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>
+     * to serialize and deserialize messages.
      */
     static GrpcJsonMarshallerBuilder builderForJackson() {
         return new GrpcJsonMarshallerBuilder();
@@ -73,15 +77,19 @@ public interface GrpcJsonMarshaller {
 
     /**
      * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes {@link Message}.
-     * This implementation internally uses {@code gson} to serialize and deserialize messages.
+     * This implementation internally uses
+     * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
+     * and {@code Gson} to serialize and deserialize messages.
      */
     static GrpcJsonMarshaller ofGson() {
         return builderForGson().build();
     }
 
     /**
-     * Returns a new {@link GrpcJsonMarshallerBuilder}. This implementation internally uses
-     * {@code gson} to serialize and deserialize messages.
+     * Returns a new {@link GrpcJsonMarshallerBuilder}.
+     * This implementation internally uses
+     * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
+     * and {@code Gson} to serialize and deserialize messages.
      */
     static GsonGrpcJsonMarshallerBuilder builderForGson() {
         return new GsonGrpcJsonMarshallerBuilder();

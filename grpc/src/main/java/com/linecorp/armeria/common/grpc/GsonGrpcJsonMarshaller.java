@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.grpc;
+package com.linecorp.armeria.common.grpc;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,17 +26,15 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 
-import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
-
 import io.grpc.MethodDescriptor.Marshaller;
 import io.grpc.MethodDescriptor.PrototypeMarshaller;
 
-public final class GsonGrpcJsonMarshaller implements GrpcJsonMarshaller {
+final class GsonGrpcJsonMarshaller implements GrpcJsonMarshaller {
 
     final JsonFormat.Printer printer;
     final JsonFormat.Parser parser;
 
-    public GsonGrpcJsonMarshaller(JsonFormat.Printer printer, JsonFormat.Parser parser) {
+    GsonGrpcJsonMarshaller(JsonFormat.Printer printer, JsonFormat.Parser parser) {
         this.printer = printer;
         this.parser = parser;
     }
