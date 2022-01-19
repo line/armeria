@@ -583,11 +583,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.15' }
+  spring-web: { version: '5.3.13' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.6.2'
+    version: &SPRING_BOOT_VERSION '2.5.7'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
