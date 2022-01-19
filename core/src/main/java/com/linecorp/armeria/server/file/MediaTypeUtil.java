@@ -28,12 +28,12 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class MimeTypeUtil {
+final class MediaTypeUtil {
 
     /**
-     * A map from extension to MIME types, which is queried before
+     * A map from extension to the {@link MediaType}, which is queried before
      * {@link URLConnection#guessContentTypeFromName(String)}, so that
-     * important extensions are always mapped to the right MIME types.
+     * important extensions are always mapped to the right {@link MediaType}.
      */
     private static final Map<String, MediaType> EXTENSION_TO_MEDIA_TYPE;
 
@@ -73,12 +73,12 @@ final class MimeTypeUtil {
     private static final MediaTypeResolver DEFAULT_MEDIA_TYPE_RESOLVER = new MediaTypeResolver() {
         @Override
         public @Nullable MediaType guessFromPath(String path) {
-            return MimeTypeUtil.guessFromPath(path);
+            return MediaTypeUtil.guessFromPath(path);
         }
 
         @Override
         public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-            return MimeTypeUtil.guessFromPath(path, contentEncoding);
+            return MediaTypeUtil.guessFromPath(path, contentEncoding);
         }
     };
 
@@ -129,5 +129,5 @@ final class MimeTypeUtil {
         return guessFromPath(path.substring(0, path.lastIndexOf('.')));
     }
 
-    private MimeTypeUtil() {}
+    private MediaTypeUtil() {}
 }

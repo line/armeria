@@ -31,7 +31,7 @@ public interface MediaTypeResolver {
      * Returns the default {@link MediaTypeResolver}.
      */
     static MediaTypeResolver ofDefault() {
-        return MimeTypeUtil.getDefaultMediaTypeResolver();
+        return MediaTypeUtil.getDefaultMediaTypeResolver();
     }
 
     /**
