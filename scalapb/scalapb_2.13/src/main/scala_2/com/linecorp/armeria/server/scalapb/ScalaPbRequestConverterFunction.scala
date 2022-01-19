@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.RequestConverterFunction
-import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.ResultType._
+import com.linecorp.armeria.server.scalapb.ResultType._
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil._
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunction._
 
@@ -81,7 +81,7 @@ object ScalaPbRequestConverterFunction {
    * Creates a new instance with the specified [[scalapb.json4s.Parser]].
    */
   def apply(jsonParser: Parser = defaultJsonParser): ScalaPbRequestConverterFunction =
-    new ScalaPbRequestConverterFunction(jsonParser, ResultType.UNKNOWN)
+    new ScalaPbRequestConverterFunction(jsonParser, UNKNOWN)
 
   private[scalapb] def apply(resultType: ResultType.Value): ScalaPbRequestConverterFunction =
     new ScalaPbRequestConverterFunction(defaultJsonParser, resultType)
@@ -226,9 +226,9 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
     }
 
     var resultType0 = resultType
-    if (resultType0 == ResultType.UNKNOWN)
+    if (resultType0 == UNKNOWN)
       resultType0 = toResultType(expectedParameterizedResultType)
-    if (resultType0 == ResultType.UNKNOWN || resultType0 == ResultType.PROTOBUF ||
+    if (resultType0 == UNKNOWN || resultType0 == PROTOBUF ||
       contentType == null || isProtobuf(contentType))
       return RequestConverterFunction.fallthrough
 
@@ -249,7 +249,7 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
       val messageType = typeArguments(0).asInstanceOf[Class[_]]
       val iter = jsonNode.iterator()
       resultType match {
-        case LIST_PROTOBUF | SET_PROTOBUF =>
+        case ResultType.LIST_PROTOBUF | SET_PROTOBUF =>
           val builder =
             if (resultType == LIST_PROTOBUF) ImmutableList.builderWithExpectedSize[Any with Serializable](size)
             else ImmutableSet.builderWithExpectedSize[Any with Serializable](size)

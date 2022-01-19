@@ -33,7 +33,7 @@ class FutureSuite extends FunSuite {
     val scalaFuture: Future[Unit] = javaFuture.toScala
 
     javaFuture.complete(null)
-    assert(Await.result(scalaFuture, 10.seconds).isInstanceOf[Unit])
+    assert(Await.result(scalaFuture, 10.seconds).getClass.getName == "void")
   }
 
   test("CompletionStage[HttpResponse].toHttpResponse") {

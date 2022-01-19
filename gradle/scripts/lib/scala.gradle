@@ -1,7 +1,8 @@
 def scala212 = projectsWithFlags('scala_2.12')
 def scala213 = projectsWithFlags('scala_2.13')
+def scala3 = projectsWithFlags('scala_3')
 
-configure(scala212 + scala213) {
+configure(scala212 + scala213 + scala3) {
 
     apply plugin: 'scala'
 
@@ -12,12 +13,19 @@ configure(scala212 + scala213) {
         scalaCompileOptions.with {
             // Disable incremental compilation to avoid intermittent compile errors.
             force = true
-            // A workaround for 'jvm-1.16' is not a valid choice for '-target'. bad option: '-target:jvm-1.16'
-            // Toolchain passes a wrong target parameter to the Scala compiler.
-            // - https://github.com/gradle/gradle/issues/19456
-            // - https://github.com/gradle/gradle/pull/18347
-            additionalParameters = [ '-target:jvm-1.8']
         }
+    }
+
+    // Delete the generated source directory on clean.
+    ext {
+        genSrcDir = "${projectDir}/gen-src"
+    }
+    clean {
+        delete project.ext.genSrcDir
+    }
+    // Add the generated source directories to the source sets.
+    project.sourceSets.all { sourceSet ->
+        sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/scala")
     }
 
     tasks.withType(Test) {
@@ -69,6 +77,15 @@ configure(scala212) {
         }
         testImplementation 'org.scalameta:munit_2.12'
     }
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.with {
+            // A workaround for 'jvm-1.16' is not a valid choice for '-target'. bad option: '-target:jvm-1.16'
+            // Toolchain passes a wrong target parameter to the Scala compiler.
+            // - https://github.com/gradle/gradle/issues/19456
+            // - https://github.com/gradle/gradle/pull/18347
+            additionalParameters = [ '-target:jvm-1.8']
+        }
+    }
 }
 
 configure(scala213) {
@@ -76,5 +93,21 @@ configure(scala213) {
         implementation 'org.scala-lang:scala-library'
         testImplementation 'org.scalameta:munit_2.13'
     }
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.with {
+            additionalParameters = [ '-target:1.8']
+        }
+    }
 }
 
+configure(scala3) {
+    dependencies {
+        implementation 'org.scala-lang:scala3-library_3'
+        testImplementation 'org.scalameta:munit_3'
+    }
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.with {
+            additionalParameters = [ '-release:8']
+        }
+    }
+}

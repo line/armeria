@@ -188,10 +188,13 @@ com.squareup.retrofit2:
 com.thesamet.scalapb:
   scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.11.8' }
   scalapb-runtime_2.13: { version: *SCALAPB_VERSION }
+  scalapb-runtime_3: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.12: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
+  scalapb-runtime-grpc_3: { version: *SCALAPB_VERSION }
   scalapb-json4s_2.12: { version: &SCALAPB_JSON4S_VERSION '0.12.0' }
   scalapb-json4s_2.13: { version: *SCALAPB_JSON4S_VERSION }
+  scalapb-json4s_3: { version: *SCALAPB_JSON4S_VERSION }
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
@@ -270,6 +273,7 @@ io.micrometer:
 io.monix:
   monix-reactive_2.12: { version: &MONIX_VERSION '3.4.0' }
   monix-reactive_2.13: { version: *MONIX_VERSION }
+  monix-reactive_3: { version: *MONIX_VERSION }
 
 io.netty:
   netty-common:
@@ -556,15 +560,18 @@ org.reflections:
 
 org.scala-lang:
   scala-library: { version: '2.13.8' }
+  scala3-library_3: { version: '3.1.0' }
 
 org.scala-lang.modules:
   scala-collection-compat_2.12: { version: '2.6.0' }
   scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '1.0.2' }
   scala-java8-compat_2.13: { version: *SCALA_JAVA8_COMPAT_VERSION }
+  scala-java8-compat_3: { version: *SCALA_JAVA8_COMPAT_VERSION }
 
 org.scalameta:
   munit_2.12: { version: &MUNIT_VERSION '0.7.29' }
   munit_2.13: { version: *MUNIT_VERSION }
+  munit_3: { version: *MUNIT_VERSION }
 
 org.sangria-graphql:
   sangria_2.12: { version: &SANGRIA_VERSION '2.1.6' }
