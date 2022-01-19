@@ -230,7 +230,7 @@ public final class FileServiceBuilder {
 
     /**
      * Sets {@link MediaTypeResolver} that provides files extension to {@link MediaType} resolver.
-     * if not set, {@link MediaTypeResolver#ofDefault()} is used by default.
+     * If not set, {@link MediaTypeResolver#ofDefault()} is used by default.
      */
     public FileServiceBuilder mediaTypeResolver(MediaTypeResolver mediaTypeResolver) {
         this.mediaTypeResolver = requireNonNull(mediaTypeResolver, "mediaTypeResolver");

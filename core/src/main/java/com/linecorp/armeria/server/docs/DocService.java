@@ -402,10 +402,9 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         @Override
         public HttpFile get(
-          Executor fileReadExecutor, String path, Clock clock,
-          @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-          MediaTypeResolver mediaTypeResolver) {
-
+                Executor fileReadExecutor, String path, Clock clock,
+                @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+                MediaTypeResolver mediaTypeResolver) {
             final AggregatedHttpFile file = files.get(path);
             if (file != null) {
                 assert file != AggregatedHttpFile.nonExistent();

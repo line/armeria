@@ -117,7 +117,7 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
-     * @param mediaTypeResolver the {@link MediaTypeResolver} to determined {@link MediaType}.
+     * @param mediaTypeResolver the {@link MediaTypeResolver} to determine the {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
     protected HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,

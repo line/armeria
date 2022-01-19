@@ -146,7 +146,7 @@ public final class FileServiceConfig {
     }
 
     /**
-     * Returns {@link MediaTypeResolver} that's used for resolving the {@link MediaType} of a file.
+     * Returns the {@link MediaTypeResolver} used for resolving the {@link MediaType} of a file.
      */
     public MediaTypeResolver mediaTypeResolver() {
         return mediaTypeResolver;
