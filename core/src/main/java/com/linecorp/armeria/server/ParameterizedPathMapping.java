@@ -145,7 +145,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 patternJoiner.add("\\" + (paramNameIdx + 1));
             }
 
-            normalizedPatternJoiner.add(':' + paramName);
+            normalizedPatternJoiner.add((captureRestPathMatching ? '*' : ':') + paramName);
             skeletonJoiner.add(captureRestPathMatching ? "*" : ":");
         }
 
