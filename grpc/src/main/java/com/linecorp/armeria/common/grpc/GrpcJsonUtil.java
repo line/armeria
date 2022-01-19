@@ -66,8 +66,8 @@ final class GrpcJsonUtil {
         try {
             return builder.build();
         } catch (RuntimeException e) {
-            logger.warn("Failed to instantiate a json marshaller for {}." +
-                        " Consider using GrpcJsonMarshaller.ofGson instead.", methods);
+            logger.warn("Failed to instantiate a json marshaller for {}. Consider using {}.ofGson() instead.",
+                        methods, GrpcJsonMarshaller.class.getName(), e);
             throw e;
         }
     }

@@ -76,7 +76,7 @@ public interface GrpcJsonMarshaller {
     }
 
     /**
-     * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes {@link Message}.
+     * Returns a newly-created {@link GrpcJsonMarshaller} which serializes and deserializes a {@link Message}.
      * This implementation internally uses
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
      * and {@code Gson} to serialize and deserialize messages.
@@ -86,8 +86,7 @@ public interface GrpcJsonMarshaller {
     }
 
     /**
-     * Returns a new {@link GrpcJsonMarshallerBuilder}.
-     * This implementation internally uses
+     * Returns a new {@link GsonGrpcJsonMarshallerBuilder}. This implementation internally uses
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
      * and {@code Gson} to serialize and deserialize messages.
      */
