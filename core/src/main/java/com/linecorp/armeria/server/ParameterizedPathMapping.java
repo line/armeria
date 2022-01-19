@@ -71,9 +71,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      * Skeletal form of given path, which is used for duplicated routing rule detection.
      * For example, "/{a}/{b}" and "/{c}/{d}" has same skeletal form and regarded as duplicated.
      *
-     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"
-     *
-     * Set a skeletal form with the patterns described in {@link Route#paths()}.
+     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"</p>
+     * <p>Set a skeletal form with the patterns described in {@link Route#paths()}.</p>
      */
     private final String skeleton;
 
