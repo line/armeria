@@ -1502,6 +1502,7 @@ co.zw
 coach
 coal.museum
 coastaldefence.museum
+codeberg.page
 codes
 codespot.com
 cody.museum
@@ -7319,6 +7320,7 @@ singles
 siracusa.it
 sirdal.no
 site
+site.tb-hosting.com
 siteleaf.net
 sites.static.land
 sj
