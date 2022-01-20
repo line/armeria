@@ -218,11 +218,18 @@ public final class GrpcServiceBuilder {
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
+        requireNonNull(bindableService, "bindableService");
         if (bindableService instanceof ProtoReflectionService) {
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
-
+        if (bindableService instanceof GrpcHealthCheckService) {
+            if (enableHealthCheckService) {
+                throw new IllegalStateException("default gRPC health check service is enabled already.");
+            }
+            grpcHealthCheckService = (GrpcHealthCheckService) bindableService;
+            return this;
+        }
         return addService(bindableService.bindService());
     }
 
@@ -592,20 +599,6 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {
         this.useClientTimeoutHeader = useClientTimeoutHeader;
-        return this;
-    }
-
-    /**
-     * Sets a {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
-     *
-     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
-     */
-    public GrpcServiceBuilder grpcHealthCheckService(GrpcHealthCheckService grpcHealthCheckService) {
-        requireNonNull(grpcHealthCheckService, "grpcHealthCheckService");
-        if (enableHealthCheckService) {
-            throw new IllegalStateException("default gRPC health check service is enabled already.");
-        }
-        this.grpcHealthCheckService = grpcHealthCheckService;
         return this;
     }
 

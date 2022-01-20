@@ -74,7 +74,7 @@ class GrpcHealthCheckServiceTest {
             sb.decorator(LoggingService.newDecorator());
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl())
-                                  .grpcHealthCheckService(service)
+                                  .addService(service)
                                   .build());
         }
     };

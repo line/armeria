@@ -261,7 +261,7 @@ class GrpcServiceBuilderTest {
     void setGrpcHealthCheckService() {
         final GrpcService grpcService =
                 GrpcService.builder()
-                           .grpcHealthCheckService(new GrpcHealthCheckService(
+                           .addService(new GrpcHealthCheckService(
                                    ImmutableSet.of(),
                                    ImmutableMap.of(),
                                    ImmutableList.of()
@@ -284,7 +284,7 @@ class GrpcServiceBuilderTest {
     @Test
     void illegalStateOfGrpcHealthCheckService() {
         assertThatThrownBy(() -> GrpcService.builder()
-                                            .grpcHealthCheckService(new GrpcHealthCheckService(
+                                            .addService(new GrpcHealthCheckService(
                                                     ImmutableSet.of(),
                                                     ImmutableMap.of(),
                                                     ImmutableList.of()
