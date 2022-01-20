@@ -249,20 +249,18 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     }
 
     private State newState(CircuitState circuitState) {
-        final State state;
-        if (circuitState == CircuitState.OPEN) {
-            state = newOpenState();
-        } else if (circuitState == CircuitState.HALF_OPEN) {
-            state = newHalfOpenState();
-        } else if (circuitState == CircuitState.CLOSED) {
-            state = newClosedState();
-        } else if (circuitState == CircuitState.FORCED_OPEN) {
-            state = newForcedOpenState();
-        } else {
-            // shouldn't reach here
-            throw new Error();
+        switch (circuitState) {
+            case OPEN:
+                return newOpenState();
+            case HALF_OPEN:
+                return newHalfOpenState();
+            case CLOSED:
+                return newClosedState();
+            case FORCED_OPEN:
+                return newForcedOpenState();
+            default:
+                throw new Error();
         }
-        return state;
     }
 
     /**
