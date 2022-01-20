@@ -91,7 +91,7 @@ public interface ResponseAs<T, R> {
      * the specified non-container type using the default {@link ObjectMapper}.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}.
+     * {@link Map}. Use {@link #json(TypeReference)} for the container type.
      *
      * @see JacksonObjectMapperProvider
      */
@@ -105,7 +105,7 @@ public interface ResponseAs<T, R> {
      * the specified non-container type using the specified {@link ObjectMapper}.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}.
+     * {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
      */
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");

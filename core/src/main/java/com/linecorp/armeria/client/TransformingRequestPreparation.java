@@ -38,8 +38,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Prepares and executes a new {@link HttpRequest} for a {@link WebClient} or {@link BlockingWebClient}, and
- * transforms a {@link HttpResponse} into the {@code T} type object.
+ * Prepares and executes a new {@link HttpRequest} for an {@link WebClient} or {@link BlockingWebClient}, and
+ * transforms an {@link HttpResponse} into the {@code T} type object.
  */
 @UnstableApi
 public class TransformingRequestPreparation<T, R> implements RequestPreparationSetters<R> {
@@ -52,9 +52,6 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
         this.responseAs = responseAs;
     }
 
-    /**
-     * Builds and executes the request.
-     */
     @Override
     public R execute() {
         // TODO(ikhoon): Use ResponseAs.requiresAggregation() to specify a proper ExchangeType
@@ -62,11 +59,6 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
         return responseAs.as(delegate.execute());
     }
 
-    /**
-     * Sets the specified {@link RequestOptions} that could overwrite the previously configured values such as
-     * {@link #responseTimeout(Duration)}, {@link #writeTimeout(Duration)}, {@link #maxResponseLength(long)}
-     * and {@link #attr(AttributeKey, Object)}.
-     */
     @Override
     public TransformingRequestPreparation<T, R> requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);

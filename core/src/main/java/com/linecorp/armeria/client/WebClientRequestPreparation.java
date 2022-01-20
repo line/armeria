@@ -50,7 +50,7 @@ import io.netty.util.AttributeKey;
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}.
  */
-public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
+public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder
         implements RequestPreparationSetters<HttpResponse> {
 
     private final WebClient client;
@@ -62,9 +62,6 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
         this.client = client;
     }
 
-    /**
-     * Builds and executes the request.
-     */
     @Override
     public HttpResponse execute() {
         final HttpRequest httpRequest = buildRequest();
@@ -275,11 +272,6 @@ public class WebClientRequestPreparation extends AbstractHttpRequestBuilder
         return asEntity(ResponseAs.json(typeRef, mapper));
     }
 
-    /**
-     * Sets the specified {@link RequestOptions} that could overwrite the previously configured values such as
-     * {@link #responseTimeout(Duration)}, {@link #writeTimeout(Duration)}, {@link #maxResponseLength(long)}
-     * and {@link #attr(AttributeKey, Object)}.
-     */
     @Override
     public WebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
         requireNonNull(requestOptions, "requestOptions");

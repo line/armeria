@@ -37,8 +37,8 @@ import com.linecorp.armeria.common.util.Unwrappable;
 import io.netty.channel.EventLoop;
 
 /**
- * A blocking web client that waits for a {@link HttpRequest} to be fully aggregated.
- * If you want to create a {@link BlockingWebClient} with various options, create a {@link WebClient} first
+ * A blocking web client that waits for an {@link HttpRequest} to be fully aggregated.
+ * If you want to create a {@link BlockingWebClient} with various options, create an {@link WebClient} first
  * and convert it into a {@link BlockingWebClient} via {@link WebClient#blocking()}.
  * <pre>{@code
  * BlockingWebClient client =
@@ -75,7 +75,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpsValues()}.
      */
     static BlockingWebClient of(String uri) {
-        return WebClient.builder(uri).build().blocking();
+        return WebClient.of(uri).blocking();
     }
 
     /**
@@ -89,7 +89,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpsValues()}.
      */
     static BlockingWebClient of(URI uri) {
-        return WebClient.builder(uri).build().blocking();
+        return WebClient.of(uri).blocking();
     }
 
     /**

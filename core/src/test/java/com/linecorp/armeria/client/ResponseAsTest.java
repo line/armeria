@@ -42,13 +42,13 @@ class ResponseAsTest {
     static Path tempDir;
 
     @Test
-    void defaultAggregationRequired() {
+    void defaultRequiresAggregation() {
         final ResponseAs<HttpResponse, Integer> responseAs = response -> 1;
         assertThat(responseAs.requiresAggregation()).isFalse();
     }
 
     @Test
-    void composeAggregationRequired() {
+    void composeRequiresAggregation() {
         final ResponseAs<HttpResponse, HttpResponse> noAggregation = response -> response;
         final ResponseAs<HttpResponse, HttpResponse> aggregation =
                 new ResponseAs<HttpResponse, HttpResponse>() {
