@@ -169,12 +169,12 @@ class ParameterizedPathMappingTest {
 
         final ParameterizedPathMapping pathMappingWithCaptureRestPathPattern =
                 new ParameterizedPathMapping("/service/{*value}");
-        assertThat(pathMappingWithCaptureRestPathPattern.patternString()).isEqualTo("/service/*value");
+        assertThat(pathMappingWithCaptureRestPathPattern.patternString()).isEqualTo("/service/:*value");
 
         final ParameterizedPathMapping pathMappingWithCaptureRestPathPattern2 =
                 new ParameterizedPathMapping("/service/{value1}/:value2/{*value3}");
         assertThat(pathMappingWithCaptureRestPathPattern2.patternString())
-                .isEqualTo("/service/:value1/:value2/*value3");
+                .isEqualTo("/service/:value1/:value2/:*value3");
     }
 
     @Test
