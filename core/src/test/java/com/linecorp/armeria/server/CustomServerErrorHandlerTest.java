@@ -131,7 +131,7 @@ class CustomServerErrorHandlerTest {
         assertThat(res1.status()).isSameAs(HttpStatus.BAD_REQUEST);
         assertThat(res1.headers()).contains(Maps.immutableEntry(HttpHeaderNames.of("alice"), "bob"));
         assertThatJson(res1.content().toStringUtf8()).isEqualTo(
-                "{ \"code\": 413, \"message\": \"Request entity too large\", \"user-id\": \"24\" }");
+                "{ \"code\": 413, \"message\": \"<null>\", \"user-id\": \"24\" }");
         assertThat(res1.trailers()).contains(Maps.immutableEntry(HttpHeaderNames.of("charlie"), "daniel"));
     }
 
@@ -169,7 +169,7 @@ class CustomServerErrorHandlerTest {
                                    .set("alice", "bob")
                                    .build(),
                     HttpData.ofUtf8("{\n  \"code\": %d,\n  \"message\": \"%s\",\n  \"user-id\": \"%s\"\n}",
-                                    status.code(), firstNonNull(description, "<unknown>"),
+                                    status.code(), firstNonNull(description, "<null>"),
                                     headers != null ? headers.get("user-id", "<null>") : "<no headers>"),
                     HttpHeaders.of("charlie", "daniel"));
         }

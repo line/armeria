@@ -255,8 +255,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                                 .transferred(transferredLength)
                                                 .build();
 
-                writeErrorResponse(streamId, req.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
-                                   "Request entity too large", cause);
+                writeErrorResponse(streamId, req.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
 
                 if (decodedReq.isOpen()) {
                     decodedReq.close(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));

@@ -255,7 +255,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .transferred(transferredLength)
                                                         .build();
                         fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
-                             Http2Error.CANCEL, "Request entity too large", cause);
+                             Http2Error.CANCEL, null, cause);
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
                         decodedReq.close(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
