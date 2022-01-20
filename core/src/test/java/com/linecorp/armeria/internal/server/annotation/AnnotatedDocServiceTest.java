@@ -207,7 +207,7 @@ class AnnotatedDocServiceTest {
     }
 
     private static void addPathParamsMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/{hello2}/hello3/{hello4}")
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/:hello2/hello3/:hello4")
                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
                                                   .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
@@ -220,7 +220,7 @@ class AnnotatedDocServiceTest {
     }
 
     private static void addPathParamsWithQueriesMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/{hello2}")
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/:hello2")
                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
                                                   .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
