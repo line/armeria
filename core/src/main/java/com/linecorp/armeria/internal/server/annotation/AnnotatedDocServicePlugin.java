@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isKFunction;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isReturnTypeNothing;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionGenericReturnType;
+import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionReturnType;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
@@ -170,7 +171,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static TypeSignature getReturnTypeSignature(Method method) {
-        if (isKFunction(method) && !isReturnTypeNothing(method)) {
+        if (isKFunction(method)) {
+            if (isReturnTypeNothing(method)) {
+                return toTypeSignature(kFunctionReturnType(method));
+            }
             return toTypeSignature(kFunctionGenericReturnType(method));
         }
         return toTypeSignature(method.getGenericReturnType());

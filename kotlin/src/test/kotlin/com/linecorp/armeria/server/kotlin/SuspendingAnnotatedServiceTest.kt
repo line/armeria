@@ -74,7 +74,7 @@ class SuspendingAnnotatedServiceTest {
     fun test_exceptionHandler() {
         val result = get("/default/throwException")
         assertThat(result.status().code()).isEqualTo(500)
-        assertThat(result.contentUtf8()).isEqualTo("handled error")
+        assertThat(result.contentUtf8()).isEqualTo("RuntimeException")
     }
 
     @Test
@@ -137,6 +137,7 @@ class SuspendingAnnotatedServiceTest {
     fun test_returnType_nothing() {
         get("/return-nothing-suspend-fun/throw-error").run {
             assertThat(status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
+            assertThat(contentUtf8()).isEqualTo("NotImplementedError")
         }
     }
 
@@ -277,7 +278,10 @@ class SuspendingAnnotatedServiceTest {
 
         private fun exceptionHandlerFunction() = ExceptionHandlerFunction { _, _, cause ->
             log.info(cause.message, cause)
-            HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8, "handled error")
+            HttpResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
+                cause.javaClass.simpleName
+            )
         }
 
         private fun get(path: String): AggregatedHttpResponse {
