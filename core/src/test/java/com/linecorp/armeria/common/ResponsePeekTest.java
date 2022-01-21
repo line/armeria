@@ -101,7 +101,7 @@ class ResponsePeekTest {
 
         final HttpResponse withTrailers = HttpResponse.of(headers,
                                                           HttpData.ofUtf8("foo"),
-                                                          HttpHeaders.of("status", "13"));
+                                                          HttpHeaders.of(HttpHeaderNames.STATUS, "13"));
 
         final HttpResponse transformed2 = withTrailers
                 .peekTrailers(trailers -> {
@@ -110,7 +110,7 @@ class ResponsePeekTest {
                 })
                 .mapTrailers(trailers -> {
                     invoked.set(true);
-                    if ("13".equals(trailers.get("status"))) {
+                    if ("13".equals(trailers.get(HttpHeaderNames.STATUS))) {
                         return trailers.toBuilder().add("error", "INTERNAL").build();
                     } else {
                         return trailers.toBuilder().add("ok", "true").build();
@@ -128,8 +128,8 @@ class ResponsePeekTest {
         assertThat(aggregated2.headers().get("ok")).isNull();
         assertThat(aggregated2.headers().get("error")).isNull();
         assertThat(aggregated2.contentUtf8()).isEqualTo("foo");
-        assertThat(aggregated2.trailers().size()).isEqualTo(2);
-        assertThat(aggregated2.trailers().get("status")).isEqualTo("13");
+        assertThat(aggregated2.trailers()).hasSize(2);
+        assertThat(aggregated2.trailers().get(HttpHeaderNames.STATUS)).isEqualTo("13");
         assertThat(aggregated2.trailers().get("error")).isEqualTo("INTERNAL");
         assertThat(aggregated2.trailers().get("ok")).isNull();
     }
@@ -142,9 +142,9 @@ class ResponsePeekTest {
 
         final AggregatedHttpResponse aggregated =
                 res.peekHeaders(headers -> {
-                    assertThat(headers.get("header1")).isNull();
-                    assertThat(headers.get("header2")).isNull();
-                })
+                        assertThat(headers.get("header1")).isNull();
+                        assertThat(headers.get("header2")).isNull();
+                    })
                    .mapHeaders(headers -> headers.toBuilder().add("header1", "1").build())
                    .mapHeaders(headers -> headers.toBuilder().add("header2", "2").build())
                    .peekHeaders(headers -> {

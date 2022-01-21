@@ -92,7 +92,7 @@ public class RequestPeekTest {
         assertThat(invoked).isTrue();
         assertThat(peekCount).hasValue(1);
         assertThat(aggregated2.contentUtf8()).isEqualTo("foo");
-        assertThat(aggregated2.trailers().size()).isEqualTo(2);
+        assertThat(aggregated2.trailers()).hasSize(2);
         assertThat(aggregated2.trailers().get("trailer1")).isEqualTo("1");
         assertThat(aggregated2.trailers().get("trailer2")).isEqualTo("2");
     }
