@@ -1,3 +1,9 @@
+management:
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
 armeria:
   ports:
     - port: 0

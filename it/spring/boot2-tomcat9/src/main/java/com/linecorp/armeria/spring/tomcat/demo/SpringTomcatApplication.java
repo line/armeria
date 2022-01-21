@@ -16,15 +16,12 @@
 
 package com.linecorp.armeria.spring.tomcat.demo;
 
-import javax.inject.Inject;
-
 import org.apache.catalina.startup.Tomcat;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.context.WebServerApplicationContext;
 import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
 import org.springframework.boot.web.server.WebServer;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 import com.linecorp.armeria.server.tomcat.TomcatService;
@@ -33,16 +30,13 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 @SpringBootApplication
 public class SpringTomcatApplication {
 
-    @Inject
-    private ApplicationContext applicationContext;
-
     /**
      * Bean to configure Armeria Tomcat service.
      * @return configuration bean.
      */
     @Bean
-    public ArmeriaServerConfigurator armeriaTomcat() {
-        final WebServer webServer = ((WebServerApplicationContext) applicationContext).getWebServer();
+    public ArmeriaServerConfigurator armeriaTomcat(WebServerApplicationContext applicationContext) {
+        final WebServer webServer = applicationContext.getWebServer();
         if (webServer instanceof TomcatWebServer) {
             final Tomcat tomcat = ((TomcatWebServer) webServer).getTomcat();
 

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.acceptHeadersResolver;
 
@@ -28,15 +29,19 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.endpoint.InvocationContext;
+import org.springframework.boot.actuate.endpoint.OperationArgumentResolver;
 import org.springframework.boot.actuate.endpoint.SecurityContext;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
@@ -80,6 +85,7 @@ final class WebOperationService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(WebOperationService.class);
 
+    private static final OperationArgumentResolver[] EMPTY_RESOLVER = new OperationArgumentResolver[0];
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};
@@ -129,11 +135,17 @@ final class WebOperationService implements HttpService {
 
     private final WebOperation operation;
     private final SimpleHttpCodeStatusMapper statusMapper;
+    private final OperationArgumentResolver[] resolvers;
 
     WebOperationService(WebOperation operation,
-                        SimpleHttpCodeStatusMapper statusMapper) {
+                        SimpleHttpCodeStatusMapper statusMapper,
+                        OperationArgumentResolver... webServerNamespaceResolver) {
         this.operation = operation;
         this.statusMapper = statusMapper;
+        resolvers = Stream.of(webServerNamespaceResolver)
+                          .filter(Objects::nonNull)
+                          .collect(toImmutableList())
+                          .toArray(EMPTY_RESOLVER);
     }
 
     @Override
@@ -178,12 +190,14 @@ final class WebOperationService implements HttpService {
         return ImmutableMap.copyOf(arguments);
     }
 
-    private static InvocationContext newInvocationContext(AggregatedHttpRequest req,
-                                                          Map<String, Object> arguments) {
+    private InvocationContext newInvocationContext(AggregatedHttpRequest req,
+                                                   Map<String, Object> arguments) {
         if (hasProducibleOperationArgumentResolver) {
-            return new InvocationContext(SecurityContext.NONE, arguments, acceptHeadersResolver(req.headers()));
+            final OperationArgumentResolver[] newResolvers = Arrays.copyOf(resolvers, resolvers.length + 1);
+            newResolvers[resolvers.length] = acceptHeadersResolver(req.headers());
+            return new InvocationContext(SecurityContext.NONE, arguments, newResolvers);
         } else {
-            return new InvocationContext(SecurityContext.NONE, arguments);
+            return new InvocationContext(SecurityContext.NONE, arguments, resolvers);
         }
     }
 
@@ -269,7 +283,7 @@ final class WebOperationService implements HttpService {
     }
 
     @Nullable
-    private static MediaType toMediaType(@Nullable MimeType mimeType) {
+    static MediaType toMediaType(@Nullable MimeType mimeType) {
         if (mimeType == null) {
             return null;
         }

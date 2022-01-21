@@ -36,6 +36,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient.Builder;
 import org.springframework.web.reactive.function.server.RequestPredicates;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
@@ -75,7 +76,7 @@ class ErrorWebExceptionHandlerTest {
         static class TestController {
             private final org.springframework.web.reactive.function.client.WebClient webClient;
 
-            TestController(org.springframework.web.reactive.function.client.WebClient.Builder builder) {
+            TestController(Builder builder) {
                 webClient = builder.build();
             }
 
@@ -95,10 +96,10 @@ class ErrorWebExceptionHandlerTest {
         static class CustomExceptionHandler extends AbstractErrorWebExceptionHandler {
 
             CustomExceptionHandler(ErrorAttributes errorAttributes,
-                                   WebProperties.Resources resources,
+                                   WebProperties webProperties,
                                    ApplicationContext applicationContext,
                                    ServerCodecConfigurer serverCodecConfigurer) {
-                super(errorAttributes, resources, applicationContext);
+                super(errorAttributes, webProperties.getResources(), applicationContext);
                 setMessageWriters(serverCodecConfigurer.getWriters());
                 setMessageReaders(serverCodecConfigurer.getReaders());
             }

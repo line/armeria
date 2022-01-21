@@ -9,7 +9,7 @@ boms:
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
   - io.grpc:grpc-bom:1.41.1
-  - io.micrometer:micrometer-bom:1.7.6
+  - io.micrometer:micrometer-bom:1.8.2
   - io.netty:netty-bom:4.1.70.Final
   - io.zipkin.brave:brave-bom:5.13.3
   - org.eclipse.jetty:jetty-bom:9.4.44.v20210927
@@ -583,11 +583,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.13' }
+  spring-web: { version: '5.3.15' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.5.7'
+    version: &SPRING_BOOT_VERSION '2.6.2'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

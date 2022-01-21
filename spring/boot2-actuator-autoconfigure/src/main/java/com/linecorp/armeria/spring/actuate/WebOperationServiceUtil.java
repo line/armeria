@@ -18,11 +18,18 @@ package com.linecorp.armeria.spring.actuate;
 
 import org.springframework.boot.actuate.endpoint.OperationArgumentResolver;
 import org.springframework.boot.actuate.endpoint.ProducibleOperationArgumentResolver;
+import org.springframework.boot.actuate.endpoint.web.WebServerNamespace;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 
 final class WebOperationServiceUtil {
+
+    static final OperationArgumentResolver serverNamespaceResolver =
+            OperationArgumentResolver.of(WebServerNamespace.class, () -> WebServerNamespace.SERVER);
+
+    static final OperationArgumentResolver managementNamespaceResolver =
+            OperationArgumentResolver.of(WebServerNamespace.class, () -> WebServerNamespace.MANAGEMENT);
 
     static OperationArgumentResolver acceptHeadersResolver(HttpHeaders headers) {
         return new ProducibleOperationArgumentResolver(() -> headers.getAll(HttpHeaderNames.ACCEPT));

@@ -7,6 +7,12 @@ spring:
 # if ArmeriaSpringActuatorAutoConfiguration was not configured.
 management.server.port: 0
 
+management:
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
 armeria:
   ports:
     - port: 0
