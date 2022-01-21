@@ -160,10 +160,12 @@ final class WebOperationService implements HttpService {
     private Function<AggregatedHttpRequest, HttpResponse> invoke(ServiceRequestContext ctx) {
         return req -> {
             final Map<String, Object> arguments = getArguments(ctx, req);
-            final Object result = operation.invoke(newInvocationContext(req, arguments));
             try {
+                final Object result = operation.invoke(newInvocationContext(req, arguments));
                 return handleResult(ctx, result, req.method());
             } catch (Throwable throwable) {
+                logger.warn("Unexpected exception is raised while invoking {} with {}.",
+                            WebOperationService.class.getSimpleName(), arguments, throwable);
                 return Exceptions.throwUnsafely(throwable);
             }
         };
