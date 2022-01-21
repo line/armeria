@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import java.time.Duration;
+
 /**
  * A <a href="https://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker</a>, which tracks the number of
  * success/failure requests and detects a remote service failure.
@@ -79,8 +81,9 @@ public interface CircuitBreaker {
 
     /**
      * Decides whether a request should be sent or failed depending on the current circuit state.
-     * If the current state is {@link CircuitState#OPEN} and {@link CircuitBreakerBuilder#circuitOpenWindow}
-     * has passed, the state will enter {@link CircuitState#HALF_OPEN}.
+     * If the current state is {@link CircuitState#OPEN} and
+     * {@link CircuitBreakerBuilder#circuitOpenWindow(Duration)} has passed, the state will enter
+     * {@link CircuitState#HALF_OPEN}.
      */
     default boolean tryRequest() {
         return canRequest();
