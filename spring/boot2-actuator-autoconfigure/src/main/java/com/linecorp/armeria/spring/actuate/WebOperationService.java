@@ -17,26 +17,20 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.acceptHeadersResolver;
+import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.namespaceResolver;
 
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +41,7 @@ import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping;
 import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthComponent;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.core.io.Resource;
 import org.springframework.util.MimeType;
@@ -85,39 +80,28 @@ final class WebOperationService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(WebOperationService.class);
 
-    private static final OperationArgumentResolver[] EMPTY_RESOLVER = new OperationArgumentResolver[0];
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};
 
-    @Nullable
-    private static final Class<?> healthComponentClass;
-    @Nullable
-    private static final MethodHandle getStatusMethodHandle;
-    private static final boolean hasProducibleOperationArgumentResolver;
+    private static final boolean HAS_PRODUCIBLE_OPERATION_ARGUMENT_RESOLVER;
+    static final boolean HAS_WEB_SERVER_NAMESPACE;
 
     static {
-        final String healthComponentClassName = "org.springframework.boot.actuate.health.HealthComponent";
-        final String getStatusMethodName = "getStatus";
-        Class<?> healthComponentC = null;
-        MethodHandle getStatusMH = null;
+        // WebServerNamespace has been added in Spring Boot 2.6.
+        final String webServerNamespaceClassName =
+                "org.springframework.boot.actuate.endpoint.web.WebServerNamespace";
+
+        Class<?> webServerNamespaceClass = null;
         try {
-            healthComponentC = Class.forName(
-                    healthComponentClassName, false, Health.class.getClassLoader());
-            getStatusMH = MethodHandles.lookup().findVirtual(
-                    healthComponentC, getStatusMethodName, MethodType.methodType(Status.class));
+            webServerNamespaceClass =
+                    Class.forName(webServerNamespaceClassName, false, Health.class.getClassLoader());
         } catch (Throwable cause) {
-            logger.debug("Failed to find {}#{}() - not Spring Boot 2.2+?",
-                         healthComponentClassName, getStatusMethodName, cause);
+            logger.debug("Failed to find {} - not Spring Boot 2.6+?",
+                         webServerNamespaceClassName, cause);
         }
 
-        if (getStatusMH != null) {
-            healthComponentClass = healthComponentC;
-            getStatusMethodHandle = getStatusMH;
-        } else {
-            healthComponentClass = null;
-            getStatusMethodHandle = null;
-        }
+        HAS_WEB_SERVER_NAMESPACE = webServerNamespaceClass != null;
 
         // ProducibleOperationArgumentResolver has been added in Spring Boot 2.5.0
         final String producibleOperationArgumentResolverClassName =
@@ -130,22 +114,21 @@ final class WebOperationService implements HttpService {
         } catch (ClassNotFoundException e) {
             hasArgumentResolver = false;
         }
-        hasProducibleOperationArgumentResolver = hasArgumentResolver;
+        HAS_PRODUCIBLE_OPERATION_ARGUMENT_RESOLVER = hasArgumentResolver;
     }
 
     private final WebOperation operation;
     private final SimpleHttpCodeStatusMapper statusMapper;
-    private final OperationArgumentResolver[] resolvers;
+    private final boolean isServerNamespace;
+    private final Map<String, Object> additionalArguments;
 
-    WebOperationService(WebOperation operation,
-                        SimpleHttpCodeStatusMapper statusMapper,
-                        OperationArgumentResolver... webServerNamespaceResolver) {
+    WebOperationService(WebOperation operation, SimpleHttpCodeStatusMapper statusMapper,
+                        boolean isServerNamespace, // management if it's false.
+                        Map<String, Object> additionalArguments) {
         this.operation = operation;
         this.statusMapper = statusMapper;
-        resolvers = Stream.of(webServerNamespaceResolver)
-                          .filter(Objects::nonNull)
-                          .collect(toImmutableList())
-                          .toArray(EMPTY_RESOLVER);
+        this.isServerNamespace = isServerNamespace;
+        this.additionalArguments = additionalArguments;
     }
 
     @Override
@@ -171,8 +154,11 @@ final class WebOperationService implements HttpService {
         };
     }
 
-    private static Map<String, Object> getArguments(ServiceRequestContext ctx, AggregatedHttpRequest req) {
-        final Map<String, Object> arguments = new LinkedHashMap<>(ctx.pathParams());
+    private Map<String, Object> getArguments(ServiceRequestContext ctx, AggregatedHttpRequest req) {
+        final Map<String, Object> arguments = new LinkedHashMap<>(additionalArguments.size() +
+                                                                  ctx.pathParams().size() + 16);
+        arguments.putAll(additionalArguments);
+        arguments.putAll(ctx.pathParams());
         if (!req.content().isEmpty()) {
             final Map<String, Object> bodyParams;
             try {
@@ -193,14 +179,17 @@ final class WebOperationService implements HttpService {
     }
 
     private InvocationContext newInvocationContext(AggregatedHttpRequest req,
-                                                   Map<String, Object> arguments) {
-        if (hasProducibleOperationArgumentResolver) {
-            final OperationArgumentResolver[] newResolvers = Arrays.copyOf(resolvers, resolvers.length + 1);
-            newResolvers[resolvers.length] = acceptHeadersResolver(req.headers());
-            return new InvocationContext(SecurityContext.NONE, arguments, newResolvers);
-        } else {
-            return new InvocationContext(SecurityContext.NONE, arguments, resolvers);
+                                                          Map<String, Object> arguments) {
+        if (HAS_PRODUCIBLE_OPERATION_ARGUMENT_RESOLVER) {
+            final OperationArgumentResolver acceptHeadersResolver = acceptHeadersResolver(req.headers());
+            if (!HAS_WEB_SERVER_NAMESPACE) {
+                return new InvocationContext(SecurityContext.NONE, arguments, acceptHeadersResolver);
+            }
+
+            return new InvocationContext(SecurityContext.NONE, arguments,
+                                         namespaceResolver(isServerNamespace), acceptHeadersResolver);
         }
+        return new InvocationContext(SecurityContext.NONE, arguments);
     }
 
     private HttpResponse handleResult(ServiceRequestContext ctx,
@@ -220,9 +209,8 @@ final class WebOperationService implements HttpService {
         } else {
             if (result instanceof Health) {
                 status = HttpStatus.valueOf(statusMapper.getStatusCode(((Health) result).getStatus()));
-            } else if (healthComponentClass != null && healthComponentClass.isInstance(result)) {
-                assert getStatusMethodHandle != null; // Always non-null if healthComponentClass is not null.
-                final Status actuatorStatus = (Status) getStatusMethodHandle.invoke(result);
+            } else if (result instanceof HealthComponent) {
+                final Status actuatorStatus = ((HealthComponent) result).getStatus();
                 status = HttpStatus.valueOf(statusMapper.getStatusCode(actuatorStatus));
             } else {
                 status = HttpStatus.OK;

@@ -19,9 +19,9 @@ package com.linecorp.armeria.spring.actuate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
+import static com.linecorp.armeria.spring.actuate.WebOperationService.HAS_WEB_SERVER_NAMESPACE;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
-import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.managementNamespaceResolver;
-import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.serverNamespaceResolver;
+import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.addAdditionalPath;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -43,7 +43,6 @@ import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointPr
 import org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties;
 import org.springframework.boot.actuate.endpoint.ApiVersion;
 import org.springframework.boot.actuate.endpoint.EndpointFilter;
-import org.springframework.boot.actuate.endpoint.OperationArgumentResolver;
 import org.springframework.boot.actuate.endpoint.invoke.OperationInvokerAdvisor;
 import org.springframework.boot.actuate.endpoint.invoke.ParameterValueMapper;
 import org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver;
@@ -55,11 +54,8 @@ import org.springframework.boot.actuate.endpoint.web.PathMapper;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicate;
-import org.springframework.boot.actuate.endpoint.web.WebServerNamespace;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpointDiscoverer;
-import org.springframework.boot.actuate.health.AdditionalHealthEndpointPath;
 import org.springframework.boot.actuate.health.HealthEndpoint;
-import org.springframework.boot.actuate.health.HealthEndpointGroup;
 import org.springframework.boot.actuate.health.HealthEndpointGroups;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -201,18 +197,21 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                          final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
                          final String path = endpointMapping.createSubPath(predicate.getPath());
                          addOperationService(sb, exposedPorts, operation, statusMapper,
-                                             predicate, path, cors, null);
+                                             predicate, path, ImmutableMap.of(), cors);
                      });
 
-            healthEndpointGroups.ifPresent(groups -> {
-                if (!groups.getNames().isEmpty()) {
-                    endpoints.stream()
-                             .filter(endpoint -> endpoint.getEndpointId().equals(HealthEndpoint.ID))
-                             .findFirst()
-                             .ifPresent(endpoint -> addAdditionalPath(sb, exposedPorts, endpoint, statusMapper,
-                                                                      cors, groups));
-                }
-            });
+            if (HAS_WEB_SERVER_NAMESPACE) {
+                // We can add additional path for health endpoint groups only when server namespace exists.
+                healthEndpointGroups.ifPresent(groups -> {
+                    if (!groups.getNames().isEmpty()) {
+                        endpoints.stream()
+                                 .filter(endpoint -> endpoint.getEndpointId().equals(HealthEndpoint.ID))
+                                 .findFirst()
+                                 .ifPresent(endpoint -> addAdditionalPath(sb, exposedPorts, endpoint,
+                                                                          statusMapper, cors, groups));
+                    }
+                });
+            }
 
             if (StringUtils.hasText(endpointMapping.getPath())) {
                 final Route route = route(
@@ -352,25 +351,22 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         return cors;
     }
 
-    private static void addOperationService(ServerBuilder sb, List<Integer> exposedPorts,
-                                            WebOperation operation, SimpleHttpCodeStatusMapper statusMapper,
-                                            WebOperationRequestPredicate predicate, String path,
-                                            @Nullable CorsServiceBuilder cors,
-                                            @Nullable OperationArgumentResolver additionalResolver) {
+    static void addOperationService(ServerBuilder sb, List<Integer> exposedPorts,
+                                    WebOperation operation, SimpleHttpCodeStatusMapper statusMapper,
+                                    WebOperationRequestPredicate predicate, String path,
+                                    Map<String, Object> arguments, @Nullable CorsServiceBuilder cors) {
         if (cors != null) {
             cors.route(path);
         }
         final Route route = route(predicate.getHttpMethod().name(), path,
                                   predicate.getConsumes(), predicate.getProduces());
         if (exposedPorts.isEmpty()) {
-            sb.service(route, new WebOperationService(operation, statusMapper,
-                                                      serverNamespaceResolver, additionalResolver));
+            sb.service(route, new WebOperationService(operation, statusMapper, true, arguments));
             return;
         }
         exposedPorts.forEach(port -> sb.virtualHost(port)
                                        .service(route, new WebOperationService(
-                                               operation, statusMapper,
-                                               managementNamespaceResolver, additionalResolver)));
+                                               operation, statusMapper, false, arguments)));
     }
 
     private static Route route(
@@ -381,59 +377,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                     .consumes(convertMediaTypes(consumes))
                     .produces(convertMediaTypes(produces))
                     .build();
-    }
-
-    private static void addAdditionalPath(ServerBuilder sb, List<Integer> exposedPorts,
-                                          ExposableWebEndpoint endpoint,
-                                          SimpleHttpCodeStatusMapper statusMapper,
-                                          @Nullable CorsServiceBuilder cors, HealthEndpointGroups groups) {
-        for (WebOperation operation : endpoint.getOperations()) {
-            final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
-            final String matchAllRemainingPathSegmentsVariable =
-                    predicate.getMatchAllRemainingPathSegmentsVariable();
-            // group operation has matchAllRemainingPathSegmentsVariable.
-            // e.g. /actuator/health/{*path}
-            // We can send a request to /actuator/health/foo if the group name is foo.
-            //
-            // We have to check if the group has additional path or not.
-            // e.g. management:
-            //        endpoint:
-            //          health:
-            //            group:
-            //              foo:
-            //                include: ping
-            //                additional-path: "management:/foohealth"
-            if (matchAllRemainingPathSegmentsVariable != null) {
-                if (!exposedPorts.isEmpty()) {
-                    final Set<HealthEndpointGroup> additionalGroups = groups.getAllWithAdditionalPath(
-                            WebServerNamespace.MANAGEMENT);
-                    addAdditionalPath(sb, exposedPorts, statusMapper, operation, predicate, additionalGroups,
-                                      cors);
-                }
-
-                final Set<HealthEndpointGroup> additionalGroups = groups.getAllWithAdditionalPath(
-                        WebServerNamespace.SERVER);
-                addAdditionalPath(sb, ImmutableList.of(), statusMapper, operation, predicate, additionalGroups,
-                                  cors);
-            }
-        }
-    }
-
-    private static void addAdditionalPath(ServerBuilder sb, List<Integer> exposedPorts,
-                                          SimpleHttpCodeStatusMapper statusMapper, WebOperation operation,
-                                          WebOperationRequestPredicate predicate,
-                                          Set<HealthEndpointGroup> additionalGroups,
-                                          @Nullable CorsServiceBuilder cors) {
-        for (HealthEndpointGroup group : additionalGroups) {
-            final AdditionalHealthEndpointPath additionalPath = group.getAdditionalPath();
-            if (additionalPath != null) {
-                final String path = additionalPath.getValue();
-                final OperationArgumentResolver pathResolver =
-                        OperationArgumentResolver.of(String[].class, () -> new String[] { path });
-                addOperationService(sb, exposedPorts, operation, statusMapper, predicate,
-                                    path, cors, pathResolver);
-            }
-        }
     }
 
     private static Set<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
