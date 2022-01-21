@@ -94,7 +94,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 @JsonDeserialize(using = MediaTypeJsonDeserializer.class)
 public final class MediaType {
 
-    // Forked from Guava 28.0 at bf9e8fa954bd76fd6642445fa644c729f91f30f2
+    // Forked from Guava at 261ac7afbf04dce2bd7e20a2085338e1f9a857d8
 
     private static final String CHARSET_ATTRIBUTE = "charset";
     private static final ImmutableListMultimap<String, String> UTF_8_CONSTANT_PARAMETERS =
@@ -121,6 +121,7 @@ public final class MediaType {
     private static final String IMAGE_TYPE = "image";
     private static final String TEXT_TYPE = "text";
     private static final String VIDEO_TYPE = "video";
+    private static final String FONT_TYPE = "font";
     private static final String MULTIPART_TYPE = "multipart";
 
     private static final String WILDCARD = "*";
@@ -162,6 +163,10 @@ public final class MediaType {
     public static final MediaType ANY_AUDIO_TYPE = createConstant(AUDIO_TYPE, WILDCARD);
     public static final MediaType ANY_VIDEO_TYPE = createConstant(VIDEO_TYPE, WILDCARD);
     public static final MediaType ANY_APPLICATION_TYPE = createConstant(APPLICATION_TYPE, WILDCARD);
+    /**
+     * Wildcard matching any "font" top-level media type.
+     */
+    public static final MediaType ANY_FONT_TYPE = createConstant(FONT_TYPE, WILDCARD);
     public static final MediaType ANY_MULTIPART_TYPE = createConstant(MULTIPART_TYPE, WILDCARD);
 
     /* text types */
@@ -218,6 +223,7 @@ public final class MediaType {
      */
     public static final MediaType VTT_UTF_8 = createConstantUtf8(TEXT_TYPE, "vtt");
 
+    /* image types */
     /**
      * <a href="https://en.wikipedia.org/wiki/BMP_file_format">Bitmap file format</a> ({@code bmp}
      * files).
@@ -262,6 +268,21 @@ public final class MediaType {
      * <a href="https://en.wikipedia.org/wiki/WebP">WebP image format</a>.
      */
     public static final MediaType WEBP = createConstant(IMAGE_TYPE, "webp");
+
+    /**
+     * <a href="https://www.iana.org/assignments/media-types/image/heif">HEIF image format</a>.
+     */
+    public static final MediaType HEIF = createConstant(IMAGE_TYPE, "heif");
+
+    /**
+     * <a href="https://datatracker.ietf.org/doc/rfc3745/">JP2K image format</a>.
+     */
+    public static final MediaType JP2K = createConstant(IMAGE_TYPE, "jp2");
+
+    /**
+     * <a href="https://aomediacodec.github.io/av1-avif/">AVIF image format</a>.
+     */
+    public static final MediaType AVIF = createImageType("avif");
 
     /* audio types */
     public static final MediaType MP4_AUDIO = createConstant(AUDIO_TYPE, "mp4");
@@ -577,6 +598,16 @@ public final class MediaType {
     public static final MediaType MICROSOFT_WORD = createConstant(APPLICATION_TYPE, "msword");
 
     /**
+     * Media type for <a
+     * href="https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP">Dynamic Adaptive
+     * Streaming over HTTP (DASH)</a>. This is <a
+     * href="https://www.iana.org/assignments/media-types/application/dash+xml">registered</a> with
+     * the IANA.
+     */
+    public static final MediaType MEDIA_PRESENTATION_DESCRIPTION =
+            createConstant(APPLICATION_TYPE, "dash+xml");
+
+    /**
      * WASM applications. For more information see <a href="https://webassembly.org/">the Web Assembly
      * overview</a>.
      */
@@ -616,6 +647,15 @@ public final class MediaType {
             createConstant(APPLICATION_TYPE, "vnd.oasis.opendocument.spreadsheet");
     public static final MediaType OPENDOCUMENT_TEXT =
             createConstant(APPLICATION_TYPE, "vnd.oasis.opendocument.text");
+
+    /**
+     * <a href="https://datatracker.ietf.org/doc/draft-ellermann-opensearch/">OpenSearch</a>
+     * Description files are XML files that describe how a website can be used as a search engine by
+     * consumers (e.g. web browsers).
+     */
+    public static final MediaType OPENSEARCH_DESCRIPTION_UTF_8 =
+            createConstantUtf8(APPLICATION_TYPE, "opensearchdescription+xml");
+
     public static final MediaType PDF = createConstant(APPLICATION_TYPE, "pdf");
     public static final MediaType POSTSCRIPT = createConstant(APPLICATION_TYPE, "postscript");
     /**
@@ -633,10 +673,9 @@ public final class MediaType {
 
     public static final MediaType RTF_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "rtf");
     /**
-     * SFNT fonts (which includes <a href="http://en.wikipedia.org/wiki/TrueType/">TrueType</a> and <a
-     * href="http://en.wikipedia.org/wiki/OpenType/">OpenType</a> fonts). This is <a
-     * href="http://www.iana.org/assignments/media-types/application/font-sfnt">registered</a> with
-     * the IANA.
+     * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a> declares {@link #FONT_SFNT
+     * font/sfnt} to be the correct media type for SFNT, but this may be necessary in certain
+     * situations for compatibility.
      */
     public static final MediaType SFNT = createConstant(APPLICATION_TYPE, "font-sfnt");
 
@@ -662,16 +701,16 @@ public final class MediaType {
     public static final MediaType TAR = createConstant(APPLICATION_TYPE, "x-tar");
 
     /**
-     * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF) <a
-     * href="http://www.w3.org/TR/WOFF/">defined</a> by the W3C. This is <a
-     * href="http://www.iana.org/assignments/media-types/application/font-woff">registered</a> with
-     * the IANA.
+     * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a> declares {@link #FONT_WOFF
+     * font/woff} to be the correct media type for WOFF, but this may be necessary in certain
+     * situations for compatibility.
      */
     public static final MediaType WOFF = createConstant(APPLICATION_TYPE, "font-woff");
 
     /**
-     * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF)
-     * version 2 <a href="https://www.w3.org/TR/WOFF2/">defined</a> by the W3C.
+     * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a> declares {@link #FONT_WOFF2
+     * font/woff2} to be the correct media type for WOFF2, but this may be necessary in certain
+     * situations for compatibility.
      */
     public static final MediaType WOFF2 = createConstant(APPLICATION_TYPE, "font-woff2");
 
@@ -687,6 +726,51 @@ public final class MediaType {
 
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
 
+    /* font types */
+
+    /**
+     * A collection of font outlines as defined by <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC
+     * 8081</a>.
+     */
+    public static final MediaType FONT_COLLECTION = createFontType("collection");
+
+    /**
+     * <a href="https://en.wikipedia.org/wiki/OpenType">Open Type Font Format</a> (OTF) as defined by
+     * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a>.
+     */
+    public static final MediaType FONT_OTF = createFontType("otf");
+
+    /**
+     * <a href="https://en.wikipedia.org/wiki/SFNT">Spline or Scalable Font Format</a> (SFNT). <a
+     * href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a> declares this to be the correct media
+     * type for SFNT, but {@link #SFNT application/font-sfnt} may be necessary in certain situations
+     * for compatibility.
+     */
+    public static final MediaType FONT_SFNT = createFontType("sfnt");
+
+    /**
+     * <a href="https://en.wikipedia.org/wiki/TrueType">True Type Font Format</a> (TTF) as defined by
+     * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a>.
+     */
+    public static final MediaType FONT_TTF = createFontType("ttf");
+
+    /**
+     * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF). <a
+     * href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a> declares this to be the correct media
+     * type for WOFF, but {@link #WOFF application/font-woff} may be necessary in certain situations
+     * for compatibility.
+     */
+    public static final MediaType FONT_WOFF = createFontType("woff");
+
+    /**
+     * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF2).
+     * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a> declares this to be the correct
+     * media type for WOFF2, but {@link #WOFF2 application/font-woff2} may be necessary in certain
+     * situations for compatibility.
+     */
+    public static final MediaType FONT_WOFF2 = createFontType("woff2");
+
+    /* GraphQL types */
     /**
      * <a href="https://graphql.org/learn/serving-over-http">GraphQL</a>
      */
@@ -1066,6 +1150,15 @@ public final class MediaType {
     }
 
     /**
+     * Creates a media type with the "font" type and the given subtype.
+     *
+     * @throws IllegalArgumentException if subtype is invalid
+     */
+    static MediaType createFontType(String subtype) {
+        return create(FONT_TYPE, subtype);
+    }
+
+    /**
      * Creates a media type with the "image" type and the given subtype.
      *
      * @throws IllegalArgumentException if subtype is invalid
@@ -1094,10 +1187,13 @@ public final class MediaType {
 
     private static String normalizeToken(String token) {
         checkArgument(TOKEN_MATCHER.matchesAllOf(token));
+        checkArgument(!token.isEmpty());
         return Ascii.toLowerCase(token);
     }
 
     private static String normalizeParameterValue(String attribute, String value) {
+        checkNotNull(value); // for GWT
+        checkArgument(ascii().matchesAllOf(value), "parameter values must be ASCII: %s", value);
         return CHARSET_ATTRIBUTE.equals(attribute) ? Ascii.toLowerCase(value) : value;
     }
 
@@ -1124,7 +1220,7 @@ public final class MediaType {
                 tokenizer.consumeTokenIfPresent(LINEAR_WHITE_SPACE);
                 String attribute = tokenizer.consumeToken(TOKEN_MATCHER);
                 tokenizer.consumeCharacter('=');
-                final String value;
+                String value;
                 if ('"' == tokenizer.previewChar()) {
                     tokenizer.consumeCharacter('"');
                     StringBuilder valueBuilder = new StringBuilder();
@@ -1246,7 +1342,9 @@ public final class MediaType {
             Multimap<String, String> quotedParameters =
                     Multimaps.transformValues(
                             parameters,
-                            value -> TOKEN_MATCHER.matchesAllOf(value) ? value : escapeAndQuote(value));
+                            value -> (TOKEN_MATCHER.matchesAllOf(value) && !value.isEmpty())
+                                     ? value
+                                     : escapeAndQuote(value));
             PARAMETER_JOINER.appendTo(builder, quotedParameters.entries());
         }
         return builder.toString();
