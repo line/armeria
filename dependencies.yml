@@ -8,7 +8,7 @@ boms:
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.41.1
+  - io.grpc:grpc-bom:1.43.2
   - io.micrometer:micrometer-bom:1.8.2
   - io.netty:netty-bom:4.1.70.Final
   - io.zipkin.brave:brave-bom:5.13.3
@@ -128,7 +128,7 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protobuf-java: { version: &PROTOBUF_VERSION '3.17.3' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.19.2' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
@@ -255,10 +255,10 @@ io.grpc:
 io.micrometer:
   micrometer-core:
     javadocs:
-    - https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.5.6/
+    - https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.8.2/
   micrometer-registry-prometheus:
     javadocs:
-    - https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.5.6/
+    - https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.8.2/
   micrometer-spring-legacy:
     javadocs:
     - https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.9/

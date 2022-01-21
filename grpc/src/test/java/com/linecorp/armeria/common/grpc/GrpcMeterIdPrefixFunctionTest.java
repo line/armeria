@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -189,10 +190,11 @@ class GrpcMeterIdPrefixFunctionTest {
     private TestServiceBlockingStub newClient(SerializationFormat serializationFormat,
                                               PrometheusMeterRegistry registry) {
         clientFactory = ClientFactory.builder().meterRegistry(registry).build();
-        return Clients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
-                      .factory(clientFactory)
-                      .decorator(MetricCollectingClient.newDecorator(GrpcMeterIdPrefixFunction.of("client")))
-                      .build(TestServiceBlockingStub.class);
+        return GrpcClients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
+                          .factory(clientFactory)
+                          .decorator(MetricCollectingClient.newDecorator(
+                                  GrpcMeterIdPrefixFunction.of("client")))
+                          .build(TestServiceBlockingStub.class);
     }
 
     @Nullable

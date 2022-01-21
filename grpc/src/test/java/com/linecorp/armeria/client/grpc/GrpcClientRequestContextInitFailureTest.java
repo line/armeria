@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
@@ -60,12 +61,12 @@ class GrpcClientRequestContextInitFailureTest {
     private static void assertFailure(EndpointGroup group, Consumer<Throwable> requirements) {
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
         final TestServiceBlockingStub client =
-                Clients.builder("gproto+http", group)
-                       .decorator((delegate, ctx, req) -> {
-                           capturedCtx.set(ctx);
-                           return delegate.execute(ctx, req);
-                       })
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(SessionProtocol.HTTP, group)
+                           .decorator((delegate, ctx, req) -> {
+                               capturedCtx.set(ctx);
+                               return delegate.execute(ctx, req);
+                           })
+                           .build(TestServiceBlockingStub.class);
 
         final Throwable grpcCause = catchThrowable(() -> client.emptyCall(Empty.getDefaultInstance()));
         assertThat(grpcCause).isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {

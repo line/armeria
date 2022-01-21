@@ -1502,6 +1502,7 @@ co.zw
 coach
 coal.museum
 coastaldefence.museum
+codeberg.page
 codes
 codespot.com
 cody.museum
@@ -4621,7 +4622,6 @@ living
 living.museum
 livinghistory.museum
 livorno.it
-lixil
 lk
 lk3.ru
 llc
@@ -7320,6 +7320,7 @@ singles
 siracusa.it
 sirdal.no
 site
+site.tb-hosting.com
 siteleaf.net
 sites.static.land
 sj
