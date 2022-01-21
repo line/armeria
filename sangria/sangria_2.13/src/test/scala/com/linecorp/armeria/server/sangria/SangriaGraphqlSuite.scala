@@ -83,8 +83,7 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
          }
        """
 
-      val response =
-        executeQuery(server.webClient(), method, query = query, variables = Map("humanId" -> "1002"))
+      val response = executeQuery(server.webClient(), method, query = query, variables = Map("humanId" -> "1002"))
       assertEquals(response.headers().status(), HttpStatus.OK)
       assertThatJson(response.contentUtf8())
         .isEqualTo("""
