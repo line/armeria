@@ -58,7 +58,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
@@ -78,7 +77,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
-import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.internal.server.annotation.DecoratorUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
@@ -86,9 +85,6 @@ import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
-import com.linecorp.armeria.server.annotation.DecoratorFactory;
-import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
-import com.linecorp.armeria.server.annotation.Decorators;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -129,7 +125,7 @@ public final class AnnotatedServiceFactory {
                         .build();
 
     /**
-     * An instance map for reusing converters, exception handlers and decorators.
+     * An instance map for reusing converters, exception.
      */
     private static final ClassValue<Object> instanceCache = new ClassValue<Object>() {
         @Override
@@ -158,15 +154,15 @@ public final class AnnotatedServiceFactory {
      */
     private static final Map<Class<?>, HttpMethod> HTTP_METHOD_MAP =
             ImmutableMap.<Class<?>, HttpMethod>builder()
-                    .put(Options.class, HttpMethod.OPTIONS)
-                    .put(Get.class, HttpMethod.GET)
-                    .put(Head.class, HttpMethod.HEAD)
-                    .put(Post.class, HttpMethod.POST)
-                    .put(Put.class, HttpMethod.PUT)
-                    .put(Patch.class, HttpMethod.PATCH)
-                    .put(Delete.class, HttpMethod.DELETE)
-                    .put(Trace.class, HttpMethod.TRACE)
-                    .build();
+                        .put(Options.class, HttpMethod.OPTIONS)
+                        .put(Get.class, HttpMethod.GET)
+                        .put(Head.class, HttpMethod.HEAD)
+                        .put(Post.class, HttpMethod.POST)
+                        .put(Put.class, HttpMethod.PUT)
+                        .put(Patch.class, HttpMethod.PATCH)
+                        .put(Delete.class, HttpMethod.DELETE)
+                        .put(Trace.class, HttpMethod.TRACE)
+                        .build();
 
     /**
      * Returns the list of {@link AnnotatedService} defined by {@link Path} and HTTP method annotations
@@ -551,7 +547,7 @@ public final class AnnotatedServiceFactory {
     private static Function<? super HttpService, ? extends HttpService> decorator(
             Method method, Class<?> clazz) {
 
-        final List<DecoratorAndOrder> decorators = collectDecorators(clazz, method);
+        final List<DecoratorAndOrder> decorators = DecoratorUtil.collectDecorators(clazz, method);
 
         Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
         for (int i = decorators.size() - 1; i >= 0; i--) {
@@ -559,122 +555,6 @@ public final class AnnotatedServiceFactory {
             decorator = decorator.andThen(d.decorator());
         }
         return decorator;
-    }
-
-    /**
-     * Returns a decorator list which is specified by {@link Decorator} annotations and user-defined
-     * decorator annotations.
-     */
-    @VisibleForTesting
-    static List<DecoratorAndOrder> collectDecorators(Class<?> clazz, Method method) {
-        final List<DecoratorAndOrder> decorators = new ArrayList<>();
-
-        // Class-level decorators are applied before method-level decorators.
-        collectDecorators(decorators, AnnotationUtil.getAllAnnotations(clazz));
-        collectDecorators(decorators, AnnotationUtil.getAllAnnotations(method));
-
-        // Sort decorators by "order" attribute values.
-        decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
-
-        return decorators;
-    }
-
-    /**
-     * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
-     * and user-defined decorators will be collected.
-     */
-    private static void collectDecorators(List<DecoratorAndOrder> list, List<Annotation> annotations) {
-        if (annotations.isEmpty()) {
-            return;
-        }
-
-        // Respect the order of decorators which is specified by a user. The first one is first applied
-        // for most of the cases. But if @Decorator and user-defined decorators are specified in a mixed order,
-        // the specified order and the applied order can be different. To overcome this problem, we introduce
-        // "order" attribute to @Decorator annotation to sort decorators. If a user-defined decorator
-        // annotation has "order" attribute, it will be also used for sorting.
-        for (final Annotation annotation : annotations) {
-            if (annotation instanceof Decorator) {
-                final Decorator d = (Decorator) annotation;
-                list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
-                continue;
-            }
-
-            if (annotation instanceof Decorators) {
-                final Decorator[] decorators = ((Decorators) annotation).value();
-                for (final Decorator d : decorators) {
-                    list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
-                }
-                continue;
-            }
-
-            DecoratorAndOrder udd = userDefinedDecorator(annotation);
-            if (udd != null) {
-                list.add(udd);
-                continue;
-            }
-
-            // If user-defined decorators are repeatable and they are specified more than once.
-            try {
-                final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
-                                                                    withName("value")), null);
-                assert method != null : "No 'value' method is found from " + annotation;
-                final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
-                for (final Annotation decorator : decorators) {
-                    udd = userDefinedDecorator(decorator);
-                    if (udd == null) {
-                        break;
-                    }
-                    list.add(udd);
-                }
-            } catch (Throwable ignore) {
-                // The annotation may be a container of a decorator or may be not, so we just ignore
-                // any exception from this clause.
-            }
-        }
-    }
-
-    /**
-     * Returns a decorator with its order if the specified {@code annotation} is one of the user-defined
-     * decorator annotation.
-     */
-    @Nullable
-    private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
-        // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
-        final DecoratorFactory d = AnnotationUtil.findFirstDeclared(annotation.annotationType(),
-                                                                    DecoratorFactory.class);
-        if (d == null) {
-            return null;
-        }
-
-        // In case of user-defined decorator, we need to create a new decorator from its factory.
-        @SuppressWarnings("unchecked")
-        final DecoratorFactoryFunction<Annotation> factory = getInstance(d, DecoratorFactoryFunction.class);
-
-        // If the annotation has "order" attribute, we can use it when sorting decorators.
-        int order = 0;
-        try {
-            final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
-                                                                withName("order")), null);
-            if (method != null) {
-                final Object value = method.invoke(annotation);
-                if (value instanceof Integer) {
-                    order = (Integer) value;
-                }
-            }
-        } catch (Throwable ignore) {
-            // A user-defined decorator may not have an 'order' attribute.
-            // If it does not exist, '0' is used by default.
-        }
-        return new DecoratorAndOrder(annotation, factory.newDecorator(annotation), order);
-    }
-
-    /**
-     * Returns a new decorator which decorates an {@link HttpService} by the specified
-     * {@link Decorator}.
-     */
-    private static Function<? super HttpService, ? extends HttpService> newDecorator(Decorator decorator) {
-        return service -> service.decorate(getInstance(decorator, DecoratingHttpServiceFunction.class));
     }
 
     /**
@@ -796,44 +676,4 @@ public final class AnnotatedServiceFactory {
     }
 
     private AnnotatedServiceFactory() {}
-
-    /**
-     * An internal class to hold a decorator with its order.
-     */
-    @VisibleForTesting
-    static final class DecoratorAndOrder {
-        // Keep the specified annotation for testing purpose.
-        private final Annotation annotation;
-        private final Function<? super HttpService, ? extends HttpService> decorator;
-        private final int order;
-
-        private DecoratorAndOrder(Annotation annotation,
-                                  Function<? super HttpService, ? extends HttpService> decorator,
-                                  int order) {
-            this.annotation = annotation;
-            this.decorator = decorator;
-            this.order = order;
-        }
-
-        Annotation annotation() {
-            return annotation;
-        }
-
-        Function<? super HttpService, ? extends HttpService> decorator() {
-            return decorator;
-        }
-
-        int order() {
-            return order;
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("annotation", annotation())
-                              .add("decorator", decorator())
-                              .add("order", order())
-                              .toString();
-        }
-    }
 }
