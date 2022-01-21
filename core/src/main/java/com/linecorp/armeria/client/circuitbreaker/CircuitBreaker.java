@@ -79,13 +79,15 @@ public interface CircuitBreaker {
 
     /**
      * Decides whether a request should be sent or failed depending on the current circuit state.
-     * If the current state is {@link CircuitState#OPEN} and {@link CircuitBreakerConfig#circuitOpenWindow()}
+     * If the current state is {@link CircuitState#OPEN} and {@link CircuitBreakerBuilder#circuitOpenWindow}
      * has passed, the state will enter {@link CircuitState#HALF_OPEN}.
      */
-    boolean tryRequest();
+    default boolean tryRequest() {
+        return canRequest();
+    }
 
     /**
-     * Returns current {@link CircuitState}.
+     * Returns the current {@link CircuitState}.
      */
     CircuitState circuitState();
 }
