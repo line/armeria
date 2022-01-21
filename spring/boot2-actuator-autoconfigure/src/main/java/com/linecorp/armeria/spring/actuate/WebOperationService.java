@@ -164,7 +164,7 @@ final class WebOperationService implements HttpService {
                 final Object result = operation.invoke(newInvocationContext(req, arguments));
                 return handleResult(ctx, result, req.method());
             } catch (Throwable throwable) {
-                logger.warn("Unexpected exception is raised while invoking {} with {}.",
+                logger.warn("Unexpected exception while invoking {} with {}.",
                             WebOperationService.class.getSimpleName(), arguments, throwable);
                 return Exceptions.throwUnsafely(throwable);
             }
