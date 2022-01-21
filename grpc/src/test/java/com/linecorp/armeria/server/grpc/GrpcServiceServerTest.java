@@ -1066,10 +1066,8 @@ class GrpcServiceServerTest {
                                public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                        throws Exception {
                                    requestHeaders.set(req.headers());
-                                   return unwrap().execute(ctx, req).mapData(data -> {
-                                       payload.set(data.array());
-                                       return data;
-                                   });
+                                   return unwrap().execute(ctx, req)
+                                                  .peekData(data -> payload.set(data.array()));
                                }
                            })
                            .build(UnitTestServiceBlockingStub.class);
@@ -1109,10 +1107,8 @@ class GrpcServiceServerTest {
                                public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                        throws Exception {
                                    requestHeaders.set(req.headers());
-                                   return unwrap().execute(ctx, req).mapData(data -> {
-                                       payload.set(data.array());
-                                       return data;
-                                   });
+                                   return unwrap().execute(ctx, req)
+                                                  .peekData(data -> payload.set(data.array()));
                                }
                            })
                            .build(UnitTestServiceBlockingStub.class);
