@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Prepares and executes a new {@link HttpRequest} for an {@link WebClient} or {@link BlockingWebClient}, and
+ * Prepares and executes a new {@link HttpRequest} for a {@link WebClient} or {@link BlockingWebClient}, and
  * transforms an {@link HttpResponse} into the {@code T} type object.
  */
 @UnstableApi
@@ -69,6 +69,7 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
      * Sets the specified {@link ResponseAs} that converts the {@code T} type object into another.
      */
     @SuppressWarnings("unchecked")
+    @UnstableApi
     public <U> TransformingRequestPreparation<T, U> as(ResponseAs<R, U> responseAs) {
         requireNonNull(responseAs, "responseAs");
         this.responseAs = (ResponseAs<T, R>) this.responseAs.andThen(responseAs);

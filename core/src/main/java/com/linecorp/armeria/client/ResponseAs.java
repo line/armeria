@@ -49,6 +49,7 @@ public interface ResponseAs<T, R> {
     /**
      * Aggregates an {@link HttpResponse} and waits the result of {@link HttpResponse#aggregate()}.
      */
+    @UnstableApi
     static ResponseAs<HttpResponse, AggregatedHttpResponse> blocking() {
         return ResponseAsUtil.BLOCKING;
     }
@@ -56,6 +57,7 @@ public interface ResponseAs<T, R> {
     /**
      * Aggregates an {@link HttpResponse} and convert the {@link AggregatedHttpResponse#content()} into bytes.
      */
+    @UnstableApi
     static FutureResponseAs<ResponseEntity<byte[]>> bytes() {
         return aggregateAndConvert(AggregatedResponseAs.bytes());
     }
@@ -64,6 +66,7 @@ public interface ResponseAs<T, R> {
      * Aggregates an {@link HttpResponse} and convert the {@link AggregatedHttpResponse#content()} into
      * {@link String}.
      */
+    @UnstableApi
     static FutureResponseAs<ResponseEntity<String>> string() {
         return aggregateAndConvert(AggregatedResponseAs.string());
     }
@@ -71,6 +74,7 @@ public interface ResponseAs<T, R> {
     /**
      * Writes the content of an {@link HttpResponse} into the specified {@link Path}.
      */
+    @UnstableApi
     static FutureResponseAs<ResponseEntity<Path>> path(Path path) {
         requireNonNull(path, "path");
         return response -> {
@@ -95,6 +99,7 @@ public interface ResponseAs<T, R> {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz) {
         requireNonNull(clazz, "clazz");
         return aggregateAndConvert(AggregatedResponseAs.json(clazz));
@@ -107,6 +112,7 @@ public interface ResponseAs<T, R> {
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
      * {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
      */
+    @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
@@ -119,6 +125,7 @@ public interface ResponseAs<T, R> {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef));
@@ -128,6 +135,7 @@ public interface ResponseAs<T, R> {
      * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
      * the specified Java type using the specified {@link ObjectMapper}.
      */
+    @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
                                                         ObjectMapper mapper) {
         requireNonNull(typeRef, "typeRef");
@@ -138,11 +146,13 @@ public interface ResponseAs<T, R> {
     /**
      * Transforms the response into another.
      */
+    @UnstableApi
     R as(T response);
 
     /**
      * Returns whether the response should be aggregated.
      */
+    @UnstableApi
     default boolean requiresAggregation() {
         return false;
     }
@@ -151,6 +161,7 @@ public interface ResponseAs<T, R> {
      * Returns a composed {@link ResponseAs} that first applies this {@link ResponseAs} to
      * its input, and then applies the {@code after} {@link ResponseAs} to the result.
      */
+    @UnstableApi
     default <V> ResponseAs<T, V> andThen(ResponseAs<R, V> after) {
         return new ResponseAs<T, V>() {
 

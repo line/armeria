@@ -38,7 +38,7 @@ import io.netty.channel.EventLoop;
 
 /**
  * A blocking web client that waits for an {@link HttpRequest} to be fully aggregated.
- * If you want to create a {@link BlockingWebClient} with various options, create an {@link WebClient} first
+ * If you want to create a {@link BlockingWebClient} with various options, create a {@link WebClient} first
  * and convert it into a {@link BlockingWebClient} via {@link WebClient#blocking()}.
  * <pre>{@code
  * BlockingWebClient client =
@@ -60,6 +60,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Returns a {@link BlockingWebClient} without a base URI using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      */
+    @UnstableApi
     static BlockingWebClient of() {
         return DefaultBlockingWebClient.DEFAULT;
     }
@@ -74,6 +75,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      *                                  in {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
+    @UnstableApi
     static BlockingWebClient of(String uri) {
         return WebClient.of(uri).blocking();
     }
@@ -88,6 +90,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      *                                  in {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
+    @UnstableApi
     static BlockingWebClient of(URI uri) {
         return WebClient.of(uri).blocking();
     }

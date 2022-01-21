@@ -140,6 +140,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      *           .execute();
      * }</pre>
      */
+    @UnstableApi
     public FutureTransformingRequestPreparation<ResponseEntity<Path>> asFile(Path path) {
         requireNonNull(path, "path");
         return asEntity(ResponseAs.path(path));
@@ -157,6 +158,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      *           .execute();
      * }</pre>
      */
+    @UnstableApi
     public FutureTransformingRequestPreparation<ResponseEntity<Path>> asFile(File file) {
         requireNonNull(file, "file");
         return asFile(file.toPath());

@@ -34,6 +34,7 @@ public interface FutureResponseAs<T> extends ResponseAs<HttpResponse, Completabl
     /**
      * Transforms the {@code T} type object into another by applying the {@link Function}.
      */
+    @UnstableApi
     default <U> FutureResponseAs<U> map(Function<T, U> mapper) {
         requireNonNull(mapper, "mapper");
         return response -> as(response).thenApply(mapper);

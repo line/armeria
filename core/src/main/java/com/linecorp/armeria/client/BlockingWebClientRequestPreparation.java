@@ -70,6 +70,7 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Sets the specified {@link ResponseAs} that converts the {@link AggregatedHttpResponse} into another.
      */
+    @UnstableApi
     public <U> TransformingRequestPreparation<AggregatedHttpResponse, U> as(
             ResponseAs<AggregatedHttpResponse, U> responseAs) {
         requireNonNull(responseAs, "responseAs");
@@ -87,6 +88,7 @@ public final class BlockingWebClientRequestPreparation
      *                                         .execute();
      * }</pre>
      */
+    @UnstableApi
     public TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<byte[]>> asBytes() {
         return as(AggregatedResponseAs.bytes());
     }
@@ -102,6 +104,7 @@ public final class BlockingWebClientRequestPreparation
      *                                         .execute();
      * }</pre>
      */
+    @UnstableApi
     public TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<String>> asString() {
         return as(AggregatedResponseAs.string());
     }
@@ -126,6 +129,7 @@ public final class BlockingWebClientRequestPreparation
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             Class<? extends T> clazz) {
         requireNonNull(clazz, "clazz");
@@ -152,6 +156,7 @@ public final class BlockingWebClientRequestPreparation
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
      *                                      the response body into the result type.
      */
+    @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
@@ -178,6 +183,7 @@ public final class BlockingWebClientRequestPreparation
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
@@ -202,6 +208,7 @@ public final class BlockingWebClientRequestPreparation
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
      *                                      the response body into the result type.
      */
+    @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef, ObjectMapper mapper) {
         requireNonNull(typeRef, "typeRef");
