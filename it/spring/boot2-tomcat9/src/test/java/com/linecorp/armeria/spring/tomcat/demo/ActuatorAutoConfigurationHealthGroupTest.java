@@ -78,7 +78,7 @@ class ActuatorAutoConfigurationHealthGroupTest {
     }
 
     @Test
-    void foo() throws Exception {
+    void additionalPath() throws Exception {
         String path = "/internal/actuator/health/foo";
         assertUpStatus(managementClient.get(path).aggregate().join());
         assertThat(armeriaClient.get(path).aggregate().join().status()).isSameAs(HttpStatus.NOT_FOUND);
