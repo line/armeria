@@ -121,7 +121,7 @@ public final class BlockingWebClientRequestPreparation
      * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
      * or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
@@ -148,7 +148,7 @@ public final class BlockingWebClientRequestPreparation
      * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
      * or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container type.
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
      *                                      the response body into the result type.
      */
@@ -173,7 +173,7 @@ public final class BlockingWebClientRequestPreparation
      *           .execute();
      * }</pre>
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
@@ -198,7 +198,7 @@ public final class BlockingWebClientRequestPreparation
      *           .execute();
      * }</pre>
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} is of the response not
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
      *                                      the response body into the result type.
      */
