@@ -2,7 +2,7 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: true
+        enabled: true # In order to inject PrometheusMeterRegistry
 
 armeria:
   ports:
