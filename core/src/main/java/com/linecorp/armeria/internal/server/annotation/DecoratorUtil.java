@@ -33,6 +33,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
@@ -277,7 +278,8 @@ public final class DecoratorUtil {
             this.order = order;
         }
 
-        Annotation annotation() {
+        @VisibleForTesting
+        public Annotation annotation() {
             return annotation;
         }
 
