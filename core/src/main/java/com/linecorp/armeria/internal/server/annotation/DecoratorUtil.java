@@ -78,7 +78,7 @@ public final class DecoratorUtil {
                 .filter(m -> AnnotationUtil.getAnnotations(m, FindOption.LOOKUP_SUPER_CLASSES)
                                            .stream()
                                            .map(Annotation::annotationType)
-                                           .anyMatch(a -> a == Decorator.class))
+                                           .anyMatch(a -> a == Decorator.class || a == Decorators.class))
                 .collect(toImmutableList());
     }
 
