@@ -557,32 +557,32 @@ public final class MediaTypeNames {
     /* font types */
 
     /**
-     * {@value #FONT_COLLECTION}
+     * {@value #FONT_COLLECTION}.
      */
     public static final String FONT_COLLECTION = "font/collection";
 
     /**
-     * {@value #FONT_OTF}
+     * {@value #FONT_OTF}.
      */
     public static final String FONT_OTF = "font/otf";
 
     /**
-     * {@value #FONT_SFNT}
+     * {@value #FONT_SFNT}.
      */
     public static final String FONT_SFNT = "font/sfnt";
 
     /**
-     * {@value #FONT_TTF}
+     * {@value #FONT_TTF}.
      */
     public static final String FONT_TTF = "font/ttf";
 
     /**
-     * {@value #FONT_WOFF}
+     * {@value #FONT_WOFF}.
      */
     public static final String FONT_WOFF = "font/woff";
 
     /**
-     * {@value #FONT_WOFF2}
+     * {@value #FONT_WOFF2}.
      */
     public static final String FONT_WOFF2 = "font/woff2";
 

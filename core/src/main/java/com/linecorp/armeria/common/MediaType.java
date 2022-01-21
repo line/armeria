@@ -282,7 +282,7 @@ public final class MediaType {
     /**
      * <a href="https://aomediacodec.github.io/av1-avif/">AVIF image format</a>.
      */
-    public static final MediaType AVIF = createImageType("avif");
+    public static final MediaType AVIF = createConstant(IMAGE_TYPE, "avif");
 
     /* audio types */
     public static final MediaType MP4_AUDIO = createConstant(AUDIO_TYPE, "mp4");
@@ -732,13 +732,13 @@ public final class MediaType {
      * A collection of font outlines as defined by <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC
      * 8081</a>.
      */
-    public static final MediaType FONT_COLLECTION = createFontType("collection");
+    public static final MediaType FONT_COLLECTION = createConstant(FONT_TYPE, "collection");
 
     /**
      * <a href="https://en.wikipedia.org/wiki/OpenType">Open Type Font Format</a> (OTF) as defined by
      * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a>.
      */
-    public static final MediaType FONT_OTF = createFontType("otf");
+    public static final MediaType FONT_OTF = createConstant(FONT_TYPE, "otf");
 
     /**
      * <a href="https://en.wikipedia.org/wiki/SFNT">Spline or Scalable Font Format</a> (SFNT). <a
@@ -746,13 +746,13 @@ public final class MediaType {
      * type for SFNT, but {@link #SFNT application/font-sfnt} may be necessary in certain situations
      * for compatibility.
      */
-    public static final MediaType FONT_SFNT = createFontType("sfnt");
+    public static final MediaType FONT_SFNT = createConstant(FONT_TYPE, "sfnt");
 
     /**
      * <a href="https://en.wikipedia.org/wiki/TrueType">True Type Font Format</a> (TTF) as defined by
      * <a href="https://datatracker.ietf.org/doc/rfc8081/">RFC 8081</a>.
      */
-    public static final MediaType FONT_TTF = createFontType("ttf");
+    public static final MediaType FONT_TTF = createConstant(FONT_TYPE, "ttf");
 
     /**
      * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF). <a
@@ -760,7 +760,7 @@ public final class MediaType {
      * type for WOFF, but {@link #WOFF application/font-woff} may be necessary in certain situations
      * for compatibility.
      */
-    public static final MediaType FONT_WOFF = createFontType("woff");
+    public static final MediaType FONT_WOFF = createConstant(FONT_TYPE, "woff");
 
     /**
      * <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font Format</a> (WOFF2).
@@ -768,7 +768,7 @@ public final class MediaType {
      * media type for WOFF2, but {@link #WOFF2 application/font-woff2} may be necessary in certain
      * situations for compatibility.
      */
-    public static final MediaType FONT_WOFF2 = createFontType("woff2");
+    public static final MediaType FONT_WOFF2 = createConstant(FONT_TYPE, "woff2");
 
     /* GraphQL types */
     /**
