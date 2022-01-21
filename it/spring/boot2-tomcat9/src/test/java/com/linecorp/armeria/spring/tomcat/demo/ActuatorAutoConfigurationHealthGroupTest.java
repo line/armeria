@@ -69,14 +69,6 @@ class ActuatorAutoConfigurationHealthGroupTest {
         assertUpStatus(res);
     }
 
-    private static void assertUpStatus(AggregatedHttpResponse res) throws IOException {
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType().toString()).isEqualTo("application/vnd.spring-boot.actuator.v3+json");
-
-        final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
-        assertThat(values).containsEntry("status", "UP");
-    }
-
     @Test
     void additionalPath() throws Exception {
         String path = "/internal/actuator/health/foo";
@@ -91,9 +83,17 @@ class ActuatorAutoConfigurationHealthGroupTest {
         assertUpStatus(managementClient.get(path).aggregate().join());
         assertThat(armeriaClient.get(path).aggregate().join().status()).isSameAs(HttpStatus.NOT_FOUND);
 
-        // barhealth is bound to armeria port.
+        // barhealth is bound to Armeria port.
         path = "/barhealth";
         assertThat(managementClient.get(path).aggregate().join().status()).isSameAs(HttpStatus.NOT_FOUND);
         assertUpStatus(armeriaClient.get(path).aggregate().join());
+    }
+
+    private static void assertUpStatus(AggregatedHttpResponse res) throws IOException {
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType().toString()).isEqualTo("application/vnd.spring-boot.actuator.v3+json");
+
+        final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
+        assertThat(values).containsEntry("status", "UP");
     }
 }
