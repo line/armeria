@@ -2986,7 +2986,6 @@ gov.km
 gov.kn
 gov.kp
 gov.kw
-gov.ky
 gov.kz
 gov.la
 gov.lb
