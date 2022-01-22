@@ -59,15 +59,8 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
     public final HttpFile get(
             Executor fileReadExecutor, String path, Clock clock,
             @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
-
-        requireNonNull(fileReadExecutor, "fileReadExecutor");
-        requireNonNull(path, "path");
-        requireNonNull(clock, "clock");
-        requireNonNull(additionalHeaders, "additionalHeaders");
-
-        return HttpFile.from(CompletableFuture.supplyAsync(
-                () -> blockingGet(fileReadExecutor, path, clock,
-                                  contentEncoding, additionalHeaders), fileReadExecutor));
+        return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
+                   MediaTypeResolver.ofDefault());
     }
 
     /**
@@ -105,8 +98,11 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      *     instead.
      */
     @Deprecated
-    protected abstract HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
-                                            @Nullable String contentEncoding, HttpHeaders additionalHeaders);
+    protected HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
+                                            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+        return blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
+                           MediaTypeResolver.ofDefault());
+    }
 
     /**
      * Finds the file at the specified {@code path}.
@@ -120,11 +116,9 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      * @param mediaTypeResolver the {@link MediaTypeResolver} to determine the {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
-    protected HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
+    protected abstract HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
                                             @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-                                            MediaTypeResolver mediaTypeResolver) {
-        return blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders);
-    }
+                                            MediaTypeResolver mediaTypeResolver);
 
     /**
      * {@inheritDoc} This method invokes {@link #blockingCanList(Executor, String)} from the specified
