@@ -41,7 +41,8 @@ public interface MediaTypeResolver {
      *             or {@code "bar.txt"}.
      * @return the resolved {@link MediaType}
      */
-    @Nullable MediaType guessFromPath(String path);
+    @Nullable
+    MediaType guessFromPath(String path);
 
     /**
      * Resolves the {@link MediaType} of the file referred by the given {@code path} assuming
@@ -54,7 +55,8 @@ public interface MediaTypeResolver {
      *                        RFC 2616</a>.
      * @return the resolved {@link MediaType}
      */
-    @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding);
+    @Nullable
+    MediaType guessFromPath(String path, @Nullable String contentEncoding);
 
     /**
      * Returns a newly created {@link MediaTypeResolver} that tries this {@link MediaTypeResolver} first and

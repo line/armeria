@@ -99,7 +99,7 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      */
     @Deprecated
     protected HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
-                                            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+                                   @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
         return blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
                            MediaTypeResolver.ofDefault());
     }
