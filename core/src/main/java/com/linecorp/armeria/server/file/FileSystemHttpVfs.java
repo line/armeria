@@ -105,7 +105,7 @@ final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
         builder.clock(clock);
         builder.setHeaders(additionalHeaders);
 
-        final @Nullable MediaType contentType = mediaTypeResolver.guessFromPath(pathOrUri, contentEncoding);
+        final MediaType contentType = mediaTypeResolver.guessFromPath(pathOrUri, contentEncoding);
         if (contentType != null) {
             builder.contentType(contentType);
         }
