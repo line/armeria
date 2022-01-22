@@ -49,7 +49,8 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
                        boolean lastModifiedEnabled,
                        @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                        HttpHeaders headers) {
-        super(contentTypeAutoDetectionEnabled ? MediaTypeUtil.guessFromPath(path.toString()) : null,
+        super(contentTypeAutoDetectionEnabled ? MediaTypeResolver.ofDefault().guessFromPath(path.toString())
+                                              : null,
               clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
         this.path = requireNonNull(path, "path");
     }
