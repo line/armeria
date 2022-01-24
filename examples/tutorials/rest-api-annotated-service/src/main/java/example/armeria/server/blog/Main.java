@@ -14,10 +14,7 @@ public final class Main {
     public static void main(String[] args) throws Exception {
         final Server server = newServer(8080);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            server.stop().join();
-            logger.info("Server has been stopped.");
-        }));
+        server.closeOnShutdown();
 
         server.start().join();
 

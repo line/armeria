@@ -417,6 +417,33 @@ public final class Server implements ListenableAsyncCloseable {
         pipelineConfigurator.updateConfig(config);
     }
 
+    /**
+     * Add a shutdown hook to stop this {@link Server}.
+     */
+    public void closeOnShutdown() {
+        closeOnShutdown(new Thread(() -> {
+            stop().join();
+            logger.info("Server has been stopped.");
+        }));
+    }
+
+    /**
+     * Add a shutdown hook to run a given {@link Runnable}. You need to call {@link Server#stop()}
+     * in a runnable to stop this {@link Server}.
+     *
+     * <pre>{@code
+     * server.closeOnShutDown(() -> {
+     *    // Do something before stopping this server.
+     *    server.stop().join();
+     *    // Do something after stopping this server.
+     * })
+     * }</pre>
+     */
+    public void closeOnShutdown(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
+        Runtime.getRuntime().addShutdownHook(new Thread(runnable));
+    }
+
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
         @Nullable

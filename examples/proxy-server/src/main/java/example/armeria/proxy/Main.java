@@ -30,14 +30,14 @@ public final class Main {
 
         final Server proxyServer = newProxyServer(8080, 8443);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        proxyServer.closeOnShutdown(() -> {
             backend1.stop().join();
             backend2.stop().join();
             backend3.stop().join();
 
             proxyServer.stop().join();
             logger.info("The proxy server has been stopped.");
-        }));
+        });
 
         proxyServer.start().join();
 

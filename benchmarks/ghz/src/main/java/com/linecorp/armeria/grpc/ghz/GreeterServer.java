@@ -61,7 +61,7 @@ final class GreeterServer {
         server.start().join();
         final Version armeria = Version.get("armeria");
         System.err.println(armeria + " Server started, listening on " + port);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        server.closeOnShutdown(() -> {
             // Use stderr here since the logger may have been
             // reset by its JVM shutdown hook.
             System.err.println("*** shutting down gRPC server since JVM is shutting down");
@@ -71,7 +71,7 @@ final class GreeterServer {
                 e.printStackTrace();
             }
             System.err.println("*** server shut down");
-        }));
+        });
     }
 
     private static final class GreeterImpl extends GreeterGrpc.GreeterImplBase {

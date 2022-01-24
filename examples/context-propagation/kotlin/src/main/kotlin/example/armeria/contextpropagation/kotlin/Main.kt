@@ -41,10 +41,8 @@ fun main() {
         .serviceUnder("/", MainService(backendClient))
         .build()
 
-    Runtime.getRuntime().addShutdownHook(Thread {
-        backend.stop().join()
-        frontend.stop().join()
-    })
+    backend.closeOnShutdown()
+    frontend.closeOnShutdown()
 
     backend.start().join()
     frontend.start().join()

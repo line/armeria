@@ -82,10 +82,8 @@ public class Main {
 
         final Server frontend = DaggerMain_MainComponent.create().server();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            backend.stop().join();
-            frontend.stop().join();
-        }));
+        backend.closeOnShutdown();
+        frontend.closeOnShutdown();
 
         backend.start().join();
         frontend.start().join();

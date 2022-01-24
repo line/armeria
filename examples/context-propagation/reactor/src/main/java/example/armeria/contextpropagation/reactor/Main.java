@@ -23,10 +23,8 @@ public class Main {
                       .serviceUnder("/", new MainService(backendClient))
                       .build();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            backend.stop().join();
-            frontend.stop().join();
-        }));
+        backend.closeOnShutdown();
+        frontend.closeOnShutdown();
 
         backend.start().join();
         frontend.start().join();

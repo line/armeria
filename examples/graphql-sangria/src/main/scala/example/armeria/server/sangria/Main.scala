@@ -10,10 +10,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val server = newServer(8080)
-    Runtime.getRuntime.addShutdownHook(new Thread(() => {
-      server.stop.join()
-      logger.info("Server has been stopped.")
-    }))
+    server.closeOnShutdown()
     server.start.join()
   }
 

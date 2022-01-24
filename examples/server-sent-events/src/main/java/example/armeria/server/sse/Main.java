@@ -30,10 +30,7 @@ public final class Main {
                                         Duration.ofSeconds(1), Long.MAX_VALUE,
                                         () -> Long.toHexString(random.nextLong()));
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            server.stop().join();
-            logger.info("Server has been stopped.");
-        }));
+        server.closeOnShutdown();
 
         server.start().join();
         logger.info("Server has been started.");
@@ -52,17 +49,17 @@ public final class Main {
     static void configureServices(ServerBuilder sb, Duration sendingInterval, long eventCount,
                                   Supplier<String> randomStringSupplier) throws Exception {
         sb.service("/long", (ctx, req) -> {
-            // Note that you MUST adjust the request timeout if you want to send events for a
-            // longer period than the configured request timeout. The timeout can be disabled by
-            // 'clearRequestTimeout()' like the below, but it is NOT RECOMMENDED in
-            // the real world application, because it can leave a lot of unfinished requests.
-            ctx.clearRequestTimeout();
-            return ServerSentEvents.fromPublisher(
-                    Flux.interval(sendingInterval)
-                        .onBackpressureDrop()
-                        .take(eventCount)
-                        .map(unused -> ServerSentEvent.ofData(randomStringSupplier.get())));
-        }).annotatedService(new Object() {
+              // Note that you MUST adjust the request timeout if you want to send events for a
+              // longer period than the configured request timeout. The timeout can be disabled by
+              // 'clearRequestTimeout()' like the below, but it is NOT RECOMMENDED in
+              // the real world application, because it can leave a lot of unfinished requests.
+              ctx.clearRequestTimeout();
+              return ServerSentEvents.fromPublisher(
+                      Flux.interval(sendingInterval)
+                          .onBackpressureDrop()
+                          .take(eventCount)
+                          .map(unused -> ServerSentEvent.ofData(randomStringSupplier.get())));
+          }).annotatedService(new Object() {
               // This shows how you can send events in the annotated HTTP service.
               @Get("/short")
               @ProducesEventStream

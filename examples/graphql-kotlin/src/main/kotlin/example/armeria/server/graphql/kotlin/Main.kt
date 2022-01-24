@@ -7,16 +7,10 @@ import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.graphql.GraphqlService
 import org.slf4j.LoggerFactory
-import kotlin.concurrent.thread
 
 fun main() {
     val server = newServer(8080)
-    Runtime.getRuntime().addShutdownHook(
-            thread(start = false) {
-                server.stop().join()
-                logger.info("Server has been stopped.")
-            }
-    )
+    server.closeOnShutdown()
     server.start().join()
 }
 
@@ -33,10 +27,15 @@ private fun newServer(port: Int): Server {
 }
 
 fun configureService(sb: ServerBuilder) {
-    sb.service("/graphql", GraphqlService.builder().schema(toSchema(
-            config = SchemaGeneratorConfig(listOf("example.armeria.server.graphql.kotlin")),
-            queries = listOf(TopLevelObject(UserQuery()))
-    )).build())
+    sb.service(
+        "/graphql",
+        GraphqlService.builder().schema(
+            toSchema(
+                config = SchemaGeneratorConfig(listOf("example.armeria.server.graphql.kotlin")),
+                queries = listOf(TopLevelObject(UserQuery()))
+            )
+        ).build()
+    )
 }
 
 data class User(val id: Int, val name: String)
@@ -44,9 +43,9 @@ data class User(val id: Int, val name: String)
 class UserQuery {
 
     private val data = mapOf(
-            1 to User(1, "hero"),
-            2 to User(2, "human"),
-            3 to User(3, "droid")
+        1 to User(1, "hero"),
+        2 to User(2, "human"),
+        3 to User(3, "droid")
     )
 
     /**

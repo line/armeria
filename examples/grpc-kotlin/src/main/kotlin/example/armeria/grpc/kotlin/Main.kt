@@ -16,14 +16,7 @@ object Main {
     fun main(args: Array<String>) {
         val server = newServer(8080, 8443)
 
-        Runtime.getRuntime().addShutdownHook(
-            Thread(
-                Runnable {
-                    server.stop().join()
-                    logger.info("Server has been stopped.")
-                }
-            )
-        )
+        server.closeOnShutdown()
 
         server.start().join()
         server.activePort()?.let {

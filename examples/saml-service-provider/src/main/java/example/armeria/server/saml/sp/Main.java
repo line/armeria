@@ -80,7 +80,8 @@ public class Main {
                                   // It can be found from the metadata of the identity provider.
                                   .entityId("https://idp.ssocircle.com")
                                   // Specify the endpoint that is supposed to send an authentication request.
-                                  .ssoEndpoint(ofHttpPost("https://idp.ssocircle.com:443/sso/SSOPOST/metaAlias/publicidp"))
+                                  .ssoEndpoint(ofHttpPost(
+                                          "https://idp.ssocircle.com:443/sso/SSOPOST/metaAlias/publicidp"))
                                   .and()
                                   .build();
     }
@@ -100,10 +101,7 @@ public class Main {
                       .service(ssp.newSamlService())
                       .build();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            server.stop().join();
-            logger.info("Server has been stopped.");
-        }));
+        server.closeOnShutdown();
 
         server.start().join();
         logger.info("Server has been started.");
