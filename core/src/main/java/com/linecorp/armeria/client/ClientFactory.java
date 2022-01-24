@@ -373,7 +373,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
     }
 
     /**
-     * Add a shutdown hook to stop this {@link ClientFactory}.
+     * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
      */
     default void closeOnShutdown() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
