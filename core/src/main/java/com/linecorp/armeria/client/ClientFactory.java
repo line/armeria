@@ -113,7 +113,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
         if (!(Thread.currentThread() instanceof NonBlocking)) {
             boolean interrupted = false;
             try {
-                for (; ; ) {
+                for (;;) {
                     try {
                         closeFuture.get();
                         break;
