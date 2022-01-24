@@ -106,7 +106,7 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
     }
 
     private static HttpResponse internalRenderStatus(ServiceConfig serviceConfig,
-                                                     @Nullable RequestHeaders headers,
+                                                     RequestHeaders headers,
                                                      HttpStatus status,
                                                      @Nullable Throwable cause) {
         final AggregatedHttpResponse res =
