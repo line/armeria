@@ -111,45 +111,6 @@ public final class DecoratorUtil {
     }
 
     /**
-     * Returns a {@link HttpService} which is specified by {@link Decorator} annotations and user-defined
-     * decorator annotations.
-     */
-    public static HttpService applyDecorators(List<DecoratorAndOrder> decorators,
-                                              HttpService delegate) {
-        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
-        for (int i = decorators.size() - 1; i >= 0; i--) {
-            final DecoratorAndOrder d = decorators.get(i);
-            decorator = decorator.andThen(d.decorator());
-        }
-        return decorator.apply(delegate);
-    }
-
-    /**
-     * Returns a cached instance of the specified {@link Class} which is specified in the given
-     * {@link Annotation}.
-     */
-    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
-        try {
-            @SuppressWarnings("unchecked")
-            final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
-            return expectedType.cast(instanceCache.get(clazz));
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException(
-                    "A class specified in @" + annotation.annotationType().getSimpleName() +
-                    " annotation cannot be cast to " + expectedType, e);
-        }
-    }
-
-    private static <T> T getInstance0(Class<? extends T> clazz) throws Exception {
-        @SuppressWarnings("unchecked")
-        final Constructor<? extends T> constructor =
-                Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
-        assert constructor != null : "No default constructor is found from " + clazz.getName();
-        constructor.setAccessible(true);
-        return constructor.newInstance();
-    }
-
-    /**
      * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
      * and user-defined decorators will be collected.
      */
@@ -202,6 +163,45 @@ public final class DecoratorUtil {
                 // any exception from this clause.
             }
         }
+    }
+
+    /**
+     * Returns a {@link HttpService} which is specified by {@link Decorator} annotations and user-defined
+     * decorator annotations.
+     */
+    public static HttpService applyDecorators(List<DecoratorAndOrder> decorators,
+                                              HttpService delegate) {
+        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+        for (int i = decorators.size() - 1; i >= 0; i--) {
+            final DecoratorAndOrder d = decorators.get(i);
+            decorator = decorator.andThen(d.decorator());
+        }
+        return decorator.apply(delegate);
+    }
+
+    /**
+     * Returns a cached instance of the specified {@link Class} which is specified in the given
+     * {@link Annotation}.
+     */
+    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
+        try {
+            @SuppressWarnings("unchecked")
+            final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
+            return expectedType.cast(instanceCache.get(clazz));
+        } catch (ClassCastException e) {
+            throw new IllegalArgumentException(
+                    "A class specified in @" + annotation.annotationType().getSimpleName() +
+                    " annotation cannot be cast to " + expectedType, e);
+        }
+    }
+
+    private static <T> T getInstance0(Class<? extends T> clazz) throws Exception {
+        @SuppressWarnings("unchecked")
+        final Constructor<? extends T> constructor =
+                Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
+        assert constructor != null : "No default constructor is found from " + clazz.getName();
+        constructor.setAccessible(true);
+        return constructor.newInstance();
     }
 
     /**
