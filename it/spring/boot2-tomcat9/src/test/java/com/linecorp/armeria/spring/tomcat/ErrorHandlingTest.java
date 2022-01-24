@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.tomcat.demo;
+package com.linecorp.armeria.spring.tomcat;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
