@@ -102,8 +102,8 @@ const config: Configuration = {
     new CompressionWebpackPlugin({
       test: /\.js(\?.*)?$/i,
       deleteOriginalAssets: !isDev,
-      algorithm: 'gzip',
-      filename: '[path].gz',
+      algorithm: 'brotliCompress',
+      filename: '[path].br',
     })
   ],
   devServer: {

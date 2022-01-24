@@ -49,7 +49,7 @@ interface Props {
   schema: GraphQLSchema | undefined;
 }
 
-// Forked from GraphiQL 1.4.2
+// Forked from GraphiQL 1.5.16
 // https://github.com/graphql/graphiql/blob/8ac05f8b141b6f5cb4449c62ad67a34115490ac8/packages/graphiql/src/components/QueryEditor.tsx
 const QueryEditor: React.FunctionComponent<Props> = (props) => {
   const [container, setContainer] = useState<HTMLElement | undefined>();
