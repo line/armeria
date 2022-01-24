@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.boot.actuate.endpoint.OperationArgumentResolver;
-import org.springframework.boot.actuate.endpoint.ProducibleOperationArgumentResolver;
 import org.springframework.boot.actuate.endpoint.web.ExposableWebEndpoint;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicate;
@@ -34,17 +33,16 @@ import org.springframework.boot.actuate.health.HealthEndpointGroups;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
+/**
+ * A utility class to support {@link WebServerNamespace} which was introduced from Spring Boot 2.6+.
+ * The methods in this class are called only if {@link WebOperationService#HAS_WEB_SERVER_NAMESPACE} is
+ * {@code true}.
+ */
 final class WebOperationServiceUtil {
-
-    static OperationArgumentResolver acceptHeadersResolver(HttpHeaders headers) {
-        return new ProducibleOperationArgumentResolver(() -> headers.getAll(HttpHeaderNames.ACCEPT));
-    }
 
     static OperationArgumentResolver namespaceResolver(boolean server) {
         return OperationArgumentResolver.of(WebServerNamespace.class,

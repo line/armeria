@@ -18,7 +18,7 @@ package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.acceptHeadersResolver;
+import static com.linecorp.armeria.spring.actuate.OperationArgumentResolverUtil.acceptHeadersResolver;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.namespaceResolver;
 
 import java.io.Closeable;

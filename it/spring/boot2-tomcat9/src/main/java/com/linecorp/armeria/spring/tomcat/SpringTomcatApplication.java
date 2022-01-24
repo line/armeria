@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.tomcat.demo;
+package com.linecorp.armeria.spring.tomcat;
 
 import org.apache.catalina.startup.Tomcat;
 import org.springframework.boot.SpringApplication;
