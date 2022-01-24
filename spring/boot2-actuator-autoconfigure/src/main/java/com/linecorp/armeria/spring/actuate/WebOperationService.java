@@ -179,7 +179,7 @@ final class WebOperationService implements HttpService {
     }
 
     private InvocationContext newInvocationContext(AggregatedHttpRequest req,
-                                                          Map<String, Object> arguments) {
+                                                   Map<String, Object> arguments) {
         if (HAS_PRODUCIBLE_OPERATION_ARGUMENT_RESOLVER) {
             final OperationArgumentResolver acceptHeadersResolver = acceptHeadersResolver(req.headers());
             if (!HAS_WEB_SERVER_NAMESPACE) {
