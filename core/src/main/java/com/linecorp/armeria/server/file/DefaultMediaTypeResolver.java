@@ -28,7 +28,8 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class MediaTypeUtil {
+enum DefaultMediaTypeResolver implements MediaTypeResolver {
+    INSTANCE;
 
     /**
      * A map from extension to the {@link MediaType}, which is queried before
@@ -70,36 +71,8 @@ final class MediaTypeUtil {
         EXTENSION_TO_MEDIA_TYPE = Collections.unmodifiableMap(map);
     }
 
-    private static final MediaTypeResolver DEFAULT_MEDIA_TYPE_RESOLVER = new MediaTypeResolver() {
-        @Override
-        public @Nullable MediaType guessFromPath(String path) {
-            return MediaTypeUtil.guessFromPath(path);
-        }
-
-        @Override
-        public @Nullable MediaType guessFromPath(String path, @Nullable String contentEncoding) {
-            return MediaTypeUtil.guessFromPath(path, contentEncoding);
-        }
-    };
-
-    private static void add(Map<String, MediaType> extensionToMediaType,
-                            MediaType mediaType, String... extensions) {
-
-        for (String e : extensions) {
-            assert Ascii.toLowerCase(e).equals(e);
-            extensionToMediaType.put(e, mediaType);
-        }
-    }
-
-    /**
-     * Returns the default {@link MediaTypeResolver}.
-     */
-    static MediaTypeResolver getDefaultMediaTypeResolver() {
-        return DEFAULT_MEDIA_TYPE_RESOLVER;
-    }
-
     @Nullable
-    static MediaType guessFromPath(String path) {
+    public MediaType guessFromPath(String path) {
         requireNonNull(path, "path");
         final int dotIdx = path.lastIndexOf('.');
         final int slashIdx = path.lastIndexOf('/');
@@ -118,7 +91,7 @@ final class MediaTypeUtil {
     }
 
     @Nullable
-    static MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+    public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
         if (contentEncoding == null || Ascii.equalsIgnoreCase(contentEncoding, "identity")) {
             return guessFromPath(path);
         }
@@ -129,5 +102,12 @@ final class MediaTypeUtil {
         return guessFromPath(path.substring(0, path.lastIndexOf('.')));
     }
 
-    private MediaTypeUtil() {}
+    private static void add(Map<String, MediaType> extensionToMediaType,
+                            MediaType mediaType, String... extensions) {
+
+        for (String e : extensions) {
+            assert Ascii.toLowerCase(e).equals(e);
+            extensionToMediaType.put(e, mediaType);
+        }
+    }
 }
