@@ -407,5 +407,4 @@ class GrpcServiceBuilderTest {
                    })
                    .collect(Collectors.toList());
     }
-
 }

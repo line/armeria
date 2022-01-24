@@ -272,8 +272,9 @@ public final class GrpcServiceBuilder {
      * Adds an implementation of gRPC service to this {@link GrpcServiceBuilder}.
      * Most gRPC service implementations are {@link BindableService}s.
      * This method is useful in cases like the followings.
-     * <p>
-     * Used for ScalaPB gRPC stubs
+     *
+     * <p>Used for ScalaPB gRPC stubs
+     *
      * <pre>{@code
      * GrpcService.builder()
      *            .addService(new HelloServiceImpl,
@@ -281,7 +282,7 @@ public final class GrpcServiceBuilder {
      *                                                     ExecutionContext.global))}
      * </pre>
      *
-     * Used for intercepted gRPC-Java stubs
+     * <p>Used for intercepted gRPC-Java stubs
      * <pre>{@code
      * GrpcService.builder()
      *            .addService(new TestServiceImpl,
@@ -771,8 +772,8 @@ public final class GrpcServiceBuilder {
     private void collectDecorators(Class<?> clazz,
                                    @Nullable String path,
                                    ServerServiceDefinition serverServiceDefinition) {
-        final String serviceName = path == null
-                                   ? serverServiceDefinition.getServiceDescriptor().getName() : path;
+        final String serviceName =
+                path == null ? serverServiceDefinition.getServiceDescriptor().getName() : path;
         serviceDecorators.put('/' + serviceName, DecoratorUtil.collectDecorators(clazz));
         // In gRPC, A method name is unique.
         final Map<String, Method> methods = DecoratorUtil.decoratorMethods(clazz)
@@ -784,8 +785,8 @@ public final class GrpcServiceBuilder {
             if (targetMethodName == null) {
                 continue;
             }
-            final String methodName = targetMethodName.substring(0, 1).toLowerCase()
-                                      + targetMethodName.substring(1);
+            final String methodName = targetMethodName.substring(0, 1)
+                                                      .toLowerCase() + targetMethodName.substring(1);
             final Method method = methods.get(methodName);
             if (method == null) {
                 continue;

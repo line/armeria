@@ -86,9 +86,9 @@ class GrpcDecoratingServiceTest {
 
     @Test
     void nonDecorators() {
-        final ReconnectServiceBlockingStub client = Clients.builder(
-                                                                   server.httpUri(GrpcSerializationFormats.PROTO))
-                                                           .build(ReconnectServiceBlockingStub.class);
+        final ReconnectServiceBlockingStub client =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
+                       .build(ReconnectServiceBlockingStub.class);
         client.start(Empty.getDefaultInstance());
         assertThat(THIRD_TEST_RESULT).isEqualTo("");
     }
