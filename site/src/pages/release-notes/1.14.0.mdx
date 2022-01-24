@@ -1,0 +1,297 @@
+---
+date: 2022-1-24
+---
+
+## 🌟 New features
+
+- You can now use [Scala 3](https://dotty.epfl.ch/) for `armeria-scala` and `armeria-scalapb`. #3614 #4036
+  <Tip>
+
+  Scala 3 modules are currently experimental. We're looking forward to your feedback.
+
+  </Tip>
+
+- You can now fluently convert an <type://HttpResponse> into another using <type://WebClient>. #4021
+  ```java
+  WebClient client = WebClient.of("api.example.com");
+  CompletableFuture<ResponseEntity<MyObject>> response =
+     client.prepare()
+          .get("/v1/items/1")
+          .asJson(MyObject.class)
+          .execute();
+  ``` 
+- You can now use <type://BlockingWebClient> to wait for an <type://HttpResponse> to be completed. #4021
+  ```java
+  BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+  ResponseEntity<MyObject> response =
+      client.prepare()
+            .get("/v1/items/1")
+            .asJson(MyObject.class)
+            .execute();
+  ``` 
+  <Tip>
+
+  Note that you should never use this client in an `EventLoop` thread.
+  Use it from a non-`EventLoop` thread such as <type://BlockingTaskExecutor>.
+ 
+  </Tip>
+- You can now fluently build a gRPC client with various options using
+  <type://GrpcClientBuilder>. #3981 #3999 #3964 #3975
+  ```java
+  GrpcClients.builder(...)
+             .decorator(myDecorators)
+             .maxResponseMessageLength(MAX_MESSAGE_SIZE)
+             .jsonMarshallerFactory(descriptor -> {
+                 ...
+             })
+             .intercept(myInterceptors)
+             .build(MyStub.class);
+  ``` 
+- You can now use <type://ServiceRequestContext.queryParams(String)> to get a decoded query part. #3955 #3960
+- You can now set an <type://ExchangeType> to <type://HttpService> for whether to enable streaming. #3956
+  - Non-streaming services will show better performance when sending and receiving a small size of data.
+  - However, if streaming is disabled, a request and response will be buffered before it is sent or received.
+    So it is recommended to enable streaming when handling a large size of data.
+  ```java
+  class MyRestService implements HttpService {
+    @Override 
+    ExchangeType exchangeType(RequestHeaders headers, Route route) {
+      return ExchangeType.UNARY; 
+    }
+  }
+  ```
+- You can now fluently build an <type://HttpResponse> by using <type://HttpRequestBuilder>. #3398 #3941
+  ```java
+  HttpResponse.builder()
+              .ok()
+              .header(HttpHeaderNames.USER_AGENT, "Armeria")
+              .content(content)
+              .build(); 
+  ```
+- You can now use <type://StreamMessage.mapAsync(CompletableFuture)> to transform a <type://StreamMessage> 
+  using an async operation #3916 #3962
+  ```java
+  StreamMessage<Integer> userIds = StreamMessage.of(...);
+  StreamMessage<UserInfo> userInfos = streamMessage.mapAsync(this::getUserInfo);
+  
+  CompletableFuture<UserInfo> getUserInfo(int userId) {
+    ...
+  }
+  ```
+- You can now use <type://HttpMessage.peekData(Consumer)>, <type://HttpMessage.peekTrailers(Consumer)> and
+  <type://StreamMessage.peekError(Consumer)> and <type://HttpResponse.peekHeaders(Consumer)> operators on
+  <type://HttpRequest> and <type://HttpResponse>. #3097 #3988 #3949
+  ```java
+  HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+                                       HttpData.ofUtf8("data1,data2"))
+                                       HttpHeaders.of("trailer", "foo"));
+  
+  HttpRequest peeked = request.peekData(data -> {
+      assert data.toStringUtf8().equals("data1,data2");
+  }).peekTrailers(trailers -> {
+      assert trailers.get("trailer").equals("foo");
+  });
+  
+  HttpRequest failed = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
+  HttpRequest peeked = failed.peekError(cause -> {
+    assert cause instanceof IllegalStateException;
+  });
+  ```
+- You can now generate an error response differently depending on the <type://RequestHeaders>. #4037
+- You can now use `{*variable}` and `:variable` path patterns to capture rest paths of a request. #3031 #3997
+  ```java
+  Server.builder()
+        .service("/api/{item}/route/{*contents}", (ctx, req) -> {
+            // If a request path is "/api/123/route/foo/bar/baz",
+            // '*contents' should be:
+            assert ctx.pathPath("contents").equals("foo/bar/baz");
+        });
+  ```
+- You can now send query parameters using <type://QueryParams> with <type://WebClient> #3915 #3921
+  ```java
+  QueryParams params = QueryParams.of("foo", "bar");
+  WebClient client = ...;
+  client.get("/api/items/1", params);
+  client.post("/api/items", params, content);
+  ```
+- You can now write a `StreamMessage<HttpData>` into a file using
+  <type://StreamMessages#writeTo(StreamMessage,Path,)>. #3870 #3874
+  ```java
+  StreamMessage<HttpData> stream = ...;
+  Path destination = ...;
+  StreamMessages.writeTo(stream, destination);
+  ```
+- You can now force a state transition of a <type://CircuitBreaker>
+  by using <type://CircuitBreaker#enterState(CircuitState)>. #4010 #4022
+  ```java
+  CircuitBreaker circuitBreaker = ...;
+  circuitBreaker.enterState(CircuitState.OPEN);
+  ```
+- You can now conveniently create a <type://RetryRule> and <type://RetryRuleWithContent> with their
+  specific <type://Backoff>. #3875 #2899 #3895
+  ```java
+  RetryRule.falesafe(Backoff.fixed(1000));
+  RetryRuleWithContent.onException(Backoff.fixed(2000));
+  ```
+- You can now dynamically change the maximum number of concurrent active requests of
+  a <type://ConcurrencyLimitingClient> #3842 #3985
+  ```java
+  ConcurrencyLimitingClient.newDecorator(new DynamicLimit());
+  
+  class DynamicLimit implements IntSupplier {
+
+    @Override
+    public int getAsInt() {
+      // Dynamically returns the current limitation.
+      ...
+    }
+  }
+  ```
+- We can get the content and trailers of an <type://HttpRequest> separately by using
+  <type://HttpRequest#split()>. #3924 #3953
+- You can now send requests to a test server by using <type://ServerExtension#webClient()>
+  or <type://ServerRule#webClient()> #3761 #3890
+- Catch up the upstream changes in <type://MediaType> and add more constants #4040
+- You can now use [OpenMetrics](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md)
+  format with <type://PrometheusExpositionService>. #3926 #3928
+- You can now use <type://UnframedGrpcStatusMappingFunction> to customize how a gRPC status is mapped to 
+  an <type://HttpStatus> when using an unframed gRPC service. #3683 #3948
+  ```java
+  UnframedGrpcStatusMappingFunction mappingFunction = 
+      (ctx, grpcStatus, cause) -> {
+        if (grpcStatus.getCode() == DEADLINE_EXCEEDED) {
+            return INTERNAL_SERVER_ERROR;
+        }
+        // Pass to the default mapping function.
+        return null;
+      };
+  UnframedGrpcErrorHandler errorHandler = 
+     UnframedGrpcErrorHandler.ofJson(mappingFunction);
+  
+  GrpcService
+      .builder()
+      .unframedGrpcErrorHandler(errorHandler);
+  ```
+- You can now expose `WebOperation`s of Actuator to a port of internal services #3919 #3946
+  ```yaml
+  armeria:
+    ...
+  internal-services:
+    # Actuator will be exposed to 18080 port.
+    include: actuator, health 
+    port: 18080
+  ``` 
+
+## 📈 Improvements
+
+- You can now can see the package name of their services, messages and enums with the same names from 
+  <type://DocService>. #3979
+- Used `ByteBuf` to avoid creating a large `byte[]` in <type://PrometheusExpositionService>. #3929
+
+## 🛠️ Bug fixes
+
+- Automatically disable gRPC-JSON serialization if a <type://GrpcService> fails to initialize
+  a <type://GrpcJsonMarshaller>. #4020 #4033
+- You no longer see `ClassCastException` when duplicating an `HttpRequest` or an `HttpResponse`. #4030 #4032
+- You no longer see `IllegalArgumentException` if an upper-bounded wildcard type with <type://@Param>
+  is used in annotated services. #4007 #4008
+- You no longer see `InvocationTargetException` with a Kotlin method whose return type is `Nothing`
+  in an annotated service. #3961 #4005
+- Actuator now correctly shows `Liveness` and `Readiness` of a Kubernetes instance. #3031 #3997
+- You can now use `google.protobuf.{Struct, Value, ListValue, Any}` messages from your `proto` files when
+  using gRPC-JSON transcoder. #3986 #3992
+- You can now properly get `SameSite` attribute from <type://Cookie#sameSite()>. #3968 #3984
+- You no longer see an <type://EmptyEndpointGroupException> when an <type://EndpointGroup> is successfully
+  resolved with the initial <typeplural://Endpoint>. #3978
+- <type://HttpRequestBuilder#header(CharSequence,Object)> does not overwrite an old header value 
+  anymore. #3932 #3941
+  - A new header value will be appended to the old value.
+- You no longer see `413 Request Entity Too Large` when a server receives a cleartext(h2c) upgrade
+  with a size greater than 16384. #3859 #3913
+  - The maximum allowed length of an upgrade request will respect <type://ServerBuilder#maxRequestLength(long)>
+    or <type://VirtualHost#maxRequestLength()>.
+- Improved <type://Multipart> decoder to correctly publish chunks one by one when streaming 
+  a large <type://BodyPart>. #3774 #3783
+
+## 🏚️ Deprecations
+
+- <type://CircuitBreaker#canRequest()> has been deprecated in favor of 
+  <type://CircuitBreaker#tryRequest()>. #4012
+- <type://Cookie#builder(String,String)> and <type://Cookie#of(String,String)> has been deprecated in favor of
+  <type://Cookie#secureBuilder(String,String)> and <type://Cookie#ofSecure(String,String)>. #3788 #3939
+
+## ☢️ Breaking changes
+
+- <type://HealthChecker#of(Supplier,Duration)?full> and 
+- <type://HealthChecker#of(Supplier,Duration,EventExecutor)?full> now returns 
+- <type://ListenableHealthChecker> instead of <type://HealthChecker>. #4017
+- The method signatures
+  of <type://ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> has been
+  changed. #4037
+  - <type://RequestHeaders> is added as the second argument.
+
+## ⛓ Dependencies
+
+- Brave 5.13.3 → 5.13.7
+- Bouncy Castle 1.69 → 1.70
+- Bucket4J 6.3.0 → 7.0.0
+- Caffeine 2.9.2 → 2.9.3
+- Dropwizard 2.0.25 → 2.0.28
+- Dropwizard Metrics 4.2.4 → 4.2.7
+- gRPC Java 1.41.1 → 1.43.2
+- gRPC Kotlin 1.1.0 → 1.2.0
+- Jackson 2.13.0 → 2.13.1
+- java-jwt 3.18.2 → 3.18.3
+- jcl-over-slf4j 1.7.32 → 1.7.33
+- jboss-logging 3.4.2 → 3.4.3
+- Kotlin 1.5.32 → 1.6.10
+- Logback 1.2.7 → 1.2.10
+- Micrometer 1.7.6 → 1.8.2
+- Netty 4.1.70 → 4.1.73
+  - io_uring 0.0.1 → 0.0.11
+- Prometheus 0.12.0 → 0.14.1
+- protobuf-jackson 1.2.0 → 2.0.0
+- protobuf-java 3.17.3 → 3.19.2
+- Reactor 3.4.12 → 3.4.14
+- RESTEasy 4.7.3 → 5.0.2
+- Scala 2.13.7 → 2.13.8, ⓧ → 3.1.0
+- scala-collection-compat 2.5.0 → 2.6.0
+- ScalaPB 0.11.6 → 0.11.8
+- Spring 5.3.13 → 5.3.15
+- Spring Boot 2.5.7 → 2.6.3
+- Tomcat 9.0.55 → 9.0.56
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'AmosDoan',
+  'AngerM',
+  'CLAassistant',
+  'LiYing2010',
+  'anuraaga',
+  'arhont375',
+  'chris-ryan-square',
+  'di-seo',
+  'freevie',
+  'ghkim3221',
+  'gurudatta-carbon',
+  'heowc',
+  'hyangtack',
+  'icepeppermint',
+  'ikhoon',
+  'injae-kim',
+  'jrhee17',
+  'jupiny',
+  'kojilin',
+  'ks-yim',
+  'lan17',
+  'minwoox',
+  'nvidyala',
+  'policeman-kh',
+  'sleeplesslord',
+  'ta7uw',
+  'tobias-',
+  'trustin',
+  'wasifaleem',
+  'woohhan'
+]} />
