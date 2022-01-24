@@ -92,27 +92,6 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
-     * @return the {@link HttpFile} at the specified {@code path}
-     *
-     * @deprecated Use {@link #blockingGet(Executor, String, Clock, String, HttpHeaders, MediaTypeResolver)}
-     *     instead.
-     */
-    @Deprecated
-    protected HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
-                                   @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
-        return blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
-                           MediaTypeResolver.ofDefault());
-    }
-
-    /**
-     * Finds the file at the specified {@code path}.
-     *
-     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
-     * @param path an absolute path that starts with {@code '/'}, whose component separator is {@code '/'}
-     * @param clock the {@link Clock} which provides the current date and time
-     * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
-     *                        {@code null} to omit the header.
-     * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
      * @param mediaTypeResolver the {@link MediaTypeResolver} to determine the {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
