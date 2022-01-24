@@ -146,7 +146,9 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
         final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
         for (ServiceConfig serviceConfig : serviceConfigs) {
-            final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
+            final GrpcService grpcService = (GrpcService) serviceConfig.service()
+                                                                       .as(GrpcService.class)
+                                                                       .unwrap();
             assert grpcService != null;
 
             if (grpcService instanceof HttpEndpointSupport) {
