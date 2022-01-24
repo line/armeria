@@ -152,8 +152,8 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         if (oldState.circuitState() == circuitState) {
             return;
         }
+        logStateTransition(circuitState, null);
         notifyStateChanged(circuitState);
-        return;
     }
 
     private State newOpenState() {
