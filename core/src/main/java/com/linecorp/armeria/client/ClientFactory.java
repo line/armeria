@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -68,6 +70,10 @@ import reactor.core.scheduler.NonBlocking;
  * </p>
  */
 public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
+
+    ThreadFactory THREAD_FACTORY = ThreadFactories
+            .builder("armeria-client-factory-shutdown-hook")
+            .build();
 
     Logger logger = LoggerFactory.getLogger(ClientFactory.class);
 
@@ -376,9 +382,9 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
      */
     default void closeOnShutdown() {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
             closeDefault();
-            logger.info("ClientFactory has been closed.");
+            logger.debug("ClientFactory has been closed.");
         }));
     }
 }

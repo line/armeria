@@ -38,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.StartStopSupport;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -94,6 +96,10 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 public final class Server implements ListenableAsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
+
+    private static final ThreadFactory THREAD_FACTORY = ThreadFactories
+            .builder("armeria-server-shutdown-hook")
+            .build();
 
     /**
      * Creates a new {@link ServerBuilder}.
@@ -421,9 +427,9 @@ public final class Server implements ListenableAsyncCloseable {
      * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
      */
     public void closeOnShutdown() {
-        closeOnShutdown(new Thread(() -> {
+        closeOnShutdown(THREAD_FACTORY.newThread(() -> {
             stop().join();
-            logger.info("Server has been stopped.");
+            logger.debug("Server has been stopped.");
         }));
     }
 
