@@ -49,11 +49,7 @@ import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
@@ -61,11 +57,13 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -85,24 +83,22 @@ public class MediaTypeTest {
 
     @Test // reflection
     public void testParse_useConstants() throws Exception {
-        for (MediaType constant : getConstants()) {
-            assertSame(constant, MediaType.parse(constant.toString()));
-        }
+        getConstants().forEach(constant -> {
+            assertThat(MediaType.parse(constant.toString())).isSameAs(constant);
+        });
     }
 
     @Test // reflection
     public void testCreate_useConstants() throws Exception {
-        for (MediaType constant : getConstants()) {
-            assertSame(
-                    constant,
-                    MediaType.create(constant.type(), constant.subtype())
-                             .withParameters(constant.parameters()));
-        }
+        getConstants().forEach(constant -> {
+            assertThat(MediaType.create(constant.type(), constant.subtype())
+                             .withParameters(constant.parameters())).isSameAs(constant);
+        });
     }
 
     @Test // reflection
     public void testConstants_charset() throws Exception {
-        for (Field field : getConstantFields(MediaType.class)) {
+        for (Field field: getConstantFieldsList(MediaType.class)) {
             final Charset charset = ((MediaType) field.get(null)).charset();
             if (field.getName().endsWith("_UTF_8")) {
                 assertThat(charset).isEqualTo(UTF_8);
@@ -113,14 +109,13 @@ public class MediaTypeTest {
     }
 
     @Test // reflection
-    public void testConstants_areUnique() {
+    void testConstants_areUnique() {
         assertThat(getConstants()).doesNotHaveDuplicates();
     }
 
     // reflection
-    @SuppressWarnings("Guava")
-    static <T, R> FluentIterable<Field> getConstantFields(Class<T> clazz, Class<R>... filterClazz) {
-        return FluentIterable.from(asList(clazz.getDeclaredFields())).filter(input -> {
+    static <T, R> Stream<Field> getConstantFields(Class<T> clazz, Class<R>... filterClazz) {
+        return asList(clazz.getDeclaredFields()).stream().filter(input -> {
             final int modifiers = input.getModifiers();
             return isPublic(modifiers) &&
                    isStatic(modifiers) &&
@@ -131,9 +126,25 @@ public class MediaTypeTest {
     }
 
     // reflection
-    @SuppressWarnings("Guava")
-    private static FluentIterable<MediaType> getConstants() {
-        return getConstantFields(MediaType.class).transform(input -> {
+    private static <T, R> List<Field> getConstantFieldsList(Class<T> clazz, Class<R>... filterClazz) {
+        return getConstantFields(clazz, filterClazz).collect(Collectors.toList());
+    }
+
+    // reflection
+    @SuppressWarnings("unchecked")
+    private static <T> Stream<T> getConstants(Class<T> clazz) {
+        return getConstantFields(clazz).map(input -> {
+            try {
+                return (T) input.get(null);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    // reflection
+    private static Stream<MediaType> getConstants() {
+        return getConstantFields(MediaType.class).map(input -> {
             try {
                 return (MediaType) input.get(null);
             } catch (Exception e) {
@@ -143,7 +154,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testCreate_invalidType() {
+    void testCreate_invalidType() {
         try {
             MediaType.create("te><t", "plaintext");
             fail();
@@ -152,7 +163,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testCreate_invalidSubtype() {
+    void testCreate_invalidSubtype() {
         try {
             MediaType.create("text", "pl@intext");
             fail();
@@ -161,7 +172,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testCreate_wildcardTypeDeclaredSubtype() {
+    void testCreate_wildcardTypeDeclaredSubtype() {
         try {
             MediaType.create("*", "text");
             fail();
@@ -170,83 +181,82 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testCreateApplicationType() {
+    void testCreateApplicationType() {
         final MediaType newType = MediaType.createApplicationType("yams");
-        assertEquals("application", newType.type());
-        assertEquals("yams", newType.subtype());
+        assertThat(newType.type()).isEqualTo("application");
+        assertThat(newType.subtype()).isEqualTo("yams");
     }
 
     @Test
-    public void testCreateAudioType() {
+    void testCreateAudioType() {
         final MediaType newType = MediaType.createAudioType("yams");
-        assertEquals("audio", newType.type());
-        assertEquals("yams", newType.subtype());
+        assertThat(newType.type()).isEqualTo("audio");
+        assertThat(newType.subtype()).isEqualTo("yams");
     }
 
     @Test
-    public void testCreateImageType() {
+    void testCreateImageType() {
         final MediaType newType = MediaType.createImageType("yams");
-        assertEquals("image", newType.type());
-        assertEquals("yams", newType.subtype());
+        assertThat(newType.type()).isEqualTo("image");
+        assertThat(newType.subtype()).isEqualTo("yams");
     }
 
     @Test
-    public void testCreateTextType() {
+    void testCreateTextType() {
         final MediaType newType = MediaType.createTextType("yams");
-        assertEquals("text", newType.type());
-        assertEquals("yams", newType.subtype());
+        assertThat(newType.type()).isEqualTo("text");
+        assertThat(newType.subtype()).isEqualTo("yams");
     }
 
     @Test
-    public void testCreateVideoType() {
+    void testCreateVideoType() {
         final MediaType newType = MediaType.createVideoType("yams");
-        assertEquals("video", newType.type());
-        assertEquals("yams", newType.subtype());
+        assertThat(newType.type()).isEqualTo("video");
+        assertThat(newType.subtype()).isEqualTo("yams");
     }
 
     @Test
-    public void testGetType() {
-        assertEquals("text", MediaType.parse("text/plain").type());
-        assertEquals("application", MediaType.parse("application/atom+xml; charset=utf-8").type());
+    void testGetType() {
+        assertThat(MediaType.parse("text/plain").type()).isEqualTo("text");
+        assertThat(MediaType.parse("application/atom+xml; charset=utf-8").type()).isEqualTo("application");
     }
 
     @Test
-    public void testGetSubtype() {
-        assertEquals("plain", MediaType.parse("text/plain").subtype());
-        assertEquals("atom+xml", MediaType.parse("application/atom+xml; charset=utf-8").subtype());
+    void testGetSubtype() {
+        assertThat(MediaType.parse("text/plain").subtype()).isEqualTo("plain");
+        assertThat(MediaType.parse("application/atom+xml; charset=utf-8").subtype()).isEqualTo("atom+xml");
     }
 
     private static final Map<String, Collection<String>> PARAMETERS =
             ImmutableListMultimap.of("a", "1", "a", "2", "b", "3").asMap();
 
     @Test
-    public void testGetParameters() {
-        assertEquals(ImmutableMap.of(), MediaType.parse("text/plain").parameters());
-        assertEquals(
-                ImmutableMap.of("charset", ImmutableList.of("utf-8")),
-                MediaType.parse("application/atom+xml; charset=utf-8").parameters());
-        assertEquals(PARAMETERS, MediaType.parse("application/atom+xml; a=1; a=2; b=3").parameters());
+    void testGetParameters() {
+        assertThat(MediaType.parse("text/plain").parameters()).isEqualTo(ImmutableMap.of());
+        assertThat(MediaType.parse("application/atom+xml; charset=utf-8").parameters())
+                .isEqualTo(ImmutableMap.of("charset", ImmutableList.of("utf-8")));
+        assertThat(MediaType.parse("application/atom+xml; a=1; a=2; b=3").parameters())
+                .isEqualTo(PARAMETERS);
     }
 
     @Test
-    public void testWithoutParameters() {
-        assertSame(MediaType.parse("image/gif"), MediaType.parse("image/gif").withoutParameters());
-        assertEquals(
-                MediaType.parse("image/gif"), MediaType.parse("image/gif; foo=bar").withoutParameters());
+    void testWithoutParameters() {
+        assertThat(MediaType.parse("image/gif").withoutParameters())
+                .isSameAs(MediaType.parse("image/gif"));
+        assertThat(MediaType.parse("image/gif"))
+                .isEqualTo(MediaType.parse("image/gif; foo=bar").withoutParameters());
     }
 
     @Test
-    public void testWithParameters() {
-        assertEquals(
-                MediaType.parse("text/plain; a=1; a=2; b=3"),
-                MediaType.parse("text/plain").withParameters(PARAMETERS));
-        assertEquals(
-                MediaType.parse("text/plain; a=1; a=2; b=3"),
-                MediaType.parse("text/plain; a=1; a=2; b=3").withParameters(PARAMETERS));
+    void testWithParameters() {
+        assertThat(MediaType.parse("text/plain").withParameters(PARAMETERS))
+                .isEqualTo(MediaType.parse("text/plain; a=1; a=2; b=3"));
+        assertThat(MediaType.parse("text/plain; a=1; a=2; b=3").withParameters(PARAMETERS))
+                .isEqualTo(MediaType.parse("text/plain; a=1; a=2; b=3"));
     }
 
     @Test
-    public void testWithParameters_invalidAttribute() {
+    void testWithParameters_invalidAttribute() {
         final MediaType mediaType = MediaType.parse("text/plain");
         final ImmutableListMultimap<String, String> parameters =
                 ImmutableListMultimap.of("a", "1", "@", "2", "b", "3");
@@ -258,22 +268,19 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testWithParameter() {
-        assertEquals(
-                MediaType.parse("text/plain; a=1"), MediaType.parse("text/plain").withParameter("a", "1"));
-        assertEquals(
-                MediaType.parse("text/plain; a=1"),
-                MediaType.parse("text/plain; a=1; a=2").withParameter("a", "1"));
-        assertEquals(
-                MediaType.parse("text/plain; a=3"),
-                MediaType.parse("text/plain; a=1; a=2").withParameter("a", "3"));
-        assertEquals(
-                MediaType.parse("text/plain; a=1; a=2; b=3"),
-                MediaType.parse("text/plain; a=1; a=2").withParameter("b", "3"));
+    void testWithParameter() {
+        assertThat(MediaType.parse("text/plain").withParameter("a", "1"))
+                .isEqualTo(MediaType.parse("text/plain; a=1"));
+        assertThat(MediaType.parse("text/plain; a=1; a=2").withParameter("a", "1"))
+                .isEqualTo(MediaType.parse("text/plain; a=1"));
+        assertThat(MediaType.parse("text/plain; a=1; a=2").withParameter("a", "3"))
+                .isEqualTo(MediaType.parse("text/plain; a=3"));
+        assertThat(MediaType.parse("text/plain; a=1; a=2").withParameter("b", "3"))
+                .isEqualTo(MediaType.parse("text/plain; a=1; a=2; b=3"));
     }
 
     @Test
-    public void testWithParameter_invalidAttribute() {
+    void testWithParameter_invalidAttribute() {
         final MediaType mediaType = MediaType.parse("text/plain");
         try {
             mediaType.withParameter("@", "2");
@@ -283,26 +290,21 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testWithParametersIterable() {
-        assertEquals(
-                MediaType.parse("text/plain"),
-                MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of()));
-        assertEquals(
-                MediaType.parse("text/plain; a=1"),
-                MediaType.parse("text/plain").withParameters("a", ImmutableSet.of("1")));
-        assertEquals(
-                MediaType.parse("text/plain; a=1"),
-                MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of("1")));
-        assertEquals(
-                MediaType.parse("text/plain; a=1; a=3"),
-                MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of("1", "3")));
-        assertEquals(
-                MediaType.parse("text/plain; a=1; a=2; b=3; b=4"),
-                MediaType.parse("text/plain; a=1; a=2").withParameters("b", ImmutableSet.of("3", "4")));
+    void testWithParametersIterable() {
+        assertThat(MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of()))
+                .isEqualTo(MediaType.parse("text/plain"));
+        assertThat(MediaType.parse("text/plain").withParameters("a", ImmutableSet.of("1")))
+                .isEqualTo(MediaType.parse("text/plain; a=1"));
+        assertThat(MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of("1")))
+                .isEqualTo(MediaType.parse("text/plain; a=1"));
+        assertThat(MediaType.parse("text/plain; a=1; a=2").withParameters("a", ImmutableSet.of("1", "3")))
+                .isEqualTo(MediaType.parse("text/plain; a=1; a=3"));
+        assertThat(MediaType.parse("text/plain; a=1; a=2").withParameters("b", ImmutableSet.of("3", "4")))
+                .isEqualTo(MediaType.parse("text/plain; a=1; a=2; b=3; b=4"));
     }
 
     @Test
-    public void testWithParametersIterable_invalidAttribute() {
+    void testWithParametersIterable_invalidAttribute() {
         final MediaType mediaType = MediaType.parse("text/plain");
         try {
             mediaType.withParameters("@", ImmutableSet.of("2"));
@@ -312,7 +314,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testWithParametersIterable_nullValue() {
+    void testWithParametersIterable_nullValue() {
         final MediaType mediaType = MediaType.parse("text/plain");
         try {
             mediaType.withParameters("a", Collections.singletonList(null));
@@ -322,45 +324,43 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testWithCharset() {
-        assertEquals(
-                MediaType.parse("text/plain; charset=utf-8"),
-                MediaType.parse("text/plain").withCharset(UTF_8));
-        assertEquals(
-                MediaType.parse("text/plain; charset=utf-8"),
-                MediaType.parse("text/plain; charset=utf-16").withCharset(UTF_8));
+    void testWithCharset() {
+        assertThat(MediaType.parse("text/plain").withCharset(UTF_8))
+                .isEqualTo(MediaType.parse("text/plain; charset=utf-8"));
+        assertThat(MediaType.parse("text/plain; charset=utf-16").withCharset(UTF_8))
+                .isEqualTo(MediaType.parse("text/plain; charset=utf-8"));
     }
 
     @Test
-    public void testHasWildcard() {
-        assertFalse(PLAIN_TEXT_UTF_8.hasWildcard());
-        assertFalse(JPEG.hasWildcard());
-        assertTrue(ANY_TYPE.hasWildcard());
-        assertTrue(ANY_APPLICATION_TYPE.hasWildcard());
-        assertTrue(ANY_AUDIO_TYPE.hasWildcard());
-        assertTrue(ANY_IMAGE_TYPE.hasWildcard());
-        assertTrue(ANY_TEXT_TYPE.hasWildcard());
-        assertTrue(ANY_VIDEO_TYPE.hasWildcard());
+    void testHasWildcard() {
+        assertThat(PLAIN_TEXT_UTF_8.hasWildcard()).isFalse();
+        assertThat(JPEG.hasWildcard()).isFalse();
+        assertThat(ANY_TYPE.hasWildcard()).isTrue();
+        assertThat(ANY_APPLICATION_TYPE.hasWildcard()).isTrue();
+        assertThat(ANY_AUDIO_TYPE.hasWildcard()).isTrue();
+        assertThat(ANY_IMAGE_TYPE.hasWildcard()).isTrue();
+        assertThat(ANY_TEXT_TYPE.hasWildcard()).isTrue();
+        assertThat(ANY_VIDEO_TYPE.hasWildcard()).isTrue();
     }
 
     @Test
-    public void testIs() {
-        assertTrue(PLAIN_TEXT_UTF_8.is(ANY_TYPE));
-        assertTrue(JPEG.is(ANY_TYPE));
-        assertTrue(ANY_TEXT_TYPE.is(ANY_TYPE));
-        assertTrue(PLAIN_TEXT_UTF_8.is(ANY_TEXT_TYPE));
-        assertTrue(PLAIN_TEXT_UTF_8.withoutParameters().is(ANY_TEXT_TYPE));
-        assertFalse(JPEG.is(ANY_TEXT_TYPE));
-        assertTrue(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8));
-        assertTrue(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withoutParameters()));
-        assertFalse(PLAIN_TEXT_UTF_8.withoutParameters().is(PLAIN_TEXT_UTF_8));
-        assertFalse(PLAIN_TEXT_UTF_8.is(HTML_UTF_8));
-        assertFalse(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16").is(PLAIN_TEXT_UTF_8));
-        assertFalse(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16")));
+    void testIs() {
+        assertThat(PLAIN_TEXT_UTF_8.is(ANY_TYPE)).isTrue();
+        assertThat(JPEG.is(ANY_TYPE)).isTrue();
+        assertThat(ANY_TEXT_TYPE.is(ANY_TYPE)).isTrue();
+        assertThat(PLAIN_TEXT_UTF_8.is(ANY_TEXT_TYPE)).isTrue();
+        assertThat(PLAIN_TEXT_UTF_8.withoutParameters().is(ANY_TEXT_TYPE)).isTrue();
+        assertThat(JPEG.is(ANY_TEXT_TYPE)).isFalse();
+        assertThat(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8)).isTrue();
+        assertThat(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withoutParameters())).isTrue();
+        assertThat(PLAIN_TEXT_UTF_8.withoutParameters().is(PLAIN_TEXT_UTF_8)).isFalse();
+        assertThat(PLAIN_TEXT_UTF_8.is(HTML_UTF_8)).isFalse();
+        assertThat(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16").is(PLAIN_TEXT_UTF_8)).isFalse();
+        assertThat(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16"))).isFalse();
     }
 
     @Test
-    public void testIsJson() {
+    void testIsJson() {
         assertThat(JSON.isJson()).isTrue();
         assertThat(JSON_UTF_8.isJson()).isTrue();
         assertThat(MediaType.parse("application/graphql+json").isJson()).isTrue();
@@ -369,7 +369,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testBelongsTo() {
+    void testBelongsTo() {
         // For quality factor, "belongsTo" has a different behavior to "is".
         assertThat(PLAIN_TEXT_UTF_8.is(ANY_TYPE.withParameter("q", "0.9"))).isFalse();
         assertThat(PLAIN_TEXT_UTF_8.belongsTo(ANY_TYPE.withParameter("q", "0.9"))).isTrue();
@@ -380,7 +380,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testParse_empty() {
+    void testParse_empty() {
         try {
             MediaType.parse("");
             fail();
@@ -389,7 +389,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testParse_badInput() {
+    void testParse_badInput() {
         try {
             MediaType.parse("/");
             fail();
@@ -473,18 +473,18 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testGetCharset() {
+    void testGetCharset() {
         assertThat(MediaType.parse("text/plain").charset()).isNull();
         assertThat(MediaType.parse("text/plain; charset=utf-8").charset()).isEqualTo(UTF_8);
     }
 
     @Test // Non-UTF-8 Charset
-    public void testGetCharset_utf16() {
+    void testGetCharset_utf16() {
         assertThat(MediaType.parse("text/plain; charset=utf-16").charset()).isEqualTo(UTF_16);
     }
 
     @Test
-    public void testGetCharset_tooMany() {
+    void testGetCharset_tooMany() {
         final MediaType mediaType = MediaType.parse("text/plain; charset=utf-8; charset=utf-16");
         try {
             mediaType.charset();
@@ -494,7 +494,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testGetCharset_illegalCharset() {
+    void testGetCharset_illegalCharset() {
         final MediaType mediaType = MediaType.parse("text/plain; charset=\"!@#$%^&*()\"");
         try {
             mediaType.charset();
@@ -504,7 +504,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testGetCharset_unsupportedCharset() {
+    void testGetCharset_unsupportedCharset() {
         final MediaType mediaType = MediaType.parse("text/plain; charset=utf-wtf");
         try {
             mediaType.charset();
@@ -514,7 +514,7 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testEquals() {
+    void testEquals() {
         new EqualsTester()
                 .addEqualityGroup(
                         MediaType.create("text", "plain"),
@@ -555,7 +555,7 @@ public class MediaTypeTest {
     }
 
     @Test // Non-UTF-8 Charset
-    public void testEquals_nonUtf8Charsets() {
+    void testEquals_nonUtf8Charsets() {
         new EqualsTester()
                 .addEqualityGroup(MediaType.create("text", "plain"))
                 .addEqualityGroup(MediaType.create("text", "plain").withCharset(UTF_8))
@@ -564,7 +564,7 @@ public class MediaTypeTest {
     }
 
     @Test // com.google.common.testing.NullPointerTester
-    public void testNullPointer() {
+    void testNullPointer() {
         final NullPointerTester tester = new NullPointerTester();
         tester.testAllPublicConstructors(MediaType.class);
         tester.testAllPublicStaticMethods(MediaType.class);
@@ -572,13 +572,21 @@ public class MediaTypeTest {
     }
 
     @Test
-    public void testToString() {
-        assertEquals("text/plain", MediaType.create("text", "plain").toString());
-        assertEquals(
-                "text/plain; something=\"cr@zy\"; something-else=\"crazy with spaces\"",
-                MediaType.create("text", "plain")
-                         .withParameter("something", "cr@zy")
-                         .withParameter("something-else", "crazy with spaces")
-                         .toString());
+    void testToString() {
+        assertThat(MediaType.create("text", "plain").toString()).isEqualTo("text/plain");
+        assertThat(MediaType.create("text", "plain")
+                            .withParameter("something", "cr@zy")
+                            .withParameter("something-else", "crazy with spaces")
+                            .toString())
+                .isEqualTo("text/plain; something=\"cr@zy\"; something-else=\"crazy with spaces\"");
+    }
+
+    @Test
+    void wellDefinedUpstreamMediaTypes() {
+        getConstants(com.google.common.net.MediaType.class).forEach(upstreamMediaType -> {
+            // If upstreamMediaType is "well-known" in armeria, the same instance will be returned
+            assertThat(MediaType.parse(upstreamMediaType.toString()))
+                    .isSameAs(MediaType.parse(upstreamMediaType.toString()));
+        });
     }
 }

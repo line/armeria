@@ -22,10 +22,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
 
@@ -52,9 +52,8 @@ class HttpHeaderNamesTest {
         assertThat(headerNames).containsAll(filtered);
     }
 
-    private static ImmutableList<String> names(FluentIterable<Field> constantFields) {
-        return constantFields.stream()
-                             .map(Field::getName)
+    private static ImmutableList<String> names(Stream<Field> constantFields) {
+        return constantFields.map(Field::getName)
                              .collect(toImmutableList());
     }
 
