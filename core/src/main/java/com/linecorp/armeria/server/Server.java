@@ -418,7 +418,7 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     /**
-     * Add a shutdown hook to stop this {@link Server}.
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
      */
     public void closeOnShutdown() {
         closeOnShutdown(new Thread(() -> {
