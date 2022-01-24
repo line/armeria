@@ -43,7 +43,8 @@ class FramedGrpcServiceTest {
     private final FramedGrpcService grpcService =
             (FramedGrpcService) GrpcService.builder()
                                            .addService(mock(TestServiceImplBase.class))
-                                           .build();
+                                           .build()
+                                           .unwrap();
 
     @Test
     void missingContentType() throws Exception {
