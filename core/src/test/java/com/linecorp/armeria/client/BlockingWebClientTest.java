@@ -74,9 +74,6 @@ class BlockingWebClientTest {
 
     @Test
     void prepare_asBytes() {
-        BlockingWebClient.of().post("/foo", null);
-
-
         final ResponseEntity<byte[]> response = client.prepare()
                                                       .get("/string")
                                                       .asBytes()

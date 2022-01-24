@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -561,7 +562,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse delete(String path) {
-        delete(path, null);
+        return delete(path, null);
     }
 
     /**
@@ -593,6 +594,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Note that a blocking request should be sent in a non-{@link EventLoop} thread such
      * {@link BlockingTaskExecutor}.
      */
+    @UnstableApi
     BlockingWebClient blocking();
 
     @Override
