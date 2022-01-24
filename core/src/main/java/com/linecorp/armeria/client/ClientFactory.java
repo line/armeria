@@ -69,6 +69,8 @@ import reactor.core.scheduler.NonBlocking;
  */
 public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
 
+    Logger logger = LoggerFactory.getLogger(ClientFactory.class);
+
     /**
      * Returns the default {@link ClientFactory} implementation.
      */
@@ -111,7 +113,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
         if (!(Thread.currentThread() instanceof NonBlocking)) {
             boolean interrupted = false;
             try {
-                for (;;) {
+                for (; ; ) {
                     try {
                         closeFuture.get();
                         break;
@@ -368,5 +370,15 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
             // Validated already, unless `ClientBuilderParams` has a bug.
         }
         return params;
+    }
+
+    /**
+     * Add a shutdown hook to stop this {@link ClientFactory}.
+     */
+    default void closeOnShutdown() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            closeDefault();
+            logger.info("ClientFactory has been closed.");
+        }));
     }
 }
