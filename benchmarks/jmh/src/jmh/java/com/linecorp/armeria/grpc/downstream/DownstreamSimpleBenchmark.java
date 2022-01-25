@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
@@ -66,9 +66,9 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
                                                 .meterRegistry(NoopMeterRegistry.get())
                                                 .build();
         server.start().join();
-        final String url = "gproto+http://127.0.0.1:" + port() + '/';
-        githubApiClient = Clients.newClient(url, GithubServiceBlockingStub.class);
-        githubApiFutureClient = Clients.newClient(url, GithubServiceFutureStub.class);
+        final String url = "http://127.0.0.1:" + port() + '/';
+        githubApiClient = GrpcClients.newClient(url, GithubServiceBlockingStub.class);
+        githubApiFutureClient = GrpcClients.newClient(url, GithubServiceFutureStub.class);
     }
 
     @Override

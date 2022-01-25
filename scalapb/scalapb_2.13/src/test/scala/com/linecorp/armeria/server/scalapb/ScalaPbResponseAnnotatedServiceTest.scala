@@ -44,6 +44,7 @@ import com.linecorp.armeria.server.annotation.{
   ProducesJsonSequences,
   ProducesProtobuf
 }
+import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.server.scalapb.ScalaPbResponseAnnotatedServiceTest.server
 import com.linecorp.armeria.server.{ServerBuilder, ServiceRequestContext}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
@@ -227,9 +228,11 @@ class ScalaPbResponseAnnotatedServiceTest {
 object ScalaPbResponseAnnotatedServiceTest {
   @RegisterExtension
   val server: ServerExtension = new ServerExtension() {
-    override protected def configure(sb: ServerBuilder): Unit =
+    override protected def configure(sb: ServerBuilder): Unit = {
       // A workaround for 'ambiguous reference to overloaded definition' in Scala 2.12.x
       sb.annotatedService(new GreetingService(), Array.emptyObjectArray: _*)
+      sb.decorator(LoggingService.newDecorator())
+    }
   }
 
   private var cause: Option[Throwable] = None

@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.MediaType;
 
@@ -27,9 +27,13 @@ public class DefaultMediaTypeResolverTest {
 
     @Test
     public void knownExtensions() {
+        assertThat(MediaType.AVIF.is(RESOLVER.guessFromPath("image.avif"))).isTrue();
+        assertThat(MediaType.HEIF.is(RESOLVER.guessFromPath("image.heif"))).isTrue();
+        assertThat(MediaType.MANIFEST_JSON_UTF_8.is(RESOLVER.guessFromPath("app.webmanifest"))).isTrue();
         assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("image.png"))).isTrue();
         assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("/static/image.png"))).isTrue();
         assertThat(MediaType.PDF.is(RESOLVER.guessFromPath("document.pdf"))).isTrue();
+        assertThat(MediaType.WEBP.is(RESOLVER.guessFromPath("image.webp"))).isTrue();
         assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.gz"))).isTrue();
     }
 

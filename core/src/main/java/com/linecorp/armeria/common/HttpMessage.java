@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.stream.HttpDecoder;
@@ -85,4 +86,28 @@ public interface HttpMessage extends StreamMessage<HttpObject> {
      */
     <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                 Function<? super HttpData, ? extends ByteBuf> byteBufConverter);
+
+    /**
+     * Transforms the {@link HttpData}s emitted by this {@link HttpMessage} by applying the
+     * specified {@link Function}.
+     */
+    HttpMessage mapData(Function<? super HttpData, ? extends HttpData> function);
+
+    /**
+     * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpMessage} by applying the
+     * specified {@link Function}.
+     */
+    HttpMessage mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function);
+
+    /**
+     * Applies the specified {@link Consumer} to the {@link HttpData}s
+     * emitted by this {@link HttpMessage}.
+     */
+    HttpMessage peekData(Consumer<? super HttpData> action);
+
+    /**
+     * Applies the specified {@link Consumer} to the {@linkplain HttpHeaders trailers}
+     * emitted by this {@link HttpMessage}.
+     */
+    HttpMessage peekTrailers(Consumer<? super HttpHeaders> action);
 }
