@@ -267,7 +267,8 @@ class FuseableStreamMessageTest {
                                                                  .map(x -> HttpData.wrap(byteBuf));
 
         if (withPooledObjects) {
-            final StreamMessageCollector<HttpData> collector = new StreamMessageCollector<>(SubscriptionOption.WITH_POOLED_OBJECTS);
+            final StreamMessageCollector<HttpData> collector =
+                    new StreamMessageCollector<>(SubscriptionOption.WITH_POOLED_OBJECTS);
             transformed.subscribe(collector, SubscriptionOption.WITH_POOLED_OBJECTS);
             final HttpData httpData = collector.collect().join().get(0);
             assertThat(httpData.isPooled()).isTrue();
