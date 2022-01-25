@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -63,7 +63,8 @@ public interface GrpcJsonMarshaller {
      * and {@code Gson} to serialize and deserialize messages.
      * Note:
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
-     * has a known performance issue. Use this method only when
+     * has a known <a href="https://github.com/curioswitch/protobuf-jackson#benchmarks">performance issue</a>.
+     * Use this method only when
      * 1) you're using Protobuf 2 or 2) you have an issue with
      * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>.
      */
@@ -77,7 +78,8 @@ public interface GrpcJsonMarshaller {
      * and {@code Gson} to serialize and deserialize messages.
      * Note:
      * <a href="https://developers.google.com/protocol-buffers/docs/reference/java/com/google/protobuf/util/JsonFormat">JsonFormat</a>
-     * has a known performance issue. Use this method only when
+     * has a known <a href="https://github.com/curioswitch/protobuf-jackson#benchmarks">performance issue</a>.
+     * Use this method only when
      * 1) you're using Protobuf 2 or 2) you have an issue with
      * <a href="https://github.com/curioswitch/protobuf-jackson">protobuf-jackson</a>.
      */

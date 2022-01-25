@@ -97,9 +97,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                .distinct()
                                .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
             } catch (Exception e) {
-                logger.warn("Failed to instantiate a JSON marshaller. Consider " +
-                            "disabling gRPC-JSON serialization or using {}.ofGson() instead.",
-                            GrpcJsonMarshaller.class.getName(), e);
+                logger.warn("Failed to instantiate a JSON marshaller. Consider disabling gRPC-JSON " +
+                            "serialization with {}.supportedSerializationFormats() " +
+                            "or using {}.ofGson() instead.",
+                            GrpcServiceBuilder.class.getName(), GrpcJsonMarshaller.class.getName(), e);
                 return ImmutableMap.of();
             }
         }
