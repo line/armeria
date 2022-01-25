@@ -46,16 +46,19 @@ final class MimeTypeUtil {
         add(map, MediaType.PLAIN_TEXT_UTF_8, "txt");
 
         // Image files
+        add(map, MediaType.AVIF, "avif");
         add(map, MediaType.GIF, "gif");
+        add(map, MediaType.HEIF, "heif");
         add(map, MediaType.JPEG, "jpeg", "jpg");
         add(map, MediaType.PNG, "png");
         add(map, MediaType.SVG_UTF_8, "svg", "svgz");
+        add(map, MediaType.WEBP, "webp");
         add(map, MediaType.create("image", "x-icon"), "ico");
 
         // Font files
         add(map, MediaType.create("application", "x-font-ttf"), "ttc", "ttf");
         add(map, MediaType.WOFF, "woff");
-        add(map, MediaType.create("application", "font-woff2"), "woff2");
+        add(map, MediaType.WOFF2, "woff2");
         add(map, MediaType.EOT, "eot");
         add(map, MediaType.create("font", "opentype"), "otf");
 
@@ -66,6 +69,7 @@ final class MimeTypeUtil {
         add(map, MediaType.XHTML_UTF_8, "xhtml", "xhtm");
         add(map, MediaType.APPLICATION_XML_UTF_8, "xml", "xsd");
         add(map, MediaType.create("application", "xml-dtd"), "dtd");
+        add(map, MediaType.MANIFEST_JSON_UTF_8, "webmanifest");
 
         EXTENSION_TO_MEDIA_TYPE = Collections.unmodifiableMap(map);
     }
