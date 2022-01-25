@@ -16,6 +16,13 @@ dependencies {
         }
     }
 
+    testImplementation("org.eclipse.jdt:ecj") {
+        version {
+            // As a workaround for JSP compiler error on Java 17, forcibly specify the newer version
+            strictly "3.28.0"
+        }
+    }
+
     // Replace commons-logging (Tomcat's logging API) with SLF4J.
     runtimeOnly 'org.slf4j:jcl-over-slf4j'
 }
