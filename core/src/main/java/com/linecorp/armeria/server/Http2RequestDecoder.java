@@ -140,9 +140,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                     ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, headers, endOfStream, scheme, cfg);
             final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), armeriaRequestHeaders);
             final Routed<ServiceConfig> routed;
-            if (routingCtx.status() != RoutingStatus.OK) {
-                routed = null;
-            } else {
+            if (routingCtx.status().needsServiceConfig()) {
                 try {
                     // Find the service that matches the path.
                     routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
@@ -152,6 +150,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                     return;
                 }
                 assert routed.isPresent();
+            } else {
+                routed = null;
             }
 
             final int id = ++nextId;

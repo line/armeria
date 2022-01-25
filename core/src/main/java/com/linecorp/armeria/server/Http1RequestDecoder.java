@@ -194,9 +194,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), requestHeaders);
                     final Routed<ServiceConfig> routed;
-                    if (routingCtx.status() != RoutingStatus.OK) {
-                        routed = null;
-                    } else {
+                    if (routingCtx.status().needsServiceConfig()) {
                         try {
                             // Find the service that matches the path.
                             routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
@@ -207,6 +205,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             return;
                         }
                         assert routed.isPresent();
+                    } else {
+                        routed = null;
                     }
 
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);

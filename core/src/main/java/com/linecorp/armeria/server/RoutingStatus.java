@@ -26,17 +26,33 @@ public enum RoutingStatus {
     /**
      * The routing completed successfully.
      */
-    OK,
-    /**
-     * An {@code "OPTIONS * HTTP/1.1"} request.
-     */
-    OPTIONS,
-    /**
-     * The request specified an invalid path.
-     */
-    INVALID_PATH,
+    OK(true),
+
     /**
      * A <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS">CORS</a> preflight request.
      */
-    CORS_PREFLIGHT
+    CORS_PREFLIGHT(true),
+
+    /**
+     * An {@code "OPTIONS * HTTP/1.1"} request.
+     */
+    OPTIONS(false),
+
+    /**
+     * The request specified an invalid path.
+     */
+    INVALID_PATH(false);
+
+    private final boolean needsServiceConfig;
+
+    RoutingStatus(boolean needsServiceConfig) {
+        this.needsServiceConfig = needsServiceConfig;
+    }
+
+    /**
+     * Returns {@code true} if the incoming HTTP request needs a {@link ServiceConfig}.
+     */
+    public boolean needsServiceConfig() {
+        return needsServiceConfig;
+    }
 }

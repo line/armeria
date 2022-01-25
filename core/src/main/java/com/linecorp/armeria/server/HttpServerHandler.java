@@ -316,17 +316,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
-        if (routingStatus != RoutingStatus.OK) {
+        if (!routingStatus.needsServiceConfig()) {
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
-            if (routingStatus == RoutingStatus.OPTIONS) {
-                // Handle 'OPTIONS * HTTP/1.1'.
-                handleOptions(ctx, reqCtx);
-            } else {
-                assert routingStatus == RoutingStatus.INVALID_PATH;
-                rejectInvalidPath(ctx, reqCtx);
+            switch (routingStatus) {
+                case OPTIONS:
+                    // Handle 'OPTIONS * HTTP/1.1'.
+                    handleOptions(ctx, reqCtx);
+                    return;
+                case INVALID_PATH:
+                    rejectInvalidPath(ctx, reqCtx);
+                    return;
+                default:
+                    throw new Error(); // Should never reach here.
             }
-            return;
         }
 
         // Find the service that matches the path.

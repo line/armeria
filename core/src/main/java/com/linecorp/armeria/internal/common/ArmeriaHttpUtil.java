@@ -233,8 +233,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a>
-     * states the path must not
-     * be empty, and instead should be {@code /}.
+     * states the path must not be empty, and instead should be {@code /}.
      */
     private static final String EMPTY_REQUEST_PATH = "/";
 
