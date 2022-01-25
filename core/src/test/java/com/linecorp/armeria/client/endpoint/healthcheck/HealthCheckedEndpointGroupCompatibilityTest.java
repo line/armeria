@@ -63,7 +63,7 @@ class HealthCheckedEndpointGroupCompatibilityTest {
         final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
         try (HealthCheckedEndpointGroup endpointGroup =
                      HealthCheckedEndpointGroup.of(endpoint, path)) {
-
+            endpointGroup.whenReady().join();
             // Check the initial state (healthy).
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
         }

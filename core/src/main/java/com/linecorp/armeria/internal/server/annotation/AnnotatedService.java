@@ -31,6 +31,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -59,6 +60,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Re
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -121,7 +123,8 @@ public final class AnnotatedService implements HttpService {
     private final ResponseConverterFunction responseConverter;
 
     private final Route route;
-    private final ResponseHeaders defaultHttpHeaders;
+    private final HttpStatus defaultStatus;
+    private final HttpHeaders defaultHttpHeaders;
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
@@ -134,7 +137,8 @@ public final class AnnotatedService implements HttpService {
                      List<ExceptionHandlerFunction> exceptionHandlers,
                      List<ResponseConverterFunction> responseConverters,
                      Route route,
-                     ResponseHeaders defaultHttpHeaders,
+                     HttpStatus defaultStatus,
+                     HttpHeaders defaultHttpHeaders,
                      HttpHeaders defaultHttpTrailers,
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
@@ -157,6 +161,7 @@ public final class AnnotatedService implements HttpService {
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");
 
+        this.defaultStatus = requireNonNull(defaultStatus, "defaultStatus");
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -194,18 +199,7 @@ public final class AnnotatedService implements HttpService {
     private static ResponseConverterFunction responseConverter(
             Method method, List<ResponseConverterFunction> responseConverters) {
 
-        final Type actualType;
-        if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
-            final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
-            warnIfHttpResponseArgumentExists(type, type);
-            actualType = type.getActualTypeArguments()[0];
-        } else if (KotlinUtil.isSuspendingFunction(method)) {
-            // Use kotlin reflection since suspending function's java return type is always Object.
-            actualType = KotlinUtil.kFunctionReturnType(method);
-        } else {
-            actualType = method.getGenericReturnType();
-        }
-
+        final Type actualType = getActualReturnType(method);
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList
                         .<ResponseConverterFunction>builder()
@@ -231,6 +225,27 @@ public final class AnnotatedService implements HttpService {
         }
 
         return responseConverter;
+    }
+
+    private static Type getActualReturnType(Method method) {
+        final Class<?> returnType;
+        final Type genericReturnType;
+
+        if (KotlinUtil.isSuspendingFunction(method)) {
+            returnType = KotlinUtil.kFunctionReturnType(method);
+            genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
+        } else {
+            returnType = method.getReturnType();
+            genericReturnType = method.getGenericReturnType();
+        }
+
+        if (HttpResult.class.isAssignableFrom(returnType)) {
+            final ParameterizedType type = (ParameterizedType) genericReturnType;
+            warnIfHttpResponseArgumentExists(type, type);
+            return type.getActualTypeArguments()[0];
+        } else {
+            return genericReturnType;
+        }
     }
 
     private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
@@ -283,21 +298,20 @@ public final class AnnotatedService implements HttpService {
             // If an error occurs, the default ExceptionHandler will handle the error.
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
                 logger.isWarnEnabled()) {
-                return response.mapError(cause -> {
+                return response.peekError(cause -> {
                     logger.warn("{} Exception raised by method '{}' in '{}':",
                                 ctx, methodName(), object.getClass().getSimpleName(), Exceptions.peel(cause));
-                    return cause;
                 });
-            } else {
-                return response;
             }
-        } else {
-            return response.recover(cause -> {
-                try (SafeCloseable ignored = ctx.push()) {
-                    return exceptionHandler.handleException(ctx, req, cause);
-                }
-            });
         }
+        return response;
+    }
+
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
     }
 
     /**
@@ -361,9 +375,16 @@ public final class AnnotatedService implements HttpService {
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
+                final ScheduledExecutorService executor;
+                // The request context will be injected by ArmeriaRequestCoroutineContext
+                if (useBlockingTaskExecutor) {
+                    executor = ctx.blockingTaskExecutor().withoutContext();
+                } else {
+                    executor = ctx.eventLoop().withoutContext();
+                }
                 return callKotlinSuspendingMethod.invoke(
                         method, object, arguments,
-                        useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
+                        executor,
                         ctx);
             } else {
                 return methodHandle.invoke(arguments);
@@ -432,8 +453,7 @@ public final class AnnotatedService implements HttpService {
             return headers.build();
         }
 
-        final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
-        return headers.status(defaultHttpStatus).build();
+        return headers.status(defaultStatus).build();
     }
 
     /**
@@ -492,6 +512,30 @@ public final class AnnotatedService implements HttpService {
             }
 
             return HttpResponse.ofFailure(peeledCause);
+        }
+    }
+
+    private static final class ExceptionHandlingHttpService extends SimpleDecoratingHttpService {
+
+        private final ExceptionHandlerFunction exceptionHandler;
+
+        ExceptionHandlingHttpService(HttpService service, ExceptionHandlerFunction exceptionHandler) {
+            super(service);
+            this.exceptionHandler = exceptionHandler;
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            try {
+                final HttpResponse response = unwrap().serve(ctx, req);
+                return response.recover(cause -> {
+                    try (SafeCloseable ignored = ctx.push()) {
+                        return exceptionHandler.handleException(ctx, req, cause);
+                    }
+                });
+            } catch (Exception ex) {
+                return exceptionHandler.handleException(ctx, req, ex);
+            }
         }
     }
 

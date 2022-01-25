@@ -99,7 +99,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      * When requests in {@link AbstractRetryingClient} are made,
      * corresponding responses are timed out by this value. {@code 0} disables the timeout.
      * It will be set by the default value in {@link Flags#defaultResponseTimeoutMillis()}, if the client
-     * dose not specify.
+     * does not specify.
      *
      * @return {@code this} to support method chaining.
      *

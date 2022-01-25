@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.sangria
 
-import com.linecorp.armeria.client.WebClient
+import com.linecorp.armeria.client.{WebClient, WebClientBuilder}
 import com.linecorp.armeria.client.logging.LoggingClient
 import com.linecorp.armeria.internal.testing.ServerRuleDelegate
 import com.linecorp.armeria.server.ServerBuilder
@@ -31,6 +31,8 @@ trait ServerSuite {
 
   protected def configureServer: ServerBuilder => Unit
 
+  protected def configureWebClient: WebClientBuilder => Unit = _ => ()
+
   protected def server: ServerRuleDelegate = delegate
 
   /**
@@ -42,6 +44,8 @@ trait ServerSuite {
   override def beforeAll(): Unit = {
     delegate = new ServerRuleDelegate(false) {
       override def configure(sb: ServerBuilder): Unit = configureServer(sb)
+
+      override def configureWebClient(wcb: WebClientBuilder): Unit = self.configureWebClient(wcb)
     }
 
     if (!runServerForEachTest) {
@@ -66,9 +70,4 @@ trait ServerSuite {
       server.stop()
     }
   }
-
-  lazy val client: WebClient = WebClient
-    .builder(server.httpUri())
-    .decorator(LoggingClient.newDecorator())
-    .build()
 }

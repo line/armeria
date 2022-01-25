@@ -19,9 +19,10 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URISyntaxException;
-import java.util.AbstractMap.SimpleEntry;
 
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.MediaType;
 
@@ -45,7 +46,16 @@ class RoutingResultTest {
         assertThat(routingResult.isPresent()).isTrue();
         assertThat(routingResult.path()).isEqualTo("/foo");
         assertThat(routingResult.query()).isEqualTo("bar=baz");
-        assertThat(routingResult.pathParams()).containsOnly(new SimpleEntry<>("qux", "quux"));
+        assertThat(routingResult.pathParams()).containsOnly(Maps.immutableEntry("qux", "quux"));
         assertThat(routingResult.negotiatedResponseMediaType()).isSameAs(MediaType.JSON_UTF_8);
+    }
+
+    @Test
+    void percentEncodedPathParam() {
+        final RoutingResultBuilder builder = RoutingResult.builder();
+        final RoutingResult routingResult = builder.path("/foo")
+                                                   .rawParam("bar", "%62az%2Fqu%78")
+                                                   .build();
+        assertThat(routingResult.pathParams()).containsOnly(Maps.immutableEntry("bar", "baz/qux"));
     }
 }

@@ -28,35 +28,32 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2LocalFlowController;
 
 final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements ClientHttpObjectEncoder {
     private final SessionProtocol protocol;
-    private final KeepAliveHandler keepAliveHandler;
 
-    ClientHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                             SessionProtocol protocol, KeepAliveHandler keepAliveHandler) {
-        super(ctx, encoder);
+    ClientHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
+                             Http2ClientConnectionHandler connectionHandler,
+                             SessionProtocol protocol) {
+        super(connectionHandlerCtx, connectionHandler);
         this.protocol = requireNonNull(protocol, "protocol");
-        assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||
-               keepAliveHandler instanceof NoopKeepAliveHandler;
-        this.keepAliveHandler = keepAliveHandler;
+        assert keepAliveHandler() instanceof Http2ClientKeepAliveHandler ||
+               keepAliveHandler() instanceof NoopKeepAliveHandler;
     }
 
     @Override
     public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
         final Http2Connection conn = encoder().connection();
         if (isStreamPresentAndWritable(streamId)) {
-            keepAliveHandler.onReadOrWrite();
+            keepAliveHandler().onReadOrWrite();
             return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0,
                                           endStream, ctx().newPromise());
         }
@@ -75,7 +72,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     }
 
     private Http2Headers convertHeaders(HttpHeaders inputHeaders) {
-        final Http2Headers outputHeaders = ArmeriaHttpUtil.toNettyHttp2ClientHeader(inputHeaders);
+        final Http2Headers outputHeaders = ArmeriaHttpUtil.toNettyHttp2ClientHeaders(inputHeaders);
 
         if (!outputHeaders.contains(HttpHeaderNames.USER_AGENT)) {
             outputHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
@@ -99,16 +96,11 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     @Override
     public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
         if (isStreamPresentAndWritable(streamId)) {
-            keepAliveHandler.onReadOrWrite();
-            return encoder().writeHeaders(ctx(), streamId, ArmeriaHttpUtil.toNettyHttp2ClientTrailer(headers),
+            keepAliveHandler().onReadOrWrite();
+            return encoder().writeHeaders(ctx(), streamId, ArmeriaHttpUtil.toNettyHttp2ClientTrailers(headers),
                                           0, true, ctx().newPromise());
         }
 
         return newFailedFuture(ClosedStreamException.get());
-    }
-
-    @Override
-    public KeepAliveHandler keepAliveHandler() {
-        return keepAliveHandler;
     }
 }

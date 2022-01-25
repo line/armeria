@@ -261,18 +261,4 @@ class RouteDecoratingTest {
         }
         assertThat(client.execute(builder.build()).aggregate().join().contentUtf8()).isEqualTo(result);
     }
-
-    void decorator() {
-        final Server server = Server.builder()
-                                   .decorator("glob:/**", newDecorator(1))
-                                   .decorator("glob:/foo/*", newDecorator(2))
-                                   .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                   .build();
-        server.start().join();
-
-        Server.builder()
-              .decorator("glob:/foo/*", newDecorator(3))
-              .decorator("glob:/**", newDecorator(4))
-              .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
-    }
 }

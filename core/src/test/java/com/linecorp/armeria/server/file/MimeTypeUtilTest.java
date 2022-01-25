@@ -17,22 +17,26 @@ package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.MediaType;
 
-public class MimeTypeUtilTest {
+class MimeTypeUtilTest {
 
     @Test
     public void knownExtensions() {
+        assertThat(MediaType.AVIF.is(MimeTypeUtil.guessFromPath("image.avif"))).isTrue();
+        assertThat(MediaType.HEIF.is(MimeTypeUtil.guessFromPath("image.heif"))).isTrue();
+        assertThat(MediaType.MANIFEST_JSON_UTF_8.is(MimeTypeUtil.guessFromPath("app.webmanifest"))).isTrue();
         assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("image.png"))).isTrue();
         assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("/static/image.png"))).isTrue();
         assertThat(MediaType.PDF.is(MimeTypeUtil.guessFromPath("document.pdf"))).isTrue();
+        assertThat(MediaType.WEBP.is(MimeTypeUtil.guessFromPath("image.webp"))).isTrue();
         assertThat(MediaType.OCTET_STREAM.is(MimeTypeUtil.guessFromPath("image.png.gz"))).isTrue();
     }
 
     @Test
-    public void preCompressed() {
+    void preCompressed() {
         assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("image.png.gz", "gzip"))).isTrue();
         assertThat(MediaType.PNG.is(MimeTypeUtil.guessFromPath("/static/image.png.br", "brotli"))).isTrue();
         assertThat(MediaType.OCTET_STREAM.is(MimeTypeUtil.guessFromPath("image.png.gz", "identity"))).isTrue();
@@ -40,12 +44,12 @@ public class MimeTypeUtilTest {
     }
 
     @Test
-    public void guessedByJdk() {
+    void guessedByJdk() {
         assertThat(MediaType.ZIP.is(MimeTypeUtil.guessFromPath("bundle.zip"))).isTrue();
     }
 
     @Test
-    public void unknownExtension() {
+    void unknownExtension() {
         assertThat(MimeTypeUtil.guessFromPath("unknown.extension")).isNull();
     }
 }

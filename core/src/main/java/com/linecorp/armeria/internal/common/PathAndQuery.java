@@ -44,13 +44,25 @@ public final class PathAndQuery {
 
     private static final PathAndQuery ROOT_PATH_QUERY = new PathAndQuery("/", null);
 
+    /**
+     * The lookup table for the characters allowed in a path.
+     */
     private static final BitSet ALLOWED_PATH_CHARS = new BitSet();
+
+    /**
+     * The lookup table for the characters allowed in a query string.
+     */
     private static final BitSet ALLOWED_QUERY_CHARS = new BitSet();
 
-    private static final int PERCENT_ENCODING_MARKER = 0xFF;
+    /**
+     * The lookup table for the reserved characters that require percent-encoding.
+     */
+    private static final BitSet RESERVED_CHARS = new BitSet();
 
-    private static final byte[] RAW_CHAR_TO_MARKER = new byte[256];
-    private static final String[] MARKER_TO_PERCENT_ENCODED_CHAR = new String[256];
+    /**
+     * The table that converts a byte into a percent-encoded chars, e.g. 'A' -> "%41".
+     */
+    private static final char[][] TO_PERCENT_ENCODED_CHARS = new char[256][];
 
     static {
         final String allowedPathChars =
@@ -65,9 +77,13 @@ public final class PathAndQuery {
             ALLOWED_QUERY_CHARS.set(allowedQueryChars.charAt(i));
         }
 
-        for (final ReservedChar reservedChar : ReservedChar.values()) {
-            RAW_CHAR_TO_MARKER[reservedChar.rawChar] = reservedChar.marker;
-            MARKER_TO_PERCENT_ENCODED_CHAR[reservedChar.marker] = reservedChar.percentEncodedChar;
+        final String reservedChars = ":/?#[]@!$&'()*+,;=";
+        for (int i = 0; i < reservedChars.length(); i++) {
+            RESERVED_CHARS.set(reservedChars.charAt(i));
+        }
+
+        for (int i = 0; i < TO_PERCENT_ENCODED_CHARS.length; i++) {
+            TO_PERCENT_ENCODED_CHARS[i] = String.format("%%%02X", i).toCharArray();
         }
     }
 
@@ -182,7 +198,7 @@ public final class PathAndQuery {
         if (query == null) {
             return path;
         }
-        return path + "?" + query;
+        return path + '?' + query;
     }
 
     @Nullable
@@ -213,18 +229,17 @@ public final class PathAndQuery {
             query = null;
         }
 
-        if (path.data[0] != '/') {
+        if (path.data[0] != '/' || path.isEncoded(0)) {
             // Do not accept a relative path.
             return null;
         }
 
         // Reject the prohibited patterns.
-        if (pathContainsDoubleDots(path)) {
+        if (pathContainsDoubleDots(path) || queryContainsDoubleDots(query)) {
             return null;
         }
 
-        return new PathAndQuery(encodeToPercents(path, true),
-                                query != null ? encodeToPercents(query, false) : null);
+        return new PathAndQuery(encodePathToPercents(path), encodeQueryToPercents(query));
     }
 
     @Nullable
@@ -257,21 +272,25 @@ public final class PathAndQuery {
 
                 final int decoded = (digit1 << 4) | digit2;
                 if (isPath) {
-                    if (appendOneByte(buf, decoded, wasSlash, isPath)) {
-                        wasSlash = decoded == '/';
+                    if (decoded == '/') {
+                        // Do not decode '%2F' and '%2f' in the path to '/' for compatibility with
+                        // other implementations in the ecosystem, e.g. HTTP/JSON to gRPC transcoding.
+                        // https://github.com/googleapis/googleapis/blob/02710fa0ea5312d79d7fb986c9c9823fb41049a9/google/api/http.proto#L257-L258
+                        buf.ensure(1);
+                        buf.addEncoded((byte) '/');
+                        wasSlash = false;
                     } else {
-                        return null;
+                        if (appendOneByte(buf, decoded, wasSlash, isPath)) {
+                            wasSlash = false;
+                        } else {
+                            return null;
+                        }
                     }
                 } else {
                     // If query:
-                    final byte marker = RAW_CHAR_TO_MARKER[decoded];
-                    if (marker != 0) {
-                        // Insert a special mark so we can distinguish a raw character and percent-encoded
-                        // character in a query string, such as '&' and '%26'.
-                        // We will encode this mark back into a percent-encoded character later.
-                        buf.ensure(2);
-                        buf.add((byte) PERCENT_ENCODING_MARKER);
-                        buf.add(marker);
+                    if (RESERVED_CHARS.get(decoded)) {
+                        buf.ensure(1);
+                        buf.addEncoded((byte) decoded);
                         wasSlash = false;
                     } else if (appendOneByte(buf, decoded, wasSlash, isPath)) {
                         wasSlash = decoded == '/';
@@ -286,7 +305,7 @@ public final class PathAndQuery {
 
             if (cp == '+' && !isPath) {
                 buf.ensure(1);
-                buf.add((byte) ' ');
+                buf.addEncoded((byte) ' ');
                 wasSlash = false;
                 continue;
             }
@@ -301,38 +320,38 @@ public final class PathAndQuery {
 
             if (cp <= 0x7ff) {
                 buf.ensure(2);
-                buf.add((byte) ((cp >>> 6) | 0b110_00000));
-                buf.add((byte) (cp & 0b111111 | 0b10_000000));
+                buf.addEncoded((byte) ((cp >>> 6) | 0b110_00000));
+                buf.addEncoded((byte) (cp & 0b111111 | 0b10_000000));
             } else if (cp <= 0xffff) {
                 buf.ensure(3);
-                buf.add((byte) ((cp >>> 12) | 0b1110_0000));
-                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp >>> 12) | 0b1110_0000));
+                buf.addEncoded((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp & 0b111111) | 0b10_000000));
             } else if (cp <= 0x1fffff) {
                 buf.ensure(4);
-                buf.add((byte) ((cp >>> 18) | 0b11110_000));
-                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
-                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp >>> 18) | 0b11110_000));
+                buf.addEncoded((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp & 0b111111) | 0b10_000000));
             } else if (cp <= 0x3ffffff) {
                 // A valid unicode character will never reach here, but for completeness.
                 // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
                 buf.ensure(5);
-                buf.add((byte) ((cp >>> 24) | 0b111110_00));
-                buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
-                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
-                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp >>> 24) | 0b111110_00));
+                buf.addEncoded((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp & 0b111111) | 0b10_000000));
             } else {
                 // A valid unicode character will never reach here, but for completeness.
                 // http://unicode.org/mail-arch/unicode-ml/Archives-Old/UML018/0330.html
                 buf.ensure(6);
-                buf.add((byte) ((cp >>> 30) | 0b1111110_0));
-                buf.add((byte) (((cp >>> 24) & 0b111111) | 0b10_000000));
-                buf.add((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
-                buf.add((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
-                buf.add((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
-                buf.add((byte) ((cp & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp >>> 30) | 0b1111110_0));
+                buf.addEncoded((byte) (((cp >>> 24) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) (((cp >>> 18) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) (((cp >>> 12) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) (((cp >>> 6) & 0b111111) | 0b10_000000));
+                buf.addEncoded((byte) ((cp & 0b111111) | 0b10_000000));
             }
 
             wasSlash = false;
@@ -365,8 +384,13 @@ public final class PathAndQuery {
                 // Remove the consecutive slashes: '/path//with///consecutive////slashes'.
             }
         } else {
+            final BitSet allowedChars = isPath ? ALLOWED_PATH_CHARS : ALLOWED_QUERY_CHARS;
             buf.ensure(1);
-            buf.add((byte) cp);
+            if (allowedChars.get(cp)) {
+                buf.add((byte) cp);
+            } else {
+                buf.addEncoded((byte) cp);
+            }
         }
 
         return true;
@@ -379,7 +403,8 @@ public final class PathAndQuery {
         byte b2 = '/';
         for (int i = 1; i < length; i++) {
             final byte b3 = path.data[i];
-            if (b3 == '/' && b2 == '.' && b1 == '.' && b0 == '/') {
+            // Flag if the last four bytes are `/../`.
+            if (b1 == '.' && b2 == '.' && isSlash(b0) && isSlash(b3)) {
                 return true;
             }
             b0 = b1;
@@ -387,69 +412,135 @@ public final class PathAndQuery {
             b2 = b3;
         }
 
-        return b0 == '/' && b1 == '.' && b2 == '.';
+        // Flag if the last three bytes are `/..`.
+        return b1 == '.' && b2 == '.' && isSlash(b0);
     }
 
-    private static String encodeToPercents(Bytes value, boolean isPath) {
-        final BitSet allowedChars = isPath ? ALLOWED_PATH_CHARS : ALLOWED_QUERY_CHARS;
-        final int length = value.length;
-        boolean needsEncoding = false;
-        for (int i = 0; i < length; i++) {
-            if (!allowedChars.get(value.data[i] & 0xFF)) {
-                needsEncoding = true;
-                break;
-            }
+    private static boolean queryContainsDoubleDots(@Nullable Bytes query) {
+        if (query == null) {
+            return false;
         }
 
-        if (!needsEncoding) {
+        final int length = query.length;
+        boolean lookingForEquals = true;
+        byte b0 = 0;
+        byte b1 = 0;
+        byte b2 = '/';
+        for (int i = 0; i < length; i++) {
+            byte b3 = query.data[i];
+
+            // Treat the delimiters as `/` so that we can use isSlash() for matching them.
+            switch (b3) {
+                case '=':
+                    // Treat only the first `=` as `/`, e.g.
+                    // - `foo=..` and `foo=../` should be flagged.
+                    // - `foo=..=` shouldn't be flagged because `..=` is not a relative path.
+                    if (lookingForEquals) {
+                        lookingForEquals = false;
+                        b3 = '/';
+                    }
+                    break;
+                case '&':
+                case ';':
+                    b3 = '/';
+                    lookingForEquals = true;
+                    break;
+            }
+
+            // Flag if the last four bytes are `/../` or `/..&`
+            if (b1 == '.' && b2 == '.' && isSlash(b0) && isSlash(b3)) {
+                return true;
+            }
+
+            b0 = b1;
+            b1 = b2;
+            b2 = b3;
+        }
+
+        return b1 == '.' && b2 == '.' && isSlash(b0);
+    }
+
+    private static boolean isSlash(byte b) {
+        switch (b) {
+            case '/':
+            case '\\':
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static String encodePathToPercents(Bytes value) {
+        if (!value.hasEncodedBytes()) {
             // Deprecated, but it fits perfect for our use case.
             // noinspection deprecation
-            return new String(value.data, 0, 0, length);
+            return new String(value.data, 0, 0, value.length);
         }
 
-        final StringBuilder buf = new StringBuilder(length);
+        // Slow path: some percent-encoded chars.
+        return slowEncodePathToPercents(value);
+    }
+
+    @Nullable
+    private static String encodeQueryToPercents(@Nullable Bytes value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (!value.hasEncodedBytes()) {
+            // Deprecated, but it fits perfect for our use case.
+            // noinspection deprecation
+            return new String(value.data, 0, 0, value.length);
+        }
+
+        // Slow path: some percent-encoded chars.
+        return slowEncodeQueryToPercents(value);
+    }
+
+    private static String slowEncodePathToPercents(Bytes value) {
+        final int length = value.length;
+        final StringBuilder buf = new StringBuilder(length + value.numEncodedBytes() * 2);
         for (int i = 0; i < length; i++) {
             final int b = value.data[i] & 0xFF;
 
-            if (b == PERCENT_ENCODING_MARKER && (i + 1) < length) {
-                final int marker = value.data[i + 1] & 0xFF;
-                final String percentEncodedChar = MARKER_TO_PERCENT_ENCODED_CHAR[marker];
-                if (percentEncodedChar != null) {
-                    buf.append(percentEncodedChar);
-                    i++;
-                    continue;
-                }
+            if (value.isEncoded(i)) {
+                buf.append(TO_PERCENT_ENCODED_CHARS[b]);
+                continue;
             }
 
-            if (allowedChars.get(b)) {
-                buf.append((char) b);
-            } else if (b == ' ') {
-                if (isPath) {
-                    buf.append("%20");
-                } else {
-                    buf.append('+');
-                }
-            } else {
-                buf.append('%');
-                appendHexNibble(buf, b >>> 4);
-                appendHexNibble(buf, b & 0xF);
-            }
+            buf.append((char) b);
         }
 
         return buf.toString();
     }
 
-    private static void appendHexNibble(StringBuilder buf, int nibble) {
-        if (nibble < 10) {
-            buf.append((char) ('0' + nibble));
-        } else {
-            buf.append((char) ('A' + nibble - 10));
+    private static String slowEncodeQueryToPercents(Bytes value) {
+        final int length = value.length;
+        final StringBuilder buf = new StringBuilder(length + value.numEncodedBytes() * 2);
+        for (int i = 0; i < length; i++) {
+            final int b = value.data[i] & 0xFF;
+
+            if (value.isEncoded(i)) {
+                if (b == ' ') {
+                    buf.append('+');
+                } else {
+                    buf.append(TO_PERCENT_ENCODED_CHARS[b]);
+                }
+                continue;
+            }
+
+            buf.append((char) b);
         }
+
+        return buf.toString();
     }
 
     private static final class Bytes {
         byte[] data;
         int length;
+        @Nullable
+        private BitSet encoded;
+        private int numEncodedBytes;
 
         Bytes(int initialCapacity) {
             data = new byte[initialCapacity];
@@ -462,6 +553,27 @@ public final class PathAndQuery {
 
         void add(byte b) {
             data[length++] = b;
+        }
+
+        void addEncoded(byte b) {
+            if (encoded == null) {
+                encoded = new BitSet();
+            }
+            encoded.set(length);
+            data[length++] = b;
+            numEncodedBytes++;
+        }
+
+        boolean isEncoded(int index) {
+            return encoded != null && encoded.get(index);
+        }
+
+        boolean hasEncodedBytes() {
+            return encoded != null;
+        }
+
+        int numEncodedBytes() {
+            return numEncodedBytes;
         }
 
         void ensure(int numBytes) {
@@ -514,44 +626,6 @@ public final class PathAndQuery {
             }
 
             return c1;
-        }
-    }
-
-    /**
-     * Reserved characters which require percent-encoding. These values are only used for constructing
-     * {@link #RAW_CHAR_TO_MARKER} and {@link #MARKER_TO_PERCENT_ENCODED_CHAR} mapping tables.
-     *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.2">RFC 3986, section 2.2</a>
-     */
-    private enum ReservedChar {
-        GEN_DELIM_01(':', "%3A", (byte) 0x01),
-        GEN_DELIM_02('/', "%2F", (byte) 0x02),
-        GEN_DELIM_03('?', "%3F", (byte) 0x03),
-        GEN_DELIM_04('#', "%23", (byte) 0x04),
-        GEN_DELIM_05('[', "%5B", (byte) 0x05),
-        GEN_DELIM_06(']', "%5D", (byte) 0x06),
-        GEN_DELIM_07('@', "%40", (byte) 0x07),
-
-        SUB_DELIM_01('!', "%21", (byte) 0x11),
-        SUB_DELIM_02('$', "%24", (byte) 0x12),
-        SUB_DELIM_03('&', "%26", (byte) 0x13),
-        SUB_DELIM_04('\'', "%27", (byte) 0x14),
-        SUB_DELIM_05('(', "%28", (byte) 0x15),
-        SUB_DELIM_06(')', "%29", (byte) 0x16),
-        SUB_DELIM_07('*', "%2A", (byte) 0x17),
-        SUB_DELIM_08('+', "%2B", (byte) 0x18),
-        SUB_DELIM_09(',', "%2C", (byte) 0x19),
-        SUB_DELIM_10(';', "%3B", (byte) 0x1A),
-        SUB_DELIM_11('=', "%3D", (byte) 0x1B);
-
-        private final int rawChar;
-        private final String percentEncodedChar;
-        private final byte marker;
-
-        ReservedChar(int rawChar, String percentEncodedChar, byte marker) {
-            this.rawChar = rawChar;
-            this.percentEncodedChar = percentEncodedChar;
-            this.marker = marker;
         }
     }
 }

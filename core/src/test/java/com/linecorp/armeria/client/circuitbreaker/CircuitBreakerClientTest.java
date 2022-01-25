@@ -80,7 +80,7 @@ class CircuitBreakerClientTest {
     @Test
     void testPerMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final Function<String, CircuitBreaker> factory = mock(Function.class);
@@ -90,14 +90,14 @@ class CircuitBreakerClientTest {
         failFastInvocation(CircuitBreakerClient.newPerMethodDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("GET");
     }
 
     @Test
     void testPerHostDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final Function<String, CircuitBreaker> factory = mock(Function.class);
@@ -107,14 +107,14 @@ class CircuitBreakerClientTest {
         failFastInvocation(CircuitBreakerClient.newPerHostDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("dummyhost:8080");
     }
 
     @Test
     void testPerPathDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final Function<String, CircuitBreaker> factory = mock(Function.class);
@@ -124,14 +124,14 @@ class CircuitBreakerClientTest {
         failFastInvocation(CircuitBreakerClient.newPerPathDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("/dummy-path");
     }
 
     @Test
     void testPerPathDecoratorWithContent() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final Function<String, CircuitBreaker> factory = mock(Function.class);
@@ -141,14 +141,14 @@ class CircuitBreakerClientTest {
         failFastInvocation(CircuitBreakerClient.newPerPathDecorator(factory, ruleWithResponse()),
                            HttpMethod.GET, COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("/dummy-path");
     }
 
     @Test
     void testPerHostAndMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final BiFunction<String, String, CircuitBreaker> factory = mock(BiFunction.class);
@@ -158,14 +158,14 @@ class CircuitBreakerClientTest {
         failFastInvocation(CircuitBreakerClient.newPerHostAndMethodDecorator(factory, rule()),
                            HttpMethod.GET, COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("dummyhost:8080", "GET");
     }
 
     @Test
     void testPerHostAndPathDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
@@ -177,7 +177,7 @@ class CircuitBreakerClientTest {
                 HttpMethod.GET,
                 COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1))
                 .apply("dummyhost:8080", null, "/dummy-path");
     }
@@ -185,7 +185,7 @@ class CircuitBreakerClientTest {
     @Test
     void testPerHostAndPathDecoratorWithContent() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
@@ -198,7 +198,7 @@ class CircuitBreakerClientTest {
                 HttpMethod.GET,
                 COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1))
                 .apply("dummyhost:8080", null, "/dummy-path");
     }
@@ -206,7 +206,7 @@ class CircuitBreakerClientTest {
     @Test
     void testPerMethodAndPathDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
@@ -218,14 +218,14 @@ class CircuitBreakerClientTest {
                 HttpMethod.GET,
                 COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply(null, "GET", "/dummy-path");
     }
 
     @Test
     void testPerMethodAndPathDecoratorWithContent() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
@@ -238,7 +238,7 @@ class CircuitBreakerClientTest {
                 HttpMethod.GET,
                 COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1))
                 .apply(null, "GET", "/dummy-path");
     }
@@ -246,7 +246,7 @@ class CircuitBreakerClientTest {
     @Test
     void testPerHostAndMethodAndPathDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
@@ -259,7 +259,7 @@ class CircuitBreakerClientTest {
                 HttpMethod.GET,
                 COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1))
                 .apply("dummyhost:8080","GET", "/dummy-path");
     }
@@ -267,7 +267,7 @@ class CircuitBreakerClientTest {
     @Test
     void testPerHostAndMethodAndPathDecoratorWithContent() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
@@ -280,7 +280,7 @@ class CircuitBreakerClientTest {
                 HttpMethod.GET,
                 COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1))
                 .apply("dummyhost:8080","GET", "/dummy-path");
     }
@@ -384,7 +384,7 @@ class CircuitBreakerClientTest {
             await().until(() -> currentTime != ticker.get());
         }
 
-        await().untilAsserted(() -> assertThat(circuitBreaker.canRequest()).isFalse());
+        await().untilAsserted(() -> assertThat(circuitBreaker.tryRequest()).isFalse());
         // OPEN
         assertThatThrownBy(() -> client.get("/unavailable").aggregate().join())
                 .hasCauseExactlyInstanceOf(FailFastException.class);

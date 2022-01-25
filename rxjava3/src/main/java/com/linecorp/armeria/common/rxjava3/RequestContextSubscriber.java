@@ -21,8 +21,8 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.internal.fuseable.QueueSubscription;
 import io.reactivex.rxjava3.internal.subscribers.BasicFuseableSubscriber;
+import io.reactivex.rxjava3.operators.QueueSubscription;
 
 final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
 

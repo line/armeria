@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class NonOverridableStreamMessageWrapper<T, D extends StreamMessageDuplicator<T>>
+public abstract class NonOverridableStreamMessageWrapper<T, D extends StreamMessageDuplicator<T>>
         extends StreamMessageWrapper<T> {
 
     protected NonOverridableStreamMessageWrapper(StreamMessage<? extends T> delegate) {
@@ -75,15 +75,11 @@ public class NonOverridableStreamMessageWrapper<T, D extends StreamMessageDuplic
         super.abort(cause);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public final D toDuplicator() {
-        return (D) super.toDuplicator();
+        return toDuplicator(defaultSubscriberExecutor());
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public final D toDuplicator(EventExecutor executor) {
-        return (D) super.toDuplicator(executor);
-    }
+    public abstract D toDuplicator(EventExecutor executor);
 }

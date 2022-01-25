@@ -162,16 +162,15 @@ final class DefaultClientFactory implements ClientFactory {
         validateParams(params);
         final Scheme scheme = params.scheme();
         final Class<?> clientType = params.clientType();
-        // `factory` must be non-null because we validated params.scheme() with validateParams().
-        ClientFactory factory = null;
-        for (ClientFactory f : clientFactories.get(scheme)) {
-            if (f.isClientTypeSupported(clientType)) {
-                factory = f;
-                break;
+        for (ClientFactory factory : clientFactories.get(scheme)) {
+            if (factory.isClientTypeSupported(clientType)) {
+                return factory.newClient(params);
             }
         }
-        assert factory != null;
-        return factory.newClient(params);
+        // Since we passed validation, there should have been at least 1 factory for this scheme,
+        // but for some reason none of these passed the filter.
+        throw new IllegalStateException(
+                "No ClientFactory for scheme: " + scheme + " matched clientType: " + clientType);
     }
 
     @Override

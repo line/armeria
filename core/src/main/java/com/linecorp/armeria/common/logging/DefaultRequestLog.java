@@ -1266,6 +1266,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
             if (rpcResponse.cause() != null) {
                 responseCause = rpcResponse.cause();
+                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }
         }
 
@@ -1358,7 +1359,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.responseEndTimeNanos = responseEndTimeNanos;
         if (responseHeaders == null) {
-            responseHeaders = DUMMY_RESPONSE_HEADERS;
+            if (responseCause instanceof HttpStatusException) {
+                responseHeaders = ResponseHeaders.of(((HttpStatusException) responseCause).httpStatus());
+            } else {
+                responseHeaders = DUMMY_RESPONSE_HEADERS;
+            }
         }
         if (this.responseCause == null) {
             if (responseCause instanceof HttpStatusException ||

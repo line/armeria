@@ -26,6 +26,7 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -43,6 +44,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
 final class ParameterizedPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
+
+    private static final Pattern CAPTURE_REST_PATTERN = Pattern.compile("/\\{\\*([^/{}]*)}|/:\\*([^/{}]*)");
+
+    private static final Pattern CAPTURE_REST_VARIABLE_NAME_PATTERN = Pattern.compile("^\\w+$");
 
     private static final String[] EMPTY_NAMES = new String[0];
 
@@ -66,7 +71,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      * Skeletal form of given path, which is used for duplicated routing rule detection.
      * For example, "/{a}/{b}" and "/{c}/{d}" has same skeletal form and regarded as duplicated.
      *
-     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"
+     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"</p>
+     * <p>Set a skeletal form with the patterns described in {@link Route#paths()}.</p>
      */
     private final String skeleton;
 
@@ -86,7 +92,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
      *
      * @param pathPattern the {@link String} that contains path params.
-     *             e.g. {@code /users/{name}} or {@code /users/:name}
+     *                    e.g. {@code /users/{name}}, {@code /users/:name}, {@code /users/{*name}} or
+     *                    {@code /users/:*name}
      *
      * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
      */
@@ -99,6 +106,11 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
         if (!VALID_PATTERN.matcher(pathPattern).matches()) {
             throw new IllegalArgumentException("pathPattern: " + pathPattern + " (invalid pattern)");
+        }
+
+        if (!isValidCaptureRestPattern(pathPattern)) {
+            throw new IllegalArgumentException(
+                    "pathPattern: " + pathPattern + " (invalid capture rest pattern)");
         }
 
         final StringJoiner patternJoiner = new StringJoiner("/");
@@ -115,21 +127,25 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 skeletonJoiner.add(token);
                 continue;
             }
-
+            final boolean captureRestPathMatching = isCaptureRestPathMatching(token);
             final int paramNameIdx = paramNames.indexOf(paramName);
             if (paramNameIdx < 0) {
                 // If the given token appeared first time, add it to the set and
                 // replace it with a capturing group expression in regex.
                 paramNames.add(paramName);
-                patternJoiner.add("([^/]+)");
+                if (captureRestPathMatching) {
+                    patternJoiner.add("(.*)");
+                } else {
+                    patternJoiner.add("([^/]+)");
+                }
             } else {
                 // If the given token appeared before, replace it with a back-reference expression
                 // in regex.
                 patternJoiner.add("\\" + (paramNameIdx + 1));
             }
 
-            normalizedPatternJoiner.add(':' + paramName);
-            skeletonJoiner.add(":");
+            normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + paramName);
+            skeletonJoiner.add(captureRestPathMatching ? "*" : ":");
         }
 
         this.pathPattern = pathPattern;
@@ -148,19 +164,49 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      *   <li>{@code "{foo}"} -> {@code "foo"}</li>
      *   <li>{@code ":bar"} -> {@code "bar"}</li>
      *   <li>{@code "baz"} -> {@code null}</li>
+     *   <li>{@code "{*foo}"} -> {@code "foo"}</li>
+     *   <li>{@code ":*foo"} -> {@code "foo"}</li>
      * </ul>
      */
     @Nullable
     private static String paramName(String token) {
         if (token.startsWith("{") && token.endsWith("}")) {
-            return token.substring(1, token.length() - 1);
+            final int beginIndex = token.charAt(1) == '*' ? 2 : 1;
+            return token.substring(beginIndex, token.length() - 1);
         }
 
         if (token.startsWith(":")) {
-            return token.substring(1);
+            final int beginIndex = token.charAt(1) == '*' ? 2 : 1;
+            return token.substring(beginIndex);
         }
 
         return null;
+    }
+
+    /**
+     * Return true if path parameter contains capture the rest path pattern
+     * ({@code "{*foo}"}" or {@code ":*foo"}).
+     */
+    private static boolean isCaptureRestPathMatching(String token) {
+        return (token.startsWith("{*") && token.endsWith("}")) || token.startsWith(":*");
+    }
+
+    /**
+     * Return true if the capture rest pattern specified is valid.
+     */
+    private static boolean isValidCaptureRestPattern(String pathPattern) {
+        final Matcher matcher = CAPTURE_REST_PATTERN.matcher(pathPattern);
+        if (!matcher.find()) {
+            // Return true if the path does not include the capture rest pattern.
+            return true;
+        }
+        final String paramName = MoreObjects.firstNonNull(matcher.group(1), matcher.group(2));
+        // The variable name must be at least a character of alphabet, number and underscore.
+        if (!CAPTURE_REST_VARIABLE_NAME_PATTERN.matcher(paramName).matches()) {
+            return false;
+        }
+        // The capture rest pattern must be located at the end of the path.
+        return pathPattern.length() == matcher.end();
     }
 
     /**

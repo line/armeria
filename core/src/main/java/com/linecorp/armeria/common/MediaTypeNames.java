@@ -41,6 +41,12 @@ public final class MediaTypeNames {
      * {@value #ANY_VIDEO_TYPE}.
      */
     public static final String ANY_VIDEO_TYPE = "video/*";
+
+    /**
+     * {@value #ANY_FONT_TYPE}.
+     */
+    public static final String ANY_FONT_TYPE = "font/*";
+
     /**
      * {@value #ANY_APPLICATION_TYPE}.
      */
@@ -151,6 +157,21 @@ public final class MediaTypeNames {
      * {@value #WEBP}.
      */
     public static final String WEBP = "image/webp";
+
+    /**
+     * {@value #HEIF}.
+     */
+    public static final String HEIF = "image/heif";
+
+    /**
+     * {@value #JP2K}.
+     */
+    public static final String JP2K = "image/jp2";
+
+    /**
+     * {@value #AVIF}.
+     */
+    public static final String AVIF = "image/avif";
 
     /* audio types */
 
@@ -281,6 +302,38 @@ public final class MediaTypeNames {
      */
     public static final String FORM_DATA = "application/x-www-form-urlencoded";
     /**
+     * {@value #MULTIPART_ALTERNATIVE}.
+     */
+    public static final String MULTIPART_ALTERNATIVE = "multipart/alternative";
+    /**
+     * {@value #MULTIPART_DIGEST}.
+     */
+    public static final String MULTIPART_DIGEST = "multipart/digest";
+    /**
+     * {@value #MULTIPART_ENCRYPTED}.
+     */
+    public static final String MULTIPART_ENCRYPTED = "multipart/encrypted";
+    /**
+     * {@value #MULTIPART_FORM_DATA}.
+     */
+    public static final String MULTIPART_FORM_DATA = "multipart/form-data";
+    /**
+     * {@value #MULTIPART_MIXED}.
+     */
+    public static final String MULTIPART_MIXED = "multipart/mixed";
+    /**
+     * {@value #MULTIPART_PARALLEL}.
+     */
+    public static final String MULTIPART_PARALLEL = "multipart/parallel";
+    /**
+     * {@value #MULTIPART_RELATED}.
+     */
+    public static final String MULTIPART_RELATED = "multipart/related";
+    /**
+     * {@value #MULTIPART_SIGNED}.
+     */
+    public static final String MULTIPART_SIGNED = "multipart/signed";
+    /**
      * {@value #KEY_ARCHIVE}.
      */
     public static final String KEY_ARCHIVE = "application/pkcs12";
@@ -293,17 +346,17 @@ public final class MediaTypeNames {
      */
     public static final String GEO_JSON = "application/geo+json";
     /**
-     * {@value #GRAPHQL}.
-     */
-    public static final String GRAPHQL = "application/graphql";
-    /**
-     * {@value #GRAPHQL_JSON}.
-     */
-    public static final String GRAPHQL_JSON = "application/graphql+json";
-    /**
      * {@value #GZIP}.
      */
     public static final String GZIP = "application/x-gzip";
+    /**
+     * {@value #BROTLI}.
+     */
+    public static final String BROTLI = "application/brotli";
+    /**
+     * {@value #ZSTD}.
+     */
+    public static final String ZSTD = "application/zstd";
     /**
      * {@value #HAL_JSON}.
      */
@@ -376,6 +429,12 @@ public final class MediaTypeNames {
      * {@value #MICROSOFT_WORD}.
      */
     public static final String MICROSOFT_WORD = "application/msword";
+
+    /**
+     * {@value #MEDIA_PRESENTATION_DESCRIPTION}.
+     */
+    public static final String MEDIA_PRESENTATION_DESCRIPTION = "application/dash+xml";
+
     /**
      * {@value #WASM_APPLICATION}.
      */
@@ -427,6 +486,13 @@ public final class MediaTypeNames {
      * {@value #OPENDOCUMENT_TEXT}.
      */
     public static final String OPENDOCUMENT_TEXT = "application/vnd.oasis.opendocument.text";
+
+    /**
+     * {@value #OPENSEARCH_DESCRIPTION_UTF_8}.
+     */
+    public static final String OPENSEARCH_DESCRIPTION_UTF_8 =
+            "application/opensearchdescription+xml; charset=utf-8";
+
     /**
      * {@value #PDF}.
      */
@@ -488,40 +554,48 @@ public final class MediaTypeNames {
      */
     public static final String ZIP = "application/zip";
 
-    /* multipart types */
+    /* font types */
 
     /**
-     * {@value #MULTIPART_ALTERNATIVE}.
+     * {@value #FONT_COLLECTION}.
      */
-    public static final String MULTIPART_ALTERNATIVE = "multipart/alternative";
+    public static final String FONT_COLLECTION = "font/collection";
+
     /**
-     * {@value #MULTIPART_DIGEST}.
+     * {@value #FONT_OTF}.
      */
-    public static final String MULTIPART_DIGEST = "multipart/digest";
+    public static final String FONT_OTF = "font/otf";
+
     /**
-     * {@value #MULTIPART_ENCRYPTED}.
+     * {@value #FONT_SFNT}.
      */
-    public static final String MULTIPART_ENCRYPTED = "multipart/encrypted";
+    public static final String FONT_SFNT = "font/sfnt";
+
     /**
-     * {@value #MULTIPART_FORM_DATA}.
+     * {@value #FONT_TTF}.
      */
-    public static final String MULTIPART_FORM_DATA = "multipart/form-data";
+    public static final String FONT_TTF = "font/ttf";
+
     /**
-     * {@value #MULTIPART_MIXED}.
+     * {@value #FONT_WOFF}.
      */
-    public static final String MULTIPART_MIXED = "multipart/mixed";
+    public static final String FONT_WOFF = "font/woff";
+
     /**
-     * {@value #MULTIPART_PARALLEL}.
+     * {@value #FONT_WOFF2}.
      */
-    public static final String MULTIPART_PARALLEL = "multipart/parallel";
+    public static final String FONT_WOFF2 = "font/woff2";
+
+    /* GraphQL types */
+
     /**
-     * {@value #MULTIPART_RELATED}.
+     * {@value #GRAPHQL}.
      */
-    public static final String MULTIPART_RELATED = "multipart/related";
+    public static final String GRAPHQL = "application/graphql";
     /**
-     * {@value #MULTIPART_SIGNED}.
+     * {@value #GRAPHQL_JSON}.
      */
-    public static final String MULTIPART_SIGNED = "multipart/signed";
+    public static final String GRAPHQL_JSON = "application/graphql+json";
 
     private MediaTypeNames() {}
 }

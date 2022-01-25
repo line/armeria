@@ -410,6 +410,7 @@ public final class Server implements ListenableAsyncCloseable {
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
         config = sb.buildServerConfig(config());
+        config.setServer(this);
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));

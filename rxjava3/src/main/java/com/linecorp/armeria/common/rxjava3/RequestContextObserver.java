@@ -20,8 +20,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.rxjava3.core.Observer;
-import io.reactivex.rxjava3.internal.fuseable.QueueDisposable;
 import io.reactivex.rxjava3.internal.observers.BasicFuseableObserver;
+import io.reactivex.rxjava3.operators.QueueDisposable;
 
 final class RequestContextObserver<T> extends BasicFuseableObserver<T, T> {
     private final RequestContext assemblyContext;

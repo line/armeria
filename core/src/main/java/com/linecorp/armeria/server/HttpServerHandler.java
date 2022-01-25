@@ -272,26 +272,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final ChannelPipeline pipeline = ctx.pipeline();
-        final Http2ServerConnectionHandler handler = pipeline.get(Http2ServerConnectionHandler.class);
-        if (responseEncoder == null) {
-            responseEncoder = newServerHttp2ObjectEncoder(ctx, handler);
-        } else if (responseEncoder instanceof Http1ObjectEncoder) {
+        final ChannelHandlerContext connectionHandlerCtx =
+                pipeline.context(Http2ServerConnectionHandler.class);
+        final Http2ServerConnectionHandler connectionHandler =
+                (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
+        if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
-            responseEncoder = newServerHttp2ObjectEncoder(ctx, handler);
         }
+        responseEncoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
 
         // Update the connection-level flow-control window size.
         final int initialWindow = config.http2InitialConnectionWindowSize();
         if (initialWindow > DEFAULT_WINDOW_SIZE) {
             incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
         }
-    }
-
-    private ServerHttp2ObjectEncoder newServerHttp2ObjectEncoder(ChannelHandlerContext ctx,
-                                                                 Http2ServerConnectionHandler handler) {
-        return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
-                                            config.isDateHeaderEnabled(),
-                                            config.isServerHeaderEnabled());
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
@@ -319,7 +313,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
         final String hostname = hostname(headers);
-        final VirtualHost virtualHost = config.findVirtualHost(hostname);
+        final int port = ((InetSocketAddress) channel.localAddress()).getPort();
+        final VirtualHost virtualHost = config.findVirtualHost(hostname, port);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
@@ -385,7 +380,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            final ExceptionHandler exceptionHandler = config.exceptionHandler();
+            final ServerErrorHandler serverErrorHandler = config.errorHandler();
             HttpResponse serviceResponse;
             try {
                 req.init(reqCtx);
@@ -401,8 +396,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
 
             serviceResponse = serviceResponse.recover(cause -> {
-                // Recover a failed response with the default exception handler.
-                return exceptionHandler.convert(reqCtx, cause);
+                // Store the cause to set as the log.responseCause().
+                CapturedServiceException.set(reqCtx, cause);
+                // Recover the failed response with the error handler.
+                return serverErrorHandler.onServiceException(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();

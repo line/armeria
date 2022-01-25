@@ -96,9 +96,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
-            // We are not closing the connection but just send a RST_STREAM,
-            // so we have to remove the response manually.
-            removeResponse(id);
+            // Removing the response and decrementing `unfinishedResponses` isn't done immediately
+            // here. Instead, we rely on `Http2ResponseDecoder#onStreamClosed` to decrement
+            // `unfinishedResponses` after Netty decrements `numActiveStreams` in `DefaultHttp2Connection`
+            // so that `unfinishedResponses` is never greater than `numActiveStreams`.
 
             // Reset the stream.
             final int streamId = idToStreamId(id);
@@ -133,21 +134,23 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamClosed(Http2Stream stream) {
         goAwayHandler.onStreamClosed(channel(), stream);
 
-        final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
+        final HttpResponseWrapper res = removeResponse(streamIdToId(stream.id()));
         if (res == null) {
             return;
         }
 
-        if (!goAwayHandler.receivedGoAway()) {
-            res.close(ClosedStreamException.get());
-            return;
-        }
+        if (res.isOpen()) {
+            if (!goAwayHandler.receivedGoAway()) {
+                res.close(ClosedStreamException.get());
+                return;
+            }
 
-        final int lastStreamId = conn.local().lastStreamKnownByPeer();
-        if (stream.id() > lastStreamId) {
-            res.close(UnprocessedRequestException.of(GoAwayReceivedException.get()));
-        } else {
-            res.close(ClosedStreamException.get());
+            final int lastStreamId = conn.local().lastStreamKnownByPeer();
+            if (stream.id() > lastStreamId) {
+                res.close(UnprocessedRequestException.of(GoAwayReceivedException.get()));
+            } else {
+                res.close(ClosedStreamException.get());
+            }
         }
 
         if (shouldSendGoAway()) {
@@ -166,6 +169,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+        // Should not reuse a connection that received a GOAWAY frame.
+        HttpSession.get(channel()).deactivate();
         disconnectWhenFinished();
         goAwayHandler.onGoAwayReceived(channel(), lastStreamId, errorCode, debugData);
     }
@@ -182,8 +187,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead();
-        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
-        if (res == null) {
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
+        if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Received a late HEADERS frame for a closed stream: {}",
@@ -209,10 +214,6 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
-
-            if (shouldSendGoAway()) {
-                channel().close();
-            }
         }
     }
 
@@ -231,8 +232,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         keepAliveChannelRead();
 
         final int dataLength = data.readableBytes();
-        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
-        if (res == null) {
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
+        if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Received a late DATA frame for a closed stream: {}",
@@ -269,12 +270,6 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
-
-            if (shouldSendGoAway()) {
-                // The connection has reached its lifespan.
-                // Should send a GOAWAY frame if it did not receive or send a GOAWAY frame.
-                channel().close();
-            }
         }
 
         // All bytes have been processed.
@@ -292,8 +287,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         keepAliveChannelRead();
-        final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
-        if (res == null) {
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
+        if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} Received a late RST_STREAM frame for a closed stream: {}",

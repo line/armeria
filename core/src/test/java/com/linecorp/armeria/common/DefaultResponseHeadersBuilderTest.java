@@ -103,7 +103,7 @@ class DefaultResponseHeadersBuilderTest {
 
     @Test
     void testSetCookieBuilder() {
-        final Cookie cookie = Cookie.of("cookie", "value");
+        final Cookie cookie = Cookie.ofSecure("cookie", "value");
         final ResponseHeaders headers = ResponseHeaders
                 .builder(HttpStatus.OK)
                 .cookie(cookie)
@@ -113,8 +113,8 @@ class DefaultResponseHeadersBuilderTest {
 
     @Test
     void testSetCookieBuilderWithIterable() {
-        final Cookies cookies = Cookies.of(Cookie.of("cookie1", "value1"),
-                                           Cookie.of("cookie2", "value2"));
+        final Cookies cookies = Cookies.of(Cookie.ofSecure("cookie1", "value1"),
+                                           Cookie.ofSecure("cookie2", "value2"));
         final ResponseHeaders headers = ResponseHeaders
                 .builder(HttpStatus.OK)
                 .cookies(cookies)
@@ -124,8 +124,8 @@ class DefaultResponseHeadersBuilderTest {
 
     @Test
     void testSetCookieBuilderWithMultipleCookie() {
-        final Cookie cookie1 = Cookie.of("cookie1", "value1");
-        final Cookie cookie2 = Cookie.of("cookie2", "value2");
+        final Cookie cookie1 = Cookie.ofSecure("cookie1", "value1");
+        final Cookie cookie2 = Cookie.ofSecure("cookie2", "value2");
         final ResponseHeaders headers = ResponseHeaders
                 .builder(HttpStatus.OK)
                 .cookies(cookie1, cookie2)

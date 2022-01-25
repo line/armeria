@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.scalapb
 
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.server.annotation.{RequestConverterFunction, RequestConverterFunctionProvider}
-import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{ResultType, toResultType}
+import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.toResultType
 import java.lang.reflect.Type
 
 /**
