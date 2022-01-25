@@ -136,13 +136,13 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             List<HealthCheckUpdateListener> updateListeners
     ) {
         serverHealth = new SettableHealthChecker(false);
-        if (!updateListeners.isEmpty()) {
-            addServerHealthUpdateListener(updateListeners);
-        }
         this.serverHealthCheckers = ImmutableSet.<ListenableHealthChecker>builder()
                                                 .add(serverHealth)
                                                 .addAll(serverHealthCheckers)
                                                 .build();
+        if (!updateListeners.isEmpty()) {
+            addServerHealthUpdateListener(updateListeners);
+        }
         this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
         final Consumer<String> healthCheckUpdateListener = watcherHealthUpdater();
         serverHealthCheckers.forEach(
@@ -237,13 +237,15 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     }
 
     private void addServerHealthUpdateListener(List<HealthCheckUpdateListener> updateListeners) {
-        serverHealth.addListener(healthChecker -> {
-            updateListeners.forEach(updateListener -> {
-                try {
-                    updateListener.healthUpdated(healthChecker.isHealthy());
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated():", t);
-                }
+        serverHealthCheckers.forEach(serverHealthChecker -> {
+            serverHealthChecker.addListener(healthChecker -> {
+                updateListeners.forEach(updateListener -> {
+                    try {
+                        updateListener.healthUpdated(healthChecker.isHealthy());
+                    } catch (Throwable t) {
+                        logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated():", t);
+                    }
+                });
             });
         });
     }
