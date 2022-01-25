@@ -412,7 +412,6 @@ public final class BlockingWebClientRequestPreparation
     @Override
     public BlockingWebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
         delegate.responseTimeoutMillis(responseTimeoutMillis);
-
         return this;
     }
 
