@@ -152,6 +152,24 @@ class GrpcHealthCheckServiceTest {
         assertThat(responses).containsExactly(ServingStatus.SERVING, ServingStatus.NOT_SERVING);
     }
 
+    @Test
+    void watchReturnsNotFound() throws Exception {
+        final HealthCheckRequest request = HealthCheckRequest.newBuilder()
+                                                             .setService("unknown-service")
+                                                             .build();
+        final HealthStub client = Clients.newClient(
+                server.httpUri(GrpcSerializationFormats.PROTO),
+                HealthStub.class);
+        final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
+        client.watch(request, recorder);
+        TimeUnit.SECONDS.sleep(1);
+        final Throwable throwable = recorder.getError();
+        assertThat(throwable).isNotNull();
+        assertThat(throwable).isInstanceOf(StatusRuntimeException.class);
+        assertThat(throwable.getMessage())
+                .isEqualTo("NOT_FOUND: The service name(unknown-service) is not registered in this service");
+    }
+
     @ParameterizedTest
     @MethodSource("checkServingStatusArguments")
     void checkServingStatus(GrpcHealthCheckService grpcHealthCheckService,

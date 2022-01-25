@@ -44,6 +44,7 @@ import com.linecorp.armeria.server.healthcheck.ListenableHealthChecker;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
 
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.health.v1.HealthCheckRequest;
 import io.grpc.health.v1.HealthCheckResponse;
 import io.grpc.health.v1.HealthCheckResponse.ServingStatus;
@@ -123,6 +124,13 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         }
     }
 
+    private static StatusRuntimeException getNotFoundStatus(String service) {
+        return Status.NOT_FOUND
+                .withDescription(String.format("The service name(%s) is not registered in this service",
+                                               service))
+                .asRuntimeException();
+    }
+
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> serverHealthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
@@ -157,11 +165,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         final String service = request.getService();
         final ServingStatus status = checkServingStatus(service);
         if (status == ServingStatus.SERVICE_UNKNOWN) {
-            responseObserver.onError(Status.NOT_FOUND
-                                             .withDescription(String.format(
-                                                     "The service name(%s) is not registered in this service",
-                                                     service))
-                                             .asRuntimeException());
+            responseObserver.onError(getNotFoundStatus(service));
             return;
         }
         responseObserver.onNext(getHealthCheckResponse(status));
@@ -174,6 +178,10 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         final String service = firstNonNull(request.getService(), EMPTY_SERVICE);
         synchronized (watchers) {
             final ServingStatus status = checkServingStatus(service);
+            if (status == ServingStatus.SERVICE_UNKNOWN) {
+                responseObserver.onError(getNotFoundStatus(service));
+                return;
+            }
             final HealthCheckResponse response = getHealthCheckResponse(status);
             responseObserver.onNext(response);
             watchers.put(service, responseObserver);
