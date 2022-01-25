@@ -27,7 +27,7 @@ import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 /**
- * Sets properties for building a {@link HttpRequest}.
+ * Sets properties for building an {@link HttpRequest}.
  */
 public interface HttpRequestSetters {
 
