@@ -9,6 +9,11 @@ dependencies {
     testImplementation 'io.monix:monix-reactive_2.13'
 }
 
+project.sourceSets.all { sourceSet ->
+    // Add the source directories for Scala 2.x only.
+    sourceSet.scala.srcDir file("src/${sourceSet.name}/scala_2")
+}
+
 sourceSets {
     test {
         scala {

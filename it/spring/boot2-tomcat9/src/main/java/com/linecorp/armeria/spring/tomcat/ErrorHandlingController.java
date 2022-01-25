@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.tomcat.demo;
+package com.linecorp.armeria.spring.tomcat;
 
 import java.util.Map;
 

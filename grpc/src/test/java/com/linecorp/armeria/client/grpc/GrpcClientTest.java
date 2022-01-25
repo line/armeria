@@ -51,6 +51,7 @@ import org.mockito.ArgumentCaptor;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
+import com.google.rpc.RequestInfo;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -169,16 +170,13 @@ class GrpcClientTest {
             sb.serviceUnder("/",
                             GrpcService.builder()
                                        .addService(interceptService)
-                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                                       .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .maxRequestMessageLength(MAX_MESSAGE_SIZE)
+                                       .maxResponseMessageLength(MAX_MESSAGE_SIZE)
                                        .useClientTimeoutHeader(false)
                                        .build()
                                        .decorate((service, ctx, req) -> {
                                            final HttpResponse res = service.serve(ctx, req);
-                                           return res.mapTrailers(trailers -> {
-                                               SERVER_TRAILERS_CAPTURE.set(trailers);
-                                               return trailers;
-                                           });
+                                           return res.peekTrailers(SERVER_TRAILERS_CAPTURE::set);
                                        }));
         }
     };
@@ -196,13 +194,13 @@ class GrpcClientTest {
         };
 
         final URI uri = server.httpUri(GrpcSerializationFormats.PROTO);
-        blockingStub = Clients.builder(uri)
-                              .maxResponseLength(MAX_MESSAGE_SIZE)
-                              .decorator(requestLogRecorder)
-                              .build(TestServiceBlockingStub.class);
-        asyncStub = Clients.builder(uri.getScheme(), server.httpEndpoint())
-                           .decorator(requestLogRecorder)
-                           .build(TestServiceStub.class);
+        blockingStub = GrpcClients.builder(uri)
+                                  .maxResponseLength(MAX_MESSAGE_SIZE)
+                                  .decorator(requestLogRecorder)
+                                  .build(TestServiceBlockingStub.class);
+        asyncStub = GrpcClients.builder(uri.getScheme(), server.httpEndpoint())
+                               .decorator(requestLogRecorder)
+                               .build(TestServiceStub.class);
     }
 
     @AfterEach
@@ -223,8 +221,9 @@ class GrpcClientTest {
     @Test
     void emptyUnary_grpcWeb() throws Exception {
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB),
-                                  TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .serializationFormat(GrpcSerializationFormats.PROTO_WEB)
+                           .build(TestServiceBlockingStub.class);
         assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
     }
 
@@ -286,8 +285,8 @@ class GrpcClientTest {
                                                  .setBody(ByteString.copyFrom(new byte[314159])))
                               .build();
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB),
-                                  TestServiceBlockingStub.class);
+                GrpcClients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB),
+                                      TestServiceBlockingStub.class);
         assertThat(stub.unaryCall(request)).isEqualTo(simpleResponse);
     }
 
@@ -309,8 +308,8 @@ class GrpcClientTest {
                                                  .setBody(ByteString.copyFrom(new byte[314159])))
                               .build();
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB_TEXT),
-                                  TestServiceBlockingStub.class);
+                GrpcClients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB_TEXT),
+                                      TestServiceBlockingStub.class);
         assertThat(stub.unaryCall(request)).isEqualTo(simpleResponse);
     }
 
@@ -331,9 +330,9 @@ class GrpcClientTest {
                               .build();
 
         final TestServiceStub stub =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                       .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
-                       .build(TestServiceStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .enableUnsafeWrapResponseBuffers(true)
+                           .build(TestServiceStub.class);
 
         final BlockingQueue<Object> resultQueue = new LinkedTransferQueue<>();
         stub.unaryCall(request, new StreamObserver<SimpleResponse>() {
@@ -918,33 +917,34 @@ class GrpcClientTest {
     void credentialsUnaryCall() {
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
-                Clients.builder("gproto+http://localhost:" + server.httpPort())
-                       .build(TestServiceBlockingStub.class)
-                       .withCallCredentials(
-                               new CallCredentials() {
-                                   @Override
-                                   public void applyRequestMetadata(RequestInfo requestInfo,
-                                                                    Executor appExecutor,
-                                                                    MetadataApplier applier) {
-                                       assertThat(requestInfo.getMethodDescriptor())
-                                               .isEqualTo(TestServiceGrpc.getEmptyCallMethod());
-                                       assertThat(requestInfo.getAuthority())
-                                               .isEqualTo("localhost:" + server.httpPort());
-                                       assertThat(requestInfo.getSecurityLevel())
-                                               .isEqualTo(SecurityLevel.NONE);
-                                       assertThat(appExecutor).isEqualTo(CommonPools.blockingTaskExecutor());
+                GrpcClients.builder("gproto+http://localhost:" + server.httpPort())
+                           .build(TestServiceBlockingStub.class)
+                           .withCallCredentials(
+                                   new CallCredentials() {
+                                       @Override
+                                       public void applyRequestMetadata(RequestInfo requestInfo,
+                                                                        Executor appExecutor,
+                                                                        MetadataApplier applier) {
+                                           assertThat(requestInfo.getMethodDescriptor())
+                                                   .isEqualTo(TestServiceGrpc.getEmptyCallMethod());
+                                           assertThat(requestInfo.getAuthority())
+                                                   .isEqualTo("localhost:" + server.httpPort());
+                                           assertThat(requestInfo.getSecurityLevel())
+                                                   .isEqualTo(SecurityLevel.NONE);
+                                           assertThat(appExecutor).isEqualTo(
+                                                   CommonPools.blockingTaskExecutor());
 
-                                       CommonPools.blockingTaskExecutor().schedule(() -> {
-                                           final Metadata metadata = new Metadata();
-                                           metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "token");
-                                           applier.apply(metadata);
-                                       }, 100, TimeUnit.MILLISECONDS);
-                                   }
+                                           CommonPools.blockingTaskExecutor().schedule(() -> {
+                                               final Metadata metadata = new Metadata();
+                                               metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "token");
+                                               applier.apply(metadata);
+                                           }, 100, TimeUnit.MILLISECONDS);
+                                       }
 
-                                   @Override
-                                   public void thisUsesUnstableApi() {
-                                   }
-                               });
+                                       @Override
+                                       public void thisUsesUnstableApi() {
+                                       }
+                                   });
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
@@ -953,29 +953,88 @@ class GrpcClientTest {
     }
 
     @Test
+    void credentialsUnaryCall_withBuilder() {
+        final TestServiceBlockingStub stub =
+                // Explicitly construct URL to better test authority.
+                GrpcClients.builder("gproto+http://localhost:" + server.httpPort())
+                           .callCredentials(new CallCredentials() {
+                               @Override
+                               public void applyRequestMetadata(RequestInfo requestInfo,
+                                                                Executor appExecutor,
+                                                                MetadataApplier applier) {
+                                   assertThat(requestInfo.getMethodDescriptor())
+                                           .isEqualTo(TestServiceGrpc.getEmptyCallMethod());
+                                   assertThat(requestInfo.getAuthority())
+                                           .isEqualTo("localhost:" + server.httpPort());
+                                   assertThat(requestInfo.getSecurityLevel())
+                                           .isEqualTo(SecurityLevel.NONE);
+                                   assertThat(appExecutor).isEqualTo(
+                                           CommonPools.blockingTaskExecutor());
+
+                                   CommonPools.blockingTaskExecutor().schedule(() -> {
+                                       final Metadata metadata = new Metadata();
+                                       metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "token");
+                                       applier.apply(metadata);
+                                   }, 100, TimeUnit.MILLISECONDS);
+                               }
+
+                               @Override
+                               public void thisUsesUnstableApi() {}
+                           })
+                           .build(TestServiceBlockingStub.class);
+
+        assertThat(stub.emptyCall(EMPTY)).isNotNull();
+
+        final HttpHeaders clientHeaders = CLIENT_HEADERS_CAPTURE.get();
+        assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("token");
+        CLIENT_HEADERS_CAPTURE.set(null);
+
+        // Override client level CallCredentials with CallOptions.
+        final TestServiceBlockingStub stubWithCredentials =
+                stub.withCallCredentials(new CallCredentials() {
+                    @Override
+                    public void applyRequestMetadata(RequestInfo requestInfo,
+                                                     Executor appExecutor,
+                                                     MetadataApplier applier) {
+                        final Metadata metadata = new Metadata();
+                        metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "token2");
+                        applier.apply(metadata);
+                    }
+
+                    @Override
+                    public void thisUsesUnstableApi() {}
+                });
+
+        assertThat(stubWithCredentials.emptyCall(EMPTY)).isNotNull();
+
+        final HttpHeaders clientHeaders0 = CLIENT_HEADERS_CAPTURE.get();
+        assertThat(clientHeaders0.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("token2");
+    }
+
+    @Test
     void credentialsUnaryCall_https() {
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
-                Clients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
-                       .factory(ClientFactory.insecure())
-                       .build(TestServiceBlockingStub.class)
-                       .withCallCredentials(
-                               new CallCredentials() {
-                                   @Override
-                                   public void applyRequestMetadata(RequestInfo requestInfo,
-                                                                    Executor appExecutor,
-                                                                    MetadataApplier applier) {
-                                       assertThat(requestInfo.getAuthority())
-                                               .isEqualTo("127.0.0.1:" + server.httpsPort());
-                                       assertThat(requestInfo.getSecurityLevel())
-                                               .isEqualTo(SecurityLevel.PRIVACY_AND_INTEGRITY);
-                                       applier.apply(new Metadata());
-                                   }
+                GrpcClients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
+                           .factory(ClientFactory.insecure())
+                           .build(TestServiceBlockingStub.class)
+                           .withCallCredentials(
+                                   new CallCredentials() {
+                                       @Override
+                                       public void applyRequestMetadata(RequestInfo requestInfo,
+                                                                        Executor appExecutor,
+                                                                        MetadataApplier applier) {
+                                           assertThat(requestInfo.getAuthority())
+                                                   .isEqualTo("127.0.0.1:" + server.httpsPort());
+                                           assertThat(requestInfo.getSecurityLevel())
+                                                   .isEqualTo(SecurityLevel.PRIVACY_AND_INTEGRITY);
+                                           applier.apply(new Metadata());
+                                       }
 
-                                   @Override
-                                   public void thisUsesUnstableApi() {
-                                   }
-                               });
+                                       @Override
+                                       public void thisUsesUnstableApi() {
+                                       }
+                                   });
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
     }
@@ -1504,15 +1563,15 @@ class GrpcClientTest {
     void endpointRemapper() {
         final EndpointGroup group = Endpoint.of("127.0.0.1", server.httpPort());
         final TestServiceBlockingStub stub =
-                Clients.builder("gproto+http://my-group")
-                       .endpointRemapper(endpoint -> {
-                           if ("my-group".equals(endpoint.host())) {
-                               return group;
-                           } else {
-                               return endpoint;
-                           }
-                       })
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder("http://my-group")
+                           .endpointRemapper(endpoint -> {
+                               if ("my-group".equals(endpoint.host())) {
+                                   return group;
+                               } else {
+                                   return endpoint;
+                               }
+                           })
+                           .build(TestServiceBlockingStub.class);
 
         assertThat(stub.emptyCall(Empty.newBuilder().build())).isNotNull();
     }

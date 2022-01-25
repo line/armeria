@@ -21,7 +21,6 @@ import io.netty.util.concurrent.EventExecutor
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import org.reactivestreams.Publisher
@@ -33,7 +32,7 @@ import kotlin.coroutines.EmptyCoroutineContext
  * [Publisher] implementation which emits values collected from [Flow].
  * Reactive streams back-pressure works on its backing [flow] too.
  */
-internal class FlowCollectingPublisher<T : Any>(
+internal class FlowCollectingPublisher<T>(
     private val flow: Flow<T>,
     private val executor: EventExecutor,
     private val context: CoroutineContext = EmptyCoroutineContext

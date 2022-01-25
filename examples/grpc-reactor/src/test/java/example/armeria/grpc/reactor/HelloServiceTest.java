@@ -11,8 +11,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Stopwatch;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -120,10 +119,6 @@ class HelloServiceTest {
     }
 
     private static ReactorHelloServiceGrpc.ReactorHelloServiceStub helloService() {
-        return Clients.newClient(uri(), ReactorHelloServiceGrpc.ReactorHelloServiceStub.class);
-    }
-
-    private static String uri() {
-        return server.httpUri(GrpcSerializationFormats.PROTO).toString();
+        return GrpcClients.newClient(server.httpUri(), ReactorHelloServiceGrpc.ReactorHelloServiceStub.class);
     }
 }

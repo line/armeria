@@ -26,12 +26,12 @@ import scalapb.descriptors.{Descriptor, FieldDescriptor, PValue, Reads}
 import scalapb.json4s.Printer
 import scalapb.{GeneratedEnumCompanion, GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof}
 
-private[scalapb] object ScalaPbConverterUtil {
+private[scalapb] object ResultType extends Enumeration {
+  val UNKNOWN, PROTOBUF, LIST_PROTOBUF, SET_PROTOBUF, MAP_PROTOBUF, SCALA_LIST_PROTOBUF, SCALA_VECTOR_PROTOBUF,
+      SCALA_SET_PROTOBUF, SCALA_MAP_PROTOBUF = Value
+}
 
-  object ResultType extends Enumeration {
-    val UNKNOWN, PROTOBUF, LIST_PROTOBUF, SET_PROTOBUF, MAP_PROTOBUF, SCALA_LIST_PROTOBUF,
-        SCALA_VECTOR_PROTOBUF, SCALA_SET_PROTOBUF, SCALA_MAP_PROTOBUF = Value
-  }
+private[scalapb] object ScalaPbConverterUtil {
 
   val X_PROTOBUF: MediaType = MediaType.create("application", "x-protobuf")
   val defaultJsonPrinter: Printer = new Printer().includingDefaultValueFields
