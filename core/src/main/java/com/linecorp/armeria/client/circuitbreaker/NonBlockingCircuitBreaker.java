@@ -118,8 +118,14 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
                config.failureRateThreshold() < count.failureRate();
     }
 
+    @Deprecated
     @Override
     public boolean canRequest() {
+        return tryRequest();
+    }
+
+    @Override
+    public boolean tryRequest() {
         final State currentState = state.get();
         if (currentState.isClosed()) {
             // all requests are allowed during CLOSED
@@ -139,6 +145,11 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         }
 
         return true;
+    }
+
+    @Override
+    public CircuitState circuitState() {
+        return state.get().circuitState;
     }
 
     private State newOpenState() {
