@@ -315,7 +315,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             final ServiceConfig serviceConfig = reqCtx.config();
             final AggregatedHttpResponse res =
                     serviceConfig.server().config().errorHandler()
-                                 .renderStatus(serviceConfig, status, null, cause0);
+                                 .renderStatus(serviceConfig, req.headers(), status, null, cause0);
             assert res != null;
             failAndRespond(cause0, res, Http2Error.CANCEL, false);
         } else if (Exceptions.isStreamCancelling(cause)) {

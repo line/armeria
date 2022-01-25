@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
@@ -578,6 +579,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
      * }</pre>
      */
+    @Override
     default HttpRequest mapData(Function<? super HttpData, ? extends HttpData> function) {
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream =
@@ -598,6 +600,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
      * }</pre>
      */
+    @Override
     default HttpRequest mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
 
@@ -614,7 +617,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * Transforms an error emitted by this {@link HttpRequest} by applying the specified {@link Function}.
      *
      * <p>For example:<pre>{@code
-     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
      * HttpRequest transformed = request.mapError(cause -> {
      *     if (cause instanceof IllegalStateException) {
      *         return new MyDomainException(cause);
@@ -628,5 +631,63 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequest mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return of(headers(), HttpMessage.super.mapError(function));
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@link HttpData}s
+     * emitted by this {@link HttpRequest}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("data1,data2"));
+     * HttpRequest peeked = request.peekData(data -> {
+     *     assert data.toStringUtf8().equals("data1,data2");
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpRequest peekData(Consumer<? super HttpData> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(action, HttpData.class);
+        return of(headers(), stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@linkplain HttpHeaders trailers}
+     * emitted by this {@link HttpRequest}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("..."),
+     *                                      HttpHeaders.of("trailer", "foo"));
+     * HttpRequest peeked = request.peekTrailers(trailers -> {
+     *     assert trailers.get("trailer").equals("foo");
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpRequest peekTrailers(Consumer<? super HttpHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(action, HttpHeaders.class);
+        return of(headers(), stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to an error emitted by this {@link HttpRequest}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
+     * HttpRequest peeked = request.peekError(cause -> {
+     *     assert cause instanceof IllegalStateException;
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpRequest peekError(Consumer<? super Throwable> action) {
+        requireNonNull(action, "action");
+        return of(headers(), HttpMessage.super.peekError(action));
     }
 }

@@ -49,7 +49,9 @@ dependencies {
 def tomcatProjectDir = "${rootProject.projectDir}/it/spring/boot2-tomcat9"
 tasks.compileJava.source "${tomcatProjectDir}/src/main/java"
 tasks.processResources.from "${tomcatProjectDir}/src/main/resources"
-tasks.compileTestJava.source "${tomcatProjectDir}/src/test/java", "${tomcatProjectDir}/gen-src/test/java"
+tasks.compileTestJava.source "${tomcatProjectDir}/src/test/java/com/linecorp/armeria/spring/tomcat/demo/ErrorHandlingTest",
+        "${tomcatProjectDir}/src/test/java/com/linecorp/armeria/spring/tomcat/demo/SpringTomcatApplicationItTest",
+        "${tomcatProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${tomcatProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${tomcatProjectDir}/src/main/java"
 tasks.sourcesJar.from "${tomcatProjectDir}/src/main/resources"
