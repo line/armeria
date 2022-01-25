@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +30,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -170,7 +171,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     @Override
     public void watch(HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
         ServiceRequestContext.current().clearRequestTimeout();
-        final String service = request.getService() == null ? EMPTY_SERVICE : request.getService();
+        final String service = firstNonNull(request.getService(), EMPTY_SERVICE);
         synchronized (watchers) {
             final ServingStatus status = checkServingStatus(service);
             final HealthCheckResponse response = getHealthCheckResponse(status);
@@ -179,8 +180,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         }
         ((ServerCallStreamObserver<HealthCheckResponse>) responseObserver).setOnCancelHandler(() -> {
             synchronized (watchers) {
-                final ServingStatus currentStatus = checkServingStatus(service);
-                watchers.get(service).remove(Maps.immutableEntry(responseObserver, currentStatus));
+                watchers.get(service).remove(responseObserver);
             }
         });
     }
