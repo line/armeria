@@ -82,7 +82,7 @@ public interface CircuitBreaker {
      * For instance, calling this method with {@link CircuitState#OPEN} will always
      * reset the timeout to {@link CircuitBreakerBuilder#circuitOpenWindow(Duration)}.
      *
-     * This method should be only used if users want extra control over the
+     * <p>This method should be only used if users want extra control over the
      * {@link CircuitBreaker}'s state. Normally state transitions are handled internally.
      */
     void enterState(CircuitState circuitState);
