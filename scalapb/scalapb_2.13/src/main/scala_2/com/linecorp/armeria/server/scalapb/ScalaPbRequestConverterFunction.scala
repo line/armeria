@@ -164,10 +164,11 @@ object ScalaPbRequestConverterFunction {
           clazz,
           key => {
             val companionClass = Class.forName(key.getName + "$")
-            try companionClass
-              .getDeclaredField("MODULE$")
-              .get(null)
-              .asInstanceOf[GeneratedMessageCompanion[_]]
+            try
+              companionClass
+                .getDeclaredField("MODULE$")
+                .get(null)
+                .asInstanceOf[GeneratedMessageCompanion[_]]
             catch {
               case _: NoSuchFieldException | _: ClassNotFoundException =>
                 unknownGeneratedMessageCompanion
@@ -213,8 +214,11 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
             .merge(getDefaultInstance(expectedResultType), CodedInputStream.newInstance(is))
             .asInstanceOf[GeneratedMessage]
           return toGenerateMessageOrOneof(expectedResultType, message).asInstanceOf[Object]
-        } finally if (is != null)
-          is.close()
+        } finally {
+          if (is != null) {
+            is.close()
+          }
+        }
       }
       if (contentType.isJson) {
         val jsonString = request.content(charset)
