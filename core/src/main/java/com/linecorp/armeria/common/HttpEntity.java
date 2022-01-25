@@ -44,7 +44,7 @@ public interface HttpEntity<T> {
     boolean hasContent();
 
     /**
-     * Returns the {@linkplain  HttpHeaders trailers} of this entity.
+     * Returns the {@linkplain HttpHeaders trailers} of this entity.
      */
     HttpHeaders trailers();
 }

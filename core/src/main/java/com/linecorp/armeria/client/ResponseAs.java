@@ -55,7 +55,7 @@ public interface ResponseAs<T, R> {
     }
 
     /**
-     * Aggregates an {@link HttpResponse} and convert the {@link AggregatedHttpResponse#content()} into bytes.
+     * Aggregates an {@link HttpResponse} and converts the {@link AggregatedHttpResponse#content()} into bytes.
      */
     @UnstableApi
     static FutureResponseAs<ResponseEntity<byte[]>> bytes() {
@@ -63,7 +63,7 @@ public interface ResponseAs<T, R> {
     }
 
     /**
-     * Aggregates an {@link HttpResponse} and convert the {@link AggregatedHttpResponse#content()} into
+     * Aggregates an {@link HttpResponse} and converts the {@link AggregatedHttpResponse#content()} into
      * {@link String}.
      */
     @UnstableApi
@@ -91,8 +91,8 @@ public interface ResponseAs<T, R> {
     }
 
     /**
-     * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
-     * the specified non-container type using the default {@link ObjectMapper}.
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the default {@link ObjectMapper}.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
      * {@link Map}. Use {@link #json(TypeReference)} for the container type.
@@ -106,8 +106,8 @@ public interface ResponseAs<T, R> {
     }
 
     /**
-     * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
-     * the specified non-container type using the specified {@link ObjectMapper}.
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the specified {@link ObjectMapper}.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
      * {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
@@ -120,8 +120,8 @@ public interface ResponseAs<T, R> {
     }
 
     /**
-     * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
-     * the specified Java type using the default {@link ObjectMapper}.
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the default {@link ObjectMapper}.
      *
      * @see JacksonObjectMapperProvider
      */
@@ -132,8 +132,8 @@ public interface ResponseAs<T, R> {
     }
 
     /**
-     * Aggregates an {@link HttpResponse} and deserialize the JSON {@link AggregatedHttpResponse#content()} into
-     * the specified Java type using the specified {@link ObjectMapper}.
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the specified {@link ObjectMapper}.
      */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
@@ -163,10 +163,12 @@ public interface ResponseAs<T, R> {
      */
     @UnstableApi
     default <V> ResponseAs<T, V> andThen(ResponseAs<R, V> after) {
+        requireNonNull(after, "after");
         return new ResponseAs<T, V>() {
 
             @Override
             public V as(T response) {
+                requireNonNull(response, "response");
                 return after.as(ResponseAs.this.as(response));
             }
 

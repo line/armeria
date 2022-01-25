@@ -418,22 +418,18 @@ public final class BlockingWebClientRequestPreparation
     @Override
     public BlockingWebClientRequestPreparation writeTimeout(Duration writeTimeout) {
         delegate.writeTimeout(writeTimeout);
-
         return this;
     }
 
     @Override
     public BlockingWebClientRequestPreparation writeTimeoutMillis(long writeTimeoutMillis) {
-
         delegate.writeTimeoutMillis(writeTimeoutMillis);
-
         return this;
     }
 
     @Override
     public BlockingWebClientRequestPreparation maxResponseLength(long maxResponseLength) {
         delegate.maxResponseLength(maxResponseLength);
-
         return this;
     }
 

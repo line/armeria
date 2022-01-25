@@ -25,6 +25,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -35,7 +37,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -49,6 +50,8 @@ import io.netty.util.AttributeKey;
 @UnstableApi
 public final class FutureTransformingRequestPreparation<T>
         implements RequestPreparationSetters<CompletableFuture<T>> {
+
+    private static final Logger logger = LoggerFactory.getLogger(FutureTransformingRequestPreparation.class);
 
     private final WebClientRequestPreparation delegate;
     private FutureResponseAs<T> responseAs;
@@ -99,6 +102,7 @@ public final class FutureTransformingRequestPreparation<T>
     @SuppressWarnings("unchecked")
     public <U> FutureTransformingRequestPreparation<U> as(
             ResponseAs<? super T, ? extends U> responseAs) {
+        requireNonNull(responseAs, "responseAs");
         this.responseAs = (FutureResponseAs<T>) this.responseAs.map(responseAs::as);
         return (FutureTransformingRequestPreparation<U>) this;
     }
@@ -133,23 +137,19 @@ public final class FutureTransformingRequestPreparation<T>
         } else {
             this.errorHandler = this.errorHandler.andThen(obj -> {
                 if (obj instanceof Throwable) {
+                    Object result = null;
                     try {
-                        final Object result = errorHandler.apply((Throwable) obj);
-                        if (result != null) {
-                            return result;
-                        }
-
-                        // Not handled.
-                        return obj;
+                        result = errorHandler.apply((Throwable) obj);
                     } catch (Throwable ex) {
-                        // Pass the new Throwable to the next chain.
-                        return ex;
+                        logger.warn("Unexpected exception while handling {}", obj, ex);
                     }
-                } else {
-                    // A cause was recovered already.
-                    assert obj instanceof ResponseEntity;
-                    return obj;
+
+                    if (result != null) {
+                        return result;
+                    }
                 }
+                // Not handled or recovered already.
+                return obj;
             });
         }
     }

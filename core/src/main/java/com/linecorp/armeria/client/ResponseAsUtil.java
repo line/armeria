@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -28,6 +30,7 @@ final class ResponseAsUtil {
             new ResponseAs<HttpResponse, AggregatedHttpResponse>() {
                 @Override
                 public AggregatedHttpResponse as(HttpResponse response) {
+                    requireNonNull(response, "response");
                     try {
                         return response.aggregate().join();
                     } catch (Exception ex) {
@@ -42,9 +45,11 @@ final class ResponseAsUtil {
             };
 
     static <T> FutureResponseAs<T> aggregateAndConvert(ResponseAs<AggregatedHttpResponse, T> responseAs) {
+        requireNonNull(responseAs, "responseAs");
         return new FutureResponseAs<T>() {
             @Override
             public CompletableFuture<T> as(HttpResponse response) {
+                requireNonNull(response, "response");
                 return response.aggregate().thenApply(responseAs::as);
             }
 

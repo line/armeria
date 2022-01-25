@@ -84,8 +84,8 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     }
 
     /**
-     * Sets the specified {@link ResponseAs} that converts the {@link HttpResponse} into an
-     * {@link ResponseEntity}.
+     * Sets the specified {@link ResponseAs} that converts the {@link HttpResponse} into
+     * a {@link ResponseEntity}.
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asEntity(
@@ -129,7 +129,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     }
 
     /**
-     * Converts the content of the {@link HttpResponse} into a {@link Path}.
+     * Writes the content of the {@link HttpResponse} to the {@link Path}.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
@@ -147,7 +147,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     }
 
     /**
-     * Converts the content of the {@link HttpResponse} into a {@link File}.
+     * Writes the content of the {@link HttpResponse} to the {@link File}.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");

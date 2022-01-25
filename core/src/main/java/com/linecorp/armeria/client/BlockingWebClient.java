@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -37,7 +38,7 @@ import com.linecorp.armeria.common.util.Unwrappable;
 import io.netty.channel.EventLoop;
 
 /**
- * A blocking web client that waits for an {@link HttpRequest} to be fully aggregated.
+ * A blocking web client that waits for an {@link HttpResponse} to be fully aggregated.
  * If you want to create a {@link BlockingWebClient} with various options, create a {@link WebClient} first
  * and convert it into a {@link BlockingWebClient} via {@link WebClient#blocking()}.
  * <pre>{@code

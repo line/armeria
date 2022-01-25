@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -37,6 +39,7 @@ public interface RequestEntity<T> extends HttpEntity<T> {
      * {@code content}.
      */
     static <T> RequestEntity<T> of(RequestHeaders headers, T content) {
+        requireNonNull(content, "content");
         return of(headers, content, HttpHeaders.of());
     }
 
@@ -45,6 +48,8 @@ public interface RequestEntity<T> extends HttpEntity<T> {
      * {@code content} and {@linkplain HttpHeaders trailers}.
      */
     static <T> RequestEntity<T> of(RequestHeaders headers, @Nullable T content, HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(trailers, "trailers");
         return new DefaultRequestEntity<>(headers, content, trailers);
     }
 

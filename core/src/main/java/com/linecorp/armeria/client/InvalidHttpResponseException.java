@@ -63,6 +63,7 @@ public final class InvalidHttpResponseException extends InvalidResponseException
     public InvalidHttpResponseException(AggregatedHttpResponse response, String message,
                                         @Nullable Throwable cause) {
         super(requireNonNull(message, "message"), cause);
+        requireNonNull(response, "response");
         ensureNonPooledObject(response);
         this.response = response;
     }
