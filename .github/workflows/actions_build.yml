@@ -37,7 +37,7 @@ jobs:
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
             on: macos-latest
             coverage: true
-          - java: 16
+          - java: 17
             on: self-hosted
             snapshot: true
 
