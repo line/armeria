@@ -139,7 +139,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             try {
                 jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY)
                                         .apply(serviceDescriptor);
-            } catch (RuntimeException e) {
+            } catch (Exception e) {
                 logger.warn("Failed to instantiate a JSON marshaller for gRPC-JSON. " +
                             "Consider using a different serialization format with {}.serializationFormat() " +
                             "or using {}.ofGson() instead.",
