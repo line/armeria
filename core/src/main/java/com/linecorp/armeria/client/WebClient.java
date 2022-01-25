@@ -591,8 +591,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Returns a {@link BlockingWebClient} that connects to the same {@link URI} with this {@link WebClient}.
-     * Note that a blocking request should be sent in a non-{@link EventLoop} thread such as a
-     * {@link BlockingTaskExecutor}.
+     *
+     * <p>Note that you should never use the {@link BlockingWebClient} in an {@link EventLoop} thread.
+     * Use it from a non-{@link EventLoop} thread such as {@link BlockingTaskExecutor}.
      */
     @UnstableApi
     BlockingWebClient blocking();

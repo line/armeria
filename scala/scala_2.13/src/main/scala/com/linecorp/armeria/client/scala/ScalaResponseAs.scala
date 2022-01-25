@@ -27,7 +27,7 @@ import java.nio.file.Path
 import scala.concurrent.Future
 
 /**
- * A utility that asynchronously transforms a `HttpResponse` into another.
+ * A utility that asynchronously transforms an `HttpResponse` into another.
  */
 object ScalaResponseAs {
 
@@ -35,25 +35,25 @@ object ScalaResponseAs {
   private val mapper = jsonMapper :: ClassTagExtensions
 
   /**
-   * Aggregates an `HttpResponse` and convert the `AggregatedHttpResponse.content()` into bytes.
+   * Aggregates an `HttpResponse` and converts the `AggregatedHttpResponse.content()` into bytes.
    */
   def bytes(): ResponseAs[HttpResponse, Future[ResponseEntity[Array[Byte]]]] =
     response => ResponseAs.bytes().as(response).toScala
 
   /**
-   * Aggregates an `HttpResponse` and convert the `AggregatedHttpResponse.content()` into `String`.
+   * Aggregates an `HttpResponse` and converts the `AggregatedHttpResponse.content()` into `String`.
    */
   def string(): ResponseAs[HttpResponse, Future[ResponseEntity[String]]] =
     response => ResponseAs.string().as(response).toScala
 
   /**
-   * Aggregates an `HttpResponse` and deserialize the JSON `AggregatedHttpResponse.content()`
+   * Aggregates an `HttpResponse` and deserializes the JSON `AggregatedHttpResponse.content()`
    * into the specified type object using the default `ObjectMapper`.
    */
   def json[A: JavaTypeable]: ResponseAs[HttpResponse, Future[ResponseEntity[A]]] = json(mapper)
 
   /**
-   * Aggregates an `HttpResponse` and deserialize the JSON `AggregatedHttpResponse.content()`
+   * Aggregates an `HttpResponse` and deserializes the JSON `AggregatedHttpResponse.content()`
    * into the specified type object using the specified Scala `ObjectMapper`.
    */
   def json[A: JavaTypeable](mapper: ClassTagExtensions): ResponseAs[HttpResponse, Future[ResponseEntity[A]]] =

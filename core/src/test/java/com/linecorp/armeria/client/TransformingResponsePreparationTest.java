@@ -196,12 +196,27 @@ class TransformingResponsePreparationTest {
                           return null;
                       }).mapError(cause -> {
                           // Not handled.
+                          assertThat(cause).isNotInstanceOf(InvalidHttpResponseException.class);
                           return null;
                       })
                       .execute();
         assertThatThrownBy(future2::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(JsonProcessingException.class);
+
+        final CompletableFuture<ResponseEntity<MyResponse>> future3 =
+                client.prepare()
+                      .get("/json_list")
+                      .<MyResponse>asJson(MyMessage.class)
+                      .mapError(cause -> {
+                          return null;
+                      }).mapError(cause -> {
+                          return null;
+                      })
+                      .execute();
+        assertThatThrownBy(future3::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(InvalidHttpResponseException.class);
     }
 
     interface MyResponse {}
