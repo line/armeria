@@ -77,7 +77,7 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '3.1.1' }
 
 com.google.api:
-  gax-grpc: { version: '2.9.0' }
+  gax-grpc: { version: '2.10.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -252,7 +252,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '1.2.0' }
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '1.2.1' }
   protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
@@ -396,7 +396,7 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '3.0.0'
+    version: '3.1.0'
     javadocs:
     - https://kafka.apache.org/30/javadoc/
 
@@ -519,7 +519,7 @@ org.jsoup:
   jsoup: { version: '1.14.3' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '4.2.0' }
+  mockito-core: { version: &MOCKITO_VERSION '4.3.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -560,7 +560,7 @@ org.reflections:
 
 org.scala-lang:
   scala-library: { version: '2.13.8' }
-  scala3-library_3: { version: '3.1.0' }
+  scala3-library_3: { version: '3.1.1' }
 
 org.scala-lang.modules:
   scala-collection-compat_2.12: { version: '2.6.0' }
@@ -580,7 +580,7 @@ org.sangria-graphql:
   sangria-slowlog_2.13: { version: *SANGRIA_SLOWLOG_VERSION }
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.33' }
+  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.34' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api:
