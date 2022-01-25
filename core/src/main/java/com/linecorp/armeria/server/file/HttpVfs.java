@@ -88,8 +88,8 @@ public interface HttpVfs {
      * @return the {@link HttpFile} at the specified {@code path}
      */
     default HttpFile get(Executor fileReadExecutor, String path, Clock clock,
-                 @Nullable String contentEncoding, HttpHeaders additionalHeaders,
-                 MediaTypeResolver mediaTypeResolver) {
+                         @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+                         MediaTypeResolver mediaTypeResolver) {
         return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders);
     }
 

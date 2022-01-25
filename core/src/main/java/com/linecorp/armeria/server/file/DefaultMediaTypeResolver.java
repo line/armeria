@@ -76,6 +76,7 @@ enum DefaultMediaTypeResolver implements MediaTypeResolver {
     }
 
     @Nullable
+    @Override
     public MediaType guessFromPath(String path) {
         requireNonNull(path, "path");
         final int dotIdx = path.lastIndexOf('.');
@@ -95,6 +96,7 @@ enum DefaultMediaTypeResolver implements MediaTypeResolver {
     }
 
     @Nullable
+    @Override
     public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
         if (contentEncoding == null || Ascii.equalsIgnoreCase(contentEncoding, "identity")) {
             return guessFromPath(path);
