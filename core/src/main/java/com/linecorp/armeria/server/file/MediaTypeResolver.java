@@ -44,7 +44,7 @@ public interface MediaTypeResolver {
      * @param contentEncoding the content encoding, such as {@code "gzip"} and {@code "br"}, as defined
      *                        in <a href="https://datatracker.ietf.org/doc/rfc2616/"> the section 3.5,
      *                        RFC 2616</a>.
-     *                        {@code null} for an uncompressed file.
+     *                        {@code null} or {@code "identity"} for an uncompressed file.
      * @return the resolved {@link MediaType}
      */
     @Nullable
