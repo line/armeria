@@ -132,6 +132,11 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             return true;
         }
 
+        if (currentState.isForcedOpen()) {
+            notifyRequestRejected();
+            return false;
+        }
+
         if (currentState.isHalfOpen() || currentState.isOpen()) {
             if (currentState.checkTimeout() && state.compareAndSet(currentState, newHalfOpenState())) {
                 // changes to HALF_OPEN if OPEN state has timed out
@@ -152,6 +157,17 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         return state.get().circuitState;
     }
 
+    @Override
+    public void enterState(CircuitState circuitState) {
+        requireNonNull(circuitState, "circuitState");
+        final State oldState = state.getAndUpdate(st -> newState(circuitState));
+        if (oldState.circuitState() == circuitState) {
+            return;
+        }
+        logStateTransition(circuitState, null);
+        notifyStateChanged(circuitState);
+    }
+
     private State newOpenState() {
         return new State(CircuitState.OPEN, config.circuitOpenWindow(), NoOpCounter.INSTANCE);
     }
@@ -166,6 +182,10 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
                 Duration.ZERO,
                 new SlidingWindowCounter(ticker, config.counterSlidingWindow(),
                                          config.counterUpdateInterval()));
+    }
+
+    private State newForcedOpenState() {
+        return new State(CircuitState.FORCED_OPEN, Duration.ZERO, NoOpCounter.INSTANCE);
     }
 
     private void logStateTransition(CircuitState circuitState, @Nullable EventCount count) {
@@ -240,6 +260,21 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         return config;
     }
 
+    private State newState(CircuitState circuitState) {
+        switch (circuitState) {
+            case OPEN:
+                return newOpenState();
+            case HALF_OPEN:
+                return newHalfOpenState();
+            case CLOSED:
+                return newClosedState();
+            case FORCED_OPEN:
+                return newForcedOpenState();
+            default:
+                throw new Error();
+        }
+    }
+
     /**
      * The internal state of the circuit breaker.
      */
@@ -287,6 +322,14 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
 
         boolean isClosed() {
             return circuitState == CircuitState.CLOSED;
+        }
+
+        boolean isForcedOpen() {
+            return circuitState == CircuitState.FORCED_OPEN;
+        }
+
+        CircuitState circuitState() {
+            return circuitState;
         }
     }
 
