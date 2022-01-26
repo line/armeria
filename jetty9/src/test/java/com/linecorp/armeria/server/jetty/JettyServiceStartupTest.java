@@ -55,7 +55,7 @@ class JettyServiceStartupTest {
                     "/jsp/",
                     JettyService.builder()
                                 .handler(newWebAppContext())
-                                .configurator(s -> jettyBeans.addAll(s.getBeans()))
+                                .customizer(s -> jettyBeans.addAll(s.getBeans()))
                                 .build()
                                 .decorate(LoggingService.newDecorator()));
 
