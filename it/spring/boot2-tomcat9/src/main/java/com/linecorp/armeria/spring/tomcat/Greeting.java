@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,10 +14,21 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.tomcat.demo;
+package com.linecorp.armeria.spring.tomcat;
 
-public class GlobalBaseException extends RuntimeException {
-    GlobalBaseException(String message) {
-        super(message);
+public class Greeting {
+
+    private final String content;
+
+    /**
+     * Greeting model.
+     * @param content the content.
+     */
+    public Greeting(String content) {
+        this.content = content;
+    }
+
+    public String getContent() {
+        return content;
     }
 }
