@@ -81,7 +81,7 @@ jobs:
         -PflakyTests=false \
         -PbuildJdkVersion=17 \
         -PtestJavaVersion=${{ matrix.java }} \
-        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jre.outputs.path }}
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
       shell: bash
 
     - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
