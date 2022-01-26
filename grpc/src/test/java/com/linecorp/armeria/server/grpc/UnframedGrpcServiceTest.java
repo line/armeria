@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
@@ -195,10 +194,8 @@ class UnframedGrpcServiceTest {
                                                                 UnframedGrpcErrorHandler errorHandler) {
         return (UnframedGrpcService) GrpcService.builder()
                                                 .addService(bindableService)
-                                                .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                .supportedSerializationFormats(
-                                                        GrpcSerializationFormats.values())
+                                                .maxRequestMessageLength(MAX_MESSAGE_BYTES)
+                                                .maxResponseMessageLength(MAX_MESSAGE_BYTES)
                                                 .enableUnframedRequests(true)
                                                 .unframedGrpcErrorHandler(errorHandler)
                                                 .build();
@@ -208,9 +205,8 @@ class UnframedGrpcServiceTest {
     void shouldThrowExceptionIfUnframedRequestHandlerAddedButUnframedRequestsAreDisabled() {
         final IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
                 GrpcService.builder()
-                           .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                           .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                           .supportedSerializationFormats(GrpcSerializationFormats.values())
+                           .maxRequestMessageLength(MAX_MESSAGE_BYTES)
+                           .maxResponseMessageLength(MAX_MESSAGE_BYTES)
                            .enableUnframedRequests(false)
                            .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
                            .build());

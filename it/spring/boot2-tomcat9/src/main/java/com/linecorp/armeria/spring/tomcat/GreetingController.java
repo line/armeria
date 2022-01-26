@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.tomcat.demo;
+package com.linecorp.armeria.spring.tomcat;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server.scalapb
 
+import com.fasterxml.jackson.core.`type`.TypeReference
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet}
-import com.google.common.reflect.TypeToken
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpMethod, HttpRequest, MediaType}
 import com.linecorp.armeria.scalapb.testing.messages.SimpleRequest
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -45,11 +45,13 @@ class ScalaPbRequestConverterFunctionTest {
 
   @Test
   def failProtobufToCollection(): Unit = {
-    val typeToken = new TypeToken[List[SimpleRequest]]() {}
+    val typeToken = new TypeReference[List[SimpleRequest]]() {}
     val converter = ScalaPbRequestConverterFunction()
     val req = AggregatedHttpRequest.of(ctx.request.headers, HttpData.wrap(simpleRequest1.toByteArray))
-    assertThatThrownBy(() =>
-      converter.convertRequest(ctx, req, classOf[List[_]], typeToken.getType.asInstanceOf[ParameterizedType]))
+    assertThatThrownBy(() => {
+      val parameterizedType = typeToken.getType.asInstanceOf[ParameterizedType]
+      converter.convertRequest(ctx, req, classOf[List[_]], parameterizedType)
+    })
       .isInstanceOf(classOf[FallthroughException])
   }
 
@@ -65,49 +67,45 @@ class ScalaPbRequestConverterFunctionTest {
 
   @ArgumentsSource(classOf[JsonArrayRequestProvider])
   @ParameterizedTest
-  def jsonArrayToCollection(collection: Any, json: String, typeToken: TypeToken[_]): Unit = {
+  def jsonArrayToCollection(
+      collection: Any,
+      json: String,
+      rawType: Class[_],
+      parameterizedType: ParameterizedType): Unit = {
     val converter = ScalaPbRequestConverterFunction()
     val req = AggregatedHttpRequest.of(
       ctx.request.headers
         .withMutations(builder => builder.contentType(MediaType.JSON)),
       HttpData.ofUtf8(json))
     val requestObject =
-      converter.convertRequest(
-        ctx,
-        req,
-        typeToken.getRawType,
-        typeToken.getType.asInstanceOf[ParameterizedType])
+      converter.convertRequest(ctx, req, rawType, parameterizedType)
     assertThat(requestObject).isEqualTo(collection)
   }
 
   @ArgumentsSource(classOf[JsonObjectRequestProvider])
   @ParameterizedTest
-  def jsonObjectToMap(map: Any, json: String, typeToken: TypeToken[_]): Unit = {
+  def jsonObjectToMap(map: Any, json: String, rawType: Class[_], parameterizedType: ParameterizedType): Unit = {
     val converter = ScalaPbRequestConverterFunction()
     val req = AggregatedHttpRequest.of(
       ctx.request.headers
         .withMutations(builder => builder.contentType(MediaType.JSON)),
       HttpData.ofUtf8(json))
     val requestObject =
-      converter.convertRequest(
-        ctx,
-        req,
-        typeToken.getRawType,
-        typeToken.getType.asInstanceOf[ParameterizedType])
+      converter.convertRequest(ctx, req, rawType, parameterizedType)
     assertThat(requestObject).isEqualTo(map)
   }
 
   @ArgumentsSource(classOf[JsonArrayRequestProvider])
   @ParameterizedTest
-  def jsonArrayWithNoContentType(collection: Any, json: String, typeToken: TypeToken[_]): Unit = {
+  def jsonArrayWithNoContentType(
+      collection: Any,
+      json: String,
+      rawType: Class[_],
+      parameterizedType: ParameterizedType): Unit = {
     val converter = ScalaPbRequestConverterFunction()
     val req = AggregatedHttpRequest.of(ctx.request.headers, HttpData.ofUtf8(json))
     assertThatThrownBy { () =>
-      converter.convertRequest(
-        ctx,
-        req,
-        typeToken.getRawType,
-        typeToken.getType.asInstanceOf[ParameterizedType])
+      converter.convertRequest(ctx, req, rawType, parameterizedType)
     }.isInstanceOf(classOf[FallthroughException])
   }
 }
@@ -129,11 +127,23 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
       val jset = ImmutableSet.of(simpleRequest1, simpleRequest2);
 
       java.util.stream.Stream.of(
-        Arguments.of(list, toJson(list), new TypeToken[List[SimpleRequest]]() {}),
-        Arguments.of(vector, toJson(vector), new TypeToken[Vector[SimpleRequest]]() {}),
-        Arguments.of(set, toJson(set), new TypeToken[Set[SimpleRequest]]() {}),
-        Arguments.of(jlist, toJson(jlist), new TypeToken[java.util.List[SimpleRequest]]() {}),
-        Arguments.of(jset, toJson(jset), new TypeToken[java.util.Set[SimpleRequest]]() {})
+        Arguments.of(list, toJson(list), classOf[List[_]], new TypeReference[List[SimpleRequest]]() {}.getType),
+        Arguments.of(
+          vector,
+          toJson(vector),
+          classOf[Vector[_]],
+          new TypeReference[Vector[SimpleRequest]]() {}.getType),
+        Arguments.of(set, toJson(set), classOf[Set[_]], new TypeReference[Set[SimpleRequest]]() {}.getType),
+        Arguments.of(
+          jlist,
+          toJson(jlist),
+          classOf[java.util.List[_]],
+          new TypeReference[java.util.List[SimpleRequest]]() {}.getType),
+        Arguments.of(
+          jset,
+          toJson(jset),
+          classOf[java.util.Set[_]],
+          new TypeReference[java.util.Set[SimpleRequest]]() {}.getType)
       )
     }
   }
@@ -148,8 +158,16 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
         .build()
 
       java.util.stream.Stream.of(
-        Arguments.of(map, toJson(map), new TypeToken[Map[String, SimpleRequest]]() {}),
-        Arguments.of(jmap, toJson(jmap), new TypeToken[java.util.Map[String, SimpleRequest]]() {})
+        Arguments.of(
+          map,
+          toJson(map),
+          classOf[Map[_, _]],
+          new TypeReference[Map[String, SimpleRequest]]() {}.getType),
+        Arguments.of(
+          jmap,
+          toJson(jmap),
+          classOf[java.util.Map[_, _]],
+          new TypeReference[java.util.Map[String, SimpleRequest]]() {}.getType)
       )
     }
   }

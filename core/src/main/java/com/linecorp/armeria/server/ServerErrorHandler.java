@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -109,6 +110,7 @@ public interface ServerErrorHandler {
      * for each request failed at the protocol level.
      *
      * @param config the {@link ServiceConfig} that provides the configuration properties.
+     * @param headers the received {@link RequestHeaders}, or {@code null} in case of severe protocol violation.
      * @param status the desired {@link HttpStatus} of the error response.
      * @param description an optional human-readable description of the error.
      * @param cause an optional exception that may contain additional information about the error, such as
@@ -119,10 +121,11 @@ public interface ServerErrorHandler {
      */
     @Nullable
     default AggregatedHttpResponse onProtocolViolation(ServiceConfig config,
+                                                       @Nullable RequestHeaders headers,
                                                        HttpStatus status,
                                                        @Nullable String description,
                                                        @Nullable Throwable cause) {
-        return renderStatus(config, status, description, cause);
+        return renderStatus(config, headers, status, description, cause);
     }
 
     /**
@@ -135,9 +138,10 @@ public interface ServerErrorHandler {
      * {@link ServerErrorHandler} or even independently, and thus should not be used for counting
      * {@link HttpStatusException}s or collecting stats. Use
      * {@link #onServiceException(ServiceRequestContext, Throwable)} and
-     * {@link #onProtocolViolation(ServiceConfig, HttpStatus, String, Throwable)} instead.
+     * {@link #onProtocolViolation(ServiceConfig, RequestHeaders, HttpStatus, String, Throwable)} instead.
      *
      * @param config the {@link ServiceConfig} that provides the configuration properties.
+     * @param headers the received {@link RequestHeaders}, or {@code null} in case of severe protocol violation.
      * @param status the desired {@link HttpStatus} of the error response.
      * @param description an optional human-readable description of the error.
      * @param cause an optional exception that may contain additional information about the error, such as
@@ -148,6 +152,7 @@ public interface ServerErrorHandler {
      */
     @Nullable
     default AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                                @Nullable RequestHeaders headers,
                                                 HttpStatus status,
                                                 @Nullable String description,
                                                 @Nullable Throwable cause) {
@@ -202,28 +207,32 @@ public interface ServerErrorHandler {
             @Nullable
             @Override
             public AggregatedHttpResponse onProtocolViolation(ServiceConfig config,
+                                                              @Nullable RequestHeaders headers,
                                                               HttpStatus status,
                                                               @Nullable String description,
                                                               @Nullable Throwable cause) {
                 final AggregatedHttpResponse response =
-                        ServerErrorHandler.this.onProtocolViolation(config, status, description, cause);
+                        ServerErrorHandler.this.onProtocolViolation(
+                                config, headers, status, description, cause);
                 if (response != null) {
                     return response;
                 }
-                return other.onProtocolViolation(config, status, description, cause);
+                return other.onProtocolViolation(config, headers, status, description, cause);
             }
 
             @Nullable
             @Override
-            public AggregatedHttpResponse renderStatus(ServiceConfig config, HttpStatus status,
+            public AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                                       @Nullable RequestHeaders headers,
+                                                       HttpStatus status,
                                                        @Nullable String description,
                                                        @Nullable Throwable cause) {
                 final AggregatedHttpResponse response =
-                        ServerErrorHandler.super.renderStatus(config, status, description, cause);
+                        ServerErrorHandler.super.renderStatus(config, headers, status, description, cause);
                 if (response != null) {
                     return response;
                 }
-                return other.renderStatus(config, status, description, cause);
+                return other.renderStatus(config, headers, status, description, cause);
             }
         };
     }

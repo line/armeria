@@ -298,10 +298,9 @@ public final class AnnotatedService implements HttpService {
             // If an error occurs, the default ExceptionHandler will handle the error.
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
                 logger.isWarnEnabled()) {
-                return response.mapError(cause -> {
+                return response.peekError(cause -> {
                     logger.warn("{} Exception raised by method '{}' in '{}':",
                                 ctx, methodName(), object.getClass().getSimpleName(), Exceptions.peel(cause));
-                    return cause;
                 });
             }
         }

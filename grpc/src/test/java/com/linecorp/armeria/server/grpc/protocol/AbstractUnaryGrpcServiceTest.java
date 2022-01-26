@@ -35,8 +35,8 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -126,8 +126,8 @@ class AbstractUnaryGrpcServiceTest {
     @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void normalDownstream(SerializationFormat serializationFormat) throws Exception {
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(serializationFormat),
-                                  TestServiceBlockingStub.class);
+                GrpcClients.newClient(server.httpUri(serializationFormat),
+                                      TestServiceBlockingStub.class);
         final SimpleResponse response = stub.unaryCall(REQUEST_MESSAGE);
         assertThat(response).isEqualTo(RESPONSE_MESSAGE);
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
@@ -154,8 +154,8 @@ class AbstractUnaryGrpcServiceTest {
     @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void statusExceptionDownstream(SerializationFormat serializationFormat) throws Exception {
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(serializationFormat),
-                                  TestServiceBlockingStub.class);
+                GrpcClients.newClient(server.httpUri(serializationFormat),
+                                      TestServiceBlockingStub.class);
         assertThatThrownBy(() -> stub.unaryCall(EXCEPTION_REQUEST_MESSAGE))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
                     final Status status = cause.getStatus();

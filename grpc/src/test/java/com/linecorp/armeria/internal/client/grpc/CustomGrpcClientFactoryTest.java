@@ -25,12 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -70,20 +66,20 @@ class CustomGrpcClientFactoryTest {
     void customFactory() {
         final AtomicBoolean invoked = new AtomicBoolean();
         final TestServiceStub client =
-                Clients.builder("gproto+http://127.0.0.1")
-                       .option(GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY.newValue(new GrpcClientStubFactory() {
-                           @Override
-                           public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
-                               invoked.set(true);
-                               return TestServiceGrpc.getServiceDescriptor();
-                           }
+                GrpcClients.builder("http://127.0.0.1")
+                           .clientStubFactory(new GrpcClientStubFactory() {
+                               @Override
+                               public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
+                                   invoked.set(true);
+                                   return TestServiceGrpc.getServiceDescriptor();
+                               }
 
-                           @Override
-                           public Object newClientStub(Class<?> clientType, Channel channel) {
-                               return TestServiceGrpc.newStub(channel);
-                           }
-                       }))
-                       .build(TestServiceStub.class);
+                               @Override
+                               public Object newClientStub(Class<?> clientType, Channel channel) {
+                                   return TestServiceGrpc.newStub(channel);
+                               }
+                           })
+                           .build(TestServiceStub.class);
 
         assertThat(client).isNotNull();
         assertThat(invoked).isTrue();
@@ -93,20 +89,20 @@ class CustomGrpcClientFactoryTest {
     void illegalType() {
         final AtomicBoolean invoked = new AtomicBoolean();
         assertThatThrownBy(() -> {
-            Clients.builder("gproto+http://127.0.0.1")
-                   .option(GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY.newValue(new GrpcClientStubFactory() {
-                       @Override
-                       public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
-                           invoked.set(true);
-                           return TestServiceGrpc.getServiceDescriptor();
-                       }
+            GrpcClients.builder("http://127.0.0.1")
+                       .clientStubFactory(new GrpcClientStubFactory() {
+                           @Override
+                           public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
+                               invoked.set(true);
+                               return TestServiceGrpc.getServiceDescriptor();
+                           }
 
-                       @Override
-                       public Object newClientStub(Class<?> clientType, Channel channel) {
-                           return TestServiceGrpc.newBlockingStub(channel);
-                       }
-                   }))
-                   .build(TestServiceStub.class);
+                           @Override
+                           public Object newClientStub(Class<?> clientType, Channel channel) {
+                               return TestServiceGrpc.newBlockingStub(channel);
+                           }
+                       })
+                       .build(TestServiceStub.class);
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Unexpected client stub type: " +
                                 TestServiceGrpc.TestServiceBlockingStub.class.getName());
@@ -161,12 +157,11 @@ class CustomGrpcClientFactoryTest {
                 };
             }
         };
-        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                                      .option(GrpcClientOptions.INTERCEPTORS.newValue(
-                                                              ImmutableList.of(thirdInterceptor,
-                                                                               secondInterceptor,
-                                                                               firstInterceptor)))
-                                                      .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+                                                          .intercept(thirdInterceptor,
+                                                                     secondInterceptor,
+                                                                     firstInterceptor)
+                                                          .build(TestServiceBlockingStub.class);
         client.unaryCall(SimpleRequest.getDefaultInstance());
         assertThat(invoked1.get()).isEqualTo(2);
         assertThat(invoked2.get()).isEqualTo(1);
