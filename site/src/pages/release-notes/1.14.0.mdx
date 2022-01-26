@@ -15,10 +15,10 @@ date: 2022-1-24
   ```java
   WebClient client = WebClient.of("https://api.example.com");
   CompletableFuture<ResponseEntity<MyObject>> response =
-     client.prepare()
-          .get("/v1/items/1")
-          .asJson(MyObject.class)
-          .execute();
+      client.prepare()
+            .get("/v1/items/1")
+            .asJson(MyObject.class)
+            .execute();
   ``` 
 - You can now use <type://BlockingWebClient> to wait for an <type://HttpResponse> to be completed. #4021
   ```java
@@ -62,7 +62,7 @@ date: 2022-1-24
   StreamMessage<UserInfo> userInfos = streamMessage.mapAsync(this::getUserInfo);
   
   CompletableFuture<UserInfo> getUserInfo(int userId) {
-    ...
+      ...
   }
   ```
 - You can now use <type://HttpMessage#peekData(Consumer)>, <type://HttpMessage#peekTrailers(Consumer)> and
@@ -84,7 +84,8 @@ date: 2022-1-24
     assert cause instanceof IllegalStateException;
   });
   ```
-- You can now generate an error response differently depending on the <type://RequestHeaders>. #4037
+- You can now generate an error response differently in <type://ServerErrorHandler> depending 
+  on the <type://RequestHeaders>. #4037
 - You can now use `{*var}` and `:*var` path patterns to capture rest paths of a request. #3031 #3997
   ```java
   Server.builder()
@@ -99,7 +100,9 @@ date: 2022-1-24
   ```java
   QueryParams params = QueryParams.of("foo", "bar");
   WebClient client = ...;
+  // Sends 'GET /api/items/1?foo=bar'
   client.get("/api/items/1", params);
+  // Sends 'POST /api/items' with body '...'
   client.post("/api/items", params, content);
   ```
 - You can now write a `StreamMessage<HttpData>` into a file using
@@ -135,9 +138,17 @@ date: 2022-1-24
     }
   }
   ```
-- You can now get the content and trailers of an <type://HttpRequest> separately by using
-  <type://HttpRequest#split()>. #3924 #3953
-- Catch up the upstream changes in <type://MediaType> and add more constants. #4040
+- You can now split an <type://HttpRequest> into <type://RequestHeaders>, `StreamMessage<HttpData>`
+  and trailers using <type://HttpRequest#split()>. #3924 #3953
+  ```java
+  HttpRequest request = HttpRequest.of(...);
+  SplitHttpRequest splitRequest = request.split();
+  
+  RequestHeaders headers = splitRequest.headers();
+  StreamMessage<HttpData> body = splitRequest.body();
+  CompletableFuture<HttpHeaders> trailers = splitRequest.trailers();
+  ```
+- Added more well-known MIME type constants to <type://MediaType>. #4040
 - You can now customize the <type://MediaType> of a file when using <type://FileService>. #4001 #4009
   ```java
   FileService.builder(resource)
@@ -154,6 +165,23 @@ date: 2022-1-24
   ```
 - You can now send requests to a test server by using <type://ServerExtension#webClient()>
   or <type://ServerRule#webClient()>. #3761 #3890
+  ```java
+   @RegisterExtension
+   static ServerExtension server = new ServerExtension() {
+     @Override
+     protected void configure(ServerBuilder sb) {
+       ...
+     }
+   };
+
+   @Test
+   void test() {
+     WebClient client = server.webClient(cb -> {  // 👈👈👈
+       cb.decorator(LoggingClient.newDecorator());
+     });
+     client.get("/foo").aggregate().join();
+   }
+  ```
 - You can now export metrics as [OpenMetrics](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md)
   format using <type://PrometheusExpositionService>. #3926 #3928
 - You can now use <type://UnframedGrpcStatusMappingFunction> to customize how a gRPC status is mapped to 
@@ -184,12 +212,19 @@ date: 2022-1-24
     include: actuator, health 
     port: 18080
   ``` 
+- Added <type://JettyServiceBuilder#tlsReverseDnsLookup(boolean)> that makes <type://JettyService>
+  perform a reverse DNS lookup for each TLS connection, which may be useful for the
+  Servlets that assumes `ServletRequest.getRemoteHost()` will return a remote host name
+  rather than a remote IP address.
+- Added <type://JettyServiceBuilder#httpConfiguration(HttpConfiguration)> that allows a user to set
+  Jetty `HttpConfiguration` in a type-safe manner.
 
 ## 📈 Improvements
 
-- You can now see the package name of their services, messages and enums with the same names from 
-  <type://DocService>. #3979
-- Use `ByteBuf` to avoid creating a large `byte[]` in <type://PrometheusExpositionService>. #3929
+- You can now distinguish services, messages and enums with the same name by their package names from 
+  <type://DocService> UI. #3979
+- Improved the memory footprint of <type://PrometheusExpositionService> by removing large byte array
+  allocations. #3929
 
 ## 🛠️ Bug fixes
 
@@ -203,16 +238,16 @@ date: 2022-1-24
 - <type://HttpRequestBuilder#header(CharSequence,Object)> does not overwrite an old header value 
   anymore. #3932 #3941
   - A new header value will be appended to the old value.
-- You no longer see `413 Request Entity Too Large` when a server receives a cleartext(h2c) upgrade
-  with a size greater than 16384. #3859 #3913
+- You no longer see `413 Request Entity Too Large` when a server receives a cleartext (h2c) upgrade request
+  lager than 16384 bytes. #3859 #3913
   - The maximum allowed length of an upgrade request will respect <type://ServerBuilder#maxRequestLength(long)>
     or <type://VirtualHost#maxRequestLength()>.
-- Fix <type://Multipart> decoder to correctly publish chunks one by one when streaming
+- Fixed <type://Multipart> decoder to correctly publish chunks one by one when streaming
   a large <type://BodyPart>. #3774 #3783
 - You can now use `google.protobuf.{Struct, Value, ListValue, Any}` messages from your `proto` files when
   using gRPC-JSON transcoder. #3986 #3992
-- Automatically disable gRPC-JSON serialization if a <type://GrpcService> fails to initialize
-  a <type://GrpcJsonMarshaller>. #4020 #4033
+- <type://GrpcService> now automatically disables gRPC-JSON serialization for Protobuf 2 services
+  rather than throwing an exception. #4020 #4033
 - You no longer see `InvocationTargetException` with a Kotlin method whose return type is `Nothing`
   in an annotated service. #3961 #4005
 - Actuator now correctly shows `Liveness` and `Readiness` of a Kubernetes instance. #3031 #3997
@@ -227,12 +262,11 @@ date: 2022-1-24
 ## ☢️ Breaking changes
 
 - <type://HealthChecker#of(Supplier,Duration)?full> and 
-- <type://HealthChecker#of(Supplier,Duration,EventExecutor)?full> now returns 
-- <type://ListenableHealthChecker> instead of <type://HealthChecker>. #4017
-- The method signatures
-  of <type://ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> has been
-  changed. #4037
-  - <type://RequestHeaders> is added as the second argument.
+  <type://HealthChecker#of(Supplier,Duration,EventExecutor)?full> now returns 
+  <type://ListenableHealthChecker> instead of <type://HealthChecker>. #4017
+- <type://ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> now 
+  requires an additional parameter <type://RequestHeaders>. #4037
+  - This allows a user to generate a different error response on a different request header value.
 
 ## ⛓ Dependencies
 
