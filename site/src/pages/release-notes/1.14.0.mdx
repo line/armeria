@@ -55,8 +55,8 @@ date: 2022-1-24
               .content(content)
               .build(); 
   ```
-- You can now use <type://StreamMessage.mapAsync(CompletableFuture)> to transform a <type://StreamMessage> 
-  using an async operation #3916 #3962
+- You can now use <type://StreamMessage#mapAsync(Function)> to transform a <type://StreamMessage> 
+  using an async operation. #3916 #3962
   ```java
   StreamMessage<Integer> userIds = StreamMessage.of(...);
   StreamMessage<UserInfo> userInfos = streamMessage.mapAsync(this::getUserInfo);
@@ -65,19 +65,19 @@ date: 2022-1-24
     ...
   }
   ```
-- You can now use <type://HttpMessage.peekData(Consumer)>, <type://HttpMessage.peekTrailers(Consumer)> and
-  <type://StreamMessage.peekError(Consumer)> and <type://HttpResponse.peekHeaders(Consumer)> operators on
+- You can now use <type://HttpMessage#peekData(Consumer)>, <type://HttpMessage#peekTrailers(Consumer)> and
+  <type://StreamMessage#peekError(Consumer)> and <type://HttpResponse#peekHeaders(Consumer)> operators on
   <type://HttpRequest> and <type://HttpResponse>. #3097 #3988 #3949
   ```java
   HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
                                        HttpData.ofUtf8("data1,data2"))
                                        HttpHeaders.of("trailer", "foo"));
-  
-  HttpRequest peeked = request.peekData(data -> {
+  HttpRequest peeked = 
+    request.peekData(data -> {
       assert data.toStringUtf8().equals("data1,data2");
-  }).peekTrailers(trailers -> {
-      assert trailers.get("trailer").equals("foo");
-  });
+    }).peekTrailers(trailers -> {
+       assert trailers.get("trailer").equals("foo");
+    });
   
   HttpRequest failed = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
   HttpRequest peeked = failed.peekError(cause -> {
@@ -85,7 +85,7 @@ date: 2022-1-24
   });
   ```
 - You can now generate an error response differently depending on the <type://RequestHeaders>. #4037
-- You can now use `{*variable}` and `:variable` path patterns to capture rest paths of a request. #3031 #3997
+- You can now use `{*var}` and `:*var` path patterns to capture rest paths of a request. #3031 #3997
   ```java
   Server.builder()
         .service("/api/{item}/route/{*contents}", (ctx, req) -> {
@@ -94,8 +94,8 @@ date: 2022-1-24
             assert ctx.pathPath("contents").equals("foo/bar/baz");
         });
   ```
-- You can now use <type://ServiceRequestContext.queryParams(String)> to get a decoded query part. #3955 #3960
-- You can now send query parameters using <type://QueryParams> with <type://WebClient> #3915 #3921
+- You can now use <type://ServiceRequestContext#queryParams(String)> to get a decoded query part. #3955 #3960
+- You can now send query parameters using <type://QueryParams> with <type://WebClient>. #3915 #3921
   ```java
   QueryParams params = QueryParams.of("foo", "bar");
   WebClient client = ...;
@@ -122,7 +122,7 @@ date: 2022-1-24
   RetryRuleWithContent.onException(Backoff.fixed(2000));
   ```
 - You can now dynamically change the maximum number of concurrent active requests of
-  a <type://ConcurrencyLimitingClient> #3842 #3985
+  a <type://ConcurrencyLimitingClient>. #3842 #3985
   ```java
   ConcurrencyLimitingClient.newDecorator(new DynamicLimit());
   
@@ -138,12 +138,22 @@ date: 2022-1-24
 - You can now get the content and trailers of an <type://HttpRequest> separately by using
   <type://HttpRequest#split()>. #3924 #3953
 - Catch up the upstream changes in <type://MediaType> and add more constants. #4040
-- You can now customize the <type://MediaType> of a file when using <type://FileService>.
+- You can now customize the <type://MediaType> of a file when using <type://FileService>. #4001 #4009
   ```java
-  
+  FileService.builder(resource)
+             .mediaTypeResolver((path, contentEncoding) -> {
+               if (path.endsWith(".proto")) {
+                 return MediaType.PROTOBUF;
+               }
+               if (path.endsWith(".csv")) {
+                 return MediaType.CSV_UTF_8;
+               }
+               return null;
+             })
+             .build();
   ```
 - You can now send requests to a test server by using <type://ServerExtension#webClient()>
-  or <type://ServerRule#webClient()> #3761 #3890
+  or <type://ServerRule#webClient()>. #3761 #3890
 - You can now export metrics as [OpenMetrics](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md)
   format using <type://PrometheusExpositionService>. #3926 #3928
 - You can now use <type://UnframedGrpcStatusMappingFunction> to customize how a gRPC status is mapped to 
@@ -157,6 +167,7 @@ date: 2022-1-24
         // Pass to the default mapping function.
         return null;
       };
+  
   UnframedGrpcErrorHandler errorHandler = 
      UnframedGrpcErrorHandler.ofJson(mappingFunction);
   
@@ -164,7 +175,7 @@ date: 2022-1-24
       .builder()
       .unframedGrpcErrorHandler(errorHandler);
   ```
-- You can now expose `WebOperation`s of Actuator to a port of internal services #3919 #3946
+- You can now expose `WebOperation`s of Actuator to a port of internal services. #3919 #3946
   ```yaml
   armeria:
     ...
@@ -182,16 +193,10 @@ date: 2022-1-24
 
 ## 🛠️ Bug fixes
 
-- Automatically disable gRPC-JSON serialization if a <type://GrpcService> fails to initialize
-  a <type://GrpcJsonMarshaller>. #4020 #4033
-- You no longer see `ClassCastException` when duplicating an `HttpRequest` or an `HttpResponse`. #4030 #4032
+- You no longer see `ClassCastException` when duplicating an <type://HttpRequest> or 
+  an <type://HttpResponse>. #4030 #4032
 - You no longer see `IllegalArgumentException` if an upper-bounded wildcard type with <type://@Param>
   is used in annotated services. #4007 #4008
-- You no longer see `InvocationTargetException` with a Kotlin method whose return type is `Nothing`
-  in an annotated service. #3961 #4005
-- Actuator now correctly shows `Liveness` and `Readiness` of a Kubernetes instance. #3031 #3997
-- You can now use `google.protobuf.{Struct, Value, ListValue, Any}` messages from your `proto` files when
-  using gRPC-JSON transcoder. #3986 #3992
 - You can now properly get `SameSite` attribute from <type://Cookie#sameSite()>. #3968 #3984
 - You no longer see an <type://EmptyEndpointGroupException> when an <type://EndpointGroup> is successfully
   resolved with the initial <typeplural://Endpoint>. #3978
@@ -202,8 +207,15 @@ date: 2022-1-24
   with a size greater than 16384. #3859 #3913
   - The maximum allowed length of an upgrade request will respect <type://ServerBuilder#maxRequestLength(long)>
     or <type://VirtualHost#maxRequestLength()>.
-- Improve <type://Multipart> decoder to correctly publish chunks one by one when streaming 
+- Fix <type://Multipart> decoder to correctly publish chunks one by one when streaming
   a large <type://BodyPart>. #3774 #3783
+- You can now use `google.protobuf.{Struct, Value, ListValue, Any}` messages from your `proto` files when
+  using gRPC-JSON transcoder. #3986 #3992
+- Automatically disable gRPC-JSON serialization if a <type://GrpcService> fails to initialize
+  a <type://GrpcJsonMarshaller>. #4020 #4033
+- You no longer see `InvocationTargetException` with a Kotlin method whose return type is `Nothing`
+  in an annotated service. #3961 #4005
+- Actuator now correctly shows `Liveness` and `Readiness` of a Kubernetes instance. #3031 #3997
 
 ## 🏚️ Deprecations
 
@@ -231,11 +243,12 @@ date: 2022-1-24
 - Dropwizard 2.0.25 → 2.0.28
 - Dropwizard Metrics 4.2.4 → 4.2.7
 - gRPC Java 1.41.1 → 1.43.2
-- gRPC Kotlin 1.1.0 → 1.2.0
+- gRPC Kotlin 1.1.0 → 1.2.1
 - Jackson 2.13.0 → 2.13.1
 - java-jwt 3.18.2 → 3.18.3
-- jcl-over-slf4j 1.7.32 → 1.7.33
+- SLF4J 1.7.32 → 1.7.34
 - jboss-logging 3.4.2 → 3.4.3
+- Kafka 3.0.0 → 3.1.0
 - Kotlin 1.5.32 → 1.6.10
 - Logback 1.2.7 → 1.2.10
 - Micrometer 1.7.6 → 1.8.2
@@ -246,7 +259,7 @@ date: 2022-1-24
 - protobuf-java 3.17.3 → 3.19.2
 - Reactor 3.4.12 → 3.4.14
 - RESTEasy 4.7.3 → 5.0.2
-- Scala 2.13.7 → 2.13.8, ⓧ → 3.1.0
+- Scala 2.13.7 → 2.13.8, ⓧ → 3.1.1
 - scala-collection-compat 2.5.0 → 2.6.0
 - ScalaPB 0.11.6 → 0.11.8
 - Spring 5.3.13 → 5.3.15
@@ -274,6 +287,7 @@ date: 2022-1-24
   'injae-kim',
   'jrhee17',
   'jupiny',
+  'klurpicolo',
   'kojilin',
   'ks-yim',
   'lan17',
