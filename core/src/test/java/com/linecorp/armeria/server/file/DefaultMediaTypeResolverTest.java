@@ -27,14 +27,14 @@ public class DefaultMediaTypeResolverTest {
 
     @Test
     public void knownExtensions() {
-        assertThat(MediaType.AVIF.is(RESOLVER.guessFromPath("image.avif"))).isTrue();
-        assertThat(MediaType.HEIF.is(RESOLVER.guessFromPath("image.heif"))).isTrue();
-        assertThat(MediaType.MANIFEST_JSON_UTF_8.is(RESOLVER.guessFromPath("app.webmanifest"))).isTrue();
-        assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("image.png"))).isTrue();
-        assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("/static/image.png"))).isTrue();
-        assertThat(MediaType.PDF.is(RESOLVER.guessFromPath("document.pdf"))).isTrue();
-        assertThat(MediaType.WEBP.is(RESOLVER.guessFromPath("image.webp"))).isTrue();
-        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.gz"))).isTrue();
+        assertThat(MediaType.AVIF.is(RESOLVER.guessFromPath("image.avif", null))).isTrue();
+        assertThat(MediaType.HEIF.is(RESOLVER.guessFromPath("image.heif", null))).isTrue();
+        assertThat(MediaType.MANIFEST_JSON_UTF_8.is(RESOLVER.guessFromPath("app.webmanifest", null))).isTrue();
+        assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("image.png", null))).isTrue();
+        assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("/static/image.png", null))).isTrue();
+        assertThat(MediaType.PDF.is(RESOLVER.guessFromPath("document.pdf", null))).isTrue();
+        assertThat(MediaType.WEBP.is(RESOLVER.guessFromPath("image.webp", null))).isTrue();
+        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.gz", null))).isTrue();
     }
 
     @Test
@@ -47,11 +47,11 @@ public class DefaultMediaTypeResolverTest {
 
     @Test
     public void guessedByJdk() {
-        assertThat(MediaType.ZIP.is(RESOLVER.guessFromPath("bundle.zip"))).isTrue();
+        assertThat(MediaType.ZIP.is(RESOLVER.guessFromPath("bundle.zip", null))).isTrue();
     }
 
     @Test
     public void unknownExtension() {
-        assertThat(RESOLVER.guessFromPath("unknown.extension")).isNull();
+        assertThat(RESOLVER.guessFromPath("unknown.extension", null)).isNull();
     }
 }

@@ -25,7 +25,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -41,26 +40,14 @@ class FileServiceBuilderTest {
             sb.serviceUnder(
                     "/mediaTypeResolver",
                     FileService.builder(getClass().getClassLoader(), BASE_RESOURCE_DIR + "bar")
-                               .mediaTypeResolver(new MediaTypeResolver() {
-                                   @Override
-                                   public MediaType guessFromPath(String path) {
-                                       if (path.endsWith(".custom-json-extension")) {
-                                           return MediaType.JSON_UTF_8;
-                                       }
-                                       if (path.endsWith(".custom-txt-extension")) {
-                                           return MediaType.PLAIN_TEXT_UTF_8;
-                                       }
-                                       return null;
+                               .mediaTypeResolver((path, contentEncoding) -> {
+                                   if (path.endsWith(".custom-json-extension")) {
+                                       return MediaType.JSON_UTF_8;
                                    }
-
-                                   @Override
-                                   public MediaType guessFromPath(String path,
-                                                                  @Nullable String contentEncoding) {
-                                       if (contentEncoding == null) {
-                                           return guessFromPath(path);
-                                       }
-                                       return null;
+                                   if (path.endsWith(".custom-txt-extension")) {
+                                       return MediaType.PLAIN_TEXT_UTF_8;
                                    }
+                                   return null;
                                })
                                .build());
         }

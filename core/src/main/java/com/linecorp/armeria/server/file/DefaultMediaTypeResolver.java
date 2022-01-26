@@ -75,9 +75,17 @@ enum DefaultMediaTypeResolver implements MediaTypeResolver {
         EXTENSION_TO_MEDIA_TYPE = Collections.unmodifiableMap(map);
     }
 
+    private static void add(Map<String, MediaType> extensionToMediaType,
+                            MediaType mediaType, String... extensions) {
+
+        for (String e : extensions) {
+            assert Ascii.toLowerCase(e).equals(e);
+            extensionToMediaType.put(e, mediaType);
+        }
+    }
+
     @Nullable
-    @Override
-    public MediaType guessFromPath(String path) {
+    private static MediaType guessFromPath(String path) {
         requireNonNull(path, "path");
         final int dotIdx = path.lastIndexOf('.');
         final int slashIdx = path.lastIndexOf('/');
@@ -106,14 +114,5 @@ enum DefaultMediaTypeResolver implements MediaTypeResolver {
         // If the path is for a precompressed file, it will have an additional extension indicating the
         // encoding, which we don't want to use when determining content type.
         return guessFromPath(path.substring(0, path.lastIndexOf('.')));
-    }
-
-    private static void add(Map<String, MediaType> extensionToMediaType,
-                            MediaType mediaType, String... extensions) {
-
-        for (String e : extensions) {
-            assert Ascii.toLowerCase(e).equals(e);
-            extensionToMediaType.put(e, mediaType);
-        }
     }
 }

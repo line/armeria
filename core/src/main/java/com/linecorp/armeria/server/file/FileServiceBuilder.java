@@ -229,7 +229,7 @@ public final class FileServiceBuilder {
     }
 
     /**
-     * Sets {@link MediaTypeResolver} that determines a file's {@link MediaType} using its path.
+     * Sets the {@link MediaTypeResolver} that determines a file's {@link MediaType} using its path.
      * If not set, {@link MediaTypeResolver#ofDefault()} is used by default.
      */
     public FileServiceBuilder mediaTypeResolver(MediaTypeResolver mediaTypeResolver) {
