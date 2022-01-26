@@ -297,11 +297,18 @@ class FileServiceTest {
         final String basePath = new URI(baseUri).getPath();
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            // Ensure auto-redirect works as expected.
+            // Ensure auto-redirect without query works as expected.
             HttpUriRequest req = new HttpGet(baseUri + "/fs/auto_index");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertStatusLine(res, "HTTP/1.1 307 Temporary Redirect");
                 assertThat(header(res, "location")).isEqualTo(basePath + "/fs/auto_index/");
+            }
+
+            // Ensure auto-redirect with query works as expected.
+            req = new HttpGet(baseUri + "/fs/auto_index?foobar=1");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 307 Temporary Redirect");
+                assertThat(header(res, "location")).isEqualTo(basePath + "/fs/auto_index/?foobar=1");
             }
 
             // Ensure directory listing works as expected.

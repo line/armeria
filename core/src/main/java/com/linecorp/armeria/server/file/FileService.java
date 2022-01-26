@@ -273,7 +273,13 @@ public final class FileService extends AbstractHttpService {
                     return config.vfs().canList(ctx.blockingTaskExecutor(), decodedMappedPath);
                 }).thenApply(canList -> {
                     if (canList) {
-                        throw HttpResponseException.of(HttpResponse.ofRedirect(ctx.path() + '/'));
+                        final StringBuilder locationBuilder = new StringBuilder(ctx.path())
+                                .append('/');
+                        if (ctx.query() != null) {
+                            locationBuilder.append('?')
+                                       .append(ctx.query());
+                        }
+                        throw HttpResponseException.of(HttpResponse.ofRedirect(locationBuilder.toString()));
                     } else {
                         return HttpFile.nonExistent();
                     }
