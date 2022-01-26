@@ -19,10 +19,10 @@ package com.linecorp.armeria.client.scala
 import _root_.scala.concurrent.ExecutionContext.Implicits.global
 import _root_.scala.concurrent.duration.Duration
 import _root_.scala.concurrent.{Await, Future}
-import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.client.scala.ScalaResponseAs.{bytes, file, json, string}
 import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.{ServerBuilder, ServerSuite}
 import java.io.File
 import java.nio.file.Files
@@ -100,7 +100,7 @@ class ScalaResponseAsSuite extends FunSuite with ServerSuite {
           .map(_.content())
 
       val file1 = Await.result(response, Duration.Inf)
-      assertEquals(Files.readString(file1.toPath), "hello")
+      assertEquals(Files.readAllBytes(file1.toPath).toSeq, "hello".getBytes.toSeq)
     } finally {
       tempFile.delete()
     }
