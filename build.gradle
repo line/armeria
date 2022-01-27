@@ -219,9 +219,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 17 when releasing.
-tasks.release.doFirst {
+// Require to use JDK 17 when publishing.
+tasks.publish.doFirst {
     if (JavaVersion.current() != JavaVersion.VERSION_17) {
-        throw new IllegalStateException("You must release using JDK 17.");
+        throw new IllegalStateException("You must publish using JDK 17.");
     }
 }
