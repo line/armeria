@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.file;
 
 import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateData;
-import static com.linecorp.armeria.server.file.MimeTypeUtil.guessFromPath;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -324,7 +323,8 @@ public final class FileService extends AbstractHttpService {
         @Nullable
         final String contentEncoding = encoding != null ? encoding.headerValue : null;
         final HttpFile uncachedFile = config.vfs().get(readExecutor, path, config.clock(),
-                                                       contentEncoding, config.headers());
+                                                       contentEncoding, config.headers(),
+                                                       config.mediaTypeResolver());
 
         return uncachedFile.readAttributes(readExecutor).thenApply(uncachedAttrs -> {
             if (cache == null) {
@@ -332,7 +332,8 @@ public final class FileService extends AbstractHttpService {
                     if (decompress && encoding != null) {
                         // The compressed data will be decompressed while being served.
                         return new DecompressingHttpFile(uncachedFile, encoding,
-                                                         guessFromPath(path, encoding.headerValue));
+                                                         config.mediaTypeResolver()
+                                                               .guessFromPath(path, encoding.headerValue));
                     } else {
                         return uncachedFile;
                     }
