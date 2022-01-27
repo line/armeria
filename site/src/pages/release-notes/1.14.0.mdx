@@ -249,6 +249,7 @@ date: 2022-1-27
   using gRPC-JSON transcoder. #3986 #3992
 - <type://GrpcService> now automatically disables gRPC-JSON serialization for Protobuf 2 services
   rather than throwing an exception. #4020 #4033
+- <type://FileService> now keeps query parameters when redirecting to a directory. #4049 #4050
 - You no longer see `InvocationTargetException` with a Kotlin method whose return type is `Nothing`
   in an annotated service. #3961 #4005
 - Actuator now correctly shows `Liveness` and `Readiness` of a Kubernetes instance. #3031 #3997
