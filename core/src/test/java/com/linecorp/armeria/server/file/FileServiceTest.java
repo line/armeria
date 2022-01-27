@@ -337,8 +337,28 @@ class FileServiceTest {
                         .contains("<a href=\"../\">../</a>");
             }
 
+            // Ensure directory listing on an empty directory works as expected,
+            // even with query parameters.
+            req = new HttpGet(baseUri + "/fs/auto_index/empty_child_dir/?foo=1");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                final String content = contentString(res);
+                assertThat(content)
+                        .contains("Directory listing: " + basePath + "/fs/auto_index/empty_child_dir/")
+                        .contains("0 file(s) total")
+                        .contains("<a href=\"../\">../</a>");
+            }
+
             // Ensure custom index.html takes precedence over auto-generated directory listing.
             req = new HttpGet(baseUri + "/fs/auto_index/child_dir_with_custom_index/");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                assertThat(contentString(res)).isEqualTo("custom_index_file");
+            }
+
+            // Ensure custom index.html takes precedence over auto-generated directory listing,
+            // even with query parameters.
+            req = new HttpGet(baseUri + "/fs/auto_index/child_dir_with_custom_index/?foo=1");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertStatusLine(res, "HTTP/1.1 200 OK");
                 assertThat(contentString(res)).isEqualTo("custom_index_file");
