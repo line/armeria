@@ -17,7 +17,6 @@ package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOError;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -52,7 +51,6 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
@@ -314,22 +312,19 @@ class FileServiceTest {
             }
 
             // Ensure directory listing works as expected.
-            ImmutableList.of("/fs/auto_index/", "/fs/auto_index/?foobar=1").forEach(path -> {
-                try (CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + path))) {
-                    assertStatusLine(res, "HTTP/1.1 200 OK");
-                    final String content = contentString(res);
-                    assertThat(content).contains(
-                            "Directory listing: " + basePath + "/fs/auto_index/",
-                            "4 file(s) total",
-                            "<a href=\"../\">../</a>",
-                            "<a href=\"child_dir/\">child_dir/</a>",
-                            "<a href=\"child_file\">child_file</a>",
-                            "<a href=\"child_dir_with_custom_index/\">child_dir_with_custom_index/</a>",
-                            "<a href=\"empty_child_dir/\">empty_child_dir/</a>");
-                } catch (IOException e) {
-                    throw new IOError(e);
-                }
-            });
+            req = new HttpGet(baseUri + "/fs/auto_index/");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                final String content = contentString(res);
+                assertThat(content)
+                        .contains("Directory listing: " + basePath + "/fs/auto_index/")
+                        .contains("4 file(s) total")
+                        .contains("<a href=\"../\">../</a>")
+                        .contains("<a href=\"child_dir/\">child_dir/</a>")
+                        .contains("<a href=\"child_file\">child_file</a>")
+                        .contains("<a href=\"child_dir_with_custom_index/\">child_dir_with_custom_index/</a>")
+                        .contains("<a href=\"empty_child_dir/\">empty_child_dir/</a>");
+            }
 
             // Ensure directory listing on an empty directory works as expected.
             req = new HttpGet(baseUri + "/fs/auto_index/empty_child_dir/");
