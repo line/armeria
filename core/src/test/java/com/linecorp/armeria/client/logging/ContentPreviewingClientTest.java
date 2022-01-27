@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
@@ -85,16 +86,17 @@ class ContentPreviewingClientTest {
 
     @Test
     void decodedContentPreview() {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(DecodingClient.newDecorator())
-                                          .decorator(ContentPreviewingClient.newDecorator(100))
-                                          .build();
+        final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                  .decorator(DecodingClient.newDecorator())
+                                                  .decorator(ContentPreviewingClient.newDecorator(100))
+                                                  .build()
+                                                  .blocking();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
 
         final ClientRequestContext context;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
+            final AggregatedHttpResponse res = client.execute(headers, "Armeria");
             assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
             context = captor.get();
@@ -111,17 +113,18 @@ class ContentPreviewingClientTest {
      */
     @Test
     void contentPreviewIsDecodedInPreviewer() {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(decodingContentPreviewDecorator())
-                                          .decorator(DecodingClient.newDecorator())
-                                          .build();
+        final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                  .decorator(decodingContentPreviewDecorator())
+                                                  .decorator(DecodingClient.newDecorator())
+                                                  .build()
+                                                  .blocking();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE,
                                                          MediaType.PLAIN_TEXT_UTF_8);
 
         final ClientRequestContext context;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
+            final AggregatedHttpResponse res = client.execute(headers, "Armeria");
             assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
             context = captor.get();
@@ -134,18 +137,19 @@ class ContentPreviewingClientTest {
 
     @Test
     void sanitizeRequestContentPreview() {
-        final WebClient client =
+        final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
                                                            .requestPreviewSanitizer(CONTENT_SANITIZER)
                                                            .newDecorator())
-                         .build();
+                         .build()
+                         .blocking();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
 
         final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+            assertThat(client.execute(headers, "Armeria").contentUtf8())
                     .isEqualTo("Hello Armeria!");
             ctx = captor.get();
         }
@@ -157,18 +161,19 @@ class ContentPreviewingClientTest {
 
     @Test
     void sanitizeResponseContentPreview() {
-        final WebClient client =
+        final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
                                                            .responsePreviewSanitizer(CONTENT_SANITIZER)
                                                            .newDecorator())
-                         .build();
+                         .build()
+                         .blocking();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
 
         final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+            assertThat(client.execute(headers, "Armeria").contentUtf8())
                     .isEqualTo("Hello Armeria!");
             ctx = captor.get();
         }
@@ -180,18 +185,19 @@ class ContentPreviewingClientTest {
 
     @Test
     void sanitizeContentPreview() {
-        final WebClient client =
+        final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
                                                            .previewSanitizer(CONTENT_SANITIZER)
                                                            .newDecorator())
-                         .build();
+                         .build()
+                         .blocking();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
 
         final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+            assertThat(client.execute(headers, "Armeria").contentUtf8())
                     .isEqualTo("Hello Armeria!");
             ctx = captor.get();
         }

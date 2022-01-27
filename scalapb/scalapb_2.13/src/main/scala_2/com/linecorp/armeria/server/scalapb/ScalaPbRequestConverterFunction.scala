@@ -164,12 +164,12 @@ object ScalaPbRequestConverterFunction {
           clazz,
           key => {
             val companionClass = Class.forName(key.getName + "$")
-            try
+            try {
               companionClass
                 .getDeclaredField("MODULE$")
                 .get(null)
                 .asInstanceOf[GeneratedMessageCompanion[_]]
-            catch {
+            } catch {
               case _: NoSuchFieldException | _: ClassNotFoundException =>
                 unknownGeneratedMessageCompanion
             }
