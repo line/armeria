@@ -47,7 +47,7 @@ date: 2022-1-27
              .intercept(myInterceptors)
              .build(MyStub.class);
   ``` 
-- You can now fluently build an <type://HttpResponse> by using <type://HttpRequestBuilder>. #3398 #3941
+- You can now fluently build an <type://HttpResponse> by using <type://HttpResponseBuilder>. #3398 #3941
   ```java
   HttpResponse.builder()
               .ok()
@@ -91,7 +91,7 @@ date: 2022-1-27
   Server.builder()
         .service("/api/{item}/route/{*contents}", (ctx, req) -> {
           // If a request path is "/api/123/route/foo/bar/baz",
-          // '*contents' should be:
+          // '*contents' should be foo/bar/baz
           assert ctx.pathPath("contents").equals("foo/bar/baz");
         });
   ```
@@ -275,7 +275,7 @@ date: 2022-1-27
   <type://ListenableHealthChecker> instead of <type://HealthChecker>. #4017
 - <type://ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> now 
   requires an additional parameter <type://RequestHeaders>. #4037
-  - This allows a user to generate a different error response depending on the different request header value.
+  - This allows a user to generate a different error response depending on the request header value.
 
 ## ⛓ Dependencies
 
