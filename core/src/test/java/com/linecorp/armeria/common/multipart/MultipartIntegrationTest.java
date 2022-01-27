@@ -71,9 +71,10 @@ class MultipartIntegrationTest {
                             assertThat(dispositionA.type()).isEqualTo("form-data");
                             Flux.from(bodyPart.content())
                                 .map(HttpData::toStringUtf8)
-                                .collectList().subscribe(contents -> {
-                                assertThat(contents).containsExactly("contentA");
-                            });
+                                .collectList()
+                                .subscribe(contents -> {
+                                    assertThat(contents).containsExactly("contentA");
+                                });
                         } else {
                             assertThat(bodyPart.headers().contentType()).isEqualTo(MediaType.JSON);
                             final ContentDisposition dispositionB = bodyPart.headers().contentDisposition();
@@ -81,11 +82,12 @@ class MultipartIntegrationTest {
                             assertThat(dispositionB.type()).isEqualTo("form-data");
                             Flux.from(bodyPart.content())
                                 .map(HttpData::toStringUtf8)
-                                .collectList().subscribe(contents -> {
-                                assertThat(contents).containsExactly("{\"foo\":\"bar\"}");
-                                writer.write(ResponseHeaders.of(200));
-                                writer.close();
-                            });
+                                .collectList()
+                                .subscribe(contents -> {
+                                    assertThat(contents).containsExactly("{\"foo\":\"bar\"}");
+                                    writer.write(ResponseHeaders.of(200));
+                                    writer.close();
+                                });
                         }
                     });
                 return writer;
@@ -192,9 +194,12 @@ class MultipartIntegrationTest {
             });
 
             sb.service("/echo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(r -> HttpResponse
-                    .of(HttpStatus.OK, requireNonNull(r.contentType(), "contentType"), r.content()))
-                    .exceptionally(HttpResponse::ofFailure));
+                return HttpResponse.from(
+                        req.aggregate()
+                           .thenApply(r -> HttpResponse.of(HttpStatus.OK,
+                                                           requireNonNull(r.contentType(), "contentType"),
+                                                           r.content()))
+                           .exceptionally(HttpResponse::ofFailure));
             });
 
             sb.service("/multipart/response/simple", (ctx, req) -> {

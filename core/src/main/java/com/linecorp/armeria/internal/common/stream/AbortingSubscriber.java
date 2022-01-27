@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,22 +14,38 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
+
+import java.lang.reflect.Field;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 
-final class AbortingSubscriber<T> implements Subscriber<T> {
+public final class AbortingSubscriber<T> implements Subscriber<T> {
 
-    static final AbortingSubscriber<Object> INSTANCE =
-            new AbortingSubscriber<>(AbortedStreamException.INSTANCE);
+    private static final AbortedStreamException ABORTED_STREAM_EXCEPTION_INSTANCE;
+
+    static {
+        try {
+            // Avoid making AbortedStreamException#INSTANCE as public.
+            final Field field = AbortedStreamException.class.getDeclaredField("INSTANCE");
+            field.setAccessible(true);
+            ABORTED_STREAM_EXCEPTION_INSTANCE = (AbortedStreamException) field.get(null);
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
+
+    public static final AbortingSubscriber<Object> INSTANCE =
+            new AbortingSubscriber<>(ABORTED_STREAM_EXCEPTION_INSTANCE);
 
     @SuppressWarnings("unchecked")
-    static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
-        return cause == null || cause == AbortedStreamException.INSTANCE ? (AbortingSubscriber<T>) INSTANCE
-                                                                         : new AbortingSubscriber<>(cause);
+    public static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
+        return cause == null || cause == ABORTED_STREAM_EXCEPTION_INSTANCE ? (AbortingSubscriber<T>) INSTANCE
+                                                                           : new AbortingSubscriber<>(cause);
     }
 
     private final Throwable cause;
@@ -55,7 +71,7 @@ final class AbortingSubscriber<T> implements Subscriber<T> {
     /**
      * Returns the cause which tells why the stream has been aborted.
      */
-    Throwable cause() {
+    public Throwable cause() {
         return cause;
     }
 }

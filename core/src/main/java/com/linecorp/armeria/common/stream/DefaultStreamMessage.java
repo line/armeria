@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -168,6 +169,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     /**
      * Invoked whenever a new demand is requested.
+     * @param n Newly requested demand
      */
     protected void onRequest(long n) {}
 
@@ -250,14 +252,15 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void doRequest(long n) {
-        onRequest(n);
-
         final long oldDemand = demand;
         if (oldDemand >= Long.MAX_VALUE - n) {
             demand = Long.MAX_VALUE;
         } else {
             demand = oldDemand + n;
         }
+
+        // To make onNext know demand, we need to put this after demand updated.
+        onRequest(n);
 
         if (oldDemand == 0 && !queue.isEmpty()) {
             notifySubscriber0();
