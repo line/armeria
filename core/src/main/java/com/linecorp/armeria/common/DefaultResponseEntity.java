@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,19 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.common;
 
-import org.reactivestreams.Subscriber;
+import com.linecorp.armeria.common.annotation.Nullable;
 
-final class SubscriberUtil {
+final class DefaultResponseEntity<T> extends AbstractHttpEntity<T> implements ResponseEntity<T> {
 
-    static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
-        if (oldSubscriber instanceof AbortingSubscriber) {
-            return ((AbortingSubscriber<?>) oldSubscriber).cause();
-        }
-
-        return new IllegalStateException("subscribed by other subscriber already");
+    DefaultResponseEntity(ResponseHeaders headers, @Nullable T content, HttpHeaders trailers) {
+        super(headers, content, trailers);
     }
 
-    private SubscriberUtil() {}
+    @Override
+    public ResponseHeaders headers() {
+        return (ResponseHeaders) super.headers();
+    }
 }

@@ -28,12 +28,13 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class MimeTypeUtil {
+enum DefaultMediaTypeResolver implements MediaTypeResolver {
+    INSTANCE;
 
     /**
-     * A map from extension to MIME types, which is queried before
+     * A map from extension to the {@link MediaType}, which is queried before
      * {@link URLConnection#guessContentTypeFromName(String)}, so that
-     * important extensions are always mapped to the right MIME types.
+     * important extensions are always mapped to the right {@link MediaType}.
      */
     private static final Map<String, MediaType> EXTENSION_TO_MEDIA_TYPE;
 
@@ -84,7 +85,7 @@ final class MimeTypeUtil {
     }
 
     @Nullable
-    static MediaType guessFromPath(String path) {
+    private static MediaType guessFromPath(String path) {
         requireNonNull(path, "path");
         final int dotIdx = path.lastIndexOf('.');
         final int slashIdx = path.lastIndexOf('/');
@@ -103,7 +104,8 @@ final class MimeTypeUtil {
     }
 
     @Nullable
-    static MediaType guessFromPath(String path, @Nullable String contentEncoding) {
+    @Override
+    public MediaType guessFromPath(String path, @Nullable String contentEncoding) {
         if (contentEncoding == null || Ascii.equalsIgnoreCase(contentEncoding, "identity")) {
             return guessFromPath(path);
         }
@@ -113,6 +115,4 @@ final class MimeTypeUtil {
         // encoding, which we don't want to use when determining content type.
         return guessFromPath(path.substring(0, path.lastIndexOf('.')));
     }
-
-    private MimeTypeUtil() {}
 }

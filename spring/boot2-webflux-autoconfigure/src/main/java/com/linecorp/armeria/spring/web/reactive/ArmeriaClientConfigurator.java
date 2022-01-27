@@ -23,7 +23,7 @@ import org.springframework.core.annotation.Order;
 import com.linecorp.armeria.client.WebClientBuilder;
 
 /**
- * A configurator to configure an {@link WebClientBuilder} for an {@link ArmeriaClientHttpConnector}.
+ * A configurator to configure a {@link WebClientBuilder} for an {@link ArmeriaClientHttpConnector}.
  */
 @FunctionalInterface
 public interface ArmeriaClientConfigurator extends Ordered {

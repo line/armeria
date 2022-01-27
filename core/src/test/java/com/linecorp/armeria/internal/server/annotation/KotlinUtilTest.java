@@ -44,6 +44,12 @@ class KotlinUtilTest {
     }
 
     @Test
+    void isKFunction() throws NoSuchMethodException {
+        final Method testMethod = DummyService.class.getDeclaredMethod("testMethod");
+        assertThat(KotlinUtil.isKFunction(testMethod)).isFalse();
+    }
+
+    @Test
     void isSuspendingFunction() throws NoSuchMethodException {
         final Method testMethod = DummyService.class.getDeclaredMethod("testMethod");
         assertThat(KotlinUtil.isSuspendingFunction(testMethod)).isFalse();
@@ -53,6 +59,12 @@ class KotlinUtilTest {
     void isSuspendingAndReturnTypeUnit() throws NoSuchMethodException {
         final Method testMethod = DummyService.class.getDeclaredMethod("testMethod");
         assertThat(KotlinUtil.isSuspendingAndReturnTypeUnit(testMethod)).isFalse();
+    }
+
+    @Test
+    void isReturnTypeNothing() throws NoSuchMethodException {
+        final Method testMethod = DummyService.class.getDeclaredMethod("testMethod");
+        assertThat(KotlinUtil.isReturnTypeNothing(testMethod)).isFalse();
     }
 
     private static class DummyService {

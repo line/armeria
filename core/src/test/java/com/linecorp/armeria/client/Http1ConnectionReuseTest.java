@@ -61,12 +61,12 @@ class Http1ConnectionReuseTest {
         final CompleteInterceptableFuture<Void> future = new CompleteInterceptableFuture<>();
         final HttpRequest httpRequest = httpRequest(future);
 
-        final WebClient webClient = WebClient.of(server.uri(SessionProtocol.H1C));
-        final AggregatedHttpResponse res = webClient.execute(httpRequest).aggregate().join();
+        final BlockingWebClient webClient = BlockingWebClient.of(server.uri(SessionProtocol.H1C));
+        final AggregatedHttpResponse res = webClient.execute(httpRequest);
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(webClient.get("/").aggregate().join().status()).isSameAs(HttpStatus.OK);
+        assertThat(webClient.get("/").status()).isSameAs(HttpStatus.OK);
         future.completeValue(null); // This will make the first connection return to the pool.
-        assertThat(webClient.get("/").aggregate().join().status()).isSameAs(HttpStatus.OK);
+        assertThat(webClient.get("/").status()).isSameAs(HttpStatus.OK);
         assertThat(remoteAddresses.get(0)).isNotSameAs(remoteAddresses.get(1));
         assertThat(remoteAddresses.get(0)).isSameAs(remoteAddresses.get(2));
     }
