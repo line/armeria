@@ -11,7 +11,7 @@ date: 2022-1-27
 
   </Tip>
 
-- You can now fluently convert an <type://HttpResponse> into another using <type://WebClient>. #4021
+- You can now fluently convert an <type://HttpResponse> into a desired type using <type://WebClient>. #4021
   ```java
   WebClient client = WebClient.of("https://api.example.com");
   CompletableFuture<ResponseEntity<MyObject>> response =
@@ -65,8 +65,8 @@ date: 2022-1-27
       ...
   }
   ```
-- You can now use <type://HttpMessage#peekData(Consumer)>, <type://HttpMessage#peekTrailers(Consumer)> and
-  <type://StreamMessage#peekError(Consumer)> and <type://HttpResponse#peekHeaders(Consumer)> operators on
+- You can now use <type://HttpResponse#peekHeaders(Consumer)>, <type://HttpMessage#peekData(Consumer)>, 
+  <type://HttpMessage#peekTrailers(Consumer)> and <type://StreamMessage#peekError(Consumer)> operators on
   <type://HttpRequest> and <type://HttpResponse>. #3097 #3988 #3949
   ```java
   HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
@@ -76,7 +76,7 @@ date: 2022-1-27
     request.peekData(data -> {
       assert data.toStringUtf8().equals("data1,data2");
     }).peekTrailers(trailers -> {
-       assert trailers.get("trailer").equals("foo");
+      assert trailers.get("trailer").equals("foo");
     });
   
   HttpRequest failed = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
@@ -90,19 +90,20 @@ date: 2022-1-27
   ```java
   Server.builder()
         .service("/api/{item}/route/{*contents}", (ctx, req) -> {
-            // If a request path is "/api/123/route/foo/bar/baz",
-            // '*contents' should be:
-            assert ctx.pathPath("contents").equals("foo/bar/baz");
+          // If a request path is "/api/123/route/foo/bar/baz",
+          // '*contents' should be:
+          assert ctx.pathPath("contents").equals("foo/bar/baz");
         });
   ```
-- You can now use <type://ServiceRequestContext#queryParams(String)> to get a decoded query part. #3955 #3960
+- You can now use <type://ServiceRequestContext#queryParams(String)> to get the decoded query 
+  parameters. #3955 #3960
 - You can now send query parameters using <type://QueryParams> with <type://WebClient>. #3915 #3921
   ```java
   QueryParams params = QueryParams.of("foo", "bar");
   WebClient client = ...;
   // Sends 'GET /api/items/1?foo=bar'
   client.get("/api/items/1", params);
-  // Sends 'POST /api/items' with body '...'
+  // Sends 'POST /api/items?foo=bar' with body '...'
   client.post("/api/items", params, content);
   ```
 - You can now write a `StreamMessage<HttpData>` into a file using
@@ -118,8 +119,8 @@ date: 2022-1-27
   CircuitBreaker circuitBreaker = CircuitBreaker.of(...);
   circuitBreaker.enterState(CircuitState.FORCED_OPEN);
   ```
-- You can now conveniently create a <type://RetryRule> and <type://RetryRuleWithContent> with their
-  specific <type://Backoff>. #3875 #2899 #3895
+- You can now conveniently create a <type://RetryRule> and <type://RetryRuleWithContent> by specifying
+  a <type://Backoff>. #3875 #2899 #3895
   ```java
   RetryRule.falesafe(Backoff.fixed(1000));
   RetryRuleWithContent.onException(Backoff.fixed(2000));
@@ -190,7 +191,7 @@ date: 2022-1-27
   UnframedGrpcStatusMappingFunction mappingFunction = 
       (ctx, grpcStatus, cause) -> {
         if (grpcStatus.getCode() == DEADLINE_EXCEEDED) {
-            return INTERNAL_SERVER_ERROR;
+          return INTERNAL_SERVER_ERROR;
         }
         // Pass to the default mapping function.
         return null;
@@ -207,14 +208,14 @@ date: 2022-1-27
   ```yaml
   armeria:
     ...
-  internal-services:
-    # Actuator will be exposed to 18080 port.
-    include: actuator, health 
-    port: 18080
+    internal-services:
+      # Actuator will be exposed to 18080 port.
+      include: actuator, health 
+      port: 18080
   ``` 
 - Added <type://JettyServiceBuilder#tlsReverseDnsLookup(boolean)> that makes <type://JettyService>
-  perform a reverse DNS lookup for each TLS connection, which may be useful for the
-  Servlets that assumes `ServletRequest.getRemoteHost()` will return a remote host name
+  perform a reverse DNS lookup for each TLS connection, which may be useful for
+  servlets that assume `ServletRequest.getRemoteHost()` will return a remote host name
   rather than a remote IP address.
 - Added <type://JettyServiceBuilder#httpConfiguration(HttpConfiguration)> that allows a user to set
   Jetty `HttpConfiguration` in a type-safe manner.
@@ -239,7 +240,7 @@ date: 2022-1-27
   anymore. #3932 #3941
   - A new header value will be appended to the old value.
 - You no longer see `413 Request Entity Too Large` when a server receives a cleartext (h2c) upgrade request
-  lager than 16384 bytes. #3859 #3913
+  larger than 16384 bytes. #3859 #3913
   - The maximum allowed length of an upgrade request will respect <type://ServerBuilder#maxRequestLength(long)>
     or <type://VirtualHost#maxRequestLength()>.
 - Fixed <type://Multipart> decoder to correctly publish chunks one by one when streaming
@@ -256,8 +257,15 @@ date: 2022-1-27
 
 - <type://CircuitBreaker#canRequest()> has been deprecated in favor of 
   <type://CircuitBreaker#tryRequest()>. #4012
-- <type://Cookie#builder(String,String)> and <type://Cookie#of(String,String)> has been deprecated in favor of
+- <type://Cookie#builder(String,String)> and <type://Cookie#of(String,String)> have been deprecated in favor of
   <type://Cookie#secureBuilder(String,String)> and <type://Cookie#ofSecure(String,String)>. #3788 #3939
+- <type://GrpcServiceBuilder#setMaxInboundMessageSizeBytes(int)> and <type://GrpcServiceBuilder#setMaxOutboundMessageSizeBytes(int)>
+  have been deprecated in favor of <type://GrpcServiceBuilder#maxRequestMessageLength(int)> and 
+  <type://GrpcServiceBuilder#maxResponseMessageLength(int)>. #3999
+- <type://AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders)?full> has been deprecated in favor of
+  <type://AbstractBlockingHttpVfs#get(Executor,String,Clock,String,HttpHeaders,MediaTypeResolver)?full>. #4009
+- <type://HttpVfs#get(Executor,String,Clock,String,HttpHeaders)?full> has been deprecated in favor of
+  <type://HttpVfs#get(Executor,String,Clock,String,HttpHeaders,MediaTypeResolver)?full>. #4009
 
 ## ☢️ Breaking changes
 
@@ -266,7 +274,7 @@ date: 2022-1-27
   <type://ListenableHealthChecker> instead of <type://HealthChecker>. #4017
 - <type://ServerErrorHandler#renderStatus(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> now 
   requires an additional parameter <type://RequestHeaders>. #4037
-  - This allows a user to generate a different error response on a different request header value.
+  - This allows a user to generate a different error response depending on the different request header value.
 
 ## ⛓ Dependencies
 
