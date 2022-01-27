@@ -1,4 +1,4 @@
-def buildJdkVersion = 16
+def buildJdkVersion = 17
 if (rootProject.hasProperty('buildJdkVersion')) {
     def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
     if (buildJdkVersion != jdkVersion) {

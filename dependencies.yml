@@ -140,7 +140,7 @@ com.graphql-java:
   graphql-java: { version: '17.3' }
 
 com.guardsquare:
-  proguard-gradle: { version: '7.1.1' }
+  proguard-gradle: { version: '7.2.0' }
 
 # Akka is used only for testing in it:grpcweb module.
 com.lightbend.akka.grpc:
