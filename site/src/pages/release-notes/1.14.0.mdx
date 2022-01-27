@@ -91,7 +91,7 @@ date: 2022-1-27
   Server.builder()
         .service("/api/{item}/route/{*contents}", (ctx, req) -> {
           // If a request path is "/api/123/route/foo/bar/baz",
-          // '*contents' should be:
+          // '*contents' should be foo/bar/baz
           assert ctx.pathPath("contents").equals("foo/bar/baz");
         });
   ```
