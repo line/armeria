@@ -15,19 +15,19 @@ date: 2022-1-27
   ```java
   WebClient client = WebClient.of("https://api.example.com");
   CompletableFuture<ResponseEntity<MyObject>> response =
-      client.prepare()
-            .get("/v1/items/1")
-            .asJson(MyObject.class)
-            .execute();
+    client.prepare()
+          .get("/v1/items/1")
+          .asJson(MyObject.class)
+          .execute();
   ``` 
 - You can now use <type://BlockingWebClient> to wait for an <type://HttpResponse> to be completed. #4021
   ```java
   BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
   ResponseEntity<MyObject> response =
-      client.prepare()
-            .get("/v1/items/1")
-            .asJson(MyObject.class)
-            .execute();
+    client.prepare()
+          .get("/v1/items/1")
+          .asJson(MyObject.class)
+          .execute();
   ``` 
   <Tip>
 
@@ -38,28 +38,30 @@ date: 2022-1-27
 - You can now fluently build a gRPC client with various options using
   <type://GrpcClientBuilder>. #3981 #3999 #3964 #3975
   ```java
-  GrpcClients.builder(...)
-             .decorator(myDecorators)
-             .maxResponseMessageLength(MAX_MESSAGE_SIZE)
-             .jsonMarshallerFactory(descriptor -> {
-                 ...
-             })
-             .intercept(myInterceptors)
-             .build(MyStub.class);
+  GrpcClients
+    .builder(...)
+    .decorator(myDecorators)
+    .maxResponseMessageLength(MAX_MESSAGE_SIZE)
+    .jsonMarshallerFactory(descriptor -> {
+        ...
+    })
+    .intercept(myInterceptors)
+    .build(MyStub.class);
   ``` 
 - You can now fluently build an <type://HttpResponse> by using <type://HttpResponseBuilder>. #3398 #3941
   ```java
-  HttpResponse.builder()
-              .ok()
-              .header(HttpHeaderNames.USER_AGENT, "Armeria")
-              .content(content)
-              .build(); 
+  HttpResponse
+    .builder()
+    .ok()
+    .header(HttpHeaderNames.USER_AGENT, "Armeria")
+    .content(content)
+    .build(); 
   ```
 - You can now use <type://StreamMessage#mapAsync(Function)> to transform a <type://StreamMessage> 
   using an async operation. #3916 #3962
   ```java
   StreamMessage<Integer> userIds = StreamMessage.of(...);
-  StreamMessage<UserInfo> userInfos = streamMessage.mapAsync(this::getUserInfo);
+  StreamMessage<UserInfo> userInfos = userIds.mapAsync(this::getUserInfo);
   
   CompletableFuture<UserInfo> getUserInfo(int userId) {
       ...
@@ -69,17 +71,19 @@ date: 2022-1-27
   <type://HttpMessage#peekTrailers(Consumer)> and <type://StreamMessage#peekError(Consumer)> operators on
   <type://HttpRequest> and <type://HttpResponse>. #3097 #3988 #3949
   ```java
-  HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
-                                       HttpData.ofUtf8("data1,data2"))
-                                       HttpHeaders.of("trailer", "foo"));
-  HttpRequest peeked = 
+  HttpRequest request =
+    HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+                   HttpData.ofUtf8("data1,data2"))
+                   HttpHeaders.of("trailer", "foo"));
+  HttpRequest peeked =
     request.peekData(data -> {
       assert data.toStringUtf8().equals("data1,data2");
     }).peekTrailers(trailers -> {
       assert trailers.get("trailer").equals("foo");
     });
   
-  HttpRequest failed = HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
+  HttpRequest failed = 
+    HttpRequest.ofFailure(new IllegalStateException("Something went wrong."));
   HttpRequest peeked = failed.peekError(cause -> {
     assert cause instanceof IllegalStateException;
   });
@@ -88,12 +92,13 @@ date: 2022-1-27
   on the <type://RequestHeaders>. #4037
 - You can now use `{*var}` and `:*var` path patterns to capture rest paths of a request. #3031 #3997
   ```java
-  Server.builder()
-        .service("/api/{item}/route/{*contents}", (ctx, req) -> {
-          // If a request path is "/api/123/route/foo/bar/baz",
-          // '*contents' should be foo/bar/baz
-          assert ctx.pathPath("contents").equals("foo/bar/baz");
-        });
+  Server
+    .builder()
+    .service("/api/{item}/route/{*contents}", (ctx, req) -> {
+      // If a request path is "/api/123/route/foo/bar/baz",
+      // '*contents' should be foo/bar/baz
+      assert ctx.pathPath("contents").equals("foo/bar/baz");
+    });
   ```
 - You can now use <type://ServiceRequestContext#queryParams(String)> to get the decoded query 
   parameters. #3955 #3960
@@ -131,7 +136,6 @@ date: 2022-1-27
   ConcurrencyLimitingClient.newDecorator(new DynamicLimit());
   
   class DynamicLimit implements IntSupplier {
-
     @Override
     public int getAsInt() {
       // Dynamically returns the current limitation.
@@ -144,7 +148,7 @@ date: 2022-1-27
   ```java
   HttpRequest request = HttpRequest.of(...);
   SplitHttpRequest splitRequest = request.split();
-  
+
   RequestHeaders headers = splitRequest.headers();
   StreamMessage<HttpData> body = splitRequest.body();
   CompletableFuture<HttpHeaders> trailers = splitRequest.trailers();
@@ -152,17 +156,18 @@ date: 2022-1-27
 - Added more well-known MIME type constants to <type://MediaType>. #4040
 - You can now customize the <type://MediaType> of a file when using <type://FileService>. #4001 #4009
   ```java
-  FileService.builder(resource)
-             .mediaTypeResolver((path, contentEncoding) -> {
-               if (path.endsWith(".proto")) {
-                 return MediaType.PROTOBUF;
-               }
-               if (path.endsWith(".csv")) {
-                 return MediaType.CSV_UTF_8;
-               }
-               return null;
-             })
-             .build();
+  FileService
+    .builder(resource)
+    .mediaTypeResolver((path, contentEncoding) -> {
+      if (path.endsWith(".proto")) {
+        return MediaType.PROTOBUF;
+      }
+      if (path.endsWith(".csv")) {
+        return MediaType.CSV_UTF_8;
+      }
+      return null;
+    })
+    .build();
   ```
 - You can now send requests to a test server by using <type://ServerExtension#webClient()>
   or <type://ServerRule#webClient()>. #3761 #3890
@@ -189,20 +194,20 @@ date: 2022-1-27
   an <type://HttpStatus> when using an unframed gRPC service. #3683 #3948
   ```java
   UnframedGrpcStatusMappingFunction mappingFunction = 
-      (ctx, grpcStatus, cause) -> {
-        if (grpcStatus.getCode() == DEADLINE_EXCEEDED) {
-          return INTERNAL_SERVER_ERROR;
-        }
-        // Pass to the default mapping function.
-        return null;
-      };
-  
+    (ctx, grpcStatus, cause) -> {
+      if (grpcStatus.getCode() == DEADLINE_EXCEEDED) {
+        return INTERNAL_SERVER_ERROR;
+      }
+      // Pass to the default mapping function.
+      return null;
+    };
+
   UnframedGrpcErrorHandler errorHandler = 
-     UnframedGrpcErrorHandler.ofJson(mappingFunction);
-  
+    UnframedGrpcErrorHandler.ofJson(mappingFunction);
+
   GrpcService
-      .builder()
-      .unframedGrpcErrorHandler(errorHandler);
+    .builder()
+    .unframedGrpcErrorHandler(errorHandler);
   ```
 - You can now expose `WebOperation`s of Actuator to a port of internal services. #3919 #3946
   ```yaml
