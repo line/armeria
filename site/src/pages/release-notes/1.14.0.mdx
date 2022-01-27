@@ -97,7 +97,7 @@ date: 2022-1-27
     .service("/api/{item}/route/{*contents}", (ctx, req) -> {
       // If a request path is "/api/123/route/foo/bar/baz",
       // '*contents' should be foo/bar/baz
-      assert ctx.pathPath("contents").equals("foo/bar/baz");
+      assert ctx.pathParam("contents").equals("foo/bar/baz");
     });
   ```
 - You can now use <type://ServiceRequestContext#queryParams(String)> to get the decoded query 
@@ -127,7 +127,7 @@ date: 2022-1-27
 - You can now conveniently create a <type://RetryRule> and <type://RetryRuleWithContent> by specifying
   a <type://Backoff>. #3875 #2899 #3895
   ```java
-  RetryRule.falesafe(Backoff.fixed(1000));
+  RetryRule.failsafe(Backoff.fixed(1000));
   RetryRuleWithContent.onException(Backoff.fixed(2000));
   ```
 - You can now dynamically change the maximum number of concurrent active requests of
