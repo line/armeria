@@ -24,6 +24,8 @@ import React, { useCallback, useState } from 'react';
 import { UnControlled as CodeMirror } from 'react-codemirror2';
 
 import 'codemirror/lib/codemirror.css';
+import './app.css';
+import './lint.css';
 import './index.css';
 import { GraphQLSchema } from 'graphql';
 

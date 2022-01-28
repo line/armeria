@@ -120,15 +120,15 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   }, [requestBody]);
 
   useEffect(() => {
-    let parsedVariables = parseJson(variables);
+    const parsedVariables = parseJson(variables);
     if (parsedVariables === undefined) {
-      parsedVariables = {};
+      return;
     }
 
     onDebugFormChange(
       JSON.stringify({
         query,
-        variables: parsedVariables,
+        variables: variables,
       }),
     );
   }, [onDebugFormChange, query, variables]);
