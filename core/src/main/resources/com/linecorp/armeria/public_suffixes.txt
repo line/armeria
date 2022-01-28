@@ -434,6 +434,7 @@ ap.it
 ap.leg.br
 aparecida.br
 apartments
+api.gov.uk
 api.stdlib.com
 apigee.io
 app
