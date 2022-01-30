@@ -37,6 +37,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.primitives.Ints;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -118,6 +120,55 @@ class PathStreamMessageTest {
         await().untilTrue(completed);
         assertThat(stringBuilder.toString())
                 .isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    @CsvSource({
+            "0, -1, A1234567890\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 100",
+            "0, -1, A1234567890\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 3",
+            "0, 10, A123456789, 100",
+            "0, 10, A123456789, 2",
+            "10, -1, 0\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 50",
+            "10, -1, 0\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 1",
+            "10, 20, 0\\nB1234567, 2",
+            "10, 20, 0\\nB1234567, 1"
+    })
+    @ParameterizedTest
+    void differentPosition(long start, long end, String expected, int bufferSize) {
+        expected = expected.replaceAll("\\\\n", "\n");
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final StreamMessage<HttpData> publisher =
+                StreamMessage.of(path, null, ByteBufAllocator.DEFAULT, start, end, bufferSize);
+
+        if (end == -1) {
+            end = Long.MAX_VALUE;
+        }
+        final int maxChunkSize = Math.min(Ints.saturatedCast(end - start), bufferSize);
+        final StringBuilder stringBuilder = new StringBuilder();
+        final AtomicBoolean completed = new AtomicBoolean();
+        publisher.subscribe(new Subscriber<HttpData>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpData httpData) {
+                assertThat(httpData.length()).isLessThanOrEqualTo(maxChunkSize);
+                final String str = httpData.toStringUtf8();
+                stringBuilder.append(str);
+            }
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {
+                completed.set(true);
+            }
+        });
+
+        await().untilTrue(completed);
+        assertThat(stringBuilder.toString()).isEqualTo(expected);
     }
 
     @Test

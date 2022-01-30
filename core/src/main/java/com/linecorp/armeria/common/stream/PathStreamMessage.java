@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -68,6 +69,8 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     @Nullable
     private final ExecutorService blockingTaskExecutor;
     private final int bufferSize;
+    private final long start;
+    private final long end;
 
     private volatile int subscribed;
 
@@ -75,11 +78,17 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     private volatile PathSubscription pathSubscription;
 
     PathStreamMessage(Path path, ByteBufAllocator alloc,
-                      @Nullable ExecutorService blockingTaskExecutor, int bufferSize) {
+                      @Nullable ExecutorService blockingTaskExecutor, long start, long end, int bufferSize) {
         this.path = requireNonNull(path, "path");
         this.alloc = requireNonNull(alloc, "alloc");
         this.blockingTaskExecutor = blockingTaskExecutor;
-        this.bufferSize = bufferSize;
+        this.start = start;
+        if (end == -1) {
+            this.end = Long.MAX_VALUE;
+        } else {
+            this.end = end;
+        }
+        this.bufferSize = Math.min(Ints.saturatedCast(this.end - start), bufferSize);
     }
 
     @Override
@@ -180,9 +189,8 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         }
 
         final PathSubscription pathSubscription =
-                new PathSubscription(fileChannel, subscriber, executor,
-                                     bufferSize, containsNotifyCancellation(options),
-                                     containsWithPooledObjects(options));
+                new PathSubscription(fileChannel, subscriber, executor, start, end, bufferSize,
+                                     containsNotifyCancellation(options), containsWithPooledObjects(options));
         this.pathSubscription = pathSubscription;
         subscriber.onSubscribe(pathSubscription);
     }
@@ -208,8 +216,9 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
         private final AsynchronousFileChannel fileChannel;
         private Subscriber<? super HttpData> downstream;
-        private final int bufferSize;
         private final EventExecutor executor;
+        private final int bufferSize;
+        private final long end;
         private final boolean notifyCancellation;
         private final boolean withPooledObjects;
 
@@ -217,17 +226,20 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         private boolean closed;
 
         private volatile long requested;
-        private volatile int position;
+        private volatile long position;
 
         private PathSubscription(AsynchronousFileChannel fileChannel, Subscriber<? super HttpData> downstream,
-                                 EventExecutor executor, int bufferSize, boolean notifyCancellation,
-                                 boolean withPooledObjects) {
+                                 EventExecutor executor, long start, long end, int bufferSize,
+                                 boolean notifyCancellation, boolean withPooledObjects) {
             this.fileChannel = fileChannel;
             this.downstream = downstream;
             this.executor = executor;
             this.bufferSize = bufferSize;
+            this.end = end;
+
             this.notifyCancellation = notifyCancellation;
             this.withPooledObjects = withPooledObjects;
+            position = start;
         }
 
         @Override
@@ -266,6 +278,8 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
             if (!reading && !closed && requested > 0) {
                 requested--;
                 reading = true;
+                final long position = this.position;
+                final int bufferSize = Math.min(this.bufferSize, Ints.saturatedCast(end - position));
                 final ByteBuf buffer = alloc.buffer(bufferSize);
                 fileChannel.read(buffer.nioBuffer(0, bufferSize), position, buffer, this);
             }
@@ -316,8 +330,15 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                             byteBuf.release();
                         }
                         downstream.onNext(data);
-                        reading = false;
-                        read();
+                        final long position = this.position;
+                        assert position <= end;
+                        if (position < end) {
+                            reading = false;
+                            read();
+                        } else {
+                            maybeCloseFileChannel();
+                            close0(null);
+                        }
                     } else {
                         byteBuf.release();
                         maybeCloseFileChannel();

@@ -44,6 +44,7 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
@@ -204,6 +205,24 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     *
+     * @param path the path of the file.
+     * @param start the start position of the file to read from; must be non-negative.
+     *              {@code 0} indicates the start of the file.
+     * @param end the end position of the file to read until.
+     *            {@code -1} indicates the end of the file.
+     */
+    static StreamMessage<HttpData> of(Path path, long start, long end) {
+        requireNonNull(path, "path");
+        return of(path, null, ByteBufAllocator.DEFAULT, start, end, DEFAULT_FILE_BUFFER_SIZE);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
      * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@code bufferSize}.
@@ -229,7 +248,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(path, "path");
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return new PathStreamMessage(path, alloc, null, bufferSize);
+        return of(path, null, alloc, bufferSize);
     }
 
     /**
@@ -243,13 +262,37 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
      */
-    static StreamMessage<HttpData> of(Path path, ExecutorService executor, ByteBufAllocator alloc,
+    static StreamMessage<HttpData> of(Path path, @Nullable ExecutorService executor, ByteBufAllocator alloc,
                                       int bufferSize) {
         requireNonNull(path, "path");
-        requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return new PathStreamMessage(path, alloc, executor, bufferSize);
+        return of(path, executor, alloc, 0, -1, bufferSize);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@code bufferSize}.
+     *
+     * @param path the path of the file.
+     * @param executor the {@link ExecutorService} which performs blocking IO read.
+     * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer.
+     * @param start the start position of the file to read from; must be non-negative.
+     *              {@code 0} indicates the start of the file.
+     * @param end the end position of the file to read until.
+     *            {@code -1} indicates the end of the file.
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers.
+     */
+    static StreamMessage<HttpData> of(Path path, @Nullable ExecutorService executor, ByteBufAllocator alloc,
+                                      long start, long end, int bufferSize) {
+        requireNonNull(path, "path");
+        requireNonNull(alloc, "alloc");
+        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
+        checkArgument(start >= 0, "start: %s (expected: >= 0)", start);
+        checkArgument(end >= -1, "end: %s (expected: >= -1)", end);
+        return new PathStreamMessage(path, alloc, executor, start, end, bufferSize);
     }
 
     /**
