@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ThreadFactories;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -73,6 +75,10 @@ final class DefaultClientFactory implements ClientFactory {
 
     static final DefaultClientFactory INSECURE =
             (DefaultClientFactory) ClientFactory.builder().tlsNoVerify().build();
+
+    private static final ThreadFactory THREAD_FACTORY = ThreadFactories
+            .builder("armeria-client-factory-shutdown-hook")
+            .build();
 
     static {
         if (DefaultClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
@@ -268,6 +274,19 @@ final class DefaultClientFactory implements ClientFactory {
             return;
         }
         closeable.close();
+    }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
+     */
+    public CompletableFuture<Void> closeOnShutdown() {
+        final CompletableFuture<Void> future = new CompletableFuture<>();
+        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
+            close();
+            logger.debug("ClientFactory has been closed.");
+            future.join();
+        }));
+        return future;
     }
 
     private boolean checkDefault() {
