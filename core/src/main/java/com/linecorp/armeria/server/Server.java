@@ -426,28 +426,26 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
      */
-    public void closeOnShutdown() {
-        closeOnShutdown(THREAD_FACTORY.newThread(() -> {
-            stop().join();
-            logger.debug("Server has been stopped.");
-        }));
+    public CompletableFuture<Void> closeOnShutdown() {
+        return closeOnShutdown(null);
     }
 
     /**
-     * Add a shutdown hook to run a given {@link Runnable}. You need to call {@link Server#stop()}
-     * in a runnable to stop this {@link Server}.
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
      *
-     * <pre>{@code
-     * server.closeOnShutDown(() -> {
-     *    // Do something before stopping this server.
-     *    server.stop().join();
-     *    // Do something after stopping this server.
-     * })
-     * }</pre>
+     * @param whenClosing {@link Runnable} will be run before closing this {@link Server}
      */
-    public void closeOnShutdown(Runnable runnable) {
-        requireNonNull(runnable, "runnable");
-        Runtime.getRuntime().addShutdownHook(new Thread(runnable));
+    public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
+        final CompletableFuture<Void> future = new CompletableFuture<>();
+        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
+            if (whenClosing != null) {
+                whenClosing.run();
+            }
+            stop().join();
+            logger.debug("Server has been stopped.");
+            future.join();
+        }));
+        return future;
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
