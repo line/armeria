@@ -1,17 +1,17 @@
 /*
- *  Copyright 2017 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
- *  LINE Corporation licenses this file to you under the Apache License,
- *  version 2.0 (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at:
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- *  License for the specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 
 package com.linecorp.armeria.internal.server.annotation;
@@ -20,13 +20,16 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.nio.file.Files;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -40,8 +43,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -53,8 +58,10 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
@@ -73,6 +80,8 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
+
+import scala.concurrent.Future;
 
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
@@ -324,11 +333,16 @@ public final class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<AggregatedHttpRequest> f;
+        final CompletableFuture<AggregatedResult> f;
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
-            f = req.aggregate();
+            final MediaType contentType = req.contentType();
+            if (contentType != null && contentType.isMultipart()) {
+                f = aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
+            } else {
+                f = req.aggregate().thenApply(AggregatedResult::new);
+            }
         } else {
-            f = CompletableFuture.completedFuture(null);
+            f = CompletableFuture.completedFuture(AggregatedResult.EMPTY);
         }
 
         ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
@@ -358,7 +372,7 @@ public final class AnnotatedService implements HttpService {
                 return composedFuture
                         .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
-                final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
+                final Function<AggregatedResult, HttpResponse> defaultApplyFunction =
                         aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
                 if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
@@ -368,14 +382,68 @@ public final class AnnotatedService implements HttpService {
         }
     }
 
+    static class FileAggregatedMultipart {
+        private ListMultimap<String, String> params;
+        private ListMultimap<String, java.nio.file.Path> files;
+
+        FileAggregatedMultipart(ListMultimap<String, String> params,
+                                ListMultimap<String, java.nio.file.Path> files) {
+            this.params = params;
+            this.files = files;
+        }
+
+        ListMultimap<String, String> getParams() {
+            return params;
+        }
+
+        ListMultimap<String, java.nio.file.Path> getFiles() {
+            return files;
+        }
+    }
+
+    private CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
+                                                                          HttpRequest req) {
+        return Multipart.from(req).collect(bodyPart -> {
+            if (bodyPart.filename() != null) {
+                final java.nio.file.Path path;
+                try {
+                    // TODO use folder defined in ServerBuilder
+                    path = Files.createTempFile("armeria_", ".tmp");
+                    return bodyPart.writeTo(path)
+                                   .thenApply(ignore -> Maps.<String, Object>immutableEntry(bodyPart.name(),
+                                                                                            path));
+                } catch (IOException e) {
+                    final CompletableFuture<Entry<String, Object>> future = new CompletableFuture<>();
+                    future.completeExceptionally(e);
+                    return future;
+                }
+            }
+            return bodyPart.aggregate()
+                           .thenApply(aggregatedBodyPart -> Maps.<String, Object>immutableEntry(
+                                   bodyPart.name(), aggregatedBodyPart.contentUtf8()));
+        }).thenApply(result -> {
+            final ImmutableListMultimap.Builder<String, String> params = ImmutableListMultimap.builder();
+            final ImmutableListMultimap.Builder<String, java.nio.file.Path> files =
+                    ImmutableListMultimap.builder();
+            for (Entry<String, Object> entry : result) {
+                final Object value = entry.getValue();
+                if (value instanceof java.nio.file.Path) {
+                    files.put(entry.getKey(), (java.nio.file.Path) value);
+                } else {
+                    params.put(entry.getKey(), (String) value);
+                }
+            }
+            return new FileAggregatedMultipart(params.build(), files.build());
+        });
+    }
+
     /**
      * Invokes the service method with arguments.
      */
     @Nullable
-    private Object invoke(ServiceRequestContext ctx, HttpRequest req,
-                          @Nullable AggregatedHttpRequest aggregatedRequest) {
+    private Object invoke(ServiceRequestContext ctx, HttpRequest req, AggregatedResult aggregatedResult) {
         try (SafeCloseable ignored = ctx.push()) {
-            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
+            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedResult);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
@@ -468,7 +536,7 @@ public final class AnnotatedService implements HttpService {
             return (CompletionStage<?>) obj;
         }
         if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
-            return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
+            return ScalaUtil.FutureConverter.toCompletableFuture((Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
     }
