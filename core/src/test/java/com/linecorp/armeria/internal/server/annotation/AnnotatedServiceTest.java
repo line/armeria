@@ -492,6 +492,14 @@ class AnnotatedServiceTest {
             validateContext(ctx);
             return username + '/' + password;
         }
+
+        @Get
+        @Path("/param/multi")
+        public String multiParams(RequestContext ctx,
+                                  @Param("params") List<String> params) {
+            validateContext(ctx);
+            return String.join(":", params);
+        }
     }
 
     @ResponseConverter(UnformattedStringConverterFunction.class)
@@ -854,6 +862,10 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/7/param/default2"), 400);
 
             testBody(hc, get("/7/param/default_null"), "(null)");
+
+            testBody(hc, get("/7/param/multi?params=a&params=b&params=c"), "a:b:c");
+            testBody(hc, get("/7/param/multi?params=a,b,c"), "a:b:c");
+            testBody(hc, get("/7/param/multi?params=a"), "a");
         }
     }
 
@@ -1024,6 +1036,16 @@ class AnnotatedServiceTest {
             request.addHeader("strings", "minwoox");
             request.addHeader("strings", "giraffe");
             request.addHeader("strings", "minwoox");
+            testBody(hc, request, "1:2:1/minwoox:giraffe");
+
+            request = post("/11/customHeader5");
+            request.addHeader("numbers", "1,2,1");
+            request.addHeader("strings", "minwoox,giraffe,minwoox");
+            testBody(hc, request, "1:2:1/minwoox:giraffe");
+
+            request = post("/11/customHeader5");
+            request.addHeader("numbers", "1, 2, 1");
+            request.addHeader("strings", "minwoox, giraffe, minwoox");
             testBody(hc, request, "1:2:1/minwoox:giraffe");
 
             request = get("/11/headerDefault");

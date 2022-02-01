@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -128,6 +129,8 @@ final class AnnotatedValueResolver {
 
         defaultRequestObjectResolvers = builder.build();
     }
+
+    private static final Splitter commaDelimitedQueryParamSplitter = Splitter.on(',').trimResults();
 
     static final List<RequestConverterFunctionProvider> requestConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(RequestConverterFunctionProvider.class,
@@ -702,7 +705,14 @@ final class AnnotatedValueResolver {
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {
-                    values.stream().map(resolver::convert).forEach(resolvedValues::add);
+                    if (values.size() == 1) {
+                        final String first = values.get(0);
+                        commaDelimitedQueryParamSplitter.splitToStream(first)
+                                                        .map(resolver::convert)
+                                                        .forEach(resolvedValues::add);
+                    } else {
+                        values.stream().map(resolver::convert).forEach(resolvedValues::add);
+                    }
                 } else {
                     final Object defaultValue = resolver.defaultOrException();
                     if (defaultValue != null) {
