@@ -81,8 +81,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
-import scala.concurrent.Future;
-
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
@@ -536,7 +534,7 @@ public final class AnnotatedService implements HttpService {
             return (CompletionStage<?>) obj;
         }
         if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
-            return ScalaUtil.FutureConverter.toCompletableFuture((Future<?>) obj, executor);
+            return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
     }
