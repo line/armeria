@@ -3599,6 +3599,11 @@ ind.gt
 ind.in
 ind.kw
 ind.tn
+independent-commission.uk
+independent-inquest.uk
+independent-inquiry.uk
+independent-panel.uk
+independent-review.uk
 inderoy.no
 indian.museum
 indiana.museum
@@ -6576,6 +6581,7 @@ pu.it
 pub
 pub.sa
 publ.pt
+public-inquiry.uk
 public.museum
 publishproxy.com
 pubol.museum
@@ -6798,6 +6804,7 @@ rotorcraft.aero
 router.management
 rovigo.it
 rovno.ua
+royal-commission.uk
 royken.no
 royrvik.no
 rr.gov.br
