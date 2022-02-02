@@ -30,7 +30,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.MoreObjects;
@@ -95,7 +97,7 @@ public final class RouteBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public RouteBuilder path(String pathPattern) {
-        return pathMapping(getPathMapping(pathPattern));
+        return pathMapping(getPathMapping(pathPattern, RouteBuilder::getPathMapping));
     }
 
     /**
@@ -141,7 +143,8 @@ public final class RouteBuilder {
             }
         }
 
-        return pathMapping(new RegexPathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
+        return pathMapping(new RegexPathMappingWithPrefix(
+                prefix, getPathMapping(pathPattern, RouteBuilder::getPathMapping)));
     }
 
     private static PathMapping globPathMapping(String glob, int numGroupsToSkip) {
@@ -162,7 +165,7 @@ public final class RouteBuilder {
      * Sets the {@link Route} to match the specified exact path.
      */
     public RouteBuilder exact(String exactPath) {
-        return pathMapping(new ExactPathMapping(exactPath));
+        return pathMapping(new ExactPathMapping(requireNonNull(exactPath, "exactPath")));
     }
 
     /**
@@ -213,7 +216,9 @@ public final class RouteBuilder {
     }
 
     private RouteBuilder glob(String glob, int numGroupsToSkip) {
-        return pathMapping(globPathMapping(requireNonNull(glob, "glob"), numGroupsToSkip));
+        requireNonNull(glob, "glob");
+        return pathMapping(
+                getPathMapping(glob, pathPattern -> globPathMapping(pathPattern, numGroupsToSkip)));
     }
 
     /**
@@ -514,6 +519,27 @@ public final class RouteBuilder {
                           .add("isFallback", isFallback)
                           .add("excludedRoutes", excludedRoutes)
                           .toString();
+    }
+
+    private static PathMapping getPathMapping(String pathPattern,
+                                              Function<String, PathMapping> basePathMappingMapper) {
+        requireNonNull(pathPattern, "pathPattern");
+        if (pathPattern.startsWith(EXACT) ||
+            pathPattern.startsWith(PREFIX) ||
+            pathPattern.startsWith(REGEX)) {
+            return basePathMappingMapper.apply(pathPattern);
+        }
+
+        // Parameterized, glob or no prefix.
+        final Matcher m = VerbSuffixPathMapping.VERB_PATTERN.matcher(pathPattern);
+        if (!m.find()) {
+            return basePathMappingMapper.apply(pathPattern);
+        }
+
+        final String verb = m.group(1);
+        final String basePathPattern = pathPattern.substring(0, pathPattern.length() - verb.length() - 1);
+        final PathMapping basePathMapping = basePathMappingMapper.apply(basePathPattern);
+        return new VerbSuffixPathMapping(basePathMapping, verb);
     }
 
     private static PathMapping getPathMapping(String pathPattern) {
