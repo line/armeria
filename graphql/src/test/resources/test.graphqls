@@ -1,4 +1,5 @@
 type Query {
     foo: String
     error: String
+    optionalInput(value: String): String
 }

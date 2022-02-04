@@ -43,6 +43,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import graphql.schema.DataFetcher;
 
 class GraphqlServiceTest {
+    private static final String UNDEFINED = "really_undefined";
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -54,12 +55,15 @@ class GraphqlServiceTest {
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
-                                      final DataFetcher bar = dataFetcher("bar");
+                                      final DataFetcher<String> bar = dataFetcher("bar");
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("foo", bar));
                                       final DataFetcher<String> error = errorDataFetcher();
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("error", error));
+                                      final DataFetcher<String> foobar = optionalInputDataFetcher();
+                                      c.type("Query",
+                                             typeWiring -> typeWiring.dataFetcher("optionalInput", foobar));
                                   })
                                   .build();
             sb.service("/graphql", service);
@@ -82,6 +86,10 @@ class GraphqlServiceTest {
             assertThat(ctx.eventLoop().inEventLoop()).isTrue();
             throw new NullPointerException("npe");
         };
+    }
+
+    private static DataFetcher<String> optionalInputDataFetcher() {
+        return environment -> environment.getArgumentOrDefault("value", UNDEFINED);
     }
 
     @Test
@@ -248,5 +256,55 @@ class GraphqlServiceTest {
                                                           .aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.contentUtf8()).contains("Validation error of type FieldUndefined");
+    }
+
+    @Test
+    void shouldAllowUndefinedParametersQuery() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                         .content(MediaType.GRAPHQL_JSON,
+                                                  "{\"operationName\":null," +
+                                                  "\"variables\":{}," +
+                                                  "\"query\":\"query ($value: String) " +
+                                                  "{ optionalInput(value: $value) } \"}"
+                                         )
+                                         .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                   .execute(request)
+                                                   .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.optionalInput").isEqualTo(UNDEFINED);
+    }
+
+    @Test
+    void shouldAllowNonnullParametersQuery() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL_JSON,
+                                                        "{\"operationName\":null," +
+                                                        "\"variables\":{\"value\": \"foobar\"}," +
+                                                        "\"query\":\"query ($value: String)" +
+                                                        " { optionalInput(value: $value) } \"}"
+                                               )
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.optionalInput").isEqualTo("foobar");
+    }
+
+    @Test
+    void shouldAllowNullParametersQuery() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                             .content(MediaType.GRAPHQL_JSON,
+                                      "{\"operationName\":null," +
+                                      "\"variables\":{\"value\": null}," +
+                                      "\"query\":\"query ($value: String) { optionalInput(value: $value) } \"}"
+                             )
+                             .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                            .execute(request)
+                            .aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.optionalInput").isEqualTo(null);
     }
 }
