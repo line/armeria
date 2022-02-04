@@ -282,9 +282,16 @@ final class DefaultClientFactory implements ClientFactory {
     public CompletableFuture<Void> closeOnShutdown() {
         final CompletableFuture<Void> future = new CompletableFuture<>();
         Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
-            close();
-            logger.debug("ClientFactory has been closed.");
-            future.join();
+            closeAsync().handle((unused, cause) -> {
+                if (cause != null) {
+                    logger.warn("Unexpected exception while closing a ClientFactory.", cause);
+                    future.completeExceptionally(cause);
+                } else {
+                    logger.debug("ClientFactory has been closed.");
+                    future.complete(null);
+                }
+                return null;
+            }).join();
         }));
         return future;
     }

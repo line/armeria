@@ -441,9 +441,16 @@ public final class Server implements ListenableAsyncCloseable {
             if (whenClosing != null) {
                 whenClosing.run();
             }
-            stop().join();
-            logger.debug("Server has been stopped.");
-            future.join();
+            stop().handle((unused, cause) -> {
+                if (cause != null) {
+                    logger.warn("Unexpected exception while stopping a Server.", cause);
+                    future.completeExceptionally(cause);
+                } else {
+                    logger.debug("Server has been stopped.");
+                    future.complete(null);
+                }
+                return null;
+            }).join();
         }));
         return future;
     }
