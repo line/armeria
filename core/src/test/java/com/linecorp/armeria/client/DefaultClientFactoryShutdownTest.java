@@ -17,8 +17,9 @@
 package com.linecorp.armeria.client;
 
 /**
- * For checking the behavior of {@link DefaultClientFactory#closeOnShutdown()}
+ * For checking the behavior of {@link DefaultClientFactory#closeOnShutdown()}.
  */
+@SuppressWarnings({ "checkstyle:HideUtilityClassConstructor", "checkstyle:UncommentedMain" })
 final class DefaultClientFactoryShutdownTest {
 
     public static void main(String[] args) {

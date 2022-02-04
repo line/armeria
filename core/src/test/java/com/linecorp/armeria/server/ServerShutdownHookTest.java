@@ -19,8 +19,9 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * For checking the behavior of {@link Server#closeOnShutdown()}
+ * For checking the behavior of {@link Server#closeOnShutdown()}.
  */
+@SuppressWarnings({ "checkstyle:HideUtilityClassConstructor", "checkstyle:UncommentedMain" })
 final class ServerShutdownHookTest {
 
     public static void main(String[] args) {
