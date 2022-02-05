@@ -17,9 +17,6 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 
 /**
  * Examples how to use {@link Param} with {@link File}.
- *
- * @see <a href="https://armeria.dev/docs/server-annotated-service#parameter-injection">
- *      Parameter injection</a>
  */
 @LoggingDecorator(
         requestLogLevel = LogLevel.INFO,            // Log every request sent to this service at INFO level.

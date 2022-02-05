@@ -544,14 +544,7 @@ final class AnnotatedValueResolver {
                 .supportContainer(true)
                 .description(description)
                 .aggregation(AggregationStrategy.ALWAYS)
-                .resolver(fileResolver(ctx -> {
-                                           if (ctx.aggregatedMultipart() != null) {
-                                               return ctx.aggregatedMultipart().getFiles().get(name);
-                                           } else {
-                                               return null;
-                                           }
-                                       },
-                                       () -> "Cannot resolve : " + name))
+                .resolver(fileResolver())
                 .build();
     }
 
@@ -724,45 +717,6 @@ final class AnnotatedValueResolver {
         };
     }
 
-    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    fileResolver(Function<ResolverContext, List<Path>> getter, Supplier<String> failureMessageSupplier) {
-        return (resolver, ctx) -> {
-            final Function<Path, Object> mapper;
-            if (resolver.elementType() == File.class) {
-                mapper = Path::toFile;
-            } else {
-                mapper = path -> path;
-            }
-            final List<Path> values = getter.apply(ctx);
-            if (!resolver.hasContainer()) {
-                if (values != null && !values.isEmpty()) {
-                    return mapper.apply(values.get(0));
-                }
-                return resolver.defaultOrException();
-            }
-
-            try {
-                assert resolver.containerType() != null;
-                @SuppressWarnings("unchecked")
-                final Collection<Object> resolvedValues =
-                        (Collection<Object>) resolver.containerType().getDeclaredConstructor().newInstance();
-
-                // Do not convert value here because the element type is String.
-                if (values != null && !values.isEmpty()) {
-                    values.stream().map(mapper::apply).forEach(resolvedValues::add);
-                } else {
-                    final Object defaultValue = resolver.defaultOrException();
-                    if (defaultValue != null) {
-                        resolvedValues.add(defaultValue);
-                    }
-                }
-                return resolvedValues;
-            } catch (Throwable cause) {
-                throw new IllegalArgumentException(failureMessageSupplier.get(), cause);
-            }
-        };
-    }
-
     /**
      * Returns a bean resolver which retrieves a value using request converters. If the target element
      * is an annotated bean, a bean factory of the specified {@link BeanFactoryId} will be used for creating an
@@ -800,6 +754,48 @@ final class AnnotatedValueResolver {
             }
 
             return value;
+        };
+    }
+
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object> fileResolver() {
+        return (resolver, ctx) -> {
+            final FileAggregatedMultipart fileAggregatedMultipart = ctx.aggregatedMultipart();
+            if (fileAggregatedMultipart == null) {
+                return resolver.defaultOrException();
+            }
+            final Function<? super Path, Object> mapper;
+            if (resolver.elementType() == File.class) {
+                mapper = Path::toFile;
+            } else {
+                mapper = Function.identity();
+            }
+            final String name = resolver.httpElementName();
+            final List<Path> values = fileAggregatedMultipart.getFiles().get(name);
+            if (!resolver.hasContainer()) {
+                if (values != null && !values.isEmpty()) {
+                    return mapper.apply(values.get(0));
+                }
+                return resolver.defaultOrException();
+            }
+
+            try {
+                assert resolver.containerType() != null;
+                @SuppressWarnings("unchecked")
+                final Collection<Object> resolvedValues =
+                        (Collection<Object>) resolver.containerType().getDeclaredConstructor().newInstance();
+
+                if (values != null && !values.isEmpty()) {
+                    values.stream().map(mapper::apply).forEach(resolvedValues::add);
+                } else {
+                    final Object defaultValue = resolver.defaultOrException();
+                    if (defaultValue != null) {
+                        resolvedValues.add(defaultValue);
+                    }
+                }
+                return resolvedValues;
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException("Cannot resolve : " + name, cause);
+            }
         };
     }
 
@@ -1392,7 +1388,7 @@ final class AnnotatedValueResolver {
         @Nullable
         AggregatedHttpRequest aggregatedHttpRequest;
 
-        AggregatedResult() {
+        private AggregatedResult() {
         }
 
         AggregatedResult(FileAggregatedMultipart aggregatedMultipart) {
@@ -1495,8 +1491,8 @@ final class AnnotatedValueResolver {
                 final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
                 QueryParams params2 = null;
                 if (isFormData(contentType)) {
-                    AggregatedHttpRequest message = result.aggregatedHttpRequest;
-                    FileAggregatedMultipart multipart = result.aggregatedMultipart;
+                    final AggregatedHttpRequest message = result.aggregatedHttpRequest;
+                    final FileAggregatedMultipart multipart = result.aggregatedMultipart;
                     if (message != null) {
                         // Respect 'charset' attribute of the 'content-type' header if it exists.
                         final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
