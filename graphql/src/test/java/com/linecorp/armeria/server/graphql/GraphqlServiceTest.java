@@ -89,7 +89,16 @@ class GraphqlServiceTest {
     }
 
     private static DataFetcher<String> optionalInputDataFetcher() {
-        return environment -> environment.getArgumentOrDefault("value", UNDEFINED);
+        return environment -> {
+            if (!environment.containsArgument("value")) {
+                return UNDEFINED;
+            }
+            final Object outerValue = environment.getArgument("value");
+            if (outerValue == null) {
+                return null;
+            }
+            return String.valueOf(((Map<?, ?>) outerValue).get("innerValue"));
+        };
     }
 
     @Test
@@ -264,7 +273,7 @@ class GraphqlServiceTest {
                                          .content(MediaType.GRAPHQL_JSON,
                                                   "{\"operationName\":null," +
                                                   "\"variables\":{}," +
-                                                  "\"query\":\"query ($value: String) " +
+                                                  "\"query\":\"query ($value: ComplexTypeInput) " +
                                                   "{ optionalInput(value: $value) } \"}"
                                          )
                                          .build();
@@ -277,13 +286,18 @@ class GraphqlServiceTest {
 
     @Test
     void shouldAllowNonnullParametersQuery() {
+        final String query =
+                "{\n" +
+                "  \"operationName\": null,\n" +
+                "  \"variables\": {\n" +
+                "    \"value\": {\n" +
+                "      \"innerValue\": \"foobar\"\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"query\": \"query ($value: ComplexTypeInput) { optionalInput(value: $value) }\"\n" +
+                "}\n";
         final HttpRequest request = HttpRequest.builder().post("/graphql")
-                                               .content(MediaType.GRAPHQL_JSON,
-                                                        "{\"operationName\":null," +
-                                                        "\"variables\":{\"value\": \"foobar\"}," +
-                                                        "\"query\":\"query ($value: String)" +
-                                                        " { optionalInput(value: $value) } \"}"
-                                               )
+                                               .content(MediaType.GRAPHQL_JSON, query)
                                                .build();
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
                                                          .execute(request)
@@ -298,7 +312,8 @@ class GraphqlServiceTest {
                              .content(MediaType.GRAPHQL_JSON,
                                       "{\"operationName\":null," +
                                       "\"variables\":{\"value\": null}," +
-                                      "\"query\":\"query ($value: String) { optionalInput(value: $value) } \"}"
+                                      "\"query\":\"query ($value: ComplexTypeInput)" +
+                                      " { optionalInput(value: $value) } \"}"
                              )
                              .build();
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
