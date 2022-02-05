@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -171,14 +169,6 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             final Map<?, ?> map = (Map<?, ?>) maybeMap;
             if (map.isEmpty()) {
                 return ImmutableMap.of();
-            }
-
-            if (map.size() == 1) {
-                final Entry<?, ?> onlyEntry = map.entrySet().stream().findFirst().get();
-                return Collections.singletonMap(
-                        String.valueOf(onlyEntry.getKey()),
-                        onlyEntry.getValue()
-                    );
             }
             return (Map<String, Object>) map;
         } else {
