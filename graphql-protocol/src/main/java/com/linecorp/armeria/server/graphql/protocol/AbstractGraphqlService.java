@@ -152,7 +152,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         if (Strings.isNullOrEmpty(value)) {
             return ImmutableMap.of();
         }
-        return toMapFromJson(parseJsonString(value));
+        return parseJsonString(value);
     }
 
     /**
