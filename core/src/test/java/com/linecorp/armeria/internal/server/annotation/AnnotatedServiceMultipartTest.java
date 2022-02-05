@@ -16,16 +16,19 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
 import com.linecorp.armeria.client.WebClient;
@@ -52,36 +55,41 @@ public class AnnotatedServiceMultipartTest {
     public static class MyAnnotatedService {
         @Post
         @Path("/uploadWithFileParam")
-        public HttpResponse returnInt(@Param File file1) throws IOException {
-            return HttpResponse.of(Files.asCharSource(file1, StandardCharsets.UTF_8).read());
-        }
-
-        @Post
-        @Path("/uploadWithPathParam")
-        public HttpResponse returnInt(@Param java.nio.file.Path file1) throws IOException {
-            //noinspection UnstableApiUsage
-            return HttpResponse.of(Files.asCharSource(file1.toFile(), StandardCharsets.UTF_8).read());
+        public HttpResponse uploadWithFileParam(@Param File file1, @Param java.nio.file.Path path1,
+                                                @Param String param1) throws IOException {
+            final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
+            final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8).read();
+            return HttpResponse.of(file1Content + '\n' + path1Content + '\n' + param1);
         }
 
         @Post
         @Path("/uploadWithMultipartObject")
-        public HttpResponse returnInt(Multipart multipart) {
+        public HttpResponse uploadWithMultipartObject(Multipart multipart) {
             return HttpResponse.from(
                     multipart.aggregate()
-                             .thenApply(aggregatedMultipart -> aggregatedMultipart.field("file1"))
-                             .thenApply(AggregatedHttpObject::contentUtf8)
+                             .thenApply(aggregated -> ImmutableList
+                                     .of(requireNonNull(aggregated.field("file1")),
+                                         requireNonNull(aggregated.field("path1")),
+                                         requireNonNull(aggregated.field("param1")))
+                                     .stream()
+                                     .map(AggregatedHttpObject::contentUtf8)
+                                     .collect(Collectors.joining("\n")))
                              .thenApply(HttpResponse::of)
             );
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "/uploadWithFileParam", "/uploadWithPathParam", "/uploadWithMultipartObject" })
+    @ValueSource(strings = { "/uploadWithFileParam", "/uploadWithMultipartObject" })
     void testUploadFile(String path) throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
-        final BodyPart part1 = BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "Armeria");
-        final Multipart multipart = Multipart.of(part1);
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
+                BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
+                BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
+
+        );
         final HttpResponse execute = client.execute(multipart.toHttpRequest(path));
-        assertThat(execute.aggregate().get().contentUtf8()).isEqualTo("Armeria");
+        assertThat(execute.aggregate().get().contentUtf8()).isEqualTo("foo\nbar\narmeria");
     }
 }
