@@ -134,8 +134,8 @@ public abstract class AbstractArmeriaAutoConfiguration {
             @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort,
             @Value("${armeria.management.server.port:#{null}}") @Nullable Integer armeriaManagementServerPort) {
         if (managementServerPort != null && armeriaManagementServerPort == null) {
-            logger.warn("Please use armeria.management.server.port instead of management.server.port. "
-                        + "management.server.port will be ignored in armeria actuator in future release.");
+            logger.warn("Please use armeria.management.server.port instead of management.server.port. " +
+                        "management.server.port will be ignored in armeria actuator in future release.");
             return InternalServices.of(settings, meterRegistry.orElse(Metrics.globalRegistry),
                                        healthCheckers.orElse(ImmutableList.of()),
                                        healthCheckServiceConfigurators.orElse(ImmutableList.of()),

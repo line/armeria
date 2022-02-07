@@ -260,8 +260,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         if (internalServices == null) {
             Integer port = null;
             if (properties.getPort() != null && properties.getPort() >= 0) {
-                logger.warn("Please use armeria.management.server.port instead of management.server.port."
-                            + "management.server.port will be ignored in armeria actuator in future release.");
+                logger.warn("Please use armeria.management.server.port instead of management.server.port." +
+                            "management.server.port will be ignored in armeria actuator in future release.");
                 port = properties.getPort();
             }
             if (armeriaProperties.getPort() != null) {
