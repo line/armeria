@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,9 +29,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -53,14 +55,15 @@ import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 /**
- * An implementation of {@code HealthImplBase} that determines a healthiness of a {@link Server}
- * and a healthiness of each gPRC service.
+ * An implementation of {@code HealthImplBase} that determines the healthiness of a {@link Server}
+ * and the healthiness of each gRPC service.
  *
  * <p>This class is implemented based on gRPC Health Checking Protocol.
- * You can set a service name (an empty service name indicates a status of a server) to a request and check
- * the status of the gRPC service from the response by registering it to gRPC Service {@link HealthChecker}s.
+ * If a service name is specified in the health check request, the service health updated by
+ * gRPC Service {@link HealthChecker}s is returned. If an empty service name is
+ * specified, the server health is returned.
  * Note: The suggested format of service name is {@code package_names.ServiceName}
- * If a server is healthy, returns {@code ServingStatus.SERVING}.
+ * If a server is healthy, returns {@code ServingStatus.SERVING} is returned.
  * For more details, please refer to the following URL.
  *
  * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
@@ -134,7 +137,8 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private final SettableHealthChecker serverHealth;
     private final Set<ListenableHealthChecker> serverHealthCheckers;
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
-    private final Multimap<String, StreamObserver<HealthCheckResponse>> watchers = HashMultimap.create();
+    private final Multimap<String, StreamObserver<HealthCheckResponse>> watchers =
+            Multimaps.newSetMultimap(new HashMap<>(), Sets::newIdentityHashSet);
     @Nullable
     private Server server;
 
@@ -148,13 +152,13 @@ public final class GrpcHealthCheckService extends HealthImplBase {
                                                 .add(serverHealth)
                                                 .addAll(serverHealthCheckers)
                                                 .build();
+        this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
+        final Consumer<String> healthCheckUpdateListener = watcherHealthUpdater();
+        this.serverHealthCheckers.forEach(
+                lhc -> lhc.addListener(healthChecker -> healthCheckUpdateListener.accept(EMPTY_SERVICE)));
         if (!updateListeners.isEmpty()) {
             addServerHealthUpdateListener(updateListeners);
         }
-        this.grpcServiceHealthCheckers = grpcServiceHealthCheckers;
-        final Consumer<String> healthCheckUpdateListener = watcherHealthUpdater();
-        serverHealthCheckers.forEach(
-                lhc -> lhc.addListener(healthChecker -> healthCheckUpdateListener.accept(EMPTY_SERVICE)));
         grpcServiceHealthCheckers.forEach((serviceName, lhc) -> {
             lhc.addListener(healthChecker -> healthCheckUpdateListener.accept(serviceName));
         });

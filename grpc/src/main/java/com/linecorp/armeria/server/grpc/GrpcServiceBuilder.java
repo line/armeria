@@ -604,7 +604,7 @@ public final class GrpcServiceBuilder {
 
     /**
      * Sets the default {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
-     * The gPRC health check service manages only the health checker that determines
+     * The gRPC health check service manages only the health checker that determines
      * the healthiness of the {@link Server}.
      *
      * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
@@ -769,8 +769,7 @@ public final class GrpcServiceBuilder {
                     "is enabled");
         }
         if (enableHealthCheckService) {
-            grpcHealthCheckService = GrpcHealthCheckService.builder()
-                                                           .build();
+            grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }
         if (grpcHealthCheckService != null) {
             registryBuilder.addService(grpcHealthCheckService.bindService());

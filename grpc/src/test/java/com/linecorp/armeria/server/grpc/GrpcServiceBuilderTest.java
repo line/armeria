@@ -27,8 +27,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -261,11 +259,7 @@ class GrpcServiceBuilderTest {
     void setGrpcHealthCheckService() {
         final GrpcService grpcService =
                 GrpcService.builder()
-                           .addService(new GrpcHealthCheckService(
-                                   ImmutableSet.of(),
-                                   ImmutableMap.of(),
-                                   ImmutableList.of()
-                           ))
+                           .addService(GrpcHealthCheckService.builder().build())
                            .build();
         assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
                 .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
@@ -284,11 +278,7 @@ class GrpcServiceBuilderTest {
     @Test
     void illegalStateOfGrpcHealthCheckService() {
         assertThatThrownBy(() -> GrpcService.builder()
-                                            .addService(new GrpcHealthCheckService(
-                                                    ImmutableSet.of(),
-                                                    ImmutableMap.of(),
-                                                    ImmutableList.of()
-                                            ))
+                                            .addService(GrpcHealthCheckService.builder().build())
                                             .enableHealthCheckService(true)
                                             .build())
                 .isInstanceOf(IllegalStateException.class);
