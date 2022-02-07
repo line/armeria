@@ -188,7 +188,7 @@ public final class InternalServices {
 
     /**
      * Returns the management server port of
-     * {@code org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties}.
+     * {@code com.linecorp.armeria.spring.actuate.ArmeriaManagementServerProperties}.
      */
     @Nullable
     public Port managementServerPort() {

@@ -9,10 +9,10 @@ armeria:
       port: 0
       protocol: HTTP
   metrics-path: ''
-
+  management:
+    server:
+      port: 9112
 management:
-  server:
-    port: 9112
   endpoints:
     web:
       exposure:

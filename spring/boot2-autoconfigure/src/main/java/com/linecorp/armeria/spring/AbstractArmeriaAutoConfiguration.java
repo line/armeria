@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -52,6 +54,8 @@ import io.micrometer.core.instrument.Metrics;
  * and ArmeriaSpringBoot1AutoConfiguration of boot1-autoconfigure module.
  */
 public abstract class AbstractArmeriaAutoConfiguration {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractArmeriaAutoConfiguration.class);
 
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(SessionProtocol.HTTP);
@@ -127,12 +131,23 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
             Optional<List<DocServiceConfigurator>> docServiceConfigurators,
-            @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort) {
-
-        return InternalServices.of(settings, meterRegistry.orElse(Metrics.globalRegistry),
-                                   healthCheckers.orElse(ImmutableList.of()),
-                                   healthCheckServiceConfigurators.orElse(ImmutableList.of()),
-                                   docServiceConfigurators.orElse(ImmutableList.of()), managementServerPort);
+            @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort,
+            @Value("${armeria.management.server.port:#{null}}") @Nullable Integer armeriaManagementServerPort) {
+        if (managementServerPort != null && armeriaManagementServerPort == null) {
+            logger.warn("Please use armeria.management.server.port instead of management.server.port. "
+                        + "management.server.port will be ignored in armeria actuator in future release.");
+            return InternalServices.of(settings, meterRegistry.orElse(Metrics.globalRegistry),
+                                       healthCheckers.orElse(ImmutableList.of()),
+                                       healthCheckServiceConfigurators.orElse(ImmutableList.of()),
+                                       docServiceConfigurators.orElse(ImmutableList.of()),
+                                       managementServerPort);
+        } else {
+            return InternalServices.of(settings, meterRegistry.orElse(Metrics.globalRegistry),
+                                       healthCheckers.orElse(ImmutableList.of()),
+                                       healthCheckServiceConfigurators.orElse(ImmutableList.of()),
+                                       docServiceConfigurators.orElse(ImmutableList.of()),
+                                       armeriaManagementServerPort);
+        }
     }
 
     /**

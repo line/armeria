@@ -33,6 +33,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
@@ -99,9 +101,11 @@ import com.linecorp.armeria.spring.InternalServiceId;
 @AutoConfigureAfter(EndpointAutoConfiguration.class)
 @EnableConfigurationProperties({
         WebEndpointProperties.class, CorsEndpointProperties.class, ManagementServerProperties.class,
-        ArmeriaSettings.class
+        ArmeriaSettings.class, ArmeriaManagementServerProperties.class
 })
 public class ArmeriaSpringActuatorAutoConfiguration {
+
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaSpringActuatorAutoConfiguration.class);
 
     @VisibleForTesting
     static final MediaType ACTUATOR_MEDIA_TYPE;
@@ -177,12 +181,14 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             CorsEndpointProperties corsProperties,
             ConfigurableEnvironment environment,
             ManagementServerProperties serverProperties,
+            ArmeriaManagementServerProperties armeriaManagementServerProperties,
             BeanFactory beanFactory,
             ArmeriaSettings armeriaSettings) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
-            final Integer managementPort = obtainManagementServerPort(sb, beanFactory, serverProperties);
+            final Integer managementPort = obtainManagementServerPort(sb, beanFactory, serverProperties,
+                                                                      armeriaManagementServerProperties);
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
             }
@@ -244,14 +250,23 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     @Nullable
     private static Integer obtainManagementServerPort(ServerBuilder serverBuilder,
                                                       BeanFactory beanFactory,
-                                                      ManagementServerProperties properties) {
+                                                      ManagementServerProperties properties,
+                                                      ArmeriaManagementServerProperties armeriaProperties) {
         Object internalServices = null;
         if (MANAGEMENT_SERVER_PORT_METHOD != null) {
             internalServices = findBean(beanFactory, INTERNAL_SERVICES_CLASS);
         }
 
         if (internalServices == null) {
-            Integer port = properties.getPort();
+            Integer port = null;
+            if (properties.getPort() != null && properties.getPort() >= 0) {
+                logger.warn("Please use armeria.management.server.port instead of management.server.port."
+                            + "management.server.port will be ignored in armeria actuator in future release.");
+                port = properties.getPort();
+            }
+            if (armeriaProperties.getPort() != null) {
+                port = armeriaProperties.getPort();
+            }
             if (port == null || port < 0) {
                 return null;
             }

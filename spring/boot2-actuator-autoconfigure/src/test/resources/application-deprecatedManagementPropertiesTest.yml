@@ -6,12 +6,13 @@ spring:
 armeria:
   ports:
     - port: 0
-    - port: 0
-
-  management:
-    server:
-      port: 0
+  internal-services:
+    include: metrics, health, actuator
+    port: 0
+    protocols: http
 management:
+  server:
+    port: 0
   endpoints:
     web:
       exposure:
