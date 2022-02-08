@@ -385,7 +385,7 @@ public final class AnnotatedService implements HttpService {
         private ListMultimap<String, java.nio.file.Path> files;
 
         private FileAggregatedMultipart(ListMultimap<String, String> params,
-                                ListMultimap<String, java.nio.file.Path> files) {
+                                        ListMultimap<String, java.nio.file.Path> files) {
             this.params = params;
             this.files = files;
         }
@@ -401,12 +401,12 @@ public final class AnnotatedService implements HttpService {
 
     private CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
                                                                           HttpRequest req) {
+        final java.nio.file.Path multipartLocation = ctx.config().server().config().multipartLocation();
         return Multipart.from(req).collect(bodyPart -> {
             if (bodyPart.filename() != null) {
-                final java.nio.file.Path path;
                 try {
-                    // TODO use folder defined in ServerBuilder
-                    path = Files.createTempFile("armeria_", ".tmp");
+                    final java.nio.file.Path path =
+                            Files.createTempFile(multipartLocation, null, ".multipart");
                     return bodyPart.writeTo(path)
                                    .thenApply(ignore -> Maps.<String, Object>immutableEntry(bodyPart.name(),
                                                                                             path));

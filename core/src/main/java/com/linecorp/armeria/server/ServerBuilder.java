@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -197,6 +198,7 @@ public final class ServerBuilder {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
+    private Path multipartLocation = Flags.defaultMultipartLocation();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -777,6 +779,16 @@ public final class ServerBuilder {
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         ServerConfig.validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                                 gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     *
+     * @param path the path of the directory stores the file.
+     */
+    public ServerBuilder multipartLocation(Path path) {
+        this.multipartLocation = requireNonNull(path, "path");
         return this;
     }
 
@@ -1821,7 +1833,7 @@ public final class ServerBuilder {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming);
+                http1HeaderNaming, multipartLocation);
     }
 
     /**
@@ -1901,6 +1913,6 @@ public final class ServerBuilder {
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null, false,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader);
+                enableServerHeader, enableDateHeader, multipartLocation);
     }
 }

@@ -2,8 +2,10 @@ package example.armeria.server.annotated;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.AggregatedHttpObject;
@@ -11,6 +13,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.multipart.AggregatedMultipart;
 import com.linecorp.armeria.common.multipart.Multipart;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
@@ -25,7 +28,16 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 public class FileUploadService {
     @Post("/upload")
     public HttpResponse upload(@Param String text, @Param File file) throws IOException {
-        return HttpResponse.ofJson(Arrays.asList(text, Files.readString(file.toPath())));
+        return HttpResponse.from(CompletableFuture.supplyAsync(() -> {
+            try {
+                final String content = Files.readString(file.toPath());
+                return HttpResponse.ofJson(Arrays.asList(text, content));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            } finally {
+                file.delete();
+            }
+        }, ServiceRequestContext.current().blockingTaskExecutor().withoutContext()));
     }
 
     @Post("/multipartObject")
