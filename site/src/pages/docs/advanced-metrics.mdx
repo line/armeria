@@ -91,13 +91,13 @@ ClientFactory clientFactory =
                    .meterRegistry(myMeterRegistry)
                    .build();
                    
-// Set a cumster ClientFactory to a WebClient                   
+// Set a custom ClientFactory to a WebClient                   
 WebClient.builder(httpUrl)
          .factory(clientFactory)
           // ...
          .build();
 
-// Set a cumster ClientFactory to a gRPC client
+// Set a custom ClientFactory to a gRPC client
 Clients.builder(grpcUrl)
        .factory(clientFactory)
         // ...
