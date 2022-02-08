@@ -87,6 +87,28 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     static final AttributeKey<ServerMethodDefinition<?, ?>> RESOLVED_GRPC_METHOD =
             AttributeKey.valueOf(FramedGrpcService.class, "RESOLVED_GRPC_METHOD");
 
+    private static Map<String, GrpcJsonMarshaller> getJsonMarshallers(
+            HandlerRegistry registry,
+            Set<SerializationFormat> supportedSerializationFormats,
+            Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
+        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
+            return ImmutableMap.of();
+        } else {
+            try {
+                return registry.services().stream()
+                               .map(ServerServiceDefinition::getServiceDescriptor)
+                               .distinct()
+                               .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
+            } catch (Exception e) {
+                logger.warn("Failed to instantiate a JSON marshaller. Consider disabling gRPC-JSON " +
+                            "serialization with {}.supportedSerializationFormats() " +
+                            "or using {}.ofGson() instead.",
+                            GrpcServiceBuilder.class.getName(), GrpcJsonMarshaller.class.getName(), e);
+                return ImmutableMap.of();
+            }
+        }
+    }
+
     private final HandlerRegistry registry;
     private final Set<Route> routes;
     private final Map<String, ExchangeType> exchangeTypes;
@@ -131,15 +153,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.useClientTimeoutHeader = useClientTimeoutHeader;
-        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
-            jsonMarshallers = ImmutableMap.of();
-        } else {
-            jsonMarshallers =
-                    registry.services().stream()
-                            .map(ServerServiceDefinition::getServiceDescriptor)
-                            .distinct()
-                            .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
-        }
+        jsonMarshallers = getJsonMarshallers(registry, supportedSerializationFormats, jsonMarshallerFactory);
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.statusFunction = statusFunction;
         this.maxRequestMessageLength = maxRequestMessageLength;

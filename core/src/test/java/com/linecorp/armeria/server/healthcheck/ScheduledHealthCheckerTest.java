@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
- * under the Licenses
+ * under the License.
  */
 
 package com.linecorp.armeria.server.healthcheck;

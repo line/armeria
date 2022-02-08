@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.consul;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,18 +25,16 @@ import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpEntity;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
@@ -46,19 +43,16 @@ import com.linecorp.armeria.internal.common.PercentEncoder;
  */
 final class CatalogClient {
 
-    private static final CollectionType collectionTypeForNode =
-            TypeFactory.defaultInstance().constructCollectionType(List.class, Node.class);
+    private static final TypeReference<List<Node>> collectionTypeForNode = new TypeReference<List<Node>>() {};
 
     static CatalogClient of(ConsulClient consulClient) {
         return new CatalogClient(consulClient);
     }
 
     private final WebClient client;
-    private final ObjectMapper mapper;
 
     private CatalogClient(ConsulClient client) {
         this.client = client.consulWebClient();
-        mapper = client.getObjectMapper();
     }
 
     /**
@@ -87,15 +81,11 @@ final class CatalogClient {
         if (!params.isEmpty()) {
             path.append('?').append(params.toQueryString());
         }
-        return client.get(path.toString())
-                     .aggregate()
-                     .thenApply(response -> {
-                         try {
-                             return mapper.readValue(response.content().array(), collectionTypeForNode);
-                         } catch (IOException e) {
-                             return Exceptions.throwUnsafely(e);
-                         }
-                     });
+        return client.prepare()
+                     .get(path.toString())
+                     .asJson(collectionTypeForNode)
+                     .as(HttpEntity::content)
+                     .execute();
     }
 
     @Nullable

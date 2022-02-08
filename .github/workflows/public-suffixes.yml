@@ -10,12 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-16
-        name: Set up JDK 16
+      - id: setup-jdk-17
+        name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '16'
+          java-version: '17'
 
       - name: Restore Gradle Cache
         uses: actions/cache@v2

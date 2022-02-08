@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -159,40 +159,40 @@ public class AnnotatedServiceDecorationTest {
 
     @Test
     public void testDecoratingAnnotatedService() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(rule.httpUri());
 
         AggregatedHttpResponse response;
 
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/ok")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/ok"));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/tooManyRequests")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/tooManyRequests"));
         assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/locked")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/locked"));
         assertThat(response.status()).isEqualTo(HttpStatus.LOCKED);
 
         // Call inherited methods.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/tooManyRequests")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/tooManyRequests"));
         assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/locked")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/locked"));
         assertThat(response.status()).isEqualTo(HttpStatus.LOCKED);
 
         // Call a new method.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/added")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/added"));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         // Call an overriding method.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/override")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/override"));
         assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         // Respond by the class-level decorator.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/tooManyRequests")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/tooManyRequests"));
         assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         // Respond by the method-level decorator.
-        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/4/tooManyRequests")).aggregate().get();
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/4/tooManyRequests"));
         assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 }

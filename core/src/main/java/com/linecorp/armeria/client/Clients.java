@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
- * If you are creating an {@link WebClient}, it is recommended to use the factory methods in
+ * If you are creating a {@link WebClient}, it is recommended to use the factory methods in
  * {@link WebClient}.
  */
 public final class Clients {

@@ -145,7 +145,7 @@ abstract class AbstractHttpResponseHandler {
         final ServiceConfig serviceConfig = reqCtx.config();
         final AggregatedHttpResponse response =
                 serviceConfig.server().config().errorHandler()
-                             .renderStatus(serviceConfig, status, null, cause0);
+                             .renderStatus(serviceConfig, req.headers(), status, null, cause0);
         assert response != null;
         return response;
     }

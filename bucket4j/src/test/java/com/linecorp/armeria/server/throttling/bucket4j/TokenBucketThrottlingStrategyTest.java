@@ -23,7 +23,7 @@ import java.time.Duration;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -90,8 +90,8 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void serve1() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
-        final AggregatedHttpResponse response = client.get("/http-serve").aggregate().get();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
+        final AggregatedHttpResponse response = client.get("/http-serve");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         assertThat(response.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
@@ -108,8 +108,8 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle1() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
-        final AggregatedHttpResponse response1 = client.get("/http-throttle1").aggregate().get();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
+        final AggregatedHttpResponse response1 = client.get("/http-throttle1");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
         assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
@@ -121,7 +121,7 @@ public class TokenBucketThrottlingStrategyTest {
         assertThat(reset1).isBetween(0L, 10L);
         assertThat(response1.headers().contains("X-RateLimit-Limit")).isFalse();
 
-        final AggregatedHttpResponse response2 = client.get("/http-throttle1").aggregate().get();
+        final AggregatedHttpResponse response2 = client.get("/http-throttle1");
         assertThat(response2.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
@@ -138,8 +138,8 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle2() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
-        final AggregatedHttpResponse response1 = client.get("/http-throttle2").aggregate().get();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
+        final AggregatedHttpResponse response1 = client.get("/http-throttle2");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
         assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
@@ -151,7 +151,7 @@ public class TokenBucketThrottlingStrategyTest {
         assertThat(reset1).isBetween(0L, 10L);
         assertThat(response1.headers().get("X-RateLimit-Limit")).isEqualTo("1, 1;window=10");
 
-        final AggregatedHttpResponse response2 = client.get("/http-throttle2").aggregate().get();
+        final AggregatedHttpResponse response2 = client.get("/http-throttle2");
         assertThat(response2.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER, "15")).isTrue();
@@ -164,8 +164,8 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle3() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
-        final AggregatedHttpResponse response1 = client.get("/http-throttle3").aggregate().get();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
+        final AggregatedHttpResponse response1 = client.get("/http-throttle3");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
         assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
@@ -174,7 +174,7 @@ public class TokenBucketThrottlingStrategyTest {
         assertThat(response1.headers().contains("X-RateLimit-Remaining")).isFalse();
         assertThat(response1.headers().contains("X-RateLimit-Reset")).isFalse();
 
-        final AggregatedHttpResponse response2 = client.get("/http-throttle3").aggregate().get();
+        final AggregatedHttpResponse response2 = client.get("/http-throttle3");
         assertThat(response2.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
@@ -188,8 +188,8 @@ public class TokenBucketThrottlingStrategyTest {
 
     @Test
     public void throttle4() throws Exception {
-        final WebClient client = WebClient.of(serverRule.httpUri());
-        final AggregatedHttpResponse response1 = client.get("/http-throttle4").aggregate().get();
+        final BlockingWebClient client = BlockingWebClient.of(serverRule.httpUri());
+        final AggregatedHttpResponse response1 = client.get("/http-throttle4");
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
         assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
@@ -198,7 +198,7 @@ public class TokenBucketThrottlingStrategyTest {
         assertThat(response1.headers().contains("X-RateLimit-Remaining")).isFalse();
         assertThat(response1.headers().contains("X-RateLimit-Reset")).isFalse();
 
-        final AggregatedHttpResponse response2 = client.get("/http-throttle4").aggregate().get();
+        final AggregatedHttpResponse response2 = client.get("/http-throttle4");
         assertThat(response2.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
 
         assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();

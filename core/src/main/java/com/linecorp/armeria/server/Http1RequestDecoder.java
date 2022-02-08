@@ -147,33 +147,45 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     keepAliveHandler.increaseNumRequests();
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
-                        fail(id, HttpStatus.BAD_REQUEST, "Decoder failure", null);
+                        fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", null);
                         return;
                     }
 
-                    final HttpHeaders nettyHeaders = nettyReq.headers();
-
                     // Do not accept unsupported methods.
                     final io.netty.handler.codec.http.HttpMethod nettyMethod = nettyReq.method();
-                    if (nettyMethod == io.netty.handler.codec.http.HttpMethod.CONNECT ||
-                        !HttpMethod.isSupported(nettyMethod.name())) {
-                        fail(id, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                    if (!HttpMethod.isSupported(nettyMethod.name())) {
+                        fail(id, null, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                        return;
+                    }
+
+                    // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
+                    // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
+                    // This is because removing a header from RequestHeaders is more expensive due to its
+                    // immutability.
+                    final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
+
+                    // Convert the Netty HttpHeaders into Armeria RequestHeaders.
+                    final RequestHeaders headers =
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
+
+                    // Do not accept a CONNECT request.
+                    if (headers.method() == HttpMethod.CONNECT) {
+                        fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
                         return;
                     }
 
                     // Validate the 'content-length' header.
-                    final String contentLengthStr = nettyHeaders.get(HttpHeaderNames.CONTENT_LENGTH);
+                    final String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
                     final boolean contentEmpty;
                     if (contentLengthStr != null) {
-                        final long contentLength;
+                        long contentLength;
                         try {
                             contentLength = Long.parseLong(contentLengthStr);
                         } catch (NumberFormatException ignored) {
-                            fail(id, HttpStatus.BAD_REQUEST, "Invalid content length", null);
-                            return;
+                            contentLength = -1;
                         }
                         if (contentLength < 0) {
-                            fail(id, HttpStatus.BAD_REQUEST, "Invalid content length", null);
+                            fail(id, headers, HttpStatus.BAD_REQUEST, "Invalid content length", null);
                             return;
                         }
 
@@ -182,26 +194,23 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         contentEmpty = true;
                     }
 
-                    if (!handle100Continue(id, nettyReq, nettyHeaders)) {
+                    // Reject the requests with an `expect` header whose value is not `100-continue`.
+                    if (hasInvalidExpectHeader) {
                         ctx.pipeline().fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
-                        fail(id, HttpStatus.EXPECTATION_FAILED, null, null);
+                        fail(id, headers, HttpStatus.EXPECTATION_FAILED, null, null);
                         return;
                     }
 
-                    // Close the request early when it is sure that there will be
-                    // neither content nor trailers.
-                    final RequestHeaders requestHeaders =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), requestHeaders);
+                    // Close the request early when it is certain there will be neither content nor trailers.
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
                     final Routed<ServiceConfig> routed;
                     if (routingCtx.status().needsServiceConfig()) {
                         try {
                             // Find the service that matches the path.
                             routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
                         } catch (Throwable cause) {
-                            logger.warn("{} Unexpected exception: {}", ctx.channel(), requestHeaders,
-                                        cause);
-                            fail(id, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+                            logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
+                            fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                             return;
                         }
                         assert routed.isPresent();
@@ -212,7 +221,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
                     final EventLoop eventLoop = ctx.channel().eventLoop();
-                    this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, requestHeaders,
+                    this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx,
                                                            routed);
 
@@ -221,7 +230,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         ctx.fireChannelRead(req);
                     }
                 } else {
-                    fail(id, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
+                    fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
                     return;
                 }
             }
@@ -239,11 +248,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    final HttpStatus badRequest = HttpStatus.BAD_REQUEST;
-                    fail(id, badRequest, Http2Error.PROTOCOL_ERROR, "Decoder failure", null);
+                    fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST,
+                         Http2Error.PROTOCOL_ERROR, "Decoder failure", null);
                     final ProtocolViolationException cause =
                             new ProtocolViolationException(decoderResult.cause());
-                    decodedReq.close(HttpStatusException.of(badRequest, cause));
+                    decodedReq.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, cause));
                     return;
                 }
 
@@ -260,11 +269,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .contentLength(req.headers())
                                                         .transferred(transferredLength)
                                                         .build();
-                        final HttpStatus entityTooLarge = HttpStatus.REQUEST_ENTITY_TOO_LARGE;
-                        fail(id, entityTooLarge, Http2Error.CANCEL, null, cause);
+                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
+                             Http2Error.CANCEL, null, cause);
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
-                        decodedReq.close(HttpStatusException.of(entityTooLarge, cause));
+                        decodedReq.close(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
                         return;
                     }
 
@@ -288,17 +297,18 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
         } catch (URISyntaxException e) {
-            final HttpStatus badRequest = HttpStatus.BAD_REQUEST;
-            fail(id, badRequest, Http2Error.CANCEL, "Invalid request path", e);
             if (req != null) {
-                req.close(HttpStatusException.of(badRequest, e));
+                fail(id, req.headers(), HttpStatus.BAD_REQUEST, Http2Error.CANCEL, "Invalid request path", e);
+                req.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, e));
+            } else {
+                fail(id, null, HttpStatus.BAD_REQUEST, Http2Error.CANCEL, "Invalid request path", e);
             }
         } catch (Throwable t) {
-            final HttpStatus serverError = HttpStatus.INTERNAL_SERVER_ERROR;
-            fail(id, serverError, Http2Error.INTERNAL_ERROR, null, t);
             if (req != null) {
-                req.close(HttpStatusException.of(serverError, t));
+                fail(id, req.headers(), HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR, null, t);
+                req.close(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, t));
             } else {
+                fail(id, null, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR, null, t);
                 logger.warn("Unexpected exception:", t);
             }
         } finally {
@@ -306,7 +316,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private boolean handle100Continue(int id, HttpRequest nettyReq, HttpHeaders nettyHeaders) {
+    private boolean handle100Continue(int id, HttpRequest nettyReq) {
+        final HttpHeaders nettyHeaders = nettyReq.headers();
         if (nettyReq.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
             // Ignore HTTP/1.0 requests.
             return true;
@@ -331,24 +342,25 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         return true;
     }
 
-    private void fail(int id, HttpStatus status, Http2Error error,
+    private void fail(int id, @Nullable RequestHeaders headers, HttpStatus status, Http2Error error,
                       @Nullable String message, @Nullable Throwable cause) {
         if (encoder.isResponseHeadersSent(id, 1)) {
             // The response is sent or being sent by HttpResponseSubscriber so we cannot send
             // the error response.
             encoder.writeReset(id, 1, error);
         } else {
-            fail(id, status, message, cause);
+            fail(id, headers, status, message, cause);
         }
     }
 
-    private void fail(int id, HttpStatus status, @Nullable String message, @Nullable Throwable cause) {
+    private void fail(int id, @Nullable RequestHeaders headers, HttpStatus status,
+                      @Nullable String message, @Nullable Throwable cause) {
         discarding = true;
         req = null;
 
         // FIXME(trustin): Use a different verboseResponses for a different virtual host.
         encoder.writeErrorResponse(id, 1, cfg.defaultVirtualHost().fallbackServiceConfig(),
-                                   status, message, cause);
+                                   headers, status, message, cause);
     }
 
     @Override

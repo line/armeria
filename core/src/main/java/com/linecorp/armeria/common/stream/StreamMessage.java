@@ -579,8 +579,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      * a {@code null} value.
      *
      * <p>For example:<pre>{@code
-     * StreamMessage streamMessage = StreamMessage.aborted(new IllegalStateException("Something went wrong.");
-     * StreamMessage transformed = streamMessage.mapError(ex -> {
+     * StreamMessage<Void> streamMessage = StreamMessage
+     *     .aborted(new IllegalStateException("Something went wrong."));
+     * StreamMessage<Void> transformed = streamMessage.mapError(ex -> {
      *     if (ex instanceof IllegalStateException) {
      *         return new MyDomainException(ex);
      *     } else {
@@ -639,6 +640,26 @@ public interface StreamMessage<T> extends Publisher<T> {
             return obj;
         };
         return map(function);
+    }
+
+    /**
+     * Peeks an error emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Void> streamMessage = StreamMessage
+     *     .aborted(new IllegalStateException("Something went wrong."));
+     * StreamMessage<Void> peeked = streamMessage.peekError(ex -> {
+     *     assert ex instanceof IllegalStateException;
+     * });
+     * }</pre>
+     */
+    default StreamMessage<T> peekError(Consumer<? super Throwable> action) {
+        requireNonNull(action, "action");
+        final Function<? super Throwable, ? extends Throwable> function = obj -> {
+            action.accept(obj);
+            return obj;
+        };
+        return mapError(function);
     }
 
     /**

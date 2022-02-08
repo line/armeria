@@ -233,9 +233,13 @@ public final class AnnotatedService implements HttpService {
         final Class<?> returnType;
         final Type genericReturnType;
 
-        if (KotlinUtil.isSuspendingFunction(method)) {
+        if (KotlinUtil.isKFunction(method)) {
             returnType = KotlinUtil.kFunctionReturnType(method);
-            genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
+            if (KotlinUtil.isReturnTypeNothing(method)) {
+                genericReturnType = KotlinUtil.kFunctionReturnType(method);
+            } else {
+                genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
+            }
         } else {
             returnType = method.getReturnType();
             genericReturnType = method.getGenericReturnType();
@@ -300,10 +304,9 @@ public final class AnnotatedService implements HttpService {
             // If an error occurs, the default ExceptionHandler will handle the error.
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
                 logger.isWarnEnabled()) {
-                return response.mapError(cause -> {
+                return response.peekError(cause -> {
                     logger.warn("{} Exception raised by method '{}' in '{}':",
                                 ctx, methodName(), object.getClass().getSimpleName(), Exceptions.peel(cause));
-                    return cause;
                 });
             }
         }

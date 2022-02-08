@@ -434,6 +434,7 @@ ap.it
 ap.leg.br
 aparecida.br
 apartments
+api.gov.uk
 api.stdlib.com
 apigee.io
 app
@@ -1502,6 +1503,7 @@ co.zw
 coach
 coal.museum
 coastaldefence.museum
+codeberg.page
 codes
 codespot.com
 cody.museum
@@ -1749,7 +1751,6 @@ cruise
 cruises
 cs.it
 cs.keliweb.cloud
-csc
 csx.cc
 ct.it
 ct.us
@@ -2985,7 +2986,6 @@ gov.km
 gov.kn
 gov.kp
 gov.kw
-gov.ky
 gov.kz
 gov.la
 gov.lb
@@ -3598,6 +3598,11 @@ ind.gt
 ind.in
 ind.kw
 ind.tn
+independent-commission.uk
+independent-inquest.uk
+independent-inquiry.uk
+independent-panel.uk
+independent-review.uk
 inderoy.no
 indian.museum
 indiana.museum
@@ -6575,6 +6580,7 @@ pu.it
 pub
 pub.sa
 publ.pt
+public-inquiry.uk
 public.museum
 publishproxy.com
 pubol.museum
@@ -6797,6 +6803,7 @@ rotorcraft.aero
 router.management
 rovigo.it
 rovno.ua
+royal-commission.uk
 royken.no
 royrvik.no
 rr.gov.br
@@ -7319,6 +7326,7 @@ singles
 siracusa.it
 sirdal.no
 site
+site.tb-hosting.com
 siteleaf.net
 sites.static.land
 sj

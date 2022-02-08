@@ -26,6 +26,13 @@ import kotlin.reflect.jvm.jvmErasure
 import kotlin.reflect.jvm.kotlinFunction
 
 /**
+ * Returns true if a method can be represented by a Kotlin function.
+ */
+internal fun isKFunction(method: Method): Boolean {
+    return method.kotlinFunction != null
+}
+
+/**
  * Returns true if a method is a suspending function.
  */
 internal fun isSuspendingFunction(method: Method): Boolean {
@@ -40,6 +47,14 @@ internal fun isSuspendingFunction(method: Method): Boolean {
 internal fun isReturnTypeUnit(method: Method): Boolean {
     val kFunction = method.kotlinFunction ?: return false
     return kFunction.returnType.jvmErasure == Unit::class
+}
+
+/**
+ * Returns true if a method returns kotlin.Nothing.
+ */
+internal fun isReturnTypeNothing(method: Method): Boolean {
+    val kFunction = method.kotlinFunction ?: return false
+    return kFunction.returnType.jvmErasure == Nothing::class
 }
 
 /**
