@@ -197,7 +197,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     void serviceAdded(ServiceConfig cfg) {
         if (serviceAdded) {
-            throw new IllegalStateException("Cannot be added to more than one server");
+            return;
         }
         serviceAdded = true;
         final Server server = cfg.server();
