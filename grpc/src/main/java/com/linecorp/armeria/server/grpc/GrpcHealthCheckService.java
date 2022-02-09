@@ -34,7 +34,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -139,8 +138,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     private final Map<String, ListenableHealthChecker> grpcServiceHealthCheckers;
     private final Multimap<String, StreamObserver<HealthCheckResponse>> watchers =
             Multimaps.newSetMultimap(new HashMap<>(), Sets::newIdentityHashSet);
-    @Nullable
-    private Server server;
+    private boolean serviceAdded;
 
     GrpcHealthCheckService(
             Set<ListenableHealthChecker> serverHealthCheckers,
@@ -166,7 +164,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     @Override
     public void check(HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
-        final String service = request.getService();
+        final String service = firstNonNull(request.getService(), EMPTY_SERVICE);
         final ServingStatus status = checkServingStatus(service);
         if (status == ServingStatus.SERVICE_UNKNOWN) {
             responseObserver.onError(getNotFoundStatus(service));
@@ -198,15 +196,11 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     }
 
     void serviceAdded(ServiceConfig cfg) {
-        if (server != null) {
-            if (server != cfg.server()) {
-                throw new IllegalStateException("Cannot be added to more than one server");
-            } else {
-                return;
-            }
+        if (serviceAdded) {
+            throw new IllegalStateException("Cannot be added to more than one server");
         }
-
-        server = cfg.server();
+        serviceAdded = true;
+        final Server server = cfg.server();
         server.addListener(new ServerListenerAdapter() {
             @Override
             public void serverStarted(Server server) {
@@ -226,7 +220,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
     }
 
     @VisibleForTesting
-    ServingStatus checkServingStatus(@Nullable String serviceName) {
+    ServingStatus checkServingStatus(String serviceName) {
         if (!isServerHealthy()) {
             return ServingStatus.NOT_SERVING;
         }
