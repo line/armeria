@@ -18,26 +18,66 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.internal.common.AbortedHttpResponse;
+import com.linecorp.armeria.server.HttpResponseException;
+
 class ResponseMapTest {
 
     @Test
     void mapHeaders() {
-        final HttpResponse res = HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "foo");
+        HttpResponse res = HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "foo");
 
-        final HttpResponse transformed = res.mapHeaders(headers -> {
+        HttpResponse transformed = res.mapHeaders(headers -> {
             return headers.withMutations(builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria"));
         });
 
-        final AggregatedHttpResponse aggregated = transformed.aggregate().join();
+        AggregatedHttpResponse aggregated = transformed.aggregate().join();
         assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
         assertThat(aggregated.contentUtf8()).isEqualTo("foo");
+
+        res = HttpResponse.ofFailure(HttpResponseException.of(HttpResponse.ofRedirect("/bar")));
+        transformed = res.mapHeaders(
+                headers -> headers.withMutations(
+                        builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria")
+                )
+        );
+        try {
+            transformed.aggregate().join();
+            failBecauseExceptionWasNotThrown(CompletionException.class);
+        } catch (CompletionException e) {
+            assertThat(e).hasCauseInstanceOf(HttpResponseException.class);
+            final HttpResponseException ex = (HttpResponseException) e.getCause();
+            aggregated = ex.httpResponse().aggregate().join();
+            assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+            assertThat(aggregated.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/bar");
+            assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
+        }
+
+        res = new AbortedHttpResponse(HttpResponseException.of(HttpResponse.ofRedirect("/foo")));
+        transformed = res.mapHeaders(
+                headers -> headers.withMutations(
+                        builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria")
+                )
+        );
+        try {
+            transformed.aggregate().join();
+            failBecauseExceptionWasNotThrown(CompletionException.class);
+        } catch (CompletionException e) {
+            assertThat(e).hasCauseInstanceOf(HttpResponseException.class);
+            final HttpResponseException ex = (HttpResponseException) e.getCause();
+            aggregated = ex.httpResponse().aggregate().join();
+            assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+            assertThat(aggregated.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo");
+            assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
+        }
     }
 
     @Test

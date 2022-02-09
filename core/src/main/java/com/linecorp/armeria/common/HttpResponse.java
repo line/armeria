@@ -59,6 +59,7 @@ import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -768,7 +769,18 @@ public interface HttpResponse extends Response, HttpMessage {
                 }
             }
             return obj;
-        });
+        })
+                .mapError(obj -> {
+                    if (obj instanceof HttpResponseException) {
+                        final HttpResponseException httpResponseException = (HttpResponseException) obj;
+                        return HttpResponseException.of(
+                                httpResponseException.httpResponse().mapHeaders(function),
+                                httpResponseException.getCause()
+                        );
+                    } else {
+                        return obj;
+                    }
+                });
         return of(stream);
     }
 

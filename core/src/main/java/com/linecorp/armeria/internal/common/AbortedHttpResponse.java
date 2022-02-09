@@ -15,12 +15,30 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import java.util.function.Function;
+
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
+import com.linecorp.armeria.server.HttpResponseException;
 
 public final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> implements HttpResponse {
     public AbortedHttpResponse(Throwable cause) {
         super(cause);
+    }
+
+    @Override
+    public HttpResponse mapHeaders(Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
+        if (getCause() instanceof HttpResponseException) {
+            final HttpResponseException httpResponseException = (HttpResponseException) getCause();
+            return new AbortedHttpResponse(
+                    HttpResponseException.of(
+                            httpResponseException.httpResponse().mapHeaders(function),
+                            httpResponseException.getCause()
+                    )
+            );
+        }
+        return HttpResponse.super.mapHeaders(function);
     }
 }
