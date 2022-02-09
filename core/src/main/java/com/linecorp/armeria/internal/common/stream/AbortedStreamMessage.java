@@ -97,7 +97,7 @@ public class AbortedStreamMessage<T> implements StreamMessage<T>, Subscription {
         subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
     }
 
-    protected Throwable getCause() {
+    protected final Throwable getCause() {
         return cause;
     }
 

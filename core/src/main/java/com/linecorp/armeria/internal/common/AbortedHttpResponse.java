@@ -15,8 +15,12 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -30,15 +34,46 @@ public final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> 
 
     @Override
     public HttpResponse mapHeaders(Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
+        requireNonNull(function, "function");
+        return mapIncludingHttpResponseException(it -> it.mapHeaders(function));
+    }
+
+    @Override
+    public HttpResponse mapTrailers(
+            Function<? super HttpHeaders, ? extends HttpHeaders> function) {
+        requireNonNull(function, "function");
+        return mapIncludingHttpResponseException(it -> it.mapTrailers(function));
+    }
+
+    @Override
+    public HttpResponse mapData(
+            Function<? super HttpData, ? extends HttpData> function) {
+        requireNonNull(function, "function");
+        return mapIncludingHttpResponseException(it -> it.mapData(function));
+    }
+
+    @Override
+    public HttpResponse mapInformational(
+            Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
+        requireNonNull(function, "function");
+        return mapIncludingHttpResponseException(it -> it.mapInformational(function));
+    }
+
+    private HttpResponse mapIncludingHttpResponseException(Function<HttpResponse, HttpResponse> function) {
+        requireNonNull(function, "function");
         if (getCause() instanceof HttpResponseException) {
             final HttpResponseException httpResponseException = (HttpResponseException) getCause();
-            return new AbortedHttpResponse(
-                    HttpResponseException.of(
-                            httpResponseException.httpResponse().mapHeaders(function),
-                            httpResponseException.getCause()
-                    )
-            );
+            if (httpResponseException.getCause() == null) {
+                return function.apply(httpResponseException.httpResponse());
+            } else {
+                return new AbortedHttpResponse(
+                        HttpResponseException.of(
+                                function.apply(httpResponseException.httpResponse()),
+                                httpResponseException.getCause()
+                        )
+                );
+            }
         }
-        return HttpResponse.super.mapHeaders(function);
+        return function.apply(this);
     }
 }

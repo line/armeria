@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.server.HttpResponseException;
 
 class ResponseMapTest {
@@ -58,24 +57,6 @@ class ResponseMapTest {
             aggregated = ex.httpResponse().aggregate().join();
             assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
             assertThat(aggregated.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/bar");
-            assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
-        }
-
-        res = new AbortedHttpResponse(HttpResponseException.of(HttpResponse.ofRedirect("/foo")));
-        transformed = res.mapHeaders(
-                headers -> headers.withMutations(
-                        builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria")
-                )
-        );
-        try {
-            transformed.aggregate().join();
-            failBecauseExceptionWasNotThrown(CompletionException.class);
-        } catch (CompletionException e) {
-            assertThat(e).hasCauseInstanceOf(HttpResponseException.class);
-            final HttpResponseException ex = (HttpResponseException) e.getCause();
-            aggregated = ex.httpResponse().aggregate().join();
-            assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
-            assertThat(aggregated.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo");
             assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
         }
     }
