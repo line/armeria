@@ -441,7 +441,7 @@ public final class Server implements ListenableAsyncCloseable {
             if (whenClosing != null) {
                 whenClosing.run();
             }
-            stop().handle((unused, cause) -> {
+            closeAsync().handle((unused, cause) -> {
                 if (cause != null) {
                     logger.warn("Unexpected exception while stopping a Server.", cause);
                     future.completeExceptionally(cause);
