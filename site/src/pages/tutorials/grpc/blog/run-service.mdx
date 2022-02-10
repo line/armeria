@@ -1,0 +1,143 @@
+---
+menuTitle: "Test run a service"
+order: 2
+category: grpc
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Test running a service
+
+Based on the code we obtained from our proto file, we'll create a server instance and add an empty gRPC service. Then we'll create a minimal client using Armeria's <type://Clients.newClient> to make a call to the service.
+
+<TutorialSteps current={2} />
+
+## What you need
+
+You need to have [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file) from the [service and messages](/tutorials/grpc/blog/define-service) defined in a proto file.
+
+## 1. Declare an empty service
+
+Create a file BlogService.java and declare an empty blog service. We'll implement the service methods later on in this file. For now, leave it empty.
+
+```java filename=BlogService.java
+package example.armeria.server.blog.grpc;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase { }
+```
+
+## 2. Add a service to a server
+
+Build a service and server using Armeria's <type://ServerBuilder> to serve our service.
+
+1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/ServerMain.java).
+
+  ```java filename=ServerMain.java
+  package example.armeria.server.blog.grpc;
+
+  public final class ServerMain {  }
+  ```
+2. Create and pass an instance of `BlogService` to Armeria's <type://GrpcService#builder()> to create a service instance.
+  ```java
+  import com.linecorp.armeria.server.grpc.GrpcService;
+
+  public final class ServerMain {
+    static Server newServer(int port) throws Exception {
+      final GrpcService grpcService = GrpcService.builder().addService(new BlogService())
+                                                           .build();
+    }
+  ```
+3. Build and return a new server using Armeria's <type://ServerBuilder> with the `grpcService` instance.
+  ```java filename=ServerMain.java
+
+    public final class ServerMain {
+      static Server newServer(int port) throws Exception {
+        ...
+        return Server.builder()
+                    .http(port)
+                    .service(grpcService)
+                    .build();
+
+      }
+  ```
+
+## 3. Serve the service
+
+Create a server instance and we'll try running the blog service.
+
+1. Create a server instance in the `main()` method.
+  ```java filename=ServerMain.java
+  public static void main(String[] args) throws Exception {
+      final Server server = newServer(8080);
+
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+          server.stop().join();
+      }));
+
+      server.start().join();
+  }
+  ```
+2. Start running the server by running the `Main.main()` method on your IDE or using Gradle.
+  ```bash
+  ./gradlew run
+  ```
+3. Open up http://127.0.0.1:8080 on a web browser. Since our blog service is empty, you'll see the 404 "Not Found" message in the browser.
+
+## 4. Write a client
+
+We've only tested running the service on a server, this time, let's try calling the service. To test, we'll write a simple client. We'll use the Java code generated from the [Defining a service](/tutorials/grpc/blog/define-service). To keep things simple, we'll write the client code where we're implementing the server code.
+
+1. Create another main class for the client. We'll name the file `BlogClient.java`.
+  ```java
+  package example.armeria.client.blog.grpc;
+
+  final class ClientMain {
+    public static void main(String[] args) throws Exception {}
+  }
+  ```
+2. Create a client using Armeria's <type://Clients>. We're running the server locally and have set the port to 8080 in our server code. Let's access the server at "http://127.0.0.1:8080".
+  ```java
+  import com.linecorp.armeria.client.Clients;
+  import example.armeria.server.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
+
+  final class ClientMain {
+    static BlogServiceBlockingStub client;
+
+    public static void main(String[] args) throws Exception {
+      BlogServiceBlockingStub blogService = Clients.newClient(
+                  "gproto+http://127.0.0.1:8080/",
+                  BlogServiceBlockingStub.class);
+  }
+  ```
+3. Although we haven't implemented any service method, we'll call one just to check our client can communicate with the server.
+  ```java
+  import example.armeria.server.blog.grpc.Blog.BlogPost;
+  import example.armeria.server.blog.grpc.Blog.CreateBlogPostRequest;
+
+  public static void main(String[] args) throws Exception {
+    ...
+    CreateBlogPostRequest request = CreateBlogPostRequest.newBuilder()
+                                                         .setTitle("My first blog")
+                                                         .setContent("Yay")
+                                                         .build();
+    BlogPost response = blogService.createBlogPost(request);
+  }
+  ```
+
+## Test run
+
+While the server is running, run the `main()` method on the client and what do you get? An exception. This is because we haven't implemented the service method yet. But here, we've checked that our service does return something to a client call.
+
+```bash
+Exception in thread "main" io.grpc.StatusRuntimeException: UNIMPLEMENTED: Method example.armeria.server.blog.grpc.BlogService/CreateBlogPost is unimplemented
+```
+
+## What's next
+
+In this section, we've created and added an empty gRPC service to a server, created a minimal client and made a call to the server.
+
+Next, at [Step 3. Implement CREATE](/tutorials/grpc/blog/implement-create), let's get on with implementing the `createBlogPost()` method in our service.
+
+<TutorialSteps current={2} />

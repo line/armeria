@@ -18,9 +18,7 @@
   "gRPC service":[
     "grpc/blog",
     "grpc/blog/define-service",
-    "grpc/blog/implement-grpc-service",
-    "grpc/blog/add-service-to-server",
-    "grpc/blog/develop-grpc-client"
+    "grpc/blog/run-service"
   ],
   "Thrift service":{
     "Coming soon": null
