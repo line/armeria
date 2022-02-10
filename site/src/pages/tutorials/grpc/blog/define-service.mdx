@@ -10,15 +10,6 @@ Let's begin by defining our gRPC blog service in a proto file.
 
 <TutorialSteps current={1} />
 
-Follow the instructions in the order:
-
-1. [Create a proto file](#1-create-a-proto-file)
-2. [Define a data object](#2-define-a-data-object)
-3. [Define service methods](#3-add-methods)
-4. [Add request types](#4-add-request-types)
-5. [Add response type](#5-add-response-type)
-6. [Compile proto file](#6-compile-proto-file)
-
 ## 1. Create a proto file
 
 Create a file named blog.proto inside the directory, /{project}/src/main/proto. This tutorial uses Protocol Buffers version 3.
@@ -103,8 +94,6 @@ message ListBlogPostsResponse {
 ## 6. Compile proto file
 
 Compile the blog.proto file to generate Java code. The compile will generate code for both client and server.
-
-// TW question: Need check the command (should we use generateProto or generateSources)
 
 ```bash
 ./gradlew generateProto
