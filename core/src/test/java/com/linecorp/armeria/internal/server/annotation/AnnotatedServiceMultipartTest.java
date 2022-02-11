@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
@@ -52,6 +53,7 @@ public class AnnotatedServiceMultipartTest {
         }
     };
 
+    @Consumes("multipart/form-data")
     public static class MyAnnotatedService {
         @Post
         @Path("/uploadWithFileParam")

@@ -14,6 +14,7 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.multipart.AggregatedMultipart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
@@ -25,6 +26,7 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
         requestLogLevel = LogLevel.INFO,            // Log every request sent to this service at INFO level.
         successfulResponseLogLevel = LogLevel.INFO  // Log every response sent from this service at INFO level.
 )
+@Consumes("multipart/form-data")
 public class FileUploadService {
     @Post("/upload")
     public HttpResponse upload(@Param String text, @Param File file) throws IOException {
