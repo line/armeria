@@ -73,7 +73,7 @@ abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     private void request0(long n) {
-        if (isCancelled()) {
+        if (isDone()) {
             // The subscription has been closed. An additional request should be ignored.
             // https://github.com/reactive-streams/reactive-streams-jvm#3.6
             return;
@@ -143,7 +143,7 @@ abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public final void cancel() {
-        if (isCancelled()) {
+        if (isDone()) {
             return;
         }
         cancelled = true;
@@ -152,7 +152,7 @@ abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public final void abort() {
-        if (isCancelled()) {
+        if (isDone()) {
             return;
         }
         cancelled = true;
@@ -161,14 +161,14 @@ abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public final void abort(Throwable cause) {
-        if (isCancelled()) {
+        if (isDone()) {
             return;
         }
         cancelled = true;
         super.abort(cause);
     }
 
-    private boolean isCancelled() {
+    private boolean isDone() {
         return cancelled || isComplete();
     }
 }

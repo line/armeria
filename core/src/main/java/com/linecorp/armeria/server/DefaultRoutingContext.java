@@ -240,7 +240,8 @@ final class DefaultRoutingContext implements RoutingContext {
                                                  .add("method", routingCtx.method())
                                                  .add("path", routingCtx.path())
                                                  .add("query", routingCtx.query())
-                                                 .add("contentType", routingCtx.contentType());
+                                                 .add("contentType", routingCtx.contentType())
+                                                 .add("status", routingCtx.status());
         if (!routingCtx.acceptTypes().isEmpty()) {
             helper.add("acceptTypes", routingCtx.acceptTypes());
         }

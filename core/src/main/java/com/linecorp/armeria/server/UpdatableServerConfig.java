@@ -53,11 +53,20 @@ final class UpdatableServerConfig implements ServerConfig {
 
     // Delegate non-public methods
 
+    /**
+     * Returns a map of SslContexts {@link SslContext}.
+     */
     @Nullable
     Mapping<String, SslContext> sslContextMapping() {
         return delegate.sslContextMapping();
     }
 
+    /**
+     * Returns the {@link Executor} which will invoke the callbacks of {@link Server#start()},
+     * {@link Server#stop()} and {@link ServerListener}.
+     *
+     * <p>Note: Kept non-public since it doesn't seem useful for users.</p>
+     */
     Executor startStopExecutor() {
         return delegate.startStopExecutor();
     }

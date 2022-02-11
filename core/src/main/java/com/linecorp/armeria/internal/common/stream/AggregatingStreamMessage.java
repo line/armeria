@@ -91,6 +91,8 @@ public class AggregatingStreamMessage<T> extends AbstractFixedStreamMessage<T> i
 
     @Override
     List<T> drainAll0(boolean withPooledObjects) {
+        assert closed : getClass().getSimpleName() + " should be closed before publishing items";
+
         if (withPooledObjects) {
             for (T obj : objs) {
                 PooledObjects.touch(obj);
