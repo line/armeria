@@ -85,7 +85,9 @@ final class FileAggregatedMultipart {
                                                           ExecutorService blockingExecutorService) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Files.createDirectories(directory);
+                if (!Files.exists(directory)) {
+                    Files.createDirectories(directory);
+                }
                 return Files.createTempFile(directory, null, ".multipart");
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
