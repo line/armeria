@@ -378,15 +378,6 @@ public final class AnnotatedService implements HttpService {
     }
 
     /**
-     * Decide aggregation in memory, file or not.
-     */
-    enum AggregationType {
-        ALL,
-        MULTIPART,
-        NONE,
-    }
-
-    /**
      * Invokes the service method with arguments.
      */
     @Nullable

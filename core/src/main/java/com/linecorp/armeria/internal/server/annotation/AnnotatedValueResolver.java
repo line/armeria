@@ -77,7 +77,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService.AggregationType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
@@ -1365,6 +1364,15 @@ final class AnnotatedValueResolver {
                 return isFormData(mediaType) ? AggregationType.ALL : AggregationType.NONE;
         }
         return AggregationType.NONE;
+    }
+
+    /**
+     * Decide aggregation in memory, file or not.
+     */
+    enum AggregationType {
+        ALL,
+        MULTIPART,
+        NONE,
     }
 
     /**
