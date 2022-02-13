@@ -494,7 +494,8 @@ public final class Flags {
 
     static {
         DEFAULT_MULTIPART_LOCATION = Paths.get(get("multipartLocation",
-                                                   System.getProperty("java.io.tmpdir"),
+                                                   System.getProperty("java.io.tmpdir") +
+                                                   "/armeria/multipart-files",
                                                    ignore -> true));
     }
 

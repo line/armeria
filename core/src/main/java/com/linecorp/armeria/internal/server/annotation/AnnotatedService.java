@@ -20,16 +20,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.nio.file.Files;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -43,9 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
@@ -58,7 +52,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
@@ -332,15 +325,19 @@ public final class AnnotatedService implements HttpService {
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<AggregatedResult> f;
-        if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
-            final MediaType contentType = req.contentType();
-            if (contentType != null && contentType.isMultipart()) {
-                f = aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
-            } else {
+        switch (AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers())) {
+            case MULTIPART:
+                f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
+                break;
+            case ALL:
                 f = req.aggregate().thenApply(AggregatedResult::new);
-            }
-        } else {
-            f = CompletableFuture.completedFuture(AggregatedResult.EMPTY);
+                break;
+            case NONE:
+                f = CompletableFuture.completedFuture(AggregatedResult.EMPTY);
+                break;
+            default:
+                // Should never reach here.
+                throw new Error();
         }
 
         ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
@@ -380,59 +377,13 @@ public final class AnnotatedService implements HttpService {
         }
     }
 
-    static final class FileAggregatedMultipart {
-        private ListMultimap<String, String> params;
-        private ListMultimap<String, java.nio.file.Path> files;
-
-        private FileAggregatedMultipart(ListMultimap<String, String> params,
-                                        ListMultimap<String, java.nio.file.Path> files) {
-            this.params = params;
-            this.files = files;
-        }
-
-        ListMultimap<String, String> getParams() {
-            return params;
-        }
-
-        ListMultimap<String, java.nio.file.Path> getFiles() {
-            return files;
-        }
-    }
-
-    private CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
-                                                                          HttpRequest req) {
-        final java.nio.file.Path multipartLocation = ctx.config().server().config().multipartLocation();
-        return Multipart.from(req).collect(bodyPart -> {
-            if (bodyPart.filename() != null) {
-                try {
-                    final java.nio.file.Path path =
-                            Files.createTempFile(multipartLocation, null, ".multipart");
-                    return bodyPart.writeTo(path)
-                                   .thenApply(ignore -> Maps.<String, Object>immutableEntry(bodyPart.name(),
-                                                                                            path));
-                } catch (IOException e) {
-                    final CompletableFuture<Entry<String, Object>> future = new CompletableFuture<>();
-                    future.completeExceptionally(e);
-                    return future;
-                }
-            }
-            return bodyPart.aggregate()
-                           .thenApply(aggregatedBodyPart -> Maps.<String, Object>immutableEntry(
-                                   bodyPart.name(), aggregatedBodyPart.contentUtf8()));
-        }).thenApply(result -> {
-            final ImmutableListMultimap.Builder<String, String> params = ImmutableListMultimap.builder();
-            final ImmutableListMultimap.Builder<String, java.nio.file.Path> files =
-                    ImmutableListMultimap.builder();
-            for (Entry<String, Object> entry : result) {
-                final Object value = entry.getValue();
-                if (value instanceof java.nio.file.Path) {
-                    files.put(entry.getKey(), (java.nio.file.Path) value);
-                } else {
-                    params.put(entry.getKey(), (String) value);
-                }
-            }
-            return new FileAggregatedMultipart(params.build(), files.build());
-        });
+    /**
+     * Decide aggregation in memory, file or not.
+     */
+    enum AggregationType {
+        ALL,
+        MULTIPART,
+        NONE,
     }
 
     /**

@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -38,6 +40,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
@@ -59,9 +62,17 @@ public class AnnotatedServiceMultipartTest {
         @Path("/uploadWithFileParam")
         public HttpResponse uploadWithFileParam(@Param File file1, @Param java.nio.file.Path path1,
                                                 @Param String param1) throws IOException {
-            final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
-            final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8).read();
-            return HttpResponse.of(file1Content + '\n' + path1Content + '\n' + param1);
+            return HttpResponse.from(CompletableFuture.supplyAsync(() -> {
+                try {
+                    final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
+                    final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8)
+                                                     .read();
+                    return file1Content + '\n' + path1Content;
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }, ServiceRequestContext.current().blockingTaskExecutor()).thenApply(
+                    fileContent -> HttpResponse.of(fileContent + '\n' + param1)));
         }
 
         @Post

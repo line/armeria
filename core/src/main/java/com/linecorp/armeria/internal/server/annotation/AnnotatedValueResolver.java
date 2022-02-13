@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy.NONE;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
 
@@ -76,7 +77,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService.FileAggregatedMultipart;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService.AggregationType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
@@ -770,7 +771,7 @@ final class AnnotatedValueResolver {
                 mapper = Function.identity();
             }
             final String name = resolver.httpElementName();
-            final List<Path> values = fileAggregatedMultipart.getFiles().get(name);
+            final List<Path> values = fileAggregatedMultipart.files().get(name);
             if (!resolver.hasContainer()) {
                 if (values != null && !values.isEmpty()) {
                     return mapper.apply(values.get(0));
@@ -1010,7 +1011,7 @@ final class AnnotatedValueResolver {
         private BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
         @Nullable
         private BeanFactoryId beanFactoryId;
-        private AggregationStrategy aggregation = AggregationStrategy.NONE;
+        private AggregationStrategy aggregation = NONE;
         private boolean warnedRedundantUse;
 
         private Builder(AnnotatedElement annotatedElement, Type type) {
@@ -1340,26 +1341,37 @@ final class AnnotatedValueResolver {
     }
 
     private static boolean isFormData(@Nullable MediaType contentType) {
-        return contentType != null && (contentType.belongsTo(MediaType.FORM_DATA) ||
-                                       contentType.belongsTo(MediaType.MULTIPART_FORM_DATA));
+        return contentType != null && contentType.belongsTo(MediaType.FORM_DATA);
     }
 
+    private static boolean isMultipartFormData(@Nullable MediaType contentType) {
+        return contentType != null && contentType.belongsTo(MediaType.MULTIPART_FORM_DATA);
+    }
+
+    static AggregationType aggregationType(AggregationStrategy strategy, RequestHeaders headers) {
+        requireNonNull(strategy, "strategy");
+        final MediaType mediaType = headers.contentType();
+        if (isMultipartFormData(mediaType)) {
+            if (strategy == NONE) {
+                return AggregationType.NONE;
+            }
+            return AggregationType.MULTIPART;
+        }
+
+        switch (strategy) {
+            case ALWAYS:
+                return AggregationType.ALL;
+            case FOR_FORM_DATA:
+                return isFormData(mediaType) ? AggregationType.ALL : AggregationType.NONE;
+        }
+        return AggregationType.NONE;
+    }
+
+    /**
+     * Each argument use this enum to decide its strategy.
+     */
     enum AggregationStrategy {
         NONE, ALWAYS, FOR_FORM_DATA;
-
-        /**
-         * Returns whether the request should be aggregated.
-         */
-        static boolean aggregationRequired(AggregationStrategy strategy, HttpRequest req) {
-            requireNonNull(strategy, "strategy");
-            switch (strategy) {
-                case ALWAYS:
-                    return true;
-                case FOR_FORM_DATA:
-                    return isFormData(req.contentType());
-            }
-            return false;
-        }
 
         /**
          * Returns {@link AggregationStrategy} which specifies how to aggregate the request
@@ -1384,29 +1396,26 @@ final class AnnotatedValueResolver {
         static final AggregatedResult EMPTY = new AggregatedResult();
 
         @Nullable
-        AnnotatedService.FileAggregatedMultipart aggregatedMultipart;
+        private final FileAggregatedMultipart aggregatedMultipart;
         @Nullable
-        AggregatedHttpRequest aggregatedHttpRequest;
+        private final AggregatedHttpRequest aggregatedHttpRequest;
 
         private AggregatedResult() {
+            this(null, null);
         }
 
-        AggregatedResult(FileAggregatedMultipart aggregatedMultipart) {
+        private AggregatedResult(@Nullable FileAggregatedMultipart aggregatedMultipart,
+                                 @Nullable AggregatedHttpRequest aggregatedHttpRequest) {
             this.aggregatedMultipart = aggregatedMultipart;
-        }
-
-        AggregatedResult(AggregatedHttpRequest aggregatedHttpRequest) {
             this.aggregatedHttpRequest = aggregatedHttpRequest;
         }
 
-        @Nullable
-        AnnotatedService.FileAggregatedMultipart getAggregatedMultipart() {
-            return aggregatedMultipart;
+        AggregatedResult(FileAggregatedMultipart aggregatedMultipart) {
+            this(aggregatedMultipart, null);
         }
 
-        @Nullable
-        AggregatedHttpRequest getAggregatedHttpRequest() {
-            return aggregatedHttpRequest;
+        AggregatedResult(AggregatedHttpRequest aggregatedHttpRequest) {
+            this(null, aggregatedHttpRequest);
         }
     }
 
@@ -1440,12 +1449,12 @@ final class AnnotatedValueResolver {
 
         @Nullable
         AggregatedHttpRequest aggregatedRequest() {
-            return aggregatedResult.getAggregatedHttpRequest();
+            return aggregatedResult.aggregatedHttpRequest;
         }
 
         @Nullable
-        AnnotatedService.FileAggregatedMultipart aggregatedMultipart() {
-            return aggregatedResult.getAggregatedMultipart();
+        FileAggregatedMultipart aggregatedMultipart() {
+            return aggregatedResult.aggregatedMultipart;
         }
 
         QueryParams queryParams() {
@@ -1492,15 +1501,17 @@ final class AnnotatedValueResolver {
                 QueryParams params2 = null;
                 if (isFormData(contentType)) {
                     final AggregatedHttpRequest message = result.aggregatedHttpRequest;
-                    final FileAggregatedMultipart multipart = result.aggregatedMultipart;
                     if (message != null) {
                         // Respect 'charset' attribute of the 'content-type' header if it exists.
                         final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
                         if (!body.isEmpty()) {
                             params2 = QueryParams.fromQueryString(body);
                         }
-                    } else if (multipart != null) {
-                        params2 = QueryParams.builder().add(multipart.getParams().entries()).build();
+                    }
+                } else if (isMultipartFormData(contentType)) {
+                    final FileAggregatedMultipart multipart = result.aggregatedMultipart;
+                    if (multipart != null) {
+                        params2 = QueryParams.builder().add(multipart.params().entries()).build();
                     }
                 }
 
