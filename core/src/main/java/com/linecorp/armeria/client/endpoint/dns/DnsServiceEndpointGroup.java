@@ -109,15 +109,7 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
         }
 
         final ImmutableSortedSet<Endpoint> endpoints = builder.build();
-        if (logger().isDebugEnabled()) {
-            logger().debug("{} Resolved: {} (TTL: {})",
-                           logPrefix(),
-                           endpoints.stream()
-                                    .map(e -> e.authority() + '/' + e.weight())
-                                    .collect(Collectors.joining(", ")),
-                           ttl);
-        }
-
+        logDnsResolutionResult(endpoints, ttl);
         return endpoints;
     }
 
