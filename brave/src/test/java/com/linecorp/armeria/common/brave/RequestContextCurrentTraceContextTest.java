@@ -126,7 +126,7 @@ class RequestContextCurrentTraceContextTest {
 
                 when(eventLoop.inEventLoop()).thenReturn(false);
                 try (Scope traceContextScope2 = currentTraceContext.newScope(traceContext2)) {
-                    assertThat(traceContextScope2).hasToString("RequestContextTraceContextScope");
+                    assertThat(traceContextScope2).hasToString("ThreadLocalScope");
                     assertThat(currentTraceContext.get()).isEqualTo(traceContext2);
                 }
                 when(eventLoop.inEventLoop()).thenReturn(true);
@@ -134,12 +134,6 @@ class RequestContextCurrentTraceContextTest {
             }
             // the first scope is attached to the request context and cleared when that's destroyed
             assertThat(currentTraceContext.get()).isEqualTo(traceContext);
-        }
-
-        final TraceContext traceContext3 = TraceContext.newBuilder().traceId(1).spanId(3).build();
-        try (Scope traceContextScope3 = currentTraceContext.newScope(traceContext3)) {
-            assertThat(traceContextScope3).hasToString("ThreadLocalScope");
-            assertThat(currentTraceContext.get()).isEqualTo(traceContext3);
         }
     }
 
