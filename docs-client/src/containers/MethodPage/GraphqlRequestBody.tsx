@@ -128,7 +128,7 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
     onDebugFormChange(
       JSON.stringify({
         query,
-        variables: variables,
+        variables,
       }),
     );
   }, [onDebugFormChange, query, variables]);

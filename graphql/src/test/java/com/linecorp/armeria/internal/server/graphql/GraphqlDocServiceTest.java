@@ -68,7 +68,7 @@ class GraphqlDocServiceTest {
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
-                                      final DataFetcher bar = dataFetcher("bar");
+                                      final DataFetcher<String> bar = dataFetcher("bar");
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("foo", bar));
                                   })

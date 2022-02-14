@@ -48,7 +48,7 @@ import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
-import GraphqlRequestBody from './GrahpqlRequestBody';
+import GraphqlRequestBody from './GraphqlRequestBody';
 
 SyntaxHighlighter.registerLanguage('json', json);
 
