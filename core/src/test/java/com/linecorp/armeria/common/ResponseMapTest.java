@@ -20,19 +20,75 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ResponseMapTest {
+
+    private static AtomicBoolean invokedTrailer = new AtomicBoolean();
+    private static AtomicBoolean invokedInformational = new AtomicBoolean();
+
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.serviceUnder(
+                    "/500",
+                    ((ctx, req) -> {
+                        throw new RuntimeException("Expected");
+                    }));
+            sb.decorator((delegate, ctx, req) -> delegate
+                    .serve(ctx, req)
+                    .mapHeaders(
+                            (headers) -> headers.withMutations(
+                                    builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria")
+                            )
+                    )
+                    .mapTrailers((headers) -> {
+                        invokedTrailer.set(true);
+                        return headers;
+                    })
+                    .mapInformational((headers) -> {
+                        invokedInformational.set(true);
+                        return headers;
+                    })
+            );
+            sb.decorator(LoggingService.newDecorator());
+        }
+    };
+
+    @AfterAll
+    static void stopSynchronously() {
+        if (SystemInfo.osType() == OsType.WINDOWS) {
+            // Shut down the server completely so that no files
+            // are open before deleting the temporary directory.
+            server.stop().join();
+        }
+    }
+
+    @BeforeEach
+    void resetInvocationStatus() {
+        invokedTrailer.set(false);
+        invokedInformational.set(false);
+    }
 
     @Test
     void mapHeaders() {
         HttpResponse res = HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "foo");
-
         HttpResponse transformed = res.mapHeaders(headers -> {
             return headers.withMutations(builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria"));
         });
@@ -42,7 +98,31 @@ class ResponseMapTest {
         assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
         assertThat(aggregated.contentUtf8()).isEqualTo("foo");
 
-        res = HttpResponse.ofFailure(HttpResponseException.of(HttpResponse.ofRedirect("/bar")));
+        res = HttpResponse.ofFailure(new RuntimeException("Expected"));
+        transformed = res.mapHeaders(
+                headers -> headers.withMutations(
+                        builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria")
+                )
+        );
+        try {
+            transformed.aggregate().join();
+            failBecauseExceptionWasNotThrown(CompletionException.class);
+        } catch (CompletionException e) {
+            assertThat(e).hasCauseInstanceOf(HttpResponseException.class);
+            final HttpResponseException ex = (HttpResponseException) e.getCause();
+            aggregated = ex.httpResponse().aggregate().join();
+            assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
+        }
+
+        final AggregatedHttpResponse httpRes = BlockingWebClient.of(server.httpUri()).get("/500");
+        assertThat(invokedInformational).isTrue();
+        assertThat(invokedTrailer).isTrue();
+        assertThat(httpRes.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
+
+        CompletableFuture<HttpResponse> foo = new CompletableFuture<>();
+        foo.completeExceptionally(HttpResponseException.of(HttpResponse.ofRedirect("/foo")));
+        res = HttpResponse.from(foo);
         transformed = res.mapHeaders(
                 headers -> headers.withMutations(
                         builder -> builder.add(HttpHeaderNames.USER_AGENT, "Armeria")
@@ -56,7 +136,8 @@ class ResponseMapTest {
             final HttpResponseException ex = (HttpResponseException) e.getCause();
             aggregated = ex.httpResponse().aggregate().join();
             assertThat(aggregated.headers().status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
-            assertThat(aggregated.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/bar");
+            assertThat(aggregated.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo");
+            // This fails because DeferredHttpResponse is not
             assertThat(aggregated.headers().get(HttpHeaderNames.USER_AGENT)).isEqualTo("Armeria");
         }
     }

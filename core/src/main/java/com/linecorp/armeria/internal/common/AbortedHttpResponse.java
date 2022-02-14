@@ -66,7 +66,7 @@ public final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> 
             if (httpResponseException.getCause() == null) {
                 return function.apply(httpResponseException.httpResponse());
             } else {
-                return new AbortedHttpResponse(
+                return HttpResponse.ofFailure(
                         HttpResponseException.of(
                                 function.apply(httpResponseException.httpResponse()),
                                 httpResponseException.getCause()
@@ -74,6 +74,12 @@ public final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> 
                 );
             }
         }
-        return function.apply(this);
+        return HttpResponse.ofFailure(
+                HttpResponseException.of(
+                        function.apply(HttpResponse.of(500)),
+                        getCause()
+                )
+        );
+        // Alternative return this;
     }
 }
