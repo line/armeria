@@ -126,7 +126,7 @@ public final class DefaultClientRequestContext
     // We use null checks which are faster than checking if a list is empty,
     // because it is more common to have no customizers than to have any.
     @Nullable
-    private volatile List<Consumer<? super ClientRequestContext>> customizers;
+    private volatile Consumer<ClientRequestContext> customizer;
 
     @Nullable
     private volatile CompletableFuture<Boolean> whenInitialized;
@@ -229,7 +229,16 @@ public final class DefaultClientRequestContext
         }
 
         additionalRequestHeaders = options.get(ClientOptions.HEADERS);
-        customizers = copyThreadLocalCustomizers();
+
+        final Consumer<ClientRequestContext> customizer = options.contextCustomizer();
+        final Consumer<ClientRequestContext> threadLocalCustomizer = copyThreadLocalCustomizer();
+        if (customizer == ClientOptions.CONTEXT_CUSTOMIZER.defaultValue()) {
+            this.customizer = threadLocalCustomizer;
+        } else if (threadLocalCustomizer == null) {
+            this.customizer = customizer;
+        } else {
+            this.customizer = customizer.andThen(threadLocalCustomizer);
+        }
     }
 
     @Nullable
@@ -252,12 +261,12 @@ public final class DefaultClientRequestContext
         initialized = true;
 
         try {
-            // Note: thread-local customizer must be run before:
+            // Note: context customizer must be run before:
             //       - EndpointSelector.select() so that the customizer can inject the attributes which may be
             //         required by the EndpointSelector.
             //       - mapEndpoint() to give an opportunity to override an Endpoint when using
             //         an additional authority.
-            runThreadLocalContextCustomizers();
+            runContextCustomizer();
 
             endpointGroup = mapEndpoint(endpointGroup, hasBaseUri);
             if (endpointGroup instanceof Endpoint) {
@@ -389,13 +398,11 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private void runThreadLocalContextCustomizers() {
-        final List<Consumer<? super ClientRequestContext>> customizers = this.customizers;
-        if (customizers != null) {
-            this.customizers = null;
-            for (Consumer<? super ClientRequestContext> c : customizers) {
-                c.accept(this);
-            }
+    private void runContextCustomizer() {
+        final Consumer<ClientRequestContext> customizer = this.customizer;
+        if (customizer != null) {
+            this.customizer = null;
+            customizer.accept(this);
         }
     }
 
@@ -480,20 +487,29 @@ public final class DefaultClientRequestContext
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext(); ) {
             addAttr(i.next());
         }
     }
 
     @Nullable
-    private List<Consumer<? super ClientRequestContext>> copyThreadLocalCustomizers() {
+    private Consumer<ClientRequestContext> copyThreadLocalCustomizer() {
         final ClientThreadLocalState state = ClientThreadLocalState.get();
         if (state == null) {
             return null;
         }
 
         state.addCapturedContext(this);
-        return state.copyCustomizers();
+        final List<Consumer<? super ClientRequestContext>> customizers = state.copyCustomizers();
+        if (customizers == null) {
+            return null;
+        } else {
+            return ctx -> {
+                for (Consumer<? super ClientRequestContext> c : customizers) {
+                    c.accept(this);
+                }
+            };
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -689,7 +705,7 @@ public final class DefaultClientRequestContext
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        for (;;) {
+        for (; ; ) {
             final HttpHeaders oldValue = additionalRequestHeaders;
             final HttpHeadersBuilder builder = oldValue.toBuilder();
             mutator.accept(builder);

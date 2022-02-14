@@ -225,20 +225,25 @@ public final class RequestContextUtil {
     public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
 
-        final SafeCloseable closeable = invokeHook(current);
+        final AutoCloseable closeable = invokeHook(current);
         if (closeable == null) {
             return () -> requestContextStorage.pop(current, toRestore);
         } else {
             return () -> {
-                closeable.close();
+                try {
+                    closeable.close();
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception while closing RequestContext.hook(). " +
+                                "closeable: {}, ctx: {}", closeable, current, t);
+                }
                 requestContextStorage.pop(current, toRestore);
             };
         }
     }
 
     @Nullable
-    private static SafeCloseable invokeHook(RequestContext ctx) {
-        final Supplier<? extends SafeCloseable> hook;
+    private static AutoCloseable invokeHook(RequestContext ctx) {
+        final Supplier<? extends AutoCloseable> hook;
         if (ctx instanceof DefaultServiceRequestContext) {
             hook = ((DefaultServiceRequestContext) ctx).hook();
         } else if (ctx instanceof DefaultClientRequestContext) {
@@ -251,7 +256,7 @@ public final class RequestContextUtil {
             return null;
         }
 
-        final SafeCloseable closeable;
+        final AutoCloseable closeable;
         try {
             closeable = hook.get();
         } catch (Throwable t) {
