@@ -17,9 +17,7 @@
 package com.linecorp.armeria.server.kotlin
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.Default
@@ -35,8 +33,12 @@ class DataClassDocServiceTest {
 
     @Test
     fun dataClassParamSpecification() {
-        val response = WebClient.of(server.httpUri()).get("/docs/specification.json").aggregate().join()
-        val jsonNode: JsonNode = ObjectMapper().readTree(response.contentUtf8()) as ObjectNode
+        val client = WebClient.of(server.httpUri()).blocking()
+        val jsonNode = client.prepare()
+            .get("/docs/specification.json")
+            .asJson(JsonNode::class.java)
+            .execute()
+            .content()!!
         val fields = jsonNode.get("services")[0]["methods"][0]["parameters"][0]["childFieldInfos"] as ArrayNode
         assertThat(fields).hasSize(2)
         assertThat(fields[0]["name"].asText()).isEqualTo("name")

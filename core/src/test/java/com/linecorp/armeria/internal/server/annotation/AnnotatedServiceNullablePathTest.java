@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
@@ -65,8 +65,8 @@ class AnnotatedServiceNullablePathTest {
     @ParameterizedTest
     @CsvSource({ "/default, 200", "/empty, 200", "/multiple, 307", "/multiple/, 200" })
     void params(String path, int statusCode) {
-        final WebClient client = WebClient.of(server.httpUri());
-        assertThat(client.get(path).aggregate().join().status().code()).isEqualTo(statusCode);
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        assertThat(client.get(path).status().code()).isEqualTo(statusCode);
     }
 
     @Test

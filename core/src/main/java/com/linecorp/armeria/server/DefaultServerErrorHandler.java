@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -68,7 +69,8 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
                     logger.warn("{} Failed processing a request:", ctx, cause);
                 }
 
-                return internalRenderStatus(serviceConfig, HttpStatus.BAD_REQUEST, cause);
+                return internalRenderStatus(serviceConfig, ctx.request().headers(),
+                                            HttpStatus.BAD_REQUEST, cause);
             }
         }
 
@@ -85,26 +87,31 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         }
 
         if (cause instanceof RequestTimeoutException) {
-            return internalRenderStatus(serviceConfig, HttpStatus.SERVICE_UNAVAILABLE, cause);
+            return internalRenderStatus(serviceConfig, ctx.request().headers(),
+                                        HttpStatus.SERVICE_UNAVAILABLE, cause);
         }
 
         if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
             logger.warn("{} Unhandled exception from a service:", ctx, cause);
         }
 
-        return internalRenderStatus(serviceConfig, HttpStatus.INTERNAL_SERVER_ERROR, cause);
+        return internalRenderStatus(serviceConfig, ctx.request().headers(),
+                                    HttpStatus.INTERNAL_SERVER_ERROR, cause);
     }
 
+    @SuppressWarnings("deprecation")
     private static boolean needsToWarn() {
         return Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
                logger.isWarnEnabled();
     }
 
     private static HttpResponse internalRenderStatus(ServiceConfig serviceConfig,
+                                                     RequestHeaders headers,
                                                      HttpStatus status,
                                                      @Nullable Throwable cause) {
-        final AggregatedHttpResponse res = serviceConfig.server().config().errorHandler()
-                                                        .renderStatus(serviceConfig, status, null, cause);
+        final AggregatedHttpResponse res =
+                serviceConfig.server().config().errorHandler()
+                             .renderStatus(serviceConfig, headers, status, null, cause);
         assert res != null;
         return res.toHttpResponse();
     }
@@ -112,6 +119,7 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
     @Nonnull
     @Override
     public AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                               @Nullable RequestHeaders headers,
                                                HttpStatus status,
                                                @Nullable String description,
                                                @Nullable Throwable cause) {

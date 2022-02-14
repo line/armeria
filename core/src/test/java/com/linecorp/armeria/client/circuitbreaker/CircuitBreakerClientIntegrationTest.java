@@ -62,7 +62,7 @@ class CircuitBreakerClientIntegrationTest {
             switch (i) {
                 case 0:
                 case 1:
-                    assertThat(circuitBreaker.canRequest()).isTrue();
+                    assertThat(circuitBreaker.tryRequest()).isTrue();
                     assertThatThrownBy(() -> client.execute(req).aggregate().join())
                             .isInstanceOfSatisfying(CompletionException.class, cause -> {
                                 assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class)
@@ -74,7 +74,7 @@ class CircuitBreakerClientIntegrationTest {
                     });
                     break;
                 default:
-                    await().until(() -> !circuitBreaker.canRequest());
+                    await().until(() -> !circuitBreaker.tryRequest());
                     assertThatThrownBy(() -> client.execute(req).aggregate().join())
                             .isInstanceOf(CompletionException.class)
                             .hasCauseInstanceOf(FailFastException.class);

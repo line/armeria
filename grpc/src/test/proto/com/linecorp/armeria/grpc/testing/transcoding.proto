@@ -24,6 +24,8 @@ import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
 
 service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
@@ -64,6 +66,73 @@ service HttpJsonTranscodingTestService {
   rpc EchoWrappers(EchoWrappersRequest) returns (EchoWrappersResponse) {
     option (google.api.http) = {
       get: "/v1/echo/wrappers"
+    };
+  }
+
+  rpc EchoStruct(EchoStructRequest) returns (EchoStructResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/struct"
+
+      additional_bindings {
+        post: "/v1/echo/struct"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoValue(EchoValueRequest) returns (EchoValueResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/value"
+
+      additional_bindings {
+        post: "/v1/echo/value"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoListValue(EchoListValueRequest) returns (EchoListValueResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/list_value"
+
+      additional_bindings {
+        post: "/v1/echo/list_value"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoAny(EchoAnyRequest) returns (EchoAnyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/any"
+
+      additional_bindings {
+        post: "/v1/echo/any"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoRecursive(EchoRecursiveRequest) returns (EchoRecursiveResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/recursive"
+
+      additional_bindings {
+        post: "/v1/echo/recursive"
+        body: "value"
+      }
+    };
+  }
+
+  // When the request message is recursive.
+  rpc EchoRecursive2(Recursive) returns (Recursive) {
+    option (google.api.http) = {
+      get: "/v1/echo/recursive2"
+
+      additional_bindings {
+        post: "/v1/echo/recursive2"
+        body: "*"
+      }
     };
   }
 }
@@ -133,4 +202,49 @@ message EchoWrappersResponse {
   google.protobuf.BoolValue boolVal = 7;
   google.protobuf.StringValue stringVal = 8;
   google.protobuf.BytesValue bytesVal = 9;
+}
+
+message EchoStructRequest {
+  google.protobuf.Struct value = 1;
+}
+
+message EchoStructResponse {
+  google.protobuf.Struct value = 1;
+}
+
+message EchoValueRequest {
+  google.protobuf.Value value = 1;
+}
+
+message EchoValueResponse {
+  google.protobuf.Value value = 1;
+}
+
+message EchoListValueRequest {
+  google.protobuf.ListValue value = 1;
+}
+
+message EchoListValueResponse {
+  google.protobuf.ListValue value = 1;
+}
+
+message EchoAnyRequest {
+  google.protobuf.Any value = 1;
+}
+
+message EchoAnyResponse {
+  google.protobuf.Any value = 1;
+}
+
+message EchoRecursiveRequest {
+  Recursive value = 1;
+}
+
+message EchoRecursiveResponse {
+  Recursive value = 1;
+}
+
+message Recursive {
+  string value = 1;
+  Recursive nested = 2;
 }

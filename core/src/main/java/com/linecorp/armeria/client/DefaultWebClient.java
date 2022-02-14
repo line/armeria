@@ -25,7 +25,6 @@ import java.net.URI;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -38,6 +37,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
+
+    @Nullable
+    private BlockingWebClient blockingWebClient;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
@@ -114,15 +116,18 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                        pathAndQuery.path(), pathAndQuery.query(), null, req, requestOptions);
     }
 
-    @Override
-    public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
-        return execute(aggregatedReq.toHttpRequest());
-    }
-
     private static HttpResponse abortRequestAndReturnFailureResponse(
             HttpRequest req, IllegalArgumentException cause) {
         req.abort(cause);
         return HttpResponse.ofFailure(cause);
+    }
+
+    @Override
+    public BlockingWebClient blocking() {
+        if (blockingWebClient != null) {
+            return blockingWebClient;
+        }
+        return blockingWebClient = new DefaultBlockingWebClient(this);
     }
 
     @Override

@@ -45,6 +45,14 @@ class AnnotatedServiceTest {
         res = client.get("/pathPattern/glob/armeria").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("glob: armeria");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        res = client.get("/pathPattern/foo/bar").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("paths: bar");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        res = client.get("/pathPattern/foo/bar/qux").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("paths: bar/qux");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

@@ -31,7 +31,6 @@ import org.reactivestreams.Subscription;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -76,8 +75,8 @@ class GrpcWebTextTest {
     @Test
     void unaryCallSuccessWhenEncodedDataSpansMultipleHttpFrames() {
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB_TEXT),
-                                  TestServiceBlockingStub.class);
+                GrpcClients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB_TEXT),
+                                      TestServiceBlockingStub.class);
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()

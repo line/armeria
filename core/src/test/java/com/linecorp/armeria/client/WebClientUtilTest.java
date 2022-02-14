@@ -16,44 +16,31 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.QueryParams;
 
 class WebClientUtilTest {
 
     @Test
-    void testFormingPathWithNullQueryParams() {
-        assertThatNullPointerException().isThrownBy(() -> WebClientUtil.addQueryParams("", null));
+    void appendNullQueryParamsToPath() {
+        assertThat(WebClientUtil.addQueryParams("foo", null)).isEqualTo("foo");
     }
 
-    @Test
-    @SuppressWarnings("checkstyle:RegexpMultiline")
-    void testFormingPathWithNonNullQueryParams() {
+    @CsvSource({
+            "/world/test, /world/test?q2=foo",
+            "/world/test?q1=foo, /world/test?q1=foo&q2=foo",
+    })
+    @ParameterizedTest
+    void appendNonNullQueryParamsToPath(String path, String expected) {
         final QueryParams queryParams1 = QueryParams.builder()
                                                     .add("q2", "foo")
                                                     .build();
-        final QueryParams queryParams2 = QueryParams.builder()
-                                                    .build();
-
-        final QueryParams[] queryParams = new QueryParams[] {
-                queryParams1, queryParams2,
-                queryParams1, queryParams2
-        };
-        final String[] paths = new String[] {
-                "/world/test", "/world/test",
-                "/world/test?q1=foo", "/world/test?q1=foo"
-        };
-        final String[] expectedPaths = new String[] {
-                "/world/test?q2=foo", "/world/test",
-                "/world/test?q1=foo&q2=foo", "/world/test?q1=foo"
-        };
-
-        for (int idx = 0; idx < queryParams.length; idx++) {
-            assertThat(WebClientUtil.addQueryParams(paths[idx], queryParams[idx]))
-                    .isEqualTo(expectedPaths[idx]);
-        }
+        final QueryParams queryParams2 = QueryParams.of();
+        assertThat(WebClientUtil.addQueryParams(path, queryParams1)).isEqualTo(expected);
+        assertThat(WebClientUtil.addQueryParams(path, queryParams2)).isEqualTo(path);
     }
 }

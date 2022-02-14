@@ -33,7 +33,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
@@ -74,8 +73,8 @@ class LazyDynamicEndpointGroupTest {
     void emptyEndpoint() {
         final EndpointGroup endpointGroup = new DynamicEndpointGroup();
         final TestServiceStub client =
-                Clients.builder(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.HTTP), endpointGroup)
-                       .build(TestServiceStub.class);
+                GrpcClients.builder(SessionProtocol.HTTP, endpointGroup)
+                           .build(TestServiceStub.class);
 
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
@@ -107,8 +106,8 @@ class LazyDynamicEndpointGroupTest {
         final LazyEndpointGroup endpointGroup = new LazyEndpointGroup();
         endpointGroup.setAll(ImmutableList.of());
         final TestServiceStub client =
-                Clients.builder(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.HTTP), endpointGroup)
-                       .build(TestServiceStub.class);
+                GrpcClients.builder(SessionProtocol.HTTP, endpointGroup)
+                           .build(TestServiceStub.class);
 
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
@@ -139,9 +138,10 @@ class LazyDynamicEndpointGroupTest {
     void lazyEndpoint() {
         final LazyEndpointGroup endpointGroup = new LazyEndpointGroup();
         final TestServiceStub client =
-                Clients.builder(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.HTTP), endpointGroup)
-                       .decorator(LoggingClient.newDecorator())
-                       .build(TestServiceStub.class);
+                GrpcClients.builder(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.HTTP),
+                                    endpointGroup)
+                           .decorator(LoggingClient.newDecorator())
+                           .build(TestServiceStub.class);
 
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
@@ -204,8 +204,8 @@ class LazyDynamicEndpointGroupTest {
         endpointGroup.add(Endpoint.of("foo"));
 
         final TestServiceStub client =
-                Clients.builder(Scheme.of(GrpcSerializationFormats.PROTO, SessionProtocol.HTTP), endpointGroup)
-                       .build(TestServiceStub.class);
+                GrpcClients.builder(SessionProtocol.HTTP, endpointGroup)
+                           .build(TestServiceStub.class);
 
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
