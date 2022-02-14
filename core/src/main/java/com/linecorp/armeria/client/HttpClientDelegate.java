@@ -23,6 +23,7 @@ import java.util.function.BiConsumer;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
@@ -70,7 +71,7 @@ final class HttpClientDelegate implements HttpClient {
             //
             // See `DefaultClientRequestContext.init()` for more information.
             final UnprocessedRequestException cause =
-                    UnprocessedRequestException.of(EmptyEndpointGroupException.get());
+                    UnprocessedRequestException.of(EmptyEndpointGroupException.get(ctx.endpointGroup()));
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }

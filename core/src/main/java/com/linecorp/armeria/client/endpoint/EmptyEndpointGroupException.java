@@ -15,8 +15,11 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An {@link EndpointGroupException} raised when the resolution of an {@link EndpointGroup} fails
@@ -32,12 +35,25 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
      * Returns an {@link EmptyEndpointGroupException} which may be a singleton or a new instance, depending on
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
-    public static EmptyEndpointGroupException get() {
+    public static EmptyEndpointGroupException get(@Nullable EndpointGroup endpointGroup) {
         return Flags.verboseExceptionSampler().isSampled(EmptyEndpointGroupException.class) ?
-               new EmptyEndpointGroupException() : INSTANCE;
+               new EmptyEndpointGroupException(endpointGroup) : INSTANCE;
     }
 
-    private EmptyEndpointGroupException() {}
+    @Nullable
+    private static String endpointGroupString(@Nullable EndpointGroup endpointGroup) {
+        if (endpointGroup == null) {
+            return null;
+        }
+        return MoreObjects.toStringHelper(endpointGroup).omitNullValues()
+                          .add("selectionStrategy", endpointGroup.selectionStrategy().getClass())
+                          .add("initialized", endpointGroup.whenReady().isDone())
+                          .add("numEndpoints", endpointGroup.endpoints().size()).toString();
+    }
+
+    private EmptyEndpointGroupException(@Nullable EndpointGroup endpointGroup) {
+        super(endpointGroupString(endpointGroup));
+    }
 
     private EmptyEndpointGroupException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
