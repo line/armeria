@@ -26,7 +26,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -237,5 +239,15 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     @Override
     public final void close() {
         closeable.close();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("selectionStrategy", selectionStrategy.getClass())
+                          .add("endpoints", endpoints.stream().limit(10).collect(Collectors.toList()))
+                          .add("numEndpoints", endpoints.size())
+                          .add("initialized", initialEndpointsFuture.isDone())
+                          .toString();
     }
 }

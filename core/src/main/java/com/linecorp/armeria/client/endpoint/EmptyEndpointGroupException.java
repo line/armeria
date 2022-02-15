@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -36,23 +34,18 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static EmptyEndpointGroupException get(@Nullable EndpointGroup endpointGroup) {
-        return Flags.verboseExceptionSampler().isSampled(EmptyEndpointGroupException.class) ?
-               new EmptyEndpointGroupException(endpointGroup) : INSTANCE;
-    }
-
-    @Nullable
-    private static String endpointGroupString(@Nullable EndpointGroup endpointGroup) {
-        if (endpointGroup == null) {
-            return null;
+        if (endpointGroup != null) {
+            return new EmptyEndpointGroupException(endpointGroup);
         }
-        return MoreObjects.toStringHelper(endpointGroup).omitNullValues()
-                          .add("selectionStrategy", endpointGroup.selectionStrategy().getClass())
-                          .add("initialized", endpointGroup.whenReady().isDone())
-                          .add("numEndpoints", endpointGroup.endpoints().size()).toString();
+        return Flags.verboseExceptionSampler().isSampled(EmptyEndpointGroupException.class) ?
+               new EmptyEndpointGroupException() : INSTANCE;
     }
 
-    private EmptyEndpointGroupException(@Nullable EndpointGroup endpointGroup) {
-        super(endpointGroupString(endpointGroup));
+    private EmptyEndpointGroupException() {
+    }
+
+    private EmptyEndpointGroupException(EndpointGroup endpointGroup) {
+        super("Unable to select endpoints from: " + endpointGroup);
     }
 
     private EmptyEndpointGroupException(@SuppressWarnings("unused") boolean dummy) {
