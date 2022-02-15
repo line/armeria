@@ -1066,7 +1066,7 @@ public final class ServerBuilder {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
         warnIfServiceHasMultipleRoutes(pathPrefix, service);
-        return service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        return route().addRoute(Route.builder().pathPrefix(pathPrefix).build()).build(service);
     }
 
     /**
@@ -1883,9 +1883,16 @@ public final class ServerBuilder {
 
     private static void warnIfServiceHasMultipleRoutes(String path, HttpService service) {
         if (service instanceof ServiceWithRoutes) {
+            if (!Flags.reportIgnoredMultipleRoutes()) {
+                return;
+            }
+
             if (((ServiceWithRoutes) service).routes().size() > 0) {
                 logger.warn("The service has self-defined routes but the routes will be ignored. " +
-                            "It will be served at the route you specified: path={}, service={}",
+                            "It will be served at the route you specified: path={}, service={}. " +
+                            "If this is an intended behavior (e.g. The path is a prefix and the service " +
+                            "still works under the prefix) you can disable this log message by specifying " +
+                            "the -Dcom.linecorp.armeria.reportIgnoredMultipleRoutes=false system property.",
                             path, service);
             }
         }

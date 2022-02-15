@@ -60,10 +60,13 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -415,8 +418,10 @@ public final class Flags {
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
-    private static final boolean REPORT_BLOCKED_EVENT_LOOP =
-            getBoolean("reportBlockedEventLoop", true);
+    private static final boolean REPORT_BLOCKED_EVENT_LOOP = getBoolean("reportBlockedEventLoop", true);
+
+    private static final boolean REPORT_IGNORED_MULTIPLE_ROUTES =
+            getBoolean("reportIgnoredMultipleRoutes", true);
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
@@ -1253,6 +1258,19 @@ public final class Flags {
      */
     public static boolean reportBlockedEventLoop() {
         return REPORT_BLOCKED_EVENT_LOOP;
+    }
+
+    /**
+     * Returns whether to log a warning if {@link ServiceWithRoutes} is set to {@link ServerBuilder} with
+     * an additional route (e.g. {@link ServerBuilder#service(String, HttpService)}).
+     * The {@link ServiceWithRoutes#routes()} are not registered to the {@link Router} so they are ignored.
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.reportIgnoredMultipleRoutes=false} JVM option
+     * to disable it.
+     */
+    public static boolean reportIgnoredMultipleRoutes() {
+        return REPORT_IGNORED_MULTIPLE_ROUTES;
     }
 
     /**
