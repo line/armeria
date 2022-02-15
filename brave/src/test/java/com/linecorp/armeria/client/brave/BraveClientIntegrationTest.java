@@ -92,6 +92,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     protected WebClient newClient(int port) {
         return WebClient.builder(sessionProtocol.uriText() + "://127.0.0.1:" + port)
                         .factory(clientFactoryWithoutUpgradeRequest)
+                        .contextCustomizer(TraceContextPropagation.inject(currentTraceContext::get))
                         .decorator(BraveClient.newDecorator(httpTracing))
                         .build();
     }
