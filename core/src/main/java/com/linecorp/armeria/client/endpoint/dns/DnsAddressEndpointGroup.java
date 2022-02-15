@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.endpoint.dns;
 import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
