@@ -92,7 +92,7 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private URI uri;
     @Nullable
-    private String path;
+    private String prefix;
     private Scheme scheme;
 
     GrpcClientBuilder(URI uri) {
@@ -162,14 +162,42 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      *           .path("/grpc")
      *           .build(MyGrpcServiceGrpc.XXXStub.class)
      * }</pre>
+     *
+     * @deprecated Use {@link #pathPrefix(String)} instead.
      */
-    public GrpcClientBuilder path(String path) {
-        requireNonNull(path, "path");
-        checkArgument(!path.isEmpty(), "path is empty.");
-        if (path.charAt(0) != '/') {
-            throw new IllegalArgumentException("Path must start with / character");
+    @Deprecated
+    public GrpcClientBuilder path(String prefix) {
+        return pathPrefix(prefix);
+    }
+
+    /**
+     * Sets the context path for the gRPC endpoint.
+     * This method will be useful if your gRPC service is bound to a context path.
+     * For example:
+     * <pre>{@code
+     * // A gRPC service is bound to "/grpc/com.example.MyGrpcService/"
+     * Server.builder()
+     *       .serviceUnder("/grpc", GrpcService.builder()
+     *                                         .addService(new MyGrpcService())
+     *                                         .build())
+     *       .build();
+     *
+     * // Prefix "/grpc" to the gRPC service path.
+     * GrpcClient.builder("https://api.example.com")
+     *           .pathPrefix("/grpc")
+     *           .build(MyGrpcServiceGrpc.XXXStub.class)
+     * }</pre>
+     */
+    public GrpcClientBuilder pathPrefix(String prefix) {
+        requireNonNull(prefix, "prefix");
+        checkArgument(!prefix.isEmpty(), "prefix is empty.");
+        if (prefix.charAt(0) != '/') {
+            throw new IllegalArgumentException("Prefix must start with / character");
         }
-        this.path = path;
+        if (!prefix.endsWith("/")) {
+            prefix += '/';
+        }
+        this.prefix = prefix;
         return this;
     }
 
@@ -362,14 +390,14 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         final ClientFactory factory = options.factory();
         URI uri = this.uri;
         if (uri != null) {
-            if (path != null) {
-                uri = uri.resolve(path);
+            if (prefix != null) {
+                uri = uri.resolve(prefix);
             }
             client = factory.newClient(ClientBuilderParams.of(uri, clientType, options));
         } else {
             assert endpointGroup != null;
             client = factory.newClient(ClientBuilderParams.of(scheme, endpointGroup,
-                                                              path, clientType, options));
+                                                              prefix, clientType, options));
         }
 
         @SuppressWarnings("unchecked")
