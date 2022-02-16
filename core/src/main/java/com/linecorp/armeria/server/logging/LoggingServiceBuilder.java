@@ -189,4 +189,9 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingServiceBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
+
+    @Override
+    public LoggingServiceBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        return (LoggingServiceBuilder) super.addExpectedException(clazz, logLevel);
+    }
 }

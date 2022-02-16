@@ -19,7 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.matches;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -45,6 +48,7 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.server.HttpStatusException;
 
 class LoggingClientTest {
     private static final HttpClient delegate = (ctx, req) -> {
@@ -52,6 +56,9 @@ class LoggingClientTest {
         ctx.logBuilder().endResponse();
         return HttpResponse.of(HttpStatus.NO_CONTENT);
     };
+
+    private static final String REQUEST_FORMAT = "{} Request: {}";
+    private static final String RESPONSE_FORMAT = "{} Response: {}";
 
     private final AtomicReference<Throwable> capturedCause = new AtomicReference<>();
 
@@ -206,5 +213,31 @@ class LoggingClientTest {
                             any(AnticipatedException.class));
         verifyNoMoreInteractions(logger);
         clearInvocations(logger);
+    }
+
+    @Test
+    void expectedExceptions() throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        final Exception exception = HttpStatusException.of(500, new IllegalStateException("status"));
+        ctx.logBuilder().endResponse(exception);
+        when(logger.isInfoEnabled()).thenReturn(true);
+
+        final LoggingClient loggingClient = LoggingClient.builder()
+                                                         .logger(logger)
+                                                         .addExpectedException(IllegalStateException.class,
+                                                                               LogLevel.INFO)
+                                                         .build(delegate);
+        loggingClient.execute(ctx, req);
+        verify(logger, never()).isWarnEnabled();
+        verify(logger).isInfoEnabled();
+        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
+                            matches(".*headers=\\[:method=POST, :path=/hello/trustin.*"));
+        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx),
+                            matches(".*cause=java\\.lang\\.IllegalStateException.*"),
+                            same(exception.getCause()));
     }
 }

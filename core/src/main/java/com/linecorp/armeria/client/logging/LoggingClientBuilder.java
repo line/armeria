@@ -176,4 +176,9 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
+
+    @Override
+    public LoggingClientBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        return (LoggingClientBuilder) super.addExpectedException(clazz, logLevel);
+    }
 }

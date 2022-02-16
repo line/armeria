@@ -17,6 +17,8 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -58,6 +60,7 @@ public abstract class LoggingDecoratorBuilder {
     private boolean isResponseLogLevelSet;
     private boolean isRequestLogLevelMapperSet;
     private boolean isResponseLogLevelMapperSet;
+    private boolean isExpectedExceptionsSet;
 
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -74,6 +77,7 @@ public abstract class LoggingDecoratorBuilder {
             responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
+    private final Map<Class<? extends Throwable>, LogLevel> expectedExceptions = new HashMap<>();
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -195,6 +199,9 @@ public abstract class LoggingDecoratorBuilder {
             throw new IllegalStateException(
                     "successfulResponseLogLevel or failedResponseLogLevel has been set already.");
         }
+        if (isExpectedExceptionsSet) {
+            throw new IllegalStateException("expectedExceptions has been added already.");
+        }
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         isResponseLogLevelMapperSet = true;
         return this;
@@ -204,7 +211,32 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging response logs.
      */
     protected final Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
+        if (isExpectedExceptionsSet) {
+            return log -> {
+                final Throwable t = log.responseCause();
+                if (t == null) {
+                    return successfulResponseLogLevel();
+                }
+                final Class<? extends Throwable> clazz = t.getClass();
+                if (expectedExceptions.containsKey(clazz)) {
+                    return expectedExceptions.get(clazz);
+                }
+                return failedResponseLogLevel();
+            };
+        }
         return responseLogLevelMapper;
+    }
+
+    /**
+     * Adds an expected exception and the {@link LogLevel} which will be used when the exception occurred.
+     */
+    public LoggingDecoratorBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        if (isResponseLogLevelMapperSet) {
+            throw new IllegalStateException("responseLogLevelMapper has been set already.");
+        }
+        expectedExceptions.put(clazz, logLevel);
+        isExpectedExceptionsSet = true;
+        return this;
     }
 
     /**
