@@ -50,8 +50,7 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
                new EmptyEndpointGroupException() : INSTANCE;
     }
 
-    private EmptyEndpointGroupException() {
-    }
+    private EmptyEndpointGroupException() {}
 
     private EmptyEndpointGroupException(EndpointGroup endpointGroup) {
         super("Unable to select endpoints from: " + endpointGroup);
