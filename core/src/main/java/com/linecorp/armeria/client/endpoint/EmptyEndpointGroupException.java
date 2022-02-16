@@ -31,12 +31,21 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
 
     /**
      * Returns an {@link EmptyEndpointGroupException} which may be a singleton or a new instance, depending on
-     * {@link Flags#verboseExceptionSampler()}'s decision.
+     * {@link Flags#verboseExceptionSampler()}'s decision. If {@code endpointGroup} is non-null, a new
+     * instance is always returned.
      */
     public static EmptyEndpointGroupException get(@Nullable EndpointGroup endpointGroup) {
         if (endpointGroup != null) {
             return new EmptyEndpointGroupException(endpointGroup);
         }
+        return get();
+    }
+
+    /**
+     * Returns an {@link EmptyEndpointGroupException} which may be a singleton or a new instance, depending on
+     * {@link Flags#verboseExceptionSampler()}'s decision.
+     */
+    public static EmptyEndpointGroupException get() {
         return Flags.verboseExceptionSampler().isSampled(EmptyEndpointGroupException.class) ?
                new EmptyEndpointGroupException() : INSTANCE;
     }
