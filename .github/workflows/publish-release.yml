@@ -39,7 +39,6 @@ jobs:
       - name: Publish and close repository
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 publish closeAndReleaseStagingRepository
-          -PbuildJdkVersion=17
         env:
           # Should not use '-P' option with 'secrets' that can cause unexpected results
           # if secret values contains white spaces or new lines.
