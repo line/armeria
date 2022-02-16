@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation project(':core')
-    implementation project(':thrift0.15')
+    implementation project(':thrift0.16')
     runtimeOnly 'org.slf4j:slf4j-simple'
 
     testImplementation project(':junit5')

@@ -2,7 +2,7 @@ dependencies {
     api 'io.zipkin.brave:brave'
     api 'io.zipkin.brave:brave-instrumentation-http'
 
-    testImplementation project(':thrift0.15')
+    testImplementation project(':thrift0.16')
     testImplementation 'io.zipkin.brave:brave-context-slf4j'
     testImplementation 'io.zipkin.brave:brave-instrumentation-http-tests'
 }
