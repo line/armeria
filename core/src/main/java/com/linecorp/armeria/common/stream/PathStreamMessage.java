@@ -83,11 +83,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         this.alloc = requireNonNull(alloc, "alloc");
         this.blockingTaskExecutor = blockingTaskExecutor;
         this.start = start;
-        if (end == -1) {
-            this.end = Long.MAX_VALUE;
-        } else {
-            this.end = end;
-        }
+        this.end = end;
         this.bufferSize = Math.min(Ints.saturatedCast(this.end - start), bufferSize);
     }
 

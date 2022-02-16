@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.file.Path;
@@ -123,12 +124,12 @@ class PathStreamMessageTest {
     }
 
     @CsvSource({
-            "0, -1, A1234567890\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 100",
-            "0, -1, A1234567890\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 3",
+            "0, 1000, A1234567890\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 100",
+            "0, 1000, A1234567890\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 3",
             "0, 10, A123456789, 100",
             "0, 10, A123456789, 2",
-            "10, -1, 0\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 50",
-            "10, -1, 0\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 1",
+            "10, 1000, 0\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 50",
+            "10, 1000, 0\\nB1234567890\\nC1234567890\\nD1234567890\\nE1234567890\\n, 1",
             "10, 20, 0\\nB1234567, 2",
             "10, 20, 0\\nB1234567, 1"
     })
@@ -169,6 +170,27 @@ class PathStreamMessageTest {
 
         await().untilTrue(completed);
         assertThat(stringBuilder.toString()).isEqualTo(expected);
+    }
+
+    @Test
+    void zeroRange() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final StreamMessage<HttpData> publisher = StreamMessage.of(path, 10, 10);
+        assertThat(publisher.isEmpty()).isTrue();
+        assertThat(publisher.collect().join()).isEmpty();
+    }
+
+    @Test
+    void negativeRange() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+
+        assertThatThrownBy(() -> StreamMessage.of(path, 10, 9))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("(expected: >= start)");
+
+        assertThatThrownBy(() -> StreamMessage.of(path, 0, -1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("(expected: >= start)");
     }
 
     @Test
