@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -275,14 +274,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public String toString() {
-        final List<Endpoint> endpoints = endpoints().stream().limit(10).collect(Collectors.toList());
-        final List<Endpoint> candidates = delegate.endpoints().stream().limit(10)
-                                                  .collect(Collectors.toList());
+        final List<Endpoint> endpoints = endpoints();
+        final List<Endpoint> delegateEndpoints = delegate.endpoints();
         return MoreObjects.toStringHelper(this)
-                          .add("endpoints", endpoints)
-                          .add("numEndpoints", endpoints().size())
-                          .add("candidates", candidates)
-                          .add("numCandidates", delegate.endpoints().size())
+                          .add("endpoints", truncatedEndpoints(endpoints))
+                          .add("numEndpoints", endpoints.size())
+                          .add("candidates", truncatedEndpoints(delegateEndpoints))
+                          .add("numCandidates", delegateEndpoints.size())
                           .add("selectionStrategy", selectionStrategy().getClass())
                           .add("initialized", whenReady().isDone())
                           .toString();

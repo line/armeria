@@ -26,7 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -245,9 +244,27 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("selectionStrategy", selectionStrategy.getClass())
-                          .add("endpoints", endpoints.stream().limit(10).collect(Collectors.toList()))
+                          .add("endpoints", truncatedEndpoints(endpoints))
                           .add("numEndpoints", endpoints.size())
                           .add("initialized", initialEndpointsFuture.isDone())
                           .toString();
+    }
+
+    /**
+     * Returns a truncated list of at most 10 endpoints.
+     */
+    protected static List<Endpoint> truncatedEndpoints(List<Endpoint> endpoints) {
+        return truncatedEndpoints(endpoints, 10);
+    }
+
+    /**
+     * Returns a truncated list of at most {@code maxEndpoints} endpoints.
+     * A new copy of the list isn't created if the size of endpoints is less than {@code maxEndpoints}.
+     */
+    private static List<Endpoint> truncatedEndpoints(List<Endpoint> endpoints, int maxEndpoints) {
+        if (endpoints.size() <= maxEndpoints) {
+            return endpoints;
+        }
+        return endpoints.stream().limit(maxEndpoints).collect(toImmutableList());
     }
 }
