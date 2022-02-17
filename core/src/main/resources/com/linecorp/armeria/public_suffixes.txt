@@ -4963,6 +4963,7 @@ mil.by
 mil.cl
 mil.cn
 mil.co
+mil.cy
 mil.do
 mil.ec
 mil.eg
@@ -5400,7 +5401,6 @@ nalchik.su
 namdalseid.no
 name
 name.az
-name.cy
 name.eg
 name.et
 name.fj
@@ -6333,7 +6333,6 @@ paragliding.aero
 paris
 paris.eu.org
 paris.museum
-parliament.cy
 parliament.nz
 parma.it
 paroch.k12.ma.us
