@@ -26,6 +26,17 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 abstract class AbstractPathMapping implements PathMapping {
 
+    @Override
+    public PathMapping withPrefix(String prefix) {
+        prefix = ensureAbsolutePath(prefix, "prefix");
+        if ("/".equals(prefix)) {
+            return this;
+        }
+        return doWithPrefix(prefix.charAt(prefix.length() - 1) == '/' ? prefix : prefix + '/');
+    }
+
+    abstract PathMapping doWithPrefix(String prefix);
+
     /**
      * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
      * {@link #doApply(RoutingContext)}.

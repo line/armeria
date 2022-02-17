@@ -58,6 +58,11 @@ final class RegexPathMapping extends AbstractPathMapping {
         return builder.build();
     }
 
+    @Override
+    public PathMapping doWithPrefix(String prefix) {
+        return new RegexPathMappingWithPrefix(prefix, this);
+    }
+
     @Nullable
     @Override
     protected RoutingResultBuilder doApply(RoutingContext routingCtx) {

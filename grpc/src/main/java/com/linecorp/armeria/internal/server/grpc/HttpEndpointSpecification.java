@@ -64,6 +64,18 @@ public final class HttpEndpointSpecification {
     }
 
     /**
+     * Returns a new {@link HttpEndpointSpecification} with the specified {@link Route}.
+     */
+    HttpEndpointSpecification withRoute(Route route) {
+        requireNonNull(route, "route");
+        if (route == this.route) {
+            return this;
+        }
+        return new HttpEndpointSpecification(order, route, pathVariables, serviceDescriptor,
+                                             methodDescriptor, parameters, httpRule);
+    }
+
+    /**
      * Returns the order of this HTTP API.
      */
     public int order() {

@@ -62,5 +62,18 @@ public final class RouteUtil {
         return path;
     }
 
+    /**
+     * Returns the innermost {@link Route} of the specified {@link Route} if it's created
+     * via {@link Route#withPrefix(String)}. If it's isn't it returns the specified {@link Route}.
+     */
+    public static Route innermostRoute(Route route) {
+        requireNonNull(route, "route");
+        Route wrapped;
+        while ((wrapped = route.unwrap()) != route) {
+            route = wrapped;
+        }
+        return wrapped;
+    }
+
     private RouteUtil() {}
 }

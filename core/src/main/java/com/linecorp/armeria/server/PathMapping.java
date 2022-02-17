@@ -26,6 +26,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 interface PathMapping {
 
     /**
+     * Returns a newly-created {@link PathMapping} which adds the specified {@code prefix}
+     * to this {@link PathMapping}.
+     */
+    PathMapping withPrefix(String prefix);
+
+    /**
      * Matches the specified {@code path} and extracts the path parameters from it.
      *
      * @param routingCtx a context to find the {@link HttpService}.

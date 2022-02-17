@@ -1070,6 +1070,62 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
+     * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
+     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     */
+    public ServerBuilder serviceUnder(String pathPrefix, HttpServiceWithRoutes serviceWithRoutes) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
+        serviceWithRoutes.routes()
+                         .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
+                                                  .build(serviceWithRoutes));
+        return this;
+    }
+
+    /**
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
+     * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
+     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     *
+     * @param pathPrefix the prefix which is prepended to each {@link Route}
+     *                   from {@link HttpServiceWithRoutes#routes()}
+     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
+     */
+    public ServerBuilder serviceUnder(
+            String pathPrefix, HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
+        requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
+        requireNonNull(decorators, "decorators");
+
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes()
+                         .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
+                                                  .build(decorated));
+        return this;
+    }
+
+    /**
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
+     * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
+     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     *
+     * @param pathPrefix the prefix which is prepended to each {@link Route}
+     *                   from {@link HttpServiceWithRoutes#routes()}
+     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
+     */
+    @SafeVarargs
+    public final ServerBuilder serviceUnder(
+            String pathPrefix, HttpServiceWithRoutes serviceWithRoutes,
+            Function<? super HttpService, ? extends HttpService>... decorators) {
+        return serviceUnder(pathPrefix, serviceWithRoutes,
+                            ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+    }
+
+    /**
      * Binds the specified {@link HttpService} at the specified path pattern of the default {@link VirtualHost}.
      * e.g.
      * <ul>
@@ -1116,15 +1172,8 @@ public final class ServerBuilder {
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        HttpService decorated = serviceWithRoutes;
-        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
-            checkNotNull(d, "decorators contains null: %s", decorators);
-            decorated = d.apply(decorated);
-            checkNotNull(decorated, "A decorator returned null: %s", d);
-        }
-
-        final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(finalDecorated));
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(decorated));
         return this;
     }
 
@@ -1140,6 +1189,18 @@ public final class ServerBuilder {
             HttpServiceWithRoutes serviceWithRoutes,
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+    }
+
+    static HttpService decorate(
+            HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        HttpService decorated = serviceWithRoutes;
+        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
+            checkNotNull(d, "decorators contains null: %s", decorators);
+            decorated = d.apply(decorated);
+            checkNotNull(decorated, "A decorator returned null: %s", d);
+        }
+        return decorated;
     }
 
     /**
@@ -1883,16 +1944,15 @@ public final class ServerBuilder {
 
     private static void warnIfServiceHasMultipleRoutes(String path, HttpService service) {
         if (service instanceof ServiceWithRoutes) {
-            if (!Flags.reportIgnoredMultipleRoutes()) {
+            if (!Flags.reportMaskedRoutes()) {
                 return;
             }
 
             if (((ServiceWithRoutes) service).routes().size() > 0) {
                 logger.warn("The service has self-defined routes but the routes will be ignored. " +
                             "It will be served at the route you specified: path={}, service={}. " +
-                            "If this is an intended behavior (e.g. The path is a prefix and the service " +
-                            "still works under the prefix) you can disable this log message by specifying " +
-                            "the -Dcom.linecorp.armeria.reportIgnoredMultipleRoutes=false system property.",
+                            "If this is intended behavior, you can disable this log message by passing " +
+                            "the -Dcom.linecorp.armeria.reportMaskedRoutes=false system property.",
                             path, service);
             }
         }

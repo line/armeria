@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.PREFIX;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 
@@ -47,6 +48,11 @@ final class PrefixPathMapping extends AbstractPathMapping {
         paths = ImmutableList.of(prefix, triePath);
         pathPattern = triePath;
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
+    }
+
+    @Override
+    public PathMapping doWithPrefix(String prefix) {
+        return new PrefixPathMapping(concatPaths(prefix, this.prefix), stripPrefix);
     }
 
     @Nullable

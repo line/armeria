@@ -72,25 +72,6 @@ class FramedGrpcServiceTest {
     }
 
     @Test
-    void pathMissingSlash() throws Exception {
-        final HttpRequest req = HttpRequest.of(
-                RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
-                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
-        final RoutingResult routingResult = RoutingResult.builder()
-                                                         .path("grpc.testing.TestService.UnaryCall")
-                                                         .build();
-        final ServiceRequestContext ctx = ServiceRequestContext.builder(req)
-                                                               .routingResult(routingResult)
-                                                               .build();
-        final HttpResponse response = grpcService.doPost(ctx, req);
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
-                ResponseHeaders.of(HttpStatus.BAD_REQUEST,
-                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                   HttpHeaderNames.CONTENT_LENGTH, 13),
-                HttpData.ofUtf8("Invalid path.")));
-    }
-
-    @Test
     void missingMethod() throws Exception {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall",
@@ -109,7 +90,7 @@ class FramedGrpcServiceTest {
                                .add(GrpcHeaderNames.GRPC_ENCODING, "identity")
                                .add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip")
                                .addInt("grpc-status", 12)
-                               .add("grpc-message", "Method not found: grpc.testing.TestService/FooCall")
+                               .add("grpc-message", "Method not found: /grpc.testing.TestService/FooCall")
                                .addInt(HttpHeaderNames.CONTENT_LENGTH, 0)
                                .build(),
                 HttpData.empty()));

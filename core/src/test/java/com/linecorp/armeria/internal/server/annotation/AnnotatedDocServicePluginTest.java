@@ -189,7 +189,7 @@ class AnnotatedDocServicePluginTest {
         route = withMethodAndTypes(Route.builder().path("/service/{value}/test/:value2/something"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
-                EndpointInfo.builder("*", "/service/{value}/test/{value2}/something")
+                EndpointInfo.builder("*", "/service/:value/test/:value2/something")
                             .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                             .build());
 

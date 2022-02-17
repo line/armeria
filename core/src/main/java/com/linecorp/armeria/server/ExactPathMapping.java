@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 
 import java.util.List;
@@ -34,6 +35,11 @@ final class ExactPathMapping extends AbstractPathMapping {
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         paths = ImmutableList.of(exactPath, exactPath);
+    }
+
+    @Override
+    public PathMapping doWithPrefix(String prefix) {
+        return new ExactPathMapping(concatPaths(prefix, exactPath));
     }
 
     @Nullable

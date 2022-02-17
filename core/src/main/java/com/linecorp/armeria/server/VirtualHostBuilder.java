@@ -17,9 +17,9 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.ServerBuilder.decorate;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
@@ -443,6 +443,58 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
+     * The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
+     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     */
+    public VirtualHostBuilder serviceUnder(String pathPrefix, HttpServiceWithRoutes serviceWithRoutes) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
+        serviceWithRoutes.routes().forEach(route -> service(route.withPrefix(pathPrefix), serviceWithRoutes));
+        return this;
+    }
+
+    /**
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
+     * The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
+     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     *
+     * @param pathPrefix the prefix which is prepended to each {@link Route}
+     *                   from {@link HttpServiceWithRoutes#routes()}
+     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
+     */
+    public VirtualHostBuilder serviceUnder(
+            String pathPrefix, HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
+        requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
+        requireNonNull(decorators, "decorators");
+
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> service(route.withPrefix(pathPrefix), decorated));
+        return this;
+    }
+
+    /**
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
+     * The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
+     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     *
+     * @param pathPrefix the prefix which is prepended to each {@link Route}
+     *                   from {@link HttpServiceWithRoutes#routes()}
+     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
+     */
+    @SafeVarargs
+    public final VirtualHostBuilder serviceUnder(
+            String pathPrefix, HttpServiceWithRoutes serviceWithRoutes,
+            Function<? super HttpService, ? extends HttpService>... decorators) {
+        return serviceUnder(pathPrefix, serviceWithRoutes,
+                            ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+    }
+
+    /**
      * Binds the specified {@link HttpService} at the specified path pattern. e.g.
      * <ul>
      *   <li>{@code /login} (no path parameters)</li>
@@ -469,8 +521,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
@@ -482,21 +533,13 @@ public final class VirtualHostBuilder {
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        HttpService decorated = serviceWithRoutes;
-        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
-            checkNotNull(d, "decorators contains null: %s", decorators);
-            decorated = d.apply(decorated);
-            checkNotNull(decorated, "A decorator returned null: %s", d);
-        }
-
-        final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> service(route, decorated));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.

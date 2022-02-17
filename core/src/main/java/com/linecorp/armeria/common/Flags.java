@@ -61,7 +61,6 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
@@ -420,8 +419,7 @@ public final class Flags {
 
     private static final boolean REPORT_BLOCKED_EVENT_LOOP = getBoolean("reportBlockedEventLoop", true);
 
-    private static final boolean REPORT_IGNORED_MULTIPLE_ROUTES =
-            getBoolean("reportIgnoredMultipleRoutes", true);
+    private static final boolean REPORT_MASKED_ROUTES = getBoolean("reportMaskedRoutes", true);
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
@@ -1261,16 +1259,28 @@ public final class Flags {
     }
 
     /**
-     * Returns whether to log a warning if {@link ServiceWithRoutes} is set to {@link ServerBuilder} with
-     * an additional route (e.g. {@link ServerBuilder#service(String, HttpService)}).
-     * The {@link ServiceWithRoutes#routes()} are not registered to the {@link Router} so they are ignored.
-     *
-     * <p>This flag is enabled by default.
-     * Specify the {@code -Dcom.linecorp.armeria.reportIgnoredMultipleRoutes=false} JVM option
-     * to disable it.
+     * Returns whether to log a warning if a {@link ServiceWithRoutes} is added to a {@link ServerBuilder}
+     * using the methods that requires a path pattern, such as
+     * {@link ServerBuilder#service(String, HttpService)}. For example, the following code will mask the
+     * returned route ({@code "/foo"}) in favor of the specified route ({@code "/bar"}):
+     * <pre>{@code
+     * > HttpServiceWithRoute serviceWithRoute = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/foo").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .service("/bar", serviceWithRoute)
+     * >       .build();
+     * }</pre>
      */
-    public static boolean reportIgnoredMultipleRoutes() {
-        return REPORT_IGNORED_MULTIPLE_ROUTES;
+    public static boolean reportMaskedRoutes() {
+        return REPORT_MASKED_ROUTES;
     }
 
     /**

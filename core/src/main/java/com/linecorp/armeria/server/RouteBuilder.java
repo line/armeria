@@ -134,14 +134,17 @@ public final class RouteBuilder {
 
         if (pathPattern.startsWith(GLOB)) {
             final String glob = pathPattern.substring(GLOB.length());
-            if (glob.startsWith("/")) {
-                return glob(concatPaths(prefix, glob));
-            } else {
-                return glob(concatPaths(prefix + "**/", glob), 1);
-            }
+            return pathMapping(globPathMapping(prefix, glob, 0));
         }
 
         return pathMapping(new RegexPathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
+    }
+
+    static PathMapping globPathMapping(String prefix, String glob, int numGroupsToSkip) {
+        if (glob.startsWith("/")) {
+            return globPathMapping(concatPaths(prefix, glob), numGroupsToSkip);
+        }
+        return globPathMapping(concatPaths(prefix + "**/", glob), numGroupsToSkip + 1);
     }
 
     private static PathMapping globPathMapping(String glob, int numGroupsToSkip) {
@@ -472,7 +475,7 @@ public final class RouteBuilder {
         }
         final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
         return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
-                                paramPredicates, headerPredicates, isFallback, excludedRoutes);
+                                paramPredicates, headerPredicates, isFallback, excludedRoutes, null);
     }
 
     @Override
@@ -543,7 +546,7 @@ public final class RouteBuilder {
         return new ParameterizedPathMapping(pathPattern);
     }
 
-    private static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
+    static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
         if ("/".equals(prefix)) {
             // Every path starts with '/'.
             return CatchAllPathMapping.INSTANCE;

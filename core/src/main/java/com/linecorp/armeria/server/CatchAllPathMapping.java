@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.RouteBuilder.prefixPathMapping;
+
 import java.util.List;
 import java.util.Set;
 
@@ -29,6 +31,11 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     private static final List<String> paths = ImmutableList.of("/", "/*");
 
     private CatchAllPathMapping() {}
+
+    @Override
+    public PathMapping doWithPrefix(String prefix) {
+        return prefixPathMapping(prefix, true);
+    }
 
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {

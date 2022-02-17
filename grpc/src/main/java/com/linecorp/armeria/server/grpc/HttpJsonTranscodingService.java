@@ -21,10 +21,12 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.internal.server.RouteUtil.innermostRoute;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -126,7 +128,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         requireNonNull(delegate, "delegate");
         requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
 
-        final ImmutableMap.Builder<Route, TranscodingSpec> builder = ImmutableMap.builder();
+        final Map<Route, TranscodingSpec> specs = new HashMap<>();
 
         final List<ServerServiceDefinition> serviceDefinitions = delegate.services();
         for (ServerServiceDefinition serviceDefinition : serviceDefinitions) {
@@ -164,30 +166,32 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final Map<String, Field> fields =
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of());
 
+                if (specs.containsKey(route)) {
+                    continue;
+                }
                 int order = 0;
-                builder.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
-                                                       serviceDesc, methodDesc, fields, pathVariables));
+                specs.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
+                                                     serviceDesc, methodDesc, fields, pathVariables));
 
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
                     @Nullable
                     final Entry<Route, List<PathVariable>> additionalRouteAndVariables
                             = toRouteAndPathVariables(additionalHttpRule);
                     if (additionalRouteAndVariables != null) {
-                        builder.put(additionalRouteAndVariables.getKey(),
-                                    new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
-                                                        serviceDesc, methodDesc, fields,
-                                                        additionalRouteAndVariables.getValue()));
+                        specs.put(additionalRouteAndVariables.getKey(),
+                                  new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
+                                                      serviceDesc, methodDesc, fields,
+                                                      additionalRouteAndVariables.getValue()));
                     }
                 }
             }
         }
 
-        final Map<Route, TranscodingSpec> routeAndSpecs = builder.build();
-        if (routeAndSpecs.isEmpty()) {
+        if (specs.isEmpty()) {
             // We don't need to create a new HttpJsonTranscodingService instance in this case.
             return delegate;
         }
-        return new HttpJsonTranscodingService(delegate, routeAndSpecs, unframedGrpcErrorHandler);
+        return new HttpJsonTranscodingService(delegate, ImmutableMap.copyOf(specs), unframedGrpcErrorHandler);
     }
 
     @Nullable
@@ -466,7 +470,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Route mappedRoute = ctx.config().route();
-        final TranscodingSpec spec = routeAndSpecs.get(mappedRoute);
+        final TranscodingSpec spec = routeAndSpecs.get(innermostRoute(mappedRoute));
         if (spec != null) {
             return serve0(ctx, req, spec);
         }

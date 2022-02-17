@@ -172,6 +172,12 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     static EndpointInfo endpointInfo(Route route, String hostnamePattern) {
+        final EndpointInfoBuilder builder = endpointInfoBuilder(route, hostnamePattern);
+        builder.availableMimeTypes(availableMimeTypes(route));
+        return builder.build();
+    }
+
+    public static EndpointInfoBuilder endpointInfoBuilder(Route route, String hostnamePattern) {
         final EndpointInfoBuilder builder;
         final RoutePathType pathType = route.pathType();
         final List<String> paths = route.paths();
@@ -183,7 +189,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 builder = EndpointInfo.builder(hostnamePattern, RouteUtil.PREFIX + paths.get(0));
                 break;
             case PARAMETERIZED:
-                builder = EndpointInfo.builder(hostnamePattern, normalizeParameterized(route));
+                builder = EndpointInfo.builder(hostnamePattern, route.patternString());
                 break;
             case REGEX:
                 builder = EndpointInfo.builder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
@@ -196,29 +202,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 // Should never reach here.
                 throw new Error();
         }
-
-        builder.availableMimeTypes(availableMimeTypes(route));
-        return builder.build();
-    }
-
-    private static String normalizeParameterized(Route route) {
-        final String path = route.paths().get(0);
-        int beginIndex = 0;
-
-        final StringBuilder sb = new StringBuilder();
-        for (String paramName : route.paramNames()) {
-            final int colonIndex = path.indexOf(':', beginIndex);
-            assert colonIndex != -1;
-            sb.append(path, beginIndex, colonIndex);
-            sb.append('{');
-            sb.append(paramName);
-            sb.append('}');
-            beginIndex = colonIndex + 1;
-        }
-        if (beginIndex < path.length()) {
-            sb.append(path, beginIndex, path.length());
-        }
-        return sb.toString();
+        return builder;
     }
 
     private static Set<MediaType> availableMimeTypes(Route route) {

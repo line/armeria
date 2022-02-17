@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -213,6 +214,11 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      */
     String skeleton() {
         return skeleton;
+    }
+
+    @Override
+    public PathMapping doWithPrefix(String prefix) {
+        return new ParameterizedPathMapping(concatPaths(prefix, pathPattern));
     }
 
     @Override
