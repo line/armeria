@@ -133,13 +133,19 @@ public final class PathAndQuery {
      */
     @Nullable
     public static PathAndQuery parse(@Nullable String rawPath) {
+        return parse(rawPath, Flags.allowDoubleDotsInQueryString());
+    }
+
+    @VisibleForTesting
+    @Nullable
+    static PathAndQuery parse(@Nullable String rawPath, boolean allowDoubleDotsInQueryParamValue) {
         if (CACHE != null && rawPath != null) {
             final PathAndQuery parsed = CACHE.getIfPresent(rawPath);
             if (parsed != null) {
                 return parsed;
             }
         }
-        return splitPathAndQuery(rawPath);
+        return splitPathAndQuery(rawPath, allowDoubleDotsInQueryParamValue);
     }
 
     /**
@@ -202,7 +208,8 @@ public final class PathAndQuery {
     }
 
     @Nullable
-    private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery) {
+    private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery,
+                                                  boolean allowDoubleDotsInQueryParamValue) {
         final Bytes path;
         final Bytes query;
 
@@ -235,7 +242,10 @@ public final class PathAndQuery {
         }
 
         // Reject the prohibited patterns.
-        if (pathContainsDoubleDots(path) || queryContainsDoubleDots(query)) {
+        if (pathContainsDoubleDots(path)) {
+            return null;
+        }
+        if (!allowDoubleDotsInQueryParamValue && queryContainsDoubleDots(query)) {
             return null;
         }
 

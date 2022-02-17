@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,7 @@ class PathAndQueryTest {
 
             // Slashes escaped
             "%2f..", "..%2F", "/..%2F", "%2F../", "%2f..%2f",
-            "/foo%2f..", "/foo%2f../", "/foo/..%2f","/foo%2F..%2F",
+            "/foo%2f..", "/foo%2f../", "/foo/..%2f", "/foo%2F..%2F",
 
             // Dots and slashes escaped
             ".%2E%2F"
@@ -63,6 +64,8 @@ class PathAndQueryTest {
             "..a/", "a../", "a..b/",
             "/..a/", "/a../", "/a..b/"
     );
+
+    private static volatile boolean allowDoubleDotsInQueryString;
 
     @Test
     void empty() {
@@ -110,7 +113,7 @@ class PathAndQueryTest {
     }
 
     @Test
-    void doubleDotsInNameValueQuery() {
+    void prohibitDoubleDotsInNameValueQuery() {
         // Dots in a query param name.
         BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
             assertProhibited("/?" + pattern + "=foo");
@@ -161,6 +164,84 @@ class PathAndQueryTest {
             });
         });
     }
+
+    private static String normalizedQuery(String string) {
+        return string.replaceAll("%2[eE]", ".")
+                     .replaceAll("%2f", "%2F");
+    }
+
+    @Test
+    void allowDoubleDotsInNameValueQuery() throws UnsupportedEncodingException {
+        allowDoubleDotsInQueryString = true;
+        try {
+            BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                assertQueryStringAllowed("/?" + pattern, normalizedQuery(pattern));
+            });
+
+            GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                assertQueryStringAllowed("/?" + pattern, pattern);
+            });
+
+            // Dots in a query param name.
+            BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                final String query = pattern + "=foo";
+                assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+            });
+            GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                assertQueryStringAllowed("/?" + pattern + "=foo");
+            });
+
+            // Dots in a query param value.
+            BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                final String query = "foo=" + pattern;
+                assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+            });
+            GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                assertQueryStringAllowed("/?foo=" + pattern);
+            });
+
+            QUERY_SEPARATORS.forEach(qs -> {
+                // Dots in the second query param name.
+                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    final String query = "a=b" + qs + pattern + "=c";
+                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+                });
+                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    assertQueryStringAllowed("/?a=b" + qs + pattern + "=c");
+                });
+
+                // Dots in the second query param value.
+                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    final String query = "a=b" + qs + "c=" + pattern;
+                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+                });
+                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    assertQueryStringAllowed("/?a=b" + qs + "c=" + pattern);
+                });
+
+                // Dots in the name of the query param in the middle.
+                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    final String query = "a=b" + qs + pattern + "=c" + qs + "d=e";
+                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+                });
+                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    assertQueryStringAllowed("/?a=b" + qs + pattern + "=c" + qs + "d=e");
+                });
+
+                // Dots in the value of the query param in the middle.
+                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    final String query = "a=b" + qs + "c=" + pattern + qs + "d=e";
+                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+                });
+                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                    assertQueryStringAllowed("/?a=b" + qs + "c=" + pattern + qs + "d=e");
+                });
+            });
+        } finally {
+            allowDoubleDotsInQueryString = false;
+        }
+    }
+
 
     /**
      * {@link PathAndQuery} treats the first `=` in a query parameter as `/` internally to simplify
@@ -454,7 +535,7 @@ class PathAndQueryTest {
 
     @Nullable
     private static PathAndQuery parse(@Nullable String rawPath) {
-        final PathAndQuery res = PathAndQuery.parse(rawPath);
+        final PathAndQuery res = PathAndQuery.parse(rawPath, allowDoubleDotsInQueryString);
         if (res != null) {
             logger.info("parse({}) => path: {}, query: {}", rawPath, res.path(), res.query());
         } else {
