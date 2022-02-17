@@ -96,7 +96,7 @@ class GrpcClientBuilderTest {
                        .pathPrefix("bar")
                        .build(TestServiceBlockingStub.class);
         }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Prefix must start with / character");
+          .hasMessageContaining("prefix: bar (must start with '/')");
     }
 
     @Test
