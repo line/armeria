@@ -70,6 +70,7 @@ import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.file.HttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpVfs;
+import com.linecorp.armeria.server.file.MediaTypeResolver;
 
 /**
  * An {@link HttpService} that provides information about the {@link Service}s running in a
@@ -390,11 +391,20 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         private final Map<String, AggregatedHttpFile> files = new ConcurrentHashMap<>();
 
+        @Deprecated
         @Override
         public HttpFile get(
                 Executor fileReadExecutor, String path, Clock clock,
                 @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+            return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
+                       MediaTypeResolver.ofDefault());
+        }
 
+        @Override
+        public HttpFile get(
+                Executor fileReadExecutor, String path, Clock clock,
+                @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+                MediaTypeResolver mediaTypeResolver) {
             final AggregatedHttpFile file = files.get(path);
             if (file != null) {
                 assert file != AggregatedHttpFile.nonExistent();
@@ -414,7 +424,8 @@ public final class DocService extends SimpleDecoratingHttpService {
             final HttpHeadersBuilder headers = additionalHeaders.toBuilder();
             headers.set(HttpHeaderNames.CACHE_CONTROL, ServerCacheControl.REVALIDATED.asHeaderValue());
 
-            return staticFiles.get(fileReadExecutor, path, clock, contentEncoding, headers.build());
+            return staticFiles.get(fileReadExecutor, path, clock, contentEncoding,
+                                   headers.build(), MediaTypeResolver.ofDefault());
         }
 
         @Override

@@ -39,6 +39,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -166,8 +167,8 @@ class AuthServiceTest {
             sb.service(
                     "/authorizer_exception",
                     ok.decorate(AuthService.builder().add((ctx, data) -> {
-                        throw new AnticipatedException("bug!");
-                    }).newDecorator())
+                          throw new AnticipatedException("bug!");
+                      }).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Authorizer returns a future that resolves to null.
@@ -224,10 +225,11 @@ class AuthServiceTest {
 
     @Test
     void testBasicAuth() throws Exception {
-        final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .auth(AuthToken.ofBasic("brown", "cony"))
-                                             .build();
-        assertThat(webClient.get("/basic").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        final BlockingWebClient webClient = WebClient.builder(server.httpUri())
+                                                     .auth(AuthToken.ofBasic("brown", "cony"))
+                                                     .build()
+                                                     .blocking();
+        assertThat(webClient.get("/basic").status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
                     basicGetRequest("/basic", AuthToken.ofBasic("pangyo", "choco"),
@@ -262,10 +264,11 @@ class AuthServiceTest {
                                                 .nonce("dummy_nonce")
                                                 .version("1.0")
                                                 .build();
-        final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .auth(passToken)
-                                             .build();
-        assertThat(webClient.get("/oauth1a").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        final BlockingWebClient webClient = WebClient.builder(server.httpUri())
+                                                     .auth(passToken)
+                                                     .build()
+                                                     .blocking();
+        assertThat(webClient.get("/oauth1a").status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
                     oauth1aGetRequest("/oauth1a-custom", passToken, CUSTOM_TOKEN_HEADER))) {
@@ -290,10 +293,11 @@ class AuthServiceTest {
 
     @Test
     void testOAuth2() throws Exception {
-        final WebClient webClient = WebClient.builder(server.httpUri())
+        final BlockingWebClient webClient = WebClient.builder(server.httpUri())
                                              .auth(AuthToken.ofOAuth2("dummy_oauth2_token"))
-                                             .build();
-        assertThat(webClient.get("/oauth2").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+                                             .build()
+                                             .blocking();
+        assertThat(webClient.get("/oauth2").status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
                     oauth2GetRequest("/oauth2-custom", AuthToken.ofOAuth2("dummy_oauth2_token"),
@@ -333,15 +337,16 @@ class AuthServiceTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
             final Map<String, String> passToken = ImmutableMap.<String, String>builder()
-                    .put("realm", "dummy_realm")
-                    .put("oauth_consumer_key", "dummy_consumer_key@#$!")
-                    .put("oauth_token", "dummy_oauth1a_token")
-                    .put("oauth_signature_method", "dummy")
-                    .put("oauth_signature", "dummy_signature")
-                    .put("oauth_timestamp", "0")
-                    .put("oauth_nonce", "dummy_nonce")
-                    .put("version", "1.0")
-                    .build();
+                                                              .put("realm", "dummy_realm")
+                                                              .put("oauth_consumer_key",
+                                                                   "dummy_consumer_key@#$!")
+                                                              .put("oauth_token", "dummy_oauth1a_token")
+                                                              .put("oauth_signature_method", "dummy")
+                                                              .put("oauth_signature", "dummy_signature")
+                                                              .put("oauth_timestamp", "0")
+                                                              .put("oauth_nonce", "dummy_nonce")
+                                                              .put("version", "1.0")
+                                                              .build();
             final OAuth1aToken oAuth1aToken = AuthToken.builderForOAuth1a().putAll(passToken).build();
             try (CloseableHttpResponse res = hc.execute(
                     oauth1aGetRequest("/composite", oAuth1aToken, AUTHORIZATION))) {

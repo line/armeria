@@ -32,14 +32,10 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.grpc.testing.GrpcDocServicePrefixTestServiceGrpc.GrpcDocServicePrefixTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
-import com.linecorp.armeria.grpc.testing.Transcoding.Message;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-import io.grpc.stub.StreamObserver;
 
 class GrpcDocServicePrefixTest {
 
@@ -106,10 +102,5 @@ class GrpcDocServicePrefixTest {
     }
 
     private static class PrefixTextService extends GrpcDocServicePrefixTestServiceImplBase {
-
-        @Override
-        public void getMessageV1(GetMessageRequestV1 request, StreamObserver<Message> responseObserver) {
-            super.getMessageV1(request, responseObserver);
-        }
     }
 }

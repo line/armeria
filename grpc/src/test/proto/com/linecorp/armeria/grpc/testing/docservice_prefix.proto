@@ -12,8 +12,6 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-// Tests for HTTP/JSON to gRPC transcoding service.
-
 syntax = "proto3";
 
 package armeria.grpc.testing;

@@ -18,8 +18,10 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isSuspendingFunction;
+import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isKFunction;
+import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isReturnTypeNothing;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionGenericReturnType;
+import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionReturnType;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
@@ -155,9 +157,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();
         final String name = method.getName();
-        final TypeSignature returnTypeSignature =
-                isSuspendingFunction(method) ? toTypeSignature(kFunctionGenericReturnType(method))
-                                             : toTypeSignature(method.getGenericReturnType());
+        final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
         final Class<?> clazz = service.object().getClass();
         route.methods().forEach(
@@ -168,6 +168,16 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                     .findDescription(method));
                     methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
                 });
+    }
+
+    private static TypeSignature getReturnTypeSignature(Method method) {
+        if (isKFunction(method)) {
+            if (isReturnTypeNothing(method)) {
+                return toTypeSignature(kFunctionReturnType(method));
+            }
+            return toTypeSignature(kFunctionGenericReturnType(method));
+        }
+        return toTypeSignature(method.getGenericReturnType());
     }
 
     @VisibleForTesting

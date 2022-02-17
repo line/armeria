@@ -35,9 +35,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
@@ -91,8 +88,6 @@ import io.grpc.protobuf.ProtoFileDescriptorSupplier;
  * {@link DocServicePlugin} implementation that supports {@link GrpcService}s.
  */
 public final class GrpcDocServicePlugin implements DocServicePlugin {
-
-    private static final Logger logger = LoggerFactory.getLogger(GrpcDocServicePlugin.class);
 
     private static final String NAME = "grpc";
 

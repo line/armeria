@@ -91,53 +91,73 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     }
 
     @Override
-    public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+    public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers nettyHeaders, int padding,
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead(true);
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             assert encoder != null;
 
+            // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
+            // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
+            // This is because removing a header from RequestHeaders is more expensive due to its
+            // immutability.
+            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders);
+
             // Validate the method.
-            final CharSequence methodText = headers.method();
+            final CharSequence methodText = nettyHeaders.method();
             if (methodText == null) {
-                writeErrorResponse(streamId, HttpStatus.BAD_REQUEST, "Missing method", null);
+                writeErrorResponse(streamId, null, HttpStatus.BAD_REQUEST, "Missing method", null);
                 return;
             }
 
             // Reject a request with an unsupported method.
-            // Note: Accept a CONNECT request with a :protocol header, as defined in:
-            //       https://datatracker.ietf.org/doc/html/rfc8441#section-4
             final HttpMethod method = HttpMethod.tryParse(methodText.toString());
-            if (method == null ||
-                method == HttpMethod.CONNECT && !headers.contains(HttpHeaderNames.PROTOCOL)) {
-                writeErrorResponse(streamId, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+            if (method == null) {
+                writeErrorResponse(streamId, null, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                return;
+            }
+
+            // Convert the Netty Http2Headers into Armeria RequestHeaders.
+            final RequestHeaders headers =
+                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream, scheme, cfg);
+
+            // Accept a CONNECT request only when it has a :protocol header, as defined in:
+            // https://datatracker.ietf.org/doc/html/rfc8441#section-4
+            if (method == HttpMethod.CONNECT && !nettyHeaders.contains(HttpHeaderNames.PROTOCOL)) {
+                writeErrorResponse(streamId, headers, HttpStatus.METHOD_NOT_ALLOWED,
+                                   "Unsupported method", null);
                 return;
             }
 
             // Validate the 'content-length' header if exists.
-            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L);
+            final String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
+            if (contentLengthStr != null) {
+                long contentLength;
+                try {
+                    contentLength = Long.parseLong(contentLengthStr);
+                } catch (NumberFormatException ignored) {
+                    contentLength = -1;
+                }
                 if (contentLength < 0) {
-                    writeErrorResponse(streamId, HttpStatus.BAD_REQUEST, "Invalid content length", null);
+                    writeErrorResponse(streamId, headers, HttpStatus.BAD_REQUEST,
+                                       "Invalid content length", null);
                     return;
                 }
             }
 
-            if (!handle100Continue(streamId, headers)) {
-                writeErrorResponse(streamId, HttpStatus.EXPECTATION_FAILED, null, null);
+            if (hasInvalidExpectHeader) {
+                writeErrorResponse(streamId, headers, HttpStatus.EXPECTATION_FAILED, null, null);
                 return;
             }
 
             final EventLoop eventLoop = ctx.channel().eventLoop();
-            final RequestHeaders armeriaRequestHeaders =
-                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, headers, endOfStream, scheme, cfg);
             final int id = ++nextId;
             if (endOfStream) {
                 // Close the request early when it is sure that there will be neither content nor trailers.
-                req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true);
+                req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, true);
             } else {
-                req = new DefaultDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true,
+                req = new DefaultDecodedHttpRequest(eventLoop, id, streamId, headers, true,
                                                     inboundTrafficController,
                                                     // FIXME(trustin): Use a different maxRequestLength for
                                                     //                 a different host.
@@ -150,7 +170,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
-                decodedReq.write(ArmeriaHttpUtil.toArmeria(headers, true, endOfStream));
+                decodedReq.write(ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream));
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
@@ -235,11 +255,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                                 .transferred(transferredLength)
                                                 .build();
 
-                final HttpStatus entityTooLarge = HttpStatus.REQUEST_ENTITY_TOO_LARGE;
-                writeErrorResponse(streamId, entityTooLarge, null, cause);
+                writeErrorResponse(streamId, req.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
 
                 if (decodedReq.isOpen()) {
-                    decodedReq.close(HttpStatusException.of(entityTooLarge, cause));
+                    decodedReq.close(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
                 }
             } else {
                 // The response has been started already. Abort the request and let the response continue.
@@ -272,12 +291,13 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
     }
 
-    private void writeErrorResponse(
-            int streamId, HttpStatus status, @Nullable String message, @Nullable Throwable cause) {
+    private void writeErrorResponse(int streamId, @Nullable RequestHeaders headers,
+                                    HttpStatus status, @Nullable String message,
+                                    @Nullable Throwable cause) {
         assert encoder != null;
         encoder.writeErrorResponse(0 /* unused */, streamId,
                                    cfg.defaultVirtualHost().fallbackServiceConfig(),
-                                   status, message, cause);
+                                   headers, status, message, cause);
     }
 
     @Override

@@ -193,6 +193,13 @@ class AnnotatedDocServicePluginTest {
                             .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                             .build());
 
+        route = withMethodAndTypes(Route.builder().path("/service/{value}/test/{*value2}"));
+        endpointInfo = endpointInfo(route, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(
+                EndpointInfo.builder("*", "/service/:value/test/:*value2")
+                            .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+                            .build());
+
         route = withMethodAndTypes(Route.builder().path("/glob/", "glob:/home/*/files/**"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(

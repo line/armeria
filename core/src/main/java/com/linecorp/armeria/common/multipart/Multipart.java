@@ -17,11 +17,15 @@ package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.multipart.DefaultMultipart.randomBoundary;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -35,7 +39,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -361,4 +367,49 @@ public interface Multipart {
      */
     CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(EventExecutor executor,
                                                                       ByteBufAllocator alloc);
+
+    /**
+     * Collects the elements published by this {@link Multipart}.
+     * The returned {@link CompletableFuture} will be notified when the elements are fully consumed.
+     *
+     * <p>Note that if this {@link Multipart} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * Path tempDir = ...;
+     * CompletableFuture<List<Object>> collect =
+     *         Multipart.of(request)
+     *                  .collect(bodyPart -> {
+     *                      if (bodyPart.filename() != null) {
+     *                          final Path path = tempDir.resolve(bodyPart.name());
+     *                          return bodyPart.writeTo(path).thenApply(ignore -> path);
+     *                      }
+     *                      return bodyPart.aggregate().thenApply(AggregatedHttpObject::contentUtf8);
+     *                  });
+     * }</pre>
+     *
+     * @param function A {@link Function} that processes the {@link BodyPart} and returns a future that will
+     *                 complete with the process result. The {@link Function} must consume the {@link BodyPart}.
+     *                 And If not, collect method will stop processing next {@link BodyPart}.
+     */
+    @UnstableApi
+    default <T> CompletableFuture<List<T>> collect(
+            Function<? super BodyPart, CompletableFuture<? extends T>> function) {
+        return collect(function, EMPTY_OPTIONS);
+    }
+
+    /**
+     * Collects the elements published by this {@link Multipart}.
+     * The returned {@link CompletableFuture} will be notified when the elements are fully consumed.
+     *
+     * <p>Note that if this {@link Multipart} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     */
+    @UnstableApi
+    default <T> CompletableFuture<List<T>> collect(
+            Function<? super BodyPart, CompletableFuture<? extends T>> function,
+            SubscriptionOption... options) {
+        return bodyParts().mapAsync(function).collect(options);
+    }
 }

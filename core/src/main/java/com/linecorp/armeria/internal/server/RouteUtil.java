@@ -64,7 +64,7 @@ public final class RouteUtil {
 
     /**
      * Returns the innermost {@link Route} of the specified {@link Route} if it's created
-     * via {@link Route#withPrefix(String)}. If it's isn't it returns the specified {@link Route}.
+     * via {@link Route#withPrefix(String)}. If it's not, it just returns the specified {@link Route}.
      */
     public static Route innermostRoute(Route route) {
         requireNonNull(route, "route");

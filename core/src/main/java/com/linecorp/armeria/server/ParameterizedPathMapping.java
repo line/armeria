@@ -72,7 +72,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      * Skeletal form of given path, which is used for duplicated routing rule detection.
      * For example, "/{a}/{b}" and "/{c}/{d}" has same skeletal form and regarded as duplicated.
      *
-     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"
+     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"</p>
+     * <p>Set a skeletal form with the patterns described in {@link Route#paths()}.</p>
      */
     private final String skeleton;
 
@@ -127,13 +128,13 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 skeletonJoiner.add(token);
                 continue;
             }
-
+            final boolean captureRestPathMatching = isCaptureRestPathMatching(token);
             final int paramNameIdx = paramNames.indexOf(paramName);
             if (paramNameIdx < 0) {
                 // If the given token appeared first time, add it to the set and
                 // replace it with a capturing group expression in regex.
                 paramNames.add(paramName);
-                if (isCaptureRestPathMatching(token)) {
+                if (captureRestPathMatching) {
                     patternJoiner.add("(.*)");
                 } else {
                     patternJoiner.add("([^/]+)");
@@ -144,8 +145,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 patternJoiner.add("\\" + (paramNameIdx + 1));
             }
 
-            normalizedPatternJoiner.add(':' + paramName);
-            skeletonJoiner.add(":");
+            normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + paramName);
+            skeletonJoiner.add(captureRestPathMatching ? "*" : ":");
         }
 
         this.pathPattern = pathPattern;

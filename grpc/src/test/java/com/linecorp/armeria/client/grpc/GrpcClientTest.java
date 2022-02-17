@@ -176,10 +176,7 @@ class GrpcClientTest {
                                        .build()
                                        .decorate((service, ctx, req) -> {
                                            final HttpResponse res = service.serve(ctx, req);
-                                           return res.mapTrailers(trailers -> {
-                                               SERVER_TRAILERS_CAPTURE.set(trailers);
-                                               return trailers;
-                                           });
+                                           return res.peekTrailers(SERVER_TRAILERS_CAPTURE::set);
                                        }));
         }
     };

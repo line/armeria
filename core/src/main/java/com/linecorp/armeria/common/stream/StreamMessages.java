@@ -42,13 +42,13 @@ import io.netty.util.concurrent.EventExecutor;
 public final class StreamMessages {
 
     /**
-     * Write the specified {@link StreamMessage} to the given {@link Path} with {@link OpenOption}.
-     * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
+     * Writes the specified {@link StreamMessage} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption}s are not specified, they default to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
-     * @param publisher the source of {@link HttpData} to be written.
+     * @param publisher the source of {@link HttpData} to be read from.
      * @param destination the {@link Path} to write to.
-     * @param options the {@link OpenOption} specifying how the file is opened.
+     * @param options the {@link OpenOption}s specifying how the file is opened.
      * @return a {@link CompletableFuture} that completes successfully when the {@link StreamMessage} is fully
      *         written to the {@link Path} or exceptionally an error occurred while writing the
      *         {@link StreamMessage}.
@@ -79,16 +79,16 @@ public final class StreamMessages {
     }
 
     /**
-     * Write the specified {@link StreamMessage} to the given {@link Path} with {@link OpenOption}.
-     * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
+     * Writes the specified {@link StreamMessage} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption}s are not specified, they default to {@link StandardOpenOption#CREATE},
      * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
-     * @param publisher the source of {@link HttpData} to be written.
+     * @param publisher the source of {@link HttpData} to be read from.
      * @param destination the {@link Path} to write to.
      * @param eventExecutor the {@link EventExecutor} to subscribe to the given publisher.
      * @param blockingTaskExecutor the {@link ExecutorService} to which blocking tasks are submitted to handle
      *                             file I/O events and write operations.
-     * @param options the {@link OpenOption} specifying how the file is opened
+     * @param options the {@link OpenOption}s specifying how the file is opened
      * @return a {@link CompletableFuture} that completes successfully when the {@link StreamMessage} is fully
      *         written to the {@link Path} or exceptionally an error occurred while writing the
      *         {@link StreamMessage}.
@@ -109,6 +109,7 @@ public final class StreamMessages {
 
     private static Set<OpenOption> checkWriteOptions(OpenOption[] options) {
         final int length = options.length;
+        @SuppressWarnings("UnstableApiUsage")
         final ImmutableSet.Builder<OpenOption> writeOptions =
                 ImmutableSet.builderWithExpectedSize(length + 3);
 

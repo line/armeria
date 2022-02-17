@@ -1264,7 +1264,7 @@ public final class Flags {
      * {@link ServerBuilder#service(String, HttpService)}. For example, the following code will mask the
      * returned route ({@code "/foo"}) in favor of the specified route ({@code "/bar"}):
      * <pre>{@code
-     * > HttpServiceWithRoute serviceWithRoute = new HttpServiceWithRoutes() {
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
      * >     @Override
      * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
      * >
@@ -1275,7 +1275,7 @@ public final class Flags {
      * > };
      * >
      * > Server.builder()
-     * >       .service("/bar", serviceWithRoute)
+     * >       .service("/bar", serviceWithRoutes)
      * >       .build();
      * }</pre>
      */

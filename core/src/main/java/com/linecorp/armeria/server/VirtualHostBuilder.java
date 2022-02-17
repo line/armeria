@@ -445,7 +445,23 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      * The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
-     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to ({@code "/foo/bar"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .service("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      */
     public VirtualHostBuilder serviceUnder(String pathPrefix, HttpServiceWithRoutes serviceWithRoutes) {
         requireNonNull(pathPrefix, "pathPrefix");
@@ -457,7 +473,23 @@ public final class VirtualHostBuilder {
     /**
      * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      * The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
-     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to ({@code "/foo/bar"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .service("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      *
      * @param pathPrefix the prefix which is prepended to each {@link Route}
      *                   from {@link HttpServiceWithRoutes#routes()}
@@ -479,7 +511,23 @@ public final class VirtualHostBuilder {
     /**
      * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      * The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
-     * with the specified {@code pathPrefix} prepended to each {@link Route}.
+     * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to ({@code "/foo/bar"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .service("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      *
      * @param pathPrefix the prefix which is prepended to each {@link Route}
      *                   from {@link HttpServiceWithRoutes#routes()}

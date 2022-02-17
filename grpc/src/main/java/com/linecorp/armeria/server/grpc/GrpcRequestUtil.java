@@ -31,7 +31,6 @@ final class GrpcRequestUtil {
         if (path.charAt(0) != '/') {
             return null;
         }
-
         return path.substring(1);
     }
 
