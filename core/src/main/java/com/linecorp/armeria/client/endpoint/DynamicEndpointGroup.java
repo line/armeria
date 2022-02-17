@@ -253,6 +253,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     /**
      * Returns a truncated list of at most 10 endpoints.
      */
+    @UnstableApi
     protected static List<Endpoint> truncatedEndpoints(List<Endpoint> endpoints) {
         return truncatedEndpoints(endpoints, 10);
     }
