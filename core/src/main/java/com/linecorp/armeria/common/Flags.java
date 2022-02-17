@@ -445,7 +445,7 @@ public final class Flags {
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
             getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
 
-    private static final boolean DEFAULT_ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
+    private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getBoolean("allowDoubleDotsInQueryString", false);
 
     static {
@@ -1345,15 +1345,15 @@ public final class Flags {
     /**
      * Returns whether to allow double dots ({@code ..}) in query string.
      *
-     * <p>Note that double dots pattern could be vulnerable if a query param value contains improper path
-     * name such as {@code /download?path=../../secrets.txt}. So you should carefully enable this option at your
-     * risk, and you may need additional validations at application level.
+     * <p>Note that double dots pattern could lead to a vulnerability if a query param value contains improper
+     * path such as {@code /download?path=../../secrets.txt}, so you should carefully enable this option at
+     * your risk, and you may need additional validations at the application level.
      *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true} JVM option to enable it.
      */
     public static boolean allowDoubleDotsInQueryString() {
-        return DEFAULT_ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
+        return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
     }
 
     @Nullable

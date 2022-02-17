@@ -15,9 +15,9 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.PathAndQuery.decodePercentEncodedQuery;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -64,8 +64,6 @@ class PathAndQueryTest {
             "..a/", "a../", "a..b/",
             "/..a/", "/a../", "/a..b/"
     );
-
-    private static volatile boolean allowDoubleDotsInQueryString;
 
     @Test
     void empty() {
@@ -165,81 +163,71 @@ class PathAndQueryTest {
         });
     }
 
-    private static String normalizedQuery(String string) {
-        return string.replaceAll("%2[eE]", ".")
-                     .replaceAll("%2f", "%2F");
-    }
-
     @Test
-    void allowDoubleDotsInNameValueQuery() throws UnsupportedEncodingException {
-        allowDoubleDotsInQueryString = true;
-        try {
+    void allowDoubleDotsInNameValueQuery() {
+        BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+            assertQueryStringAllowed("/?" + pattern, decodePercentEncodedQuery(pattern), true);
+        });
+
+        GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+            assertQueryStringAllowed("/?" + pattern, pattern, true);
+        });
+
+        // Dots in a query param name.
+        BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+            final String query = pattern + "=foo";
+            assertQueryStringAllowed("/?" + query, decodePercentEncodedQuery(query), true);
+        });
+        GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+            assertQueryStringAllowed("/?" + pattern + "=foo", true);
+        });
+
+        // Dots in a query param value.
+        BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+            final String query = "foo=" + pattern;
+            assertQueryStringAllowed("/?" + query, decodePercentEncodedQuery(query), true);
+        });
+        GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+            assertQueryStringAllowed("/?foo=" + pattern, true);
+        });
+
+        QUERY_SEPARATORS.forEach(qs -> {
+            // Dots in the second query param name.
             BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                assertQueryStringAllowed("/?" + pattern, normalizedQuery(pattern));
+                final String query = "a=b" + qs + pattern + "=c";
+                assertQueryStringAllowed("/?" + query, decodePercentEncodedQuery(query), true);
             });
-
             GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                assertQueryStringAllowed("/?" + pattern, pattern);
+                assertQueryStringAllowed("/?a=b" + qs + pattern + "=c", true);
             });
 
-            // Dots in a query param name.
+            // Dots in the second query param value.
             BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                final String query = pattern + "=foo";
-                assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+                final String query = "a=b" + qs + "c=" + pattern;
+                assertQueryStringAllowed("/?" + query, decodePercentEncodedQuery(query), true);
             });
             GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                assertQueryStringAllowed("/?" + pattern + "=foo");
+                assertQueryStringAllowed("/?a=b" + qs + "c=" + pattern, true);
             });
 
-            // Dots in a query param value.
+            // Dots in the name of the query param in the middle.
             BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                final String query = "foo=" + pattern;
-                assertQueryStringAllowed("/?" + query, normalizedQuery(query));
+                final String query = "a=b" + qs + pattern + "=c" + qs + "d=e";
+                assertQueryStringAllowed("/?" + query, decodePercentEncodedQuery(query), true);
             });
             GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                assertQueryStringAllowed("/?foo=" + pattern);
+                assertQueryStringAllowed("/?a=b" + qs + pattern + "=c" + qs + "d=e");
             });
 
-            QUERY_SEPARATORS.forEach(qs -> {
-                // Dots in the second query param name.
-                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    final String query = "a=b" + qs + pattern + "=c";
-                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
-                });
-                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    assertQueryStringAllowed("/?a=b" + qs + pattern + "=c");
-                });
-
-                // Dots in the second query param value.
-                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    final String query = "a=b" + qs + "c=" + pattern;
-                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
-                });
-                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    assertQueryStringAllowed("/?a=b" + qs + "c=" + pattern);
-                });
-
-                // Dots in the name of the query param in the middle.
-                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    final String query = "a=b" + qs + pattern + "=c" + qs + "d=e";
-                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
-                });
-                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    assertQueryStringAllowed("/?a=b" + qs + pattern + "=c" + qs + "d=e");
-                });
-
-                // Dots in the value of the query param in the middle.
-                BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    final String query = "a=b" + qs + "c=" + pattern + qs + "d=e";
-                    assertQueryStringAllowed("/?" + query, normalizedQuery(query));
-                });
-                GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
-                    assertQueryStringAllowed("/?a=b" + qs + "c=" + pattern + qs + "d=e");
-                });
+            // Dots in the value of the query param in the middle.
+            BAD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                final String query = "a=b" + qs + "c=" + pattern + qs + "d=e";
+                assertQueryStringAllowed("/?" + query, decodePercentEncodedQuery(query), true);
             });
-        } finally {
-            allowDoubleDotsInQueryString = false;
-        }
+            GOOD_DOUBLE_DOT_PATTERNS.forEach(pattern -> {
+                assertQueryStringAllowed("/?a=b" + qs + "c=" + pattern + qs + "d=e", true);
+            });
+        });
     }
 
 
@@ -518,13 +506,22 @@ class PathAndQueryTest {
     }
 
     private static void assertQueryStringAllowed(String rawPath) {
+        assertQueryStringAllowed(rawPath, false);
+    }
+
+    private static void assertQueryStringAllowed(String rawPath, boolean allowDoubleDotsInQueryString) {
         assertThat(rawPath).startsWith("/?");
         final String expectedQuery = rawPath.substring(2);
-        assertQueryStringAllowed(rawPath, expectedQuery);
+        assertQueryStringAllowed(rawPath, expectedQuery, allowDoubleDotsInQueryString);
     }
 
     private static void assertQueryStringAllowed(String rawPath, String expectedQuery) {
-        final PathAndQuery res = parse(rawPath);
+        assertQueryStringAllowed(rawPath, expectedQuery, false);
+    }
+
+    private static void assertQueryStringAllowed(String rawPath, String expectedQuery,
+                                                 boolean allowDoubleDotsInQueryString) {
+        final PathAndQuery res = parse(rawPath, allowDoubleDotsInQueryString);
         assertThat(res)
                 .as("parse(\"%s\") must return non-null.", rawPath)
                 .isNotNull();
@@ -533,8 +530,14 @@ class PathAndQueryTest {
                 .isEqualTo(expectedQuery);
     }
 
+
     @Nullable
     private static PathAndQuery parse(@Nullable String rawPath) {
+        return parse(rawPath, false);
+    }
+
+    @Nullable
+    private static PathAndQuery parse(@Nullable String rawPath, boolean allowDoubleDotsInQueryString) {
         final PathAndQuery res = PathAndQuery.parse(rawPath, allowDoubleDotsInQueryString);
         if (res != null) {
             logger.info("parse({}) => path: {}, query: {}", rawPath, res.path(), res.query());
