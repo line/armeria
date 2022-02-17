@@ -76,7 +76,7 @@ class ClientContextCustomizerTest {
 
     @Test
     void multipleContextCustomizer_ClientBuilder() {
-        final List<Integer> executionOrders = new ArrayList<>(); ;
+        final List<Integer> executionOrders = new ArrayList<>();
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .contextCustomizer(ctx -> {
@@ -96,7 +96,7 @@ class ClientContextCustomizerTest {
 
     @Test
     void contextCustomizer_withThreadLocalContext() {
-        final List<Integer> executionOrders = new ArrayList<>(); ;
+        final List<Integer> executionOrders = new ArrayList<>();
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .contextCustomizer(ctx -> {
@@ -105,7 +105,6 @@ class ClientContextCustomizerTest {
                          })
                          .build()
                          .blocking();
-
 
         try (SafeCloseable ignored = Clients.withContextCustomizer(ctx -> {
             executionOrders.add(2);

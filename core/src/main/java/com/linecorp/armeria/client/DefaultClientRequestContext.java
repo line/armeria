@@ -487,7 +487,7 @@ public final class DefaultClientRequestContext
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext(); ) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
     }
@@ -705,7 +705,7 @@ public final class DefaultClientRequestContext
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        for (; ; ) {
+        for (;;) {
             final HttpHeaders oldValue = additionalRequestHeaders;
             final HttpHeadersBuilder builder = oldValue.toBuilder();
             mutator.accept(builder);

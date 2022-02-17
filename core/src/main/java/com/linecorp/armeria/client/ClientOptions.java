@@ -80,7 +80,7 @@ public final class ClientOptions
     /**
      * The {@link ClientRequestContext} customizer.
      *
-     * @see Clients#withContextCustomizer(Consumer).
+     * @see Clients#withContextCustomizer(Consumer)
      */
     @UnstableApi
     public static final ClientOption<Consumer<ClientRequestContext>> CONTEXT_CUSTOMIZER =
