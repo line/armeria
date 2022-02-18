@@ -12,8 +12,8 @@ date: 2022-2-18
 
 ## 🛠️ Bug fixes
 
-- `DnsEndpointGroup` now correctly respects a trailing dot in a hostname when resolving DNS records. #4088
-- You can now allow double dots (`..`) in query string by specifying
+- `DnsEndpointGroup` now correctly respects the trailing dot in a hostname when resolving DNS records. #4088
+- You can now allow double dots (`..`) in query string by specifying the
   `-Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true` JVM option. #4091 #4094
 - `GrpcClientBuilder` now correctly normalizes path prefixes. #4085
 - `GraphQLService` won't reject GraphQL requests with `null` variables. #4068 #4069
