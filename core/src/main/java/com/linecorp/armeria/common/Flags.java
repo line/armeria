@@ -1343,7 +1343,7 @@ public final class Flags {
     }
 
     /**
-     * Returns whether to allow double dots ({@code ..}) in a query string.
+     * Returns whether to allow double dots ({@code ..}) in a request path query string.
      *
      * <p>Note that double dots in a query string can lead to a vulnerability if a query param value contains
      * an improper path such as {@code /download?path=../../secrets.txt}. Therefore, extra caution should be
