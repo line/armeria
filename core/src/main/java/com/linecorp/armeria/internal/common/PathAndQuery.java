@@ -208,7 +208,7 @@ public final class PathAndQuery {
     }
 
     @Nullable
-    private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery,
+    private static PathAndQuery splitPathAndQuery(@Nullable String pathAndQuery,
                                                   boolean allowDoubleDotsInQueryString) {
         final Bytes path;
         final Bytes query;
@@ -253,7 +253,7 @@ public final class PathAndQuery {
     }
 
     /**
-     * Decodes a query string. This method is only used for {@code PathAndQueryTest}.
+     * Decodes a percent-encoded query string. This method is only used for {@code PathAndQueryTest}.
      */
     @Nullable
     @VisibleForTesting
