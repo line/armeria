@@ -83,20 +83,20 @@ class GrpcClientBuilderTest {
     }
 
     @Test
-    void path() {
+    void prefix() {
         final TestServiceBlockingStub client =
                 GrpcClients.builder("http://foo.com")
-                           .path("/bar")
+                           .pathPrefix("/bar")
                            .build(TestServiceBlockingStub.class);
         final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
-        assertThat(clientParams.uri().toString()).isEqualTo("gproto+http://foo.com/bar");
+        assertThat(clientParams.uri().toString()).isEqualTo("gproto+http://foo.com/bar/");
 
         assertThatThrownBy(() -> {
             GrpcClients.builder("http://foo.com")
-                       .path("bar")
+                       .pathPrefix("bar")
                        .build(TestServiceBlockingStub.class);
         }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Path must start with / character");
+          .hasMessageContaining("prefix: bar (must start with '/')");
     }
 
     @Test
