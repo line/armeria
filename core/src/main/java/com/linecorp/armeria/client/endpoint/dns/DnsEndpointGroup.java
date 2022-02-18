@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -194,5 +195,18 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
      */
     final void warnInvalidRecord(DnsRecordType type, ByteBuf content) {
         DnsUtil.warnInvalidRecord(logger(), logPrefix(), type, content);
+    }
+
+    final void logDnsResolutionResult(Collection<Endpoint> endpoints, int ttl) {
+        if (endpoints.isEmpty()) {
+            logger().warn("{} Resolved to empty endpoints (TTL: {})", logPrefix(), ttl);
+        } else {
+            if (logger().isDebugEnabled()) {
+                logger().debug("{} Resolved: {} (TTL: {})",
+                               logPrefix(),
+                               endpoints.stream().map(Object::toString).collect(Collectors.joining(", ")),
+                               ttl);
+            }
+        }
     }
 }
