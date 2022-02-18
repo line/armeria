@@ -20,7 +20,6 @@ option java_package = "com.linecorp.armeria.grpc.testing";
 
 import "com/linecorp/armeria/grpc/testing/transcoding.proto";
 import "google/api/annotations.proto";
-import "google/protobuf/struct.proto";
 
 service GrpcDocServicePrefixTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
