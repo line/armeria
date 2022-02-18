@@ -1,5 +1,5 @@
 ---
-date: 2022-2-16
+date: 2022-2-18
 ---
 
 ## 🌟 New features
@@ -8,19 +8,22 @@ date: 2022-2-16
 
 ## 📈 Improvements
 
-- Users have more transparency on why they encounter an `EmptyEndpointGroupException` #4084
+- A message containing the context of the `EndpointGroup` is now added to `EmptyEndpointGroupException`. #4084
 
 ## 🛠️ Bug fixes
 
-- `DnsEndpointGroup` now correctly respects a trailer dot of a hostname when resolving DNS records. #4088
-- You can disable the ignored multiple routes warning log by specifying `-Dcom.linecorp.armeria.reportIgnoredMultipleRoutes=false`. #4086
-- `GrpcClientBuilder` now correctly normalizes a path prefix. #4085
-- `GrpcClientBuilder.path()` has been deprecated in favor of `GrpcClientBuilder.pathPrefix()`. #4085
-- Server will stop responding 500 when sending null GraphQL variable #4068 #4069
+- `DnsEndpointGroup` now correctly respects a trailing dot in a hostname when resolving DNS records. #4088
+- You can now allow double dots (`..`) in query string by specifying
+  `-Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true` JVM option. #4091 #4094
+- `GrpcClientBuilder` now correctly normalizes path prefixes. #4085
+- `GraphQLService` won't reject GraphQL requests with `null` variables. #4068 #4069
+
+## 📃 Documentation
+
+- N/A
 
 ## 🏚️ Deprecations
 
-- `GrpcClientBuilder` now correctly normalizes a path prefix. #4085
 - `GrpcClientBuilder.path()` has been deprecated in favor of `GrpcClientBuilder.pathPrefix()`. #4085
 
 ## ☢️ Breaking changes
@@ -41,6 +44,8 @@ date: 2022-2-16
   'heowc',
   'ikhoon',
   'jrhee17',
+  'ks-yim',
   'minwoox',
-  'tobias-'
+  'tobias-',
+  'trustin'
 ]} />
