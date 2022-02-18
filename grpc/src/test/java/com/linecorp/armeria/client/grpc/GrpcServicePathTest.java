@@ -46,15 +46,15 @@ class GrpcServicePathTest {
         }
     };
 
-    @CsvSource({"/grpc", "/grpc/"})
+    @CsvSource({ "/grpc", "/grpc/" })
     @ParameterizedTest
     void prefix(String path) {
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
                                                           .pathPrefix(path)
                                                           .build(TestServiceBlockingStub.class);
         final SimpleResponse response = client.unaryCall(SimpleRequest.newBuilder()
-                                                                   .setResponseSize(10)
-                                                                   .build());
+                                                                      .setResponseSize(10)
+                                                                      .build());
         assertThat(response.getPayload().getBody().size()).isEqualTo(10);
     }
 }
