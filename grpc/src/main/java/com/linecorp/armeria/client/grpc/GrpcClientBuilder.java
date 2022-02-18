@@ -191,7 +191,7 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder pathPrefix(String prefix) {
         requireNonNull(prefix, "prefix");
         checkArgument(!prefix.isEmpty(), "prefix is empty.");
-        checkArgument(prefix.charAt(0) == '/', "prefix: %s (must start with '/')" , prefix);
+        checkArgument(prefix.charAt(0) == '/', "prefix: %s (must start with '/')", prefix);
 
         if (!prefix.endsWith("/")) {
             prefix += '/';
