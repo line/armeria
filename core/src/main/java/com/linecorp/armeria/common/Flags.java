@@ -1343,11 +1343,11 @@ public final class Flags {
     }
 
     /**
-     * Returns whether to allow double dots ({@code ..}) in query string.
+     * Returns whether to allow double dots ({@code ..}) in a query string.
      *
-     * <p>Note that double dots pattern could lead to a vulnerability if a query param value contains
-     * an improper path such as {@code /download?path=../../secrets.txt}, so you should carefully enable
-     * this option at your risk, and you may need additional validations at the application level.
+     * <p>Note that double dots in a query string can lead to a vulnerability if a query param value contains
+     * an improper path such as {@code /download?path=../../secrets.txt}. Therefore, extra caution should be
+     * taken when enabling this option, and you may need additional validations at the application level.
      *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true} JVM option to enable it.
