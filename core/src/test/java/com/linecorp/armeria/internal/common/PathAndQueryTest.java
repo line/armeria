@@ -230,7 +230,6 @@ class PathAndQueryTest {
         });
     }
 
-
     /**
      * {@link PathAndQuery} treats the first `=` in a query parameter as `/` internally to simplify
      * the detection the logic. This test makes sure the `=` appeared later is not treated as `/`.
@@ -529,7 +528,6 @@ class PathAndQueryTest {
                 .as("parse(\"%s\").query() must return \"%s\".", rawPath, expectedQuery)
                 .isEqualTo(expectedQuery);
     }
-
 
     @Nullable
     private static PathAndQuery parse(@Nullable String rawPath) {
