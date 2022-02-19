@@ -1058,7 +1058,6 @@ bss.design
 bt
 bt.it
 bu.no
-budapest
 budejju.no
 bugatti
 build
@@ -1912,6 +1911,8 @@ dinosaur.museum
 direct
 direct.quickconnect.to
 directory
+discordsays.com
+discordsez.com
 discount
 discourse.group
 discourse.team
@@ -6017,6 +6018,7 @@ ono.fukushima.jp
 ono.hyogo.jp
 onojo.fukuoka.jp
 onomichi.hiroshima.jp
+onporter.run
 onred.one
 onrender.com
 ontario.museum
@@ -7964,6 +7966,7 @@ traniandriabarletta.it
 tranibarlettaandria.it
 tranoy.no
 translate.goog
+translated.page
 transport.museum
 transporte.bo
 trapani.it
