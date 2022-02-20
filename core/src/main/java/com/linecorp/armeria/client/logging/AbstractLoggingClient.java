@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.log;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
-import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logWhenComplete;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -74,6 +74,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
             responseCauseSanitizer;
 
     private final Sampler<? super ClientRequestContext> sampler;
+    private final Sampler<? super ClientRequestContext> failedSampler;
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
@@ -98,7 +99,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ClientRequestContext> sampler) {
+            Sampler<? super ClientRequestContext> sampler,
+            Sampler<? super ClientRequestContext> failedSampler) {
 
         super(requireNonNull(delegate, "delegate"));
 
@@ -115,13 +117,20 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         this.sampler = requireNonNull(sampler, "sampler");
+        this.failedSampler = requireNonNull(failedSampler, "failedSampler");
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        if (sampler.isSampled(ctx)) {
-            logWhenComplete(logger, ctx, requestLogger, responseLogger);
-        }
+        ctx.log().whenComplete().thenAccept(log -> {
+            if (log.responseCause() == null) {
+                if (sampler.isSampled(ctx)) {
+                    log(logger, ctx, log, requestLogger, responseLogger);
+                }
+            } else if (failedSampler.isSampled(ctx)) {
+                log(logger, ctx, log, requestLogger, responseLogger);
+            }
+        });
         return unwrap().execute(ctx, req);
     }
 

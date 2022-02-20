@@ -53,7 +53,8 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
                                  responseContentSanitizer(),
                                  responseTrailersSanitizer(),
                                  responseCauseSanitizer(),
-                                 sampler());
+                                 sampler(),
+                                 failedSampler());
     }
 
     /**
@@ -73,6 +74,16 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     @Override
     public LoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
         return (LoggingClientBuilder) super.sampler(sampler);
+    }
+
+    @Override
+    public LoggingClientBuilder failedSamplingRate(float samplingRate) {
+        return (LoggingClientBuilder) super.failedSamplingRate(samplingRate);
+    }
+
+    @Override
+    public LoggingClientBuilder failedSampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingClientBuilder) super.failedSampler(sampler);
     }
 
     // Override the return type of the chaining methods in the super-superclass.

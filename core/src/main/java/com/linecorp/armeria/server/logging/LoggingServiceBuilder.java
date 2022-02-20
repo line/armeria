@@ -42,6 +42,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
 
+    private Sampler<? super ServiceRequestContext> failedSampler = Sampler.always();
+
     LoggingServiceBuilder() {}
 
     /**
@@ -63,6 +65,26 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the {@link Sampler} that determines which failed request needs logging.
+     */
+    public LoggingServiceBuilder failedSampler(
+            Sampler<? super ServiceRequestContext> failedSampler) {
+        this.failedSampler = requireNonNull(failedSampler, "failedSampler");
+        return this;
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the failed requests to be logged.
+     */
+    public LoggingServiceBuilder failedSamplingRate(float failedSamplingRate) {
+        checkArgument(0.0 <= failedSamplingRate && failedSamplingRate <= 1.0,
+                      "failedSamplingRate: %s (expected: 0.0 <= failedSamplingRate <= 1.0)",
+                      failedSamplingRate);
+        return failedSampler(Sampler.random(failedSamplingRate));
+    }
+
+    /**
      * Returns a newly-created {@link LoggingService} decorating {@link HttpService} based on the properties
      * of this builder.
      */
@@ -78,7 +100,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                                   responseContentSanitizer(),
                                   responseTrailersSanitizer(),
                                   responseCauseSanitizer(),
-                                  sampler);
+                                  sampler,
+                                  failedSampler);
     }
 
     /**

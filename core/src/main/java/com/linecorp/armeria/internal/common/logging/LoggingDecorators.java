@@ -41,34 +41,21 @@ public final class LoggingDecorators {
     private static final String RESPONSE_FORMAT = "{} Response: {}";
     private static final String RESPONSE_FORMAT2 = "{} Response: {}, cause: {}";
 
-    private LoggingDecorators() {}
-
     /**
      * Logs request and response using the specified {@code requestLogger} and {@code responseLogger}.
      */
-    public static void logWhenComplete(
-            Logger logger, RequestContext ctx,
+    public static void log(
+            Logger logger, RequestContext ctx, RequestLog requestLog,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
-        ctx.log().whenRequestComplete().thenAccept(log -> {
-            try {
-                requestLogger.accept(log);
-            } catch (Throwable t) {
-                logException(logger, ctx, "request", t);
-            }
-        });
-        ctx.log().whenComplete().thenAccept(log -> {
-            try {
-                responseLogger.accept(log);
-            } catch (Throwable t) {
-                logException(logger, ctx, "response", t);
-            }
-        });
-    }
-
-    private static void logException(Logger logger, RequestContext ctx,
-                                     String requestOrResponse, Throwable cause) {
-        try (SafeCloseable ignored = ctx.push()) {
-            logger.warn("{} Unexpected exception while logging {}: ", ctx, requestOrResponse, cause);
+        try {
+            requestLogger.accept(requestLog);
+        } catch (Throwable t) {
+            logException(logger, ctx, "request", t);
+        }
+        try {
+            responseLogger.accept(requestLog);
+        } catch (Throwable t) {
+            logException(logger, ctx, "response", t);
         }
     }
 
@@ -168,6 +155,15 @@ public final class LoggingDecorators {
                                          responseStr, sanitizedResponseCause);
                 }
             }
+        }
+    }
+
+    private LoggingDecorators() {}
+
+    private static void logException(Logger logger, RequestContext ctx,
+                                     String requestOrResponse, Throwable cause) {
+        try (SafeCloseable ignored = ctx.push()) {
+            logger.warn("{} Unexpected exception while logging {}: ", ctx, requestOrResponse, cause);
         }
     }
 

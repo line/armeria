@@ -30,6 +30,8 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ClientRequestContext> sampler = Sampler.always();
 
+    private Sampler<? super ClientRequestContext> failedSampler = Sampler.always();
+
     /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged.
@@ -38,6 +40,17 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
                       "samplingRate: %s (expected: 0.0 <= samplingRate <= 1.0)", samplingRate);
         return sampler(Sampler.random(samplingRate));
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the failed requests to be logged.
+     */
+    public AbstractLoggingClientBuilder failedSamplingRate(float failedSamplingRate) {
+        checkArgument(0.0 <= failedSamplingRate && failedSamplingRate <= 1.0,
+                      "failedSamplingRate: %s (expected: 0.0 <= failedSamplingRate <= 1.0)",
+                      failedSamplingRate);
+        return failedSampler(Sampler.random(failedSamplingRate));
     }
 
     /**
@@ -50,5 +63,18 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
 
     final Sampler<? super ClientRequestContext> sampler() {
         return sampler;
+    }
+
+    /**
+     * Sets the {@link Sampler} that determines which failed request needs logging.
+     */
+    public AbstractLoggingClientBuilder failedSampler(
+            Sampler<? super ClientRequestContext> failedSampler) {
+        this.failedSampler = requireNonNull(failedSampler, "failedSampler");
+        return this;
+    }
+
+    final Sampler<? super ClientRequestContext> failedSampler() {
+        return failedSampler;
     }
 }

@@ -81,11 +81,12 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ClientRequestContext> sampler) {
+            Sampler<? super ClientRequestContext> sampler,
+            Sampler<? super ClientRequestContext> failedSampler) {
 
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
               requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
               responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-              responseCauseSanitizer, sampler);
+              responseCauseSanitizer, sampler, failedSampler);
     }
 }

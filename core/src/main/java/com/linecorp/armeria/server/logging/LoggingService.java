@@ -16,9 +16,9 @@
 package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.log;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
-import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logWhenComplete;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -90,6 +90,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             ? extends @Nullable Object> responseCauseSanitizer;
 
     private final Sampler<? super ServiceRequestContext> sampler;
+    private final Sampler<? super ServiceRequestContext> failedSampler;
 
     /**
      * Creates a new instance that logs {@link HttpRequest}s and {@link HttpResponse}s at the specified
@@ -114,7 +115,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ServiceRequestContext> sampler) {
+            Sampler<? super ServiceRequestContext> sampler,
+            Sampler<? super ServiceRequestContext> failedSampler) {
 
         super(requireNonNull(delegate, "delegate"));
 
@@ -130,13 +132,20 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         this.sampler = requireNonNull(sampler, "sampler");
+        this.failedSampler = requireNonNull(failedSampler, "failedSampler");
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (sampler.isSampled(ctx)) {
-            logWhenComplete(logger, ctx, requestLogger, responseLogger);
-        }
+        ctx.log().whenComplete().thenAccept(requestLog -> {
+            if (requestLog.responseCause() == null) {
+                if (sampler.isSampled(ctx)) {
+                    log(logger, ctx, requestLog, requestLogger, responseLogger);
+                }
+            } else if (failedSampler.isSampled(ctx)) {
+                log(logger, ctx, requestLog, requestLogger, responseLogger);
+            }
+        });
         return unwrap().serve(ctx, req);
     }
 

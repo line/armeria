@@ -36,6 +36,7 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
                              .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
                              .failureResponseLogLevel(parameter.failureResponseLogLevel())
                              .samplingRate(parameter.samplingRate())
+                             .failedSamplingRate(parameter.failedSamplingRate())
                              .newDecorator();
     }
 }
