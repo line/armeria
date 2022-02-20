@@ -187,8 +187,8 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             if (rampingUpTaskWindowNanos > 0) {
                 // Check whether we can ramp up with the previous ramped up endpoints which are at the last
                 // of the rampingUpEndpointsEntries.
+                final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
                 if (shouldRampUpWithPreviousRampedUpEntry()) {
-                    final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
                     if (!newlyAddedEndpoints.isEmpty()) {
                         updateWeightAndStep(newlyAddedEndpoints);
                         endpointsRampingUp.getLast().addEndpoints(newlyAddedEndpoints);
@@ -254,7 +254,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         /**
          * Removes endpoints in endpointsFinishedRampingUp and endpointsRampingUp that
          * newEndpoints do not contain.
-         * This also returns the {@link Set} of {@link EndpointAndStep}s whose endpoints are not in
+         * This also returns the {@link Set} of {@link EndpointAndStep}s whose endpoints are not
          * in endpointsFinishedRampingUp and endpointsRampingUp.
          */
         private Set<EndpointAndStep> filterOldEndpoints(List<Endpoint> newEndpoints) {
