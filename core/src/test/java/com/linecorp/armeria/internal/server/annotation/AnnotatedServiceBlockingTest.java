@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
@@ -149,10 +150,10 @@ class AnnotatedServiceBlockingTest {
             "/myEvenLoop/completionStage, 0"
     })
     void testOnlyEventLoopWithoutBlockingAnnotation(String path, Integer count) throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
-        final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+        final AggregatedHttpResponse res = client.execute(headers);
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(blockingCount).hasValue(count);
     }

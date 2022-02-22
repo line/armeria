@@ -202,7 +202,8 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
                         assertThat(headers.status()).isEqualTo(HttpStatus.OK);
                         assertThat(headers.contentType()).isEqualTo(MediaType.OCTET_STREAM);
                         assertThat(headers.get(HttpHeaderNames.CONTENT_DISPOSITION))
-                                .startsWith("attachment;filename=heapdump");
+                                // e.g. attachment;filename=heap-2022-01-19-22-064029423405632482108.hprof
+                                .startsWith("attachment;filename=heap");
                         final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1);
                         assertThat(contentLength).isPositive();
                         remainingBytes.set(contentLength);

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.client.circuitbreaker.CircuitState.CLOSED;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitState.FORCED_OPEN;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitState.HALF_OPEN;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitState.OPEN;
 import static java.util.Objects.requireNonNull;
@@ -40,6 +41,7 @@ final class CircuitBreakerMetrics {
     private final Counter transitionsToClosed;
     private final Counter transitionsToOpen;
     private final Counter transitionsToHalfOpen;
+    private final Counter transitionsToForcedOpen;
     private final Counter rejectedRequests;
 
     CircuitBreakerMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
@@ -58,6 +60,7 @@ final class CircuitBreakerMetrics {
         transitionsToClosed = parent.counter(transitions, idPrefix.tags("state", CLOSED.name()));
         transitionsToOpen = parent.counter(transitions, idPrefix.tags("state", OPEN.name()));
         transitionsToHalfOpen = parent.counter(transitions, idPrefix.tags("state", HALF_OPEN.name()));
+        transitionsToForcedOpen = parent.counter(transitions, idPrefix.tags("state", FORCED_OPEN.name()));
         rejectedRequests = parent.counter(idPrefix.name("rejected.requests"), idPrefix.tags());
     }
 
@@ -74,6 +77,10 @@ final class CircuitBreakerMetrics {
             case HALF_OPEN:
                 this.state.set(0.5);
                 transitionsToHalfOpen.increment();
+                break;
+            case FORCED_OPEN:
+                this.state.set(0);
+                transitionsToForcedOpen.increment();
                 break;
             default:
                 throw new Error("unknown circuit state: " + state);

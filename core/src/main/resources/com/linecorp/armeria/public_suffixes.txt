@@ -14,6 +14,7 @@
 *.backyards.banzaicloud.io
 *.banzai.cloud
 *.bd
+*.beget.app
 *.bzz.dapps.earth
 *.ck
 *.cloud.metacentrum.cz
@@ -99,6 +100,7 @@
 *.uberspace.de
 *.usercontent.goog
 *.vps.myjino.ru
+*.vultrobjects.com
 *.webhare.dev
 *.webpaas.ovh.net
 *.yokohama.jp
@@ -434,6 +436,7 @@ ap.it
 ap.leg.br
 aparecida.br
 apartments
+api.gov.uk
 api.stdlib.com
 apigee.io
 app
@@ -1055,7 +1058,6 @@ bss.design
 bt
 bt.it
 bu.no
-budapest
 budejju.no
 bugatti
 build
@@ -1502,6 +1504,7 @@ co.zw
 coach
 coal.museum
 coastaldefence.museum
+codeberg.page
 codes
 codespot.com
 cody.museum
@@ -1749,7 +1752,6 @@ cruise
 cruises
 cs.it
 cs.keliweb.cloud
-csc
 csx.cc
 ct.it
 ct.us
@@ -1909,6 +1911,8 @@ dinosaur.museum
 direct
 direct.quickconnect.to
 directory
+discordsays.com
+discordsez.com
 discount
 discourse.group
 discourse.team
@@ -2985,7 +2989,6 @@ gov.km
 gov.kn
 gov.kp
 gov.kw
-gov.ky
 gov.kz
 gov.la
 gov.lb
@@ -3598,6 +3601,11 @@ ind.gt
 ind.in
 ind.kw
 ind.tn
+independent-commission.uk
+independent-inquest.uk
+independent-inquiry.uk
+independent-panel.uk
+independent-review.uk
 inderoy.no
 indian.museum
 indiana.museum
@@ -4956,6 +4964,7 @@ mil.by
 mil.cl
 mil.cn
 mil.co
+mil.cy
 mil.do
 mil.ec
 mil.eg
@@ -5393,7 +5402,6 @@ nalchik.su
 namdalseid.no
 name
 name.az
-name.cy
 name.eg
 name.et
 name.fj
@@ -6010,6 +6018,7 @@ ono.fukushima.jp
 ono.hyogo.jp
 onojo.fukuoka.jp
 onomichi.hiroshima.jp
+onporter.run
 onred.one
 onrender.com
 ontario.museum
@@ -6326,7 +6335,6 @@ paragliding.aero
 paris
 paris.eu.org
 paris.museum
-parliament.cy
 parliament.nz
 parma.it
 paroch.k12.ma.us
@@ -6575,6 +6583,7 @@ pu.it
 pub
 pub.sa
 publ.pt
+public-inquiry.uk
 public.museum
 publishproxy.com
 pubol.museum
@@ -6797,6 +6806,7 @@ rotorcraft.aero
 router.management
 rovigo.it
 rovno.ua
+royal-commission.uk
 royken.no
 royrvik.no
 rr.gov.br
@@ -7319,6 +7329,7 @@ singles
 siracusa.it
 sirdal.no
 site
+site.tb-hosting.com
 siteleaf.net
 sites.static.land
 sj
@@ -7955,6 +7966,7 @@ traniandriabarletta.it
 tranibarlettaandria.it
 tranoy.no
 translate.goog
+translated.page
 transport.museum
 transporte.bo
 trapani.it

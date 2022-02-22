@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -23,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
@@ -71,6 +73,14 @@ public final class JacksonUtil {
 
     public static byte[] writeValueAsBytes(Object value) throws JsonProcessingException {
         return INSTANCE.writeValueAsBytes(value);
+    }
+
+    public static <T> T readValue(byte[] bytes, Class<T> clazz) throws IOException {
+        return INSTANCE.readValue(bytes, clazz);
+    }
+
+    public static <T> T readValue(byte[] bytes, TypeReference<T> typeRef) throws IOException {
+        return INSTANCE.readValue(bytes, typeRef);
     }
 
     private JacksonUtil() {}

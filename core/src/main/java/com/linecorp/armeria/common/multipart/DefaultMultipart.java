@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.HttpObjectAggregator;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -241,9 +240,11 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
         @Override
         public void onNext(BodyPart bodyPart) {
             requireNonNull(bodyPart, "bodyPart");
-            final CompletableFuture<AggregatedBodyPart> future = new CompletableFuture<>();
-            bodyPart.content().subscribe(new ContentAggregator(bodyPart, future, alloc));
-            bodyPartFutures.add(future);
+            if (alloc != null) {
+                bodyPartFutures.add(bodyPart.aggregateWithPooledObjects(alloc));
+            } else {
+                bodyPartFutures.add(bodyPart.aggregate());
+            }
         }
 
         @Override
@@ -264,30 +265,5 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
                                   return null;
                               });
         }
-    }
-
-    /**
-     * Aggregates a {@link BodyPart#content()}.
-     */
-    private static final class ContentAggregator extends HttpObjectAggregator<AggregatedBodyPart> {
-
-        private final BodyPart bodyPart;
-
-        ContentAggregator(BodyPart bodyPart, CompletableFuture<AggregatedBodyPart> future,
-                          @Nullable ByteBufAllocator alloc) {
-            super(future, alloc);
-            this.bodyPart = bodyPart;
-        }
-
-        @Override
-        protected void onHeaders(HttpHeaders headers) {}
-
-        @Override
-        protected AggregatedBodyPart onSuccess(HttpData content) {
-            return AggregatedBodyPart.of(bodyPart.headers(), content);
-        }
-
-        @Override
-        protected void onFailure() {}
     }
 }
