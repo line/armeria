@@ -375,12 +375,9 @@ class GrpcDocServicePluginTest {
 
     @Test
     void httpEndpoint() {
-        final GrpcService grpcService = (GrpcService) GrpcService
-                .builder()
-                .addService(mock(HttpJsonTranscodingTestServiceImplBase.class))
-                .enableHttpJsonTranscoding(true)
-                .build()
-                .unwrap();
+        final GrpcService grpcService =
+                GrpcService.builder().addService(mock(HttpJsonTranscodingTestServiceImplBase.class))
+                           .enableHttpJsonTranscoding(true).build();
         assertThat(grpcService).isInstanceOf(HttpEndpointSupport.class);
         final HttpEndpointSupport httpEndpointSupport = (HttpEndpointSupport) grpcService;
 

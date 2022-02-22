@@ -66,8 +66,6 @@ public final class DecoratorUtil {
         }
     };
 
-    private DecoratorUtil() {}
-
     /**
      * Returns the list of {@link Decorator} annotated methods.
      */
@@ -260,6 +258,8 @@ public final class DecoratorUtil {
                                             " must have a 'value' method", e);
         }
     }
+
+    private DecoratorUtil() {}
 
     /**
      * An internal class to hold a decorator with its order.

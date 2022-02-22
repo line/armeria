@@ -46,23 +46,15 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     private final GrpcService delegate;
 
     /**
-     * A pair of a service name (e.g. '/armeria.grpc.sample.SampleService') and decorators
-     * that are extracted from `@Decorator` and composite already.
-     */
-    private final Map<String, HttpService> serviceDecorators;
-
-    /**
      * A pair of a method path (e.g. '/armeria.grpc.sample.SampleService/UnaryCall') and decorators
      * that are extracted from `@Decorator` and composite already.
      */
     private final Map<String, HttpService> methodDecorators;
 
     GrpcDecoratingService(GrpcService delegate,
-                          Map<String, HttpService> serviceDecorators,
                           Map<String, HttpService> methodDecorators) {
         super(delegate);
         this.delegate = delegate;
-        this.serviceDecorators = serviceDecorators;
         this.methodDecorators = methodDecorators;
     }
 
@@ -73,7 +65,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
             return methodDecorator.serve(ctx, req);
         }
         final String serviceName = extractServiceName(req.path());
-        final HttpService serviceDecorator = serviceDecorators.get(serviceName);
+        final HttpService serviceDecorator = methodDecorators.get(serviceName);
         if (serviceDecorator != null) {
             return serviceDecorator.serve(ctx, req);
         }

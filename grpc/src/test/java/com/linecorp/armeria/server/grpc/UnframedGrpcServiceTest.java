@@ -198,8 +198,7 @@ class UnframedGrpcServiceTest {
                                                 .maxResponseMessageLength(MAX_MESSAGE_BYTES)
                                                 .enableUnframedRequests(true)
                                                 .unframedGrpcErrorHandler(errorHandler)
-                                                .build()
-                                                .unwrap();
+                                                .build();
     }
 
     @Test
