@@ -23,14 +23,18 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +55,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.assertj.core.api.AbstractDoubleAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +79,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
+import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -514,6 +520,98 @@ class ServerTest {
     }
 
     @Test
+    void noTlsMetricGivenNoTlsSetup() {
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+        Server.builder()
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .meterRegistry(meterRegistry)
+                .build();
+
+        final Gauge gauge = meterRegistry.find("armeria.server.certificate.expiration").gauge();
+
+        assertThat(gauge).isNull();
+    }
+
+    @Test
+    void tlsMetricGivenConfiguredCertificateNotExpired() throws CertificateException {
+        final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+        Server.builder()
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .meterRegistry(meterRegistry)
+              .tls(ssc.certificate(), ssc.privateKey())
+              .build();
+
+        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isZero();
+    }
+
+    @Test
+    void tlsMetricGivenSelfSignCertificateNotExpired() {
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+        Server.builder()
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .meterRegistry(meterRegistry)
+              .tlsSelfSigned()
+              .build();
+
+        final Gauge gauge = meterRegistry.find("armeria.server.certificate.expiration").gauge();
+        assertThat(gauge).isNotNull();
+        assertThat(gauge.value()).isZero();
+    }
+
+    @Test
+    void tlsMetricGivenCertificateChainNotExpired() {
+        final InputStream expiredCertificateChain = getClass().getResourceAsStream("certificate-chain.pem");
+        final InputStream pk = getClass().getResourceAsStream("pk.key");
+
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+        Server.builder()
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .meterRegistry(meterRegistry)
+              .tls(expiredCertificateChain, pk)
+              .build();
+
+        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isZero();
+        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "test.root.armeria").isZero();
+    }
+
+    @Test
+    void tlsMetricGivenExpired() throws CertificateException {
+        final Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        final Date notAfter = calendar.getTime();
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        final Date notBefore = calendar.getTime();
+        final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", notBefore, notAfter);
+
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+        Server.builder()
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .meterRegistry(meterRegistry)
+              .tls(ssc.certificate(), ssc.privateKey())
+              .build();
+
+        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isOne();
+    }
+
+    @Test
+    void tlsMetricGivenCertificateChainExpired() {
+        final InputStream expiredCertificateChain = getClass()
+                .getResourceAsStream("expired-certificate_chain.pem");
+        final InputStream pk = getClass().getResourceAsStream("expire_pk.key");
+
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+        Server.builder()
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .meterRegistry(meterRegistry)
+              .tls(expiredCertificateChain, pk)
+              .build();
+
+        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isOne();
+        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "test.root.armeria").isZero();
+    }
+
+    @Test
     void blockUntilShutdown() throws Exception {
         final AtomicBoolean stopped = new AtomicBoolean();
         final Server server = Server.builder()
@@ -613,5 +711,12 @@ class ServerTest {
         private void recordThread() {
             threads.add(Thread.currentThread());
         }
+    }
+
+    private static AbstractDoubleAssert<?> assertThatGauge(MeterRegistry meterRegistry, String gaugeName,
+                                                           String cn) {
+        final Gauge gauge = meterRegistry.find(gaugeName).tag("CN", cn).gauge();
+        assertThat(gauge).isNotNull();
+        return assertThat(gauge.value());
     }
 }

@@ -17,10 +17,16 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -40,9 +46,17 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.net.ssl.SSLSession;
+
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,6 +144,11 @@ public final class Server implements ListenableAsyncCloseable {
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
 
         setupVersionMetrics();
+
+        if (config().sslContextMapping() != null) {
+            final SslContext sslContext = config().sslContextMapping().map(defaultHostname());
+            setupTlsMetrics(sslContext);
+        }
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
@@ -389,6 +408,35 @@ public final class Server implements ListenableAsyncCloseable {
              .description("A metric with a constant '1' value labeled by version and commit hash" +
                           " from which Armeria was built.")
              .register(meterRegistry);
+    }
+
+    /**
+     * Sets up gauge metric for each server certificate.
+     */
+    private void setupTlsMetrics(SslContext sslContext) {
+        final MeterRegistry meterRegistry = config().meterRegistry();
+
+        final SSLSession sslSession = validateSslContext(sslContext);
+        for (Certificate certificate : sslSession.getLocalCertificates()) {
+            try {
+                final X509Certificate x509Certificate = (X509Certificate) certificate;
+                final Supplier<Number> certificateExpirationInfoProvider = () -> {
+                    try {
+                        x509Certificate.checkValidity();
+                    } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+                        return 1;
+                    }
+                    return 0;
+                };
+
+                Gauge.builder("armeria.server.certificate.expiration", certificateExpirationInfoProvider)
+                     .description("0 if certificate is not expired, 1 if certificate is expired")
+                     .tags("CN", getCommonName(x509Certificate))
+                     .register(meterRegistry);
+            } catch (Exception ex) {
+                logger.warn("Fail to setup certificate expiration, " + ex.getMessage());
+            }
+        }
     }
 
     @Override
@@ -843,5 +891,11 @@ public final class Server implements ListenableAsyncCloseable {
     private static boolean isLocalPort(ServerPort serverPort) {
         final InetAddress address = serverPort.localAddress().getAddress();
         return address.isAnyLocalAddress() || address.isLoopbackAddress();
+    }
+
+    private static String getCommonName(X509Certificate certificate) throws CertificateEncodingException {
+        final X500Name x500Name = new JcaX509CertificateHolder(certificate).getSubject();
+        final RDN cn = x500Name.getRDNs(BCStyle.CN)[0];
+        return IETFUtils.valueToString(cn.getFirst().getValue());
     }
 }
