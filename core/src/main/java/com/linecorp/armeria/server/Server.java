@@ -27,6 +27,8 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -420,6 +422,8 @@ public final class Server implements ListenableAsyncCloseable {
         for (Certificate certificate : sslSession.getLocalCertificates()) {
             try {
                 final X509Certificate x509Certificate = (X509Certificate) certificate;
+                final String commonName = getCommonName(x509Certificate);
+
                 final Supplier<Number> certificateExpirationInfoProvider = () -> {
                     try {
                         x509Certificate.checkValidity();
@@ -428,10 +432,17 @@ public final class Server implements ListenableAsyncCloseable {
                     }
                     return 0;
                 };
-
                 Gauge.builder("armeria.server.certificate.expiration", certificateExpirationInfoProvider)
                      .description("0 if certificate is not expired, 1 if certificate is expired")
-                     .tags("CN", getCommonName(x509Certificate))
+                     .tags("CN", commonName)
+                     .register(meterRegistry);
+
+                final Supplier<Number> timeToExpireProvider = () ->
+                        Duration.between(Instant.now(), x509Certificate.getNotAfter().toInstant()).getSeconds();
+                Gauge.builder("armeria.server.certificate.time.to.expire", timeToExpireProvider)
+                     .description("Duration in second before certificate expires which becomes negative " +
+                                  "if certificate is expired")
+                     .tags("CN", commonName)
                      .register(meterRegistry);
             } catch (Exception ex) {
                 logger.warn("Fail to setup certificate expiration, " + ex.getMessage());

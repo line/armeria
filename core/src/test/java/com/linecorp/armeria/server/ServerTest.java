@@ -101,6 +101,9 @@ class ServerTest {
     private static final long requestTimeoutMillis = 500;
     private static final long idleTimeoutMillis = 500;
 
+    private static final String CERT_EXPIRATION_GAUGE_NAME = "armeria.server.certificate.expiration";
+    private static final String CERT_TIME_TO_EXPIRE_GAUGE_NAME = "armeria.server.certificate.time.to.expire";
+
     private static final EventExecutorGroup asyncExecutorGroup = new DefaultEventExecutorGroup(1);
 
     @RegisterExtension
@@ -527,9 +530,11 @@ class ServerTest {
                 .meterRegistry(meterRegistry)
                 .build();
 
-        final Gauge gauge = meterRegistry.find("armeria.server.certificate.expiration").gauge();
+        final Gauge expirationGauge = meterRegistry.find(CERT_EXPIRATION_GAUGE_NAME).gauge();
+        final Gauge timeToExpireGauge = meterRegistry.find(CERT_TIME_TO_EXPIRE_GAUGE_NAME).gauge();
 
-        assertThat(gauge).isNull();
+        assertThat(expirationGauge).isNull();
+        assertThat(timeToExpireGauge).isNull();
     }
 
     @Test
@@ -542,7 +547,8 @@ class ServerTest {
               .tls(ssc.certificate(), ssc.privateKey())
               .build();
 
-        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isZero();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isPositive();
     }
 
     @Test
@@ -554,9 +560,13 @@ class ServerTest {
               .tlsSelfSigned()
               .build();
 
-        final Gauge gauge = meterRegistry.find("armeria.server.certificate.expiration").gauge();
-        assertThat(gauge).isNotNull();
-        assertThat(gauge.value()).isZero();
+        final Gauge expirationGauge = meterRegistry.find(CERT_EXPIRATION_GAUGE_NAME).gauge();
+        assertThat(expirationGauge).isNotNull();
+        assertThat(expirationGauge.value()).isZero();
+
+        final Gauge timeToExpireGauge = meterRegistry.find(CERT_TIME_TO_EXPIRE_GAUGE_NAME).gauge();
+        assertThat(timeToExpireGauge).isNotNull();
+        assertThat(timeToExpireGauge.value()).isPositive();
     }
 
     @Test
@@ -571,8 +581,10 @@ class ServerTest {
               .tls(expiredCertificateChain, pk)
               .build();
 
-        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isZero();
-        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "test.root.armeria").isZero();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isPositive();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isZero();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "test.root.armeria").isPositive();
     }
 
     @Test
@@ -591,7 +603,8 @@ class ServerTest {
               .tls(ssc.certificate(), ssc.privateKey())
               .build();
 
-        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isOne();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isNegative();
     }
 
     @Test
@@ -607,8 +620,10 @@ class ServerTest {
               .tls(expiredCertificateChain, pk)
               .build();
 
-        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "localhost").isOne();
-        assertThatGauge(meterRegistry, "armeria.server.certificate.expiration", "test.root.armeria").isZero();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isNegative();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isZero();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "test.root.armeria").isPositive();
     }
 
     @Test
