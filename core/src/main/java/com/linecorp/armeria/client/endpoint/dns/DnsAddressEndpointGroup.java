@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.endpoint.dns;
 import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -194,15 +193,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
         }
 
         final ImmutableSortedSet<Endpoint> endpoints = builder.build();
-        if (logger().isDebugEnabled()) {
-            logger().debug("{} Resolved: {} (TTL: {})",
-                           logPrefix(),
-                           endpoints.stream()
-                                    .map(Endpoint::ipAddr)
-                                    .collect(Collectors.joining(", ")),
-                           ttl);
-        }
-
+        logDnsResolutionResult(endpoints, ttl);
         return endpoints;
     }
 }

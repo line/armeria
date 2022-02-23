@@ -47,6 +47,7 @@ import org.slf4j.Logger;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -358,9 +359,9 @@ class HealthCheckServiceTest {
 
     @Test
     void notUpdatableByDefault() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hc"),
-                                                          "{\"healthy\":false}").aggregate().join();
+                                                          "{\"healthy\":false}");
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
@@ -368,11 +369,11 @@ class HealthCheckServiceTest {
 
     @Test
     void updateUsingPutOrPost() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         // Make unhealthy.
         final AggregatedHttpResponse res1 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_updatable"),
-                                                           "{\"healthy\":false}").aggregate().join();
+                                                           "{\"healthy\":false}");
         assertThat(res1).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
@@ -381,7 +382,7 @@ class HealthCheckServiceTest {
 
         // Make healthy.
         final AggregatedHttpResponse res2 = client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_updatable"),
-                                                           "{\"healthy\":true}").aggregate().join();
+                                                           "{\"healthy\":true}");
         assertThat(res2).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
@@ -391,12 +392,12 @@ class HealthCheckServiceTest {
 
     @Test
     void updateUsingPatch() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         // Make unhealthy.
         final AggregatedHttpResponse res1 = client.execute(
                 RequestHeaders.of(HttpMethod.PATCH, "/hc_updatable"),
-                "[{\"op\":\"replace\",\"path\":\"/healthy\",\"value\":false}]").aggregate().join();
+                "[{\"op\":\"replace\",\"path\":\"/healthy\",\"value\":false}]");
         assertThat(res1).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
@@ -406,7 +407,7 @@ class HealthCheckServiceTest {
         // Make healthy.
         final AggregatedHttpResponse res2 = client.execute(
                 RequestHeaders.of(HttpMethod.PATCH, "/hc_updatable"),
-                "[{\"op\":\"replace\",\"path\":\"/healthy\",\"value\":true}]").aggregate().join();
+                "[{\"op\":\"replace\",\"path\":\"/healthy\",\"value\":true}]");
         assertThat(res2).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
@@ -416,20 +417,18 @@ class HealthCheckServiceTest {
 
     @Test
     void updateListener() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         capturedHealthy.set(null);
 
         // Make unhealthy.
-        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":false}")
-              .aggregate().join();
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":false}");
         assertThat(capturedHealthy.get()).isFalse();
 
         capturedHealthy.set(null);
 
         // Make healthy.
-        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":true}")
-              .aggregate().join();
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":true}");
         assertThat(capturedHealthy.get()).isTrue();
     }
 
@@ -445,11 +444,11 @@ class HealthCheckServiceTest {
 
     @Test
     void custom() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         // Make unhealthy.
         final AggregatedHttpResponse res1 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_custom"),
-                                                           "KO").aggregate().join();
+                                                           "KO");
         assertThat(res1).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -458,7 +457,7 @@ class HealthCheckServiceTest {
 
         // Make healthy.
         final AggregatedHttpResponse res2 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_custom"),
-                                                           "OK").aggregate().join();
+                                                           "OK");
         assertThat(res2).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -467,7 +466,7 @@ class HealthCheckServiceTest {
 
         // Send a no-op request.
         final AggregatedHttpResponse res3 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_custom"),
-                                                           "NOOP").aggregate().join();
+                                                           "NOOP");
         assertThat(res3).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -477,16 +476,15 @@ class HealthCheckServiceTest {
 
     @Test
     void customError() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         // Use an unsupported method.
-        final AggregatedHttpResponse res1 = client.execute(RequestHeaders.of(HttpMethod.PATCH, "/hc_custom"))
-                                                  .aggregate().join();
+        final AggregatedHttpResponse res1 = client.execute(RequestHeaders.of(HttpMethod.PATCH, "/hc_custom"));
         assertThat(res1.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
 
         // Send a wrong command.
         final AggregatedHttpResponse res2 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_custom"),
-                                                           "BAD").aggregate().join();
+                                                           "BAD");
         assertThat(res2.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 

@@ -152,12 +152,16 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 this.requestHeaders = null;
                 subscriber.onNext(requestHeaders);
             } else {
-                askUpstreamForElement();
+                whenConsumed().thenRun(() -> {
+                    if (demand() > 0) {
+                        askUpstreamForElement();
+                    }
+                });
             }
         }
     }
 
-    private void askUpstreamForElement() {
+    public void askUpstreamForElement() {
         if (!askedUpstreamForElement) {
             askedUpstreamForElement = true;
             assert upstream != null;
@@ -241,8 +245,10 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                     }
                 } else {
                     // Handler didn't produce anything, which means it needs more elements from the upstream
-                    // to produce something.
-                    askUpstreamForElement();
+                    // to produce something if there is a demand.
+                    if (demand() > 0) {
+                        askUpstreamForElement();
+                    }
                 }
             } catch (Throwable ex) {
                 decoder.processOnError(ex);

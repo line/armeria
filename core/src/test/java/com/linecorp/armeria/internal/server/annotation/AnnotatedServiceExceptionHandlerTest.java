@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
@@ -74,18 +73,17 @@ class AnnotatedServiceExceptionHandlerTest {
         }
     };
 
-    private WebClient client;
+    private BlockingWebClient client;
 
     @BeforeEach
     void setUp() {
-        client = WebClient.of(server.httpUri());
+        client = BlockingWebClient.of(server.httpUri());
     }
 
     @Test
     void sync() {
         NoExceptionHandler.counter.set(0);
-        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/sync"))
-                                                      .aggregate().join();
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/sync"));
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("handler1");
@@ -95,8 +93,7 @@ class AnnotatedServiceExceptionHandlerTest {
     @Test
     void async() {
         NoExceptionHandler.counter.set(0);
-        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/async"))
-                                                      .aggregate().join();
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/async"));
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("handler1");
@@ -106,8 +103,7 @@ class AnnotatedServiceExceptionHandlerTest {
     @Test
     void resp1() {
         NoExceptionHandler.counter.set(0);
-        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp1"))
-                                                      .aggregate().join();
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp1"));
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("handler1");
@@ -117,8 +113,7 @@ class AnnotatedServiceExceptionHandlerTest {
     @Test
     void resp2() {
         NoExceptionHandler.counter.set(0);
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp2")).aggregate().join();
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/resp2"));
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("handler2");
@@ -129,15 +124,14 @@ class AnnotatedServiceExceptionHandlerTest {
     void sync2() {
         // By default exception handler.
         final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/sync")).aggregate().join();
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/sync"));
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     void async2() {
         // The method returns CompletionStage<?>. It throws an exception immediately if it is called.
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async")).aggregate().join();
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async"));
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
@@ -145,8 +139,7 @@ class AnnotatedServiceExceptionHandlerTest {
     void async2Aggregation() {
         // The method returns CompletionStage<?>. It throws an exception after the request is aggregated.
         final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async/aggregation"))
-                      .aggregate().join();
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/2/async/aggregation"));
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
@@ -154,33 +147,29 @@ class AnnotatedServiceExceptionHandlerTest {
     void bad1() {
         // Timeout because of bad exception handler.
         // As a response headers was written already, RST_STREAM will be received.
-        assertThatThrownBy(
-                () -> client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad1")).aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasRootCauseInstanceOf(ClosedStreamException.class)
-                .hasRootCauseMessage("received a RST_STREAM frame: INTERNAL_ERROR");
+        assertThatThrownBy(() -> client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad1")))
+                .isInstanceOf(ClosedStreamException.class)
+                .hasMessageContaining("received a RST_STREAM frame: INTERNAL_ERROR");
     }
 
     @Test
     void bad2() {
         // Internal server error would be returned due to invalid response.
-        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad2"))
-                                                      .aggregate().join();
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad2"));
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
     void bad3() {
-        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad3"))
-                                                      .aggregate().join();
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/bad3"));
         assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
     void handler3() {
         NoExceptionHandler.counter.set(0);
-        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/4/handler3"))
-                                                      .aggregate().join();
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/4/handler3"));
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("handler3");
@@ -190,8 +179,8 @@ class AnnotatedServiceExceptionHandlerTest {
     @Test
     void handle3WithBadDecorator() {
         // A decorator throws an exception.
-        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/5/handler3"))
-                                                      .aggregate().join();
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/5/handler3"));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("handler3");
     }

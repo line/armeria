@@ -22,6 +22,13 @@ dependencies {
             }
         }
     }
+
+    testImplementation("org.eclipse.jdt:ecj") {
+        version {
+            // As a workaround for JSP compiler error on Java 17, forcibly specify the newer version
+            strictly "3.24.0"
+        }
+    }
 }
 
 // Use the test sources from ':jetty9'.

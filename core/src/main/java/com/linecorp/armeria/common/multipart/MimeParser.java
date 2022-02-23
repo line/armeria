@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.multipart.MultipartDecoder.BodyPartPublisher;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 
@@ -65,6 +65,8 @@ final class MimeParser {
      * Boundary as bytes.
      */
     private final byte[] boundaryBytes;
+
+    private final MultipartDecoder multipartDecoder;
 
     /**
      * Boundary length.
@@ -112,7 +114,7 @@ final class MimeParser {
      * The publisher that emits body part contents.
      */
     @Nullable
-    private DefaultStreamMessage<HttpData> bodyPartPublisher;
+    private MultipartDecoder.BodyPartPublisher bodyPartPublisher;
 
     /**
      * Read and process body parts until we see the terminating boundary line.
@@ -137,10 +139,12 @@ final class MimeParser {
     /**
      * Parses the MIME content.
      */
-    MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary) {
+    MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary,
+               MultipartDecoder multipartDecoder) {
         this.in = in;
         this.out = out;
         boundaryBytes = getBytes("--" + boundary);
+        this.multipartDecoder = multipartDecoder;
         boundaryLength = boundaryBytes.length;
         goodSuffixes = new int[boundaryLength];
         compileBoundaryPattern();
@@ -194,7 +198,7 @@ final class MimeParser {
                         logger.trace("state={}", State.SKIP_PREAMBLE);
                         skipPreamble();
                         if (boundaryStart == -1) {
-                            // Need more data
+                            // Need more data; DecodedHttpStreamMessage will handle.
                             return;
                         }
                         logger.trace("Skipped the preamble.");
@@ -212,7 +216,7 @@ final class MimeParser {
                         logger.trace("state={}", State.HEADERS);
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
-                            // Need more data
+                            // Need more data; DecodedHttpStreamMessage will handle.
                             return;
                         }
                         if (!headerLine.isEmpty()) {
@@ -229,7 +233,7 @@ final class MimeParser {
                         state = State.BODY;
                         startOfLine = true;
 
-                        bodyPartPublisher = new DefaultStreamMessage<>();
+                        bodyPartPublisher = multipartDecoder.onBodyPartBegin();
                         final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
                                                                  .content(bodyPartPublisher)
                                                                  .build();
@@ -239,15 +243,22 @@ final class MimeParser {
                     case BODY:
                         logger.trace("state={}", State.BODY);
                         final ByteBuf bodyContent = readBody();
-                        if (boundaryStart == -1 || bodyContent == NEED_MORE) {
-                            if (bodyContent == NEED_MORE) {
-                                // Need more data
-                                return;
-                            }
-                        } else {
+                        if (bodyContent == NEED_MORE) {
+                            final BodyPartPublisher currentPublisher = bodyPartPublisher;
+                            currentPublisher.whenConsumed().thenRun(() -> {
+                                if (currentPublisher.demand() > 0 && !currentPublisher.isComplete()) {
+                                    multipartDecoder.requestUpstreamForBodyPartData();
+                                }
+                            });
+                            return;
+                        }
+                        if (boundaryStart != -1) {
                             startOfLine = false;
                         }
-                        bodyPartPublisher.write(HttpData.wrap(bodyContent));
+                        // Use tryWrite() to avoid throwing exception.
+                        // For example, when body part is cancelled, MimeParser need to ignore it without
+                        // throwing exception.
+                        bodyPartPublisher.tryWrite(HttpData.wrap(bodyContent));
                         break;
 
                     case END_PART:
@@ -257,8 +268,6 @@ final class MimeParser {
                         } else {
                             state = State.START_PART;
                         }
-
-                        // Release body part resources
                         bodyPartPublisher.close();
                         bodyPartPublisher = null;
                         bodyPartHeadersBuilder = null;
@@ -300,7 +309,7 @@ final class MimeParser {
                 final int bodyLength = length - (boundaryLength + 1);
                 return in.readBytes(bodyLength);
             }
-            // remaining data can be an complete boundary, force it to be
+            // remaining data can be a complete boundary, force it to be
             // processed during next iteration
             return NEED_MORE;
         }
