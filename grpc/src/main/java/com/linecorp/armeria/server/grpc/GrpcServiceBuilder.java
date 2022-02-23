@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
@@ -98,8 +99,7 @@ public final class GrpcServiceBuilder {
     private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
 
     private static Map<String, HttpService> applyGrpcServiceToDecorators(
-            Map<String, List<DecoratorAndOrder>> mp,
-            GrpcService grpcService) {
+            Map<String, List<DecoratorAndOrder>> mp, GrpcService grpcService) {
         return mp.entrySet()
                  .stream()
                  .collect(toImmutableMap(Map.Entry::getKey,
@@ -166,7 +166,8 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    private final Map<String, List<DecoratorAndOrder>> methodDecorators = new HashMap<>();
+    private final ImmutableMap.Builder<String, List<DecoratorAndOrder>> methodDecoratorBuilder =
+            ImmutableMap.builder();
 
     GrpcServiceBuilder() {}
 
@@ -295,6 +296,7 @@ public final class GrpcServiceBuilder {
         requireNonNull(implementation, "implementation");
         requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
         final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
+        requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
         collectDecorators(implementation.getClass(), null, serverServiceDefinition);
         return addService(serverServiceDefinition);
     }
@@ -771,11 +773,10 @@ public final class GrpcServiceBuilder {
         return interceptors;
     }
 
-    private void collectDecorators(Class<?> clazz,
-                                   @Nullable String path,
+    private void collectDecorators(Class<?> clazz, @Nullable String path,
                                    ServerServiceDefinition serverServiceDefinition) {
         final String serviceName =
-                path == null ? serverServiceDefinition.getServiceDescriptor().getName() : path;
+                path != null ? path : serverServiceDefinition.getServiceDescriptor().getName();
         // In gRPC, A method name is unique.
         final Map<String, Method> methods = new HashMap<>();
         for (Method method : getAllMethods(clazz, withModifier(Modifier.PUBLIC))) {
@@ -796,14 +797,14 @@ public final class GrpcServiceBuilder {
             }
             final List<DecoratorAndOrder> decorators = DecoratorUtil.collectDecorators(clazz, method);
             if (!decorators.isEmpty()) {
-                methodDecorators.put('/' + serviceName + '/' + targetMethodName, decorators);
+                methodDecoratorBuilder.put('/' + serviceName + '/' + targetMethodName, decorators);
             }
         }
     }
 
     @VisibleForTesting
     Map<String, List<DecoratorAndOrder>> methodDecorators() {
-        return methodDecorators;
+        return methodDecoratorBuilder.build();
     }
 
     /**
@@ -881,14 +882,14 @@ public final class GrpcServiceBuilder {
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson());
         }
-
+        final Map<String, List<DecoratorAndOrder>> methodDecorators = methodDecoratorBuilder.build();
         if (methodDecorators.isEmpty()) {
             return grpcService;
         } else {
-            final Map<String, HttpService> methodDecorators = applyGrpcServiceToDecorators(
-                    this.methodDecorators,
+            final Map<String, HttpService> composedMethodDecorators = applyGrpcServiceToDecorators(
+                    methodDecorators,
                     grpcService);
-            return new GrpcDecoratingService(grpcService, methodDecorators);
+            return new GrpcDecoratingService(grpcService, composedMethodDecorators);
         }
     }
 }

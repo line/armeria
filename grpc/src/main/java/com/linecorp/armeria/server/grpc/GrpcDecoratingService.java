@@ -43,8 +43,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
      */
     private final Map<String, HttpService> methodDecorators;
 
-    GrpcDecoratingService(GrpcService delegate,
-                          Map<String, HttpService> methodDecorators) {
+    GrpcDecoratingService(GrpcService delegate, Map<String, HttpService> methodDecorators) {
         super(delegate);
         this.delegate = delegate;
         this.methodDecorators = methodDecorators;
@@ -56,7 +55,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
         if (methodDecorator != null) {
             return methodDecorator.serve(ctx, req);
         }
-        return unwrap().serve(ctx, req);
+        return delegate.serve(ctx, req);
     }
 
     @Override
