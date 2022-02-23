@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.ServerSslContextUtil.buildSslContext;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
@@ -64,7 +65,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -1133,15 +1133,6 @@ public final class VirtualHostBuilder {
             return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
         }
         return selfSignedCertificate;
-    }
-
-    private static SslContext buildSslContext(
-            Supplier<SslContextBuilder> sslContextBuilderSupplier,
-            boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
-        return SslContextUtil
-                .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers);
     }
 
     int port() {
