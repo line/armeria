@@ -279,17 +279,15 @@ class GrpcServiceBuilderTest {
                                                       .addService(firstTestService)
                                                       .addService("foo", secondTestService);
 
-        final Map<String, List<DecoratorAndOrder>> serviceDecorators = builder.serviceDecorators();
-        assertThat(serviceDecorators.size()).isEqualTo(2);
-        assertThat(serviceDecorators.containsKey("/armeria.grpc.testing.TestService")).isTrue();
-        assertThat(values(serviceDecorators.get("/armeria.grpc.testing.TestService")))
+        final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
+        assertThat(methodDecorators.size()).isEqualTo(4);
+        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService")).isTrue();
+        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService")))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);
-        assertThat(serviceDecorators.containsKey("/foo")).isTrue();
-        assertThat(values(serviceDecorators.get("/foo"))).containsExactly(Decorator1.class);
-        final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
-        assertThat(methodDecorators.size()).isEqualTo(2);
+        assertThat(methodDecorators.containsKey("/foo")).isTrue();
+        assertThat(values(methodDecorators.get("/foo"))).containsExactly(Decorator1.class);
         assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/unaryCall")).isFalse();
         assertThat(methodDecorators.containsKey("/foo/EmptyCall")).isTrue();
         assertThat(values(methodDecorators.get("/foo/EmptyCall")))
@@ -309,10 +307,10 @@ class GrpcServiceBuilderTest {
                 .addService(firstTestService,
                             impl -> ServerInterceptors.intercept(impl, new DummyInterceptor()));
 
-        final Map<String, List<DecoratorAndOrder>> serviceDecorators = builder.serviceDecorators();
-        assertThat(serviceDecorators.size()).isEqualTo(1);
-        assertThat(serviceDecorators.containsKey("/armeria.grpc.testing.TestService")).isTrue();
-        assertThat(values(serviceDecorators.get("/armeria.grpc.testing.TestService")))
+        final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
+        assertThat(methodDecorators.size()).isEqualTo(1);
+        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService")).isTrue();
+        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService")))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);

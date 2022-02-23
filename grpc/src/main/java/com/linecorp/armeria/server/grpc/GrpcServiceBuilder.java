@@ -164,8 +164,6 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    private final Map<String, List<DecoratorAndOrder>> serviceDecorators = new HashMap<>();
-
     private final Map<String, List<DecoratorAndOrder>> methodDecorators = new HashMap<>();
 
     GrpcServiceBuilder() {}
@@ -801,11 +799,6 @@ public final class GrpcServiceBuilder {
                 methodDecorators.put('/' + serviceName + '/' + targetMethodName, decorators);
             }
         }
-    }
-
-    @VisibleForTesting
-    Map<String, List<DecoratorAndOrder>> serviceDecorators() {
-        return serviceDecorators;
     }
 
     @VisibleForTesting
