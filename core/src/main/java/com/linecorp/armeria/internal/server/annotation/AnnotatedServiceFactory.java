@@ -24,17 +24,14 @@ import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
-import static org.reflections.ReflectionUtils.getConstructors;
 import static org.reflections.ReflectionUtils.getMethods;
 import static org.reflections.ReflectionUtils.withModifier;
 import static org.reflections.ReflectionUtils.withName;
-import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -123,21 +120,6 @@ public final class AnnotatedServiceFactory {
                         .maximumSize(100)
                         .expireAfterWrite(30, TimeUnit.SECONDS)
                         .build();
-
-    /**
-     * An instance map for reusing converters, exception.
-     */
-    private static final ClassValue<Object> instanceCache = new ClassValue<Object>() {
-        @Override
-        protected Object computeValue(Class<?> type) {
-            try {
-                return getInstance0(type);
-            } catch (Exception e) {
-                throw new IllegalStateException("A class must have an accessible default constructor: " +
-                                                type.getName(), e);
-            }
-        }
-    };
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -567,42 +549,8 @@ public final class AnnotatedServiceFactory {
         final Builder<R> builder = new Builder<>();
         Stream.concat(AnnotationUtil.findAll(method, annotationType).stream(),
                       AnnotationUtil.findAll(clazz, annotationType).stream())
-              .forEach(annotation -> builder.add(getInstance(annotation, resultType)));
+              .forEach(annotation -> builder.add(AnnotatedObjectFactory.getInstance(annotation, resultType)));
         return builder;
-    }
-
-    /**
-     * Returns a cached instance of the specified {@link Class} which is specified in the given
-     * {@link Annotation}.
-     */
-    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
-        try {
-            @SuppressWarnings("unchecked")
-            final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
-            return expectedType.cast(instanceCache.get(clazz));
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException(
-                    "A class specified in @" + annotation.annotationType().getSimpleName() +
-                    " annotation cannot be cast to " + expectedType, e);
-        }
-    }
-
-    /**
-     * Returns a cached instance of the specified {@link Class}.
-     */
-    static <T> T getInstance(Class<T> clazz) {
-        @SuppressWarnings("unchecked")
-        final T casted = (T) instanceCache.get(clazz);
-        return casted;
-    }
-
-    private static <T> T getInstance0(Class<? extends T> clazz) throws Exception {
-        @SuppressWarnings("unchecked")
-        final Constructor<? extends T> constructor =
-                Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
-        assert constructor != null : "No default constructor is found from " + clazz.getName();
-        constructor.setAccessible(true);
-        return constructor.newInstance();
     }
 
     /**

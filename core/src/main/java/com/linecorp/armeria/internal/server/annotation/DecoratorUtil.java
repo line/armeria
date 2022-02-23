@@ -18,14 +18,11 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.reflections.ReflectionUtils.getAllMethods;
-import static org.reflections.ReflectionUtils.getConstructors;
 import static org.reflections.ReflectionUtils.getMethods;
 import static org.reflections.ReflectionUtils.withModifier;
 import static org.reflections.ReflectionUtils.withName;
-import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -50,21 +47,6 @@ import com.linecorp.armeria.server.annotation.Decorators;
  * A utility class for {@link Decorator}.
  */
 public final class DecoratorUtil {
-
-    /**
-     * An instance map for decorators.
-     */
-    private static final ClassValue<Object> instanceCache = new ClassValue<Object>() {
-        @Override
-        protected Object computeValue(Class<?> type) {
-            try {
-                return getInstance0(type);
-            } catch (Exception e) {
-                throw new IllegalStateException("A class must have an accessible default constructor: " +
-                                                type.getName(), e);
-            }
-        }
-    };
 
     /**
      * Returns the list of {@link Decorator} annotated methods.
@@ -178,31 +160,6 @@ public final class DecoratorUtil {
     }
 
     /**
-     * Returns a cached instance of the specified {@link Class} which is specified in the given
-     * {@link Annotation}.
-     */
-    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
-        try {
-            @SuppressWarnings("unchecked")
-            final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
-            return expectedType.cast(instanceCache.get(clazz));
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException(
-                    "A class specified in @" + annotation.annotationType().getSimpleName() +
-                    " annotation cannot be cast to " + expectedType, e);
-        }
-    }
-
-    private static <T> T getInstance0(Class<? extends T> clazz) throws Exception {
-        @SuppressWarnings("unchecked")
-        final Constructor<? extends T> constructor =
-                Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
-        assert constructor != null : "No default constructor is found from " + clazz.getName();
-        constructor.setAccessible(true);
-        return constructor.newInstance();
-    }
-
-    /**
      * Returns a decorator with its order if the specified {@code annotation} is one of the user-defined
      * decorator annotation.
      */
@@ -217,7 +174,8 @@ public final class DecoratorUtil {
 
         // In case of user-defined decorator, we need to create a new decorator from its factory.
         @SuppressWarnings("unchecked")
-        final DecoratorFactoryFunction<Annotation> factory = getInstance(d, DecoratorFactoryFunction.class);
+        final DecoratorFactoryFunction<Annotation> factory = AnnotatedObjectFactory
+                .getInstance(d, DecoratorFactoryFunction.class);
 
         // If the annotation has "order" attribute, we can use it when sorting decorators.
         int order = 0;
@@ -242,21 +200,8 @@ public final class DecoratorUtil {
      * {@link Decorator}.
      */
     private static Function<? super HttpService, ? extends HttpService> newDecorator(Decorator decorator) {
-        return service -> service.decorate(getInstance(decorator, DecoratingHttpServiceFunction.class));
-    }
-
-    /**
-     * Returns an object which is returned by {@code value()} method of the specified annotation {@code a}.
-     */
-    private static Object invokeValueMethod(Annotation a) {
-        try {
-            final Method method = Iterables.getFirst(getMethods(a.annotationType(), withName("value")), null);
-            assert method != null : "No 'value' method is found from " + a;
-            return method.invoke(a);
-        } catch (Exception e) {
-            throw new IllegalStateException("An annotation @" + a.annotationType().getSimpleName() +
-                                            " must have a 'value' method", e);
-        }
+        return service -> service.decorate(
+                AnnotatedObjectFactory.getInstance(decorator, DecoratingHttpServiceFunction.class));
     }
 
     private DecoratorUtil() {}
