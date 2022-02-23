@@ -21,8 +21,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
+import static org.reflections.ReflectionUtils.getAllMethods;
+import static org.reflections.ReflectionUtils.withModifier;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.HashMap;
@@ -35,7 +38,6 @@ import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
@@ -774,15 +776,13 @@ public final class GrpcServiceBuilder {
                                    ServerServiceDefinition serverServiceDefinition) {
         final String serviceName =
                 path == null ? serverServiceDefinition.getServiceDescriptor().getName() : path;
-        final List<DecoratorAndOrder> serviceDecorators = DecoratorUtil.collectDecorators(clazz);
-        if (!serviceDecorators.isEmpty()) {
-            methodDecorators.put('/' + serviceName, DecoratorUtil.collectDecorators(clazz));
-        }
         // In gRPC, A method name is unique.
-        final Map<String, Method> methods = DecoratorUtil.decoratorMethods(clazz)
-                                                         .stream()
-                                                         .collect(Collectors.toMap(Method::getName,
-                                                                                   Function.identity()));
+        final Map<String, Method> methods = new HashMap<>();
+        for (Method method : getAllMethods(clazz, withModifier(Modifier.PUBLIC))) {
+            if (method.getDeclaringClass().equals(clazz)) {
+                methods.put(method.getName(), method);
+            }
+        }
         for (final ServerMethodDefinition<?, ?> serverMethodDefinition : serverServiceDefinition.getMethods()) {
             final String targetMethodName = serverMethodDefinition.getMethodDescriptor().getBareMethodName();
             if (targetMethodName == null) {

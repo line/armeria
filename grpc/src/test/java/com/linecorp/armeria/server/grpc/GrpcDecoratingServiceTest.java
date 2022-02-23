@@ -93,13 +93,6 @@ class GrpcDecoratingServiceTest {
         assertThat(THIRD_TEST_RESULT).isEqualTo("");
     }
 
-    @Test
-    void extractServiceName() {
-        final String res = GrpcDecoratingService.extractServiceName(
-                "/armeria.grpc.testing.TestService/UnaryCall");
-        assertThat(res).isEqualTo("/armeria.grpc.testing.TestService");
-    }
-
     private static class FirstDecorator implements DecoratingHttpServiceFunction {
         @Override
         public HttpResponse serve(HttpService delegate,

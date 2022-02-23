@@ -20,8 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -36,12 +34,6 @@ import io.grpc.ServerServiceDefinition;
  * A Wrapper class for {@link GrpcService} to route decorated function according to a request path.
  */
 final class GrpcDecoratingService extends SimpleDecoratingHttpService implements GrpcService {
-
-    @VisibleForTesting
-    static String extractServiceName(String path) {
-        final int idx = path.substring(1).indexOf('/');
-        return path.substring(0, idx + 1);
-    }
 
     private final GrpcService delegate;
 
@@ -63,11 +55,6 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
         final HttpService methodDecorator = methodDecorators.get(req.path());
         if (methodDecorator != null) {
             return methodDecorator.serve(ctx, req);
-        }
-        final String serviceName = extractServiceName(req.path());
-        final HttpService serviceDecorator = methodDecorators.get(serviceName);
-        if (serviceDecorator != null) {
-            return serviceDecorator.serve(ctx, req);
         }
         return unwrap().serve(ctx, req);
     }

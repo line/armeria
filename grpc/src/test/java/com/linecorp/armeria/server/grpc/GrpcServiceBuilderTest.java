@@ -280,15 +280,11 @@ class GrpcServiceBuilderTest {
                                                       .addService("foo", secondTestService);
 
         final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
-        assertThat(methodDecorators.size()).isEqualTo(4);
-        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService")).isTrue();
-        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService")))
+        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);
-        assertThat(methodDecorators.containsKey("/foo")).isTrue();
-        assertThat(values(methodDecorators.get("/foo"))).containsExactly(Decorator1.class);
-        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/unaryCall")).isFalse();
         assertThat(methodDecorators.containsKey("/foo/EmptyCall")).isTrue();
         assertThat(values(methodDecorators.get("/foo/EmptyCall")))
                 .containsExactly(Decorator1.class,
@@ -308,9 +304,8 @@ class GrpcServiceBuilderTest {
                             impl -> ServerInterceptors.intercept(impl, new DummyInterceptor()));
 
         final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
-        assertThat(methodDecorators.size()).isEqualTo(1);
-        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService")).isTrue();
-        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService")))
+        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);
