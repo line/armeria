@@ -39,8 +39,7 @@ import io.netty.util.ReferenceCountUtil;
 /**
  * Utilities for server {@link SslContext}.
  */
-public final class ServerSslContextUtil {
-    private ServerSslContextUtil() {}
+final class ServerSslContextUtil {
 
     /**
      * Makes sure the specified {@link SslContext} is configured properly. If configured as client context or
@@ -138,4 +137,6 @@ public final class ServerSslContextUtil {
             break;
         }
     }
+
+    private ServerSslContextUtil() {}
 }
