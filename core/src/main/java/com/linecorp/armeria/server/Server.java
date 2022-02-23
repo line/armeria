@@ -433,13 +433,17 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
      *
-     * @param whenClosing {@link Runnable} will be run before closing this {@link Server}
+     * @param whenClosing the {@link Runnable} will be run before closing this {@link Server}
      */
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
         Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
             if (whenClosing != null) {
-                whenClosing.run();
+                try {
+                    whenClosing.run();
+                } catch (Exception e) {
+                    logger.warn("whenClosing failed", e);
+                }
             }
             closeAsync().handle((unused, cause) -> {
                 if (cause != null) {
