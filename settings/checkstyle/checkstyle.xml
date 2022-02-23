@@ -325,4 +325,9 @@
                value="WhitespaceAround: ''{0}'' is not preceded with whitespace."/>
     </module>
   </module>
+
+  <!-- exclude all 'gen-src' folder files -->
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value=".*[\\/]gen-src[\\/].*$"/>
+  </module>
 </module>
