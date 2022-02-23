@@ -278,10 +278,20 @@ final class DefaultClientFactory implements ClientFactory {
 
     /**
      * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
+     *
+     * @param whenClosing the {@link Runnable} will be run before closing this {@link ClientFactory}
      */
-    public CompletableFuture<Void> closeOnShutdown() {
+    @Override
+    public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
         Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
+            if (whenClosing != null) {
+                try {
+                    whenClosing.run();
+                } catch (Exception e) {
+                    logger.warn("whenClosing failed", e);
+                }
+            }
             closeAsync().handle((unused, cause) -> {
                 if (cause != null) {
                     logger.warn("Unexpected exception while closing a ClientFactory.", cause);

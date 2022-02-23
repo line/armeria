@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -48,6 +49,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
@@ -76,6 +78,10 @@ final class HttpClientFactory implements ClientFactory {
             Arrays.stream(SessionProtocol.values())
                   .map(p -> Scheme.of(SerializationFormat.NONE, p))
                   .collect(toImmutableSet());
+
+    private static final ThreadFactory THREAD_FACTORY = ThreadFactories
+            .builder("armeria-http-client-factory-shutdown-hook")
+            .build();
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
@@ -379,6 +385,36 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public int numConnections() {
         return pools.values().stream().mapToInt(HttpChannelPool::numConnections).sum();
+    }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link HttpClientFactory} when the current JVM terminates.
+     *
+     * @param whenClosing the {@link Runnable} will be run before closing this {@link HttpClientFactory}
+     */
+    @Override
+    public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
+        final CompletableFuture<Void> future = new CompletableFuture<>();
+        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
+            if (whenClosing != null) {
+                try {
+                    whenClosing.run();
+                } catch (Exception e) {
+                    logger.warn("whenClosing failed", e);
+                }
+            }
+            closeAsync().handle((unused, cause) -> {
+                if (cause != null) {
+                    logger.warn("Unexpected exception while closing a HttpClientFactory.", cause);
+                    future.completeExceptionally(cause);
+                } else {
+                    logger.debug("HttpClientFactory has been closed.");
+                    future.complete(null);
+                }
+                return null;
+            }).join();
+        }));
+        return future;
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {
