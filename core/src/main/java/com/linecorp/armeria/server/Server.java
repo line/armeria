@@ -41,8 +41,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
+import java.util.stream.Stream;
 
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
@@ -58,6 +57,7 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -410,6 +410,7 @@ public final class Server implements ListenableAsyncCloseable {
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
         config = sb.buildServerConfig(config());
+        config.setServer(this);
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
@@ -604,29 +605,22 @@ public final class Server implements ListenableAsyncCloseable {
         private void finishDoStop(CompletableFuture<Void> future) {
             serverChannels.clear();
 
-            if (config.shutdownBlockingTaskExecutorOnStop()) {
-                final ScheduledExecutorService executor;
-                final ScheduledExecutorService blockingTaskExecutor = config.blockingTaskExecutor();
-                if (blockingTaskExecutor instanceof UnstoppableScheduledExecutorService) {
-                    executor =
-                            ((UnstoppableScheduledExecutorService) blockingTaskExecutor).getExecutorService();
-                } else {
-                    executor = blockingTaskExecutor;
-                }
+            final Set<ScheduledExecutorService> executors =
+                    Stream.concat(config.virtualHosts()
+                                        .stream()
+                                        .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
+                                        .map(VirtualHost::blockingTaskExecutor),
+                                  config.serviceConfigs()
+                                        .stream()
+                                        .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
+                                        .map(ServiceConfig::blockingTaskExecutor))
+                          .collect(Collectors.toSet());
 
-                try {
-                    executor.shutdown();
-                    while (!executor.isTerminated()) {
-                        try {
-                            executor.awaitTermination(1, TimeUnit.DAYS);
-                        } catch (InterruptedException ignore) {
-                            // Do nothing.
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
-                }
+            if (config.shutdownBlockingTaskExecutorOnStop()) {
+                executors.add(config.blockingTaskExecutor());
             }
+
+            shutdownExecutor(executors);
 
             final Builder<AccessLogWriter> builder = ImmutableSet.builder();
             config.virtualHosts()
@@ -691,6 +685,38 @@ public final class Server implements ListenableAsyncCloseable {
 
         private void logStopFailure(Throwable cause) {
             logger.warn("Failed to stop a server: {}", cause.getMessage(), cause);
+        }
+
+        private void shutdownExecutor(Iterable<ScheduledExecutorService> executors) {
+            for (ScheduledExecutorService executor : executors) {
+                if (executor instanceof UnstoppableScheduledExecutorService) {
+                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
+                }
+
+                executor.shutdown();
+            }
+
+            boolean interrupted = false;
+            for (ScheduledExecutorService executor : executors) {
+                if (executor instanceof UnstoppableScheduledExecutorService) {
+                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
+                }
+
+                try {
+                    while (!executor.isTerminated()) {
+                        try {
+                            executor.awaitTermination(1, TimeUnit.DAYS);
+                        } catch (InterruptedException ignore) {
+                            interrupted = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 

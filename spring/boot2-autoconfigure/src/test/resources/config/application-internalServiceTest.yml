@@ -1,0 +1,22 @@
+# Use-legacy-processing to use this application-testbed.yml file instead of application.yml
+spring:
+  config:
+    use-legacy-processing: true
+
+# Should not bind internal services to the management.server.port
+# if ArmeriaSpringActuatorAutoConfiguration was not configured.
+management.server.port: 0
+
+management:
+  metrics:
+    export:
+      prometheus:
+        enabled: true # In order to inject PrometheusMeterRegistry
+
+armeria:
+  ports:
+    - port: 0
+  internal-services:
+    include: metrics, health
+    port: 0
+    protocols: http

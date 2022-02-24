@@ -22,16 +22,16 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal {@link HttpVfs} implementation for accessing file system with blocking I/O.
  * All its operations are executed in the given {@code fileReadExecutor} via the blocking I/O methods,
- * such as {@link #blockingGet(Executor, String, Clock, String, HttpHeaders)}.
+ * such as {@link #blockingGet(Executor, String, Clock, String, HttpHeaders, MediaTypeResolver)}.
  */
 public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
 
@@ -49,13 +49,29 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
     }
 
     /**
-     * {@inheritDoc} This method invokes {@link #blockingGet(Executor, String, Clock, String, HttpHeaders)}
-     * from the specified {@code fileReadExecutor}.
+     * {@inheritDoc} This method invokes {@link #blockingGet(Executor, String, Clock, String, HttpHeaders,
+     * MediaTypeResolver)} from the specified {@code fileReadExecutor}.
+     *
+     * @deprecated Use {@link #get(Executor, String, Clock, String, HttpHeaders, MediaTypeResolver)} instead.
      */
+    @Deprecated
     @Override
     public final HttpFile get(
             Executor fileReadExecutor, String path, Clock clock,
             @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+        return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders,
+                   MediaTypeResolver.ofDefault());
+    }
+
+    /**
+     * {@inheritDoc} This method invokes {@link #blockingGet(Executor, String, Clock, String, HttpHeaders,
+     * MediaTypeResolver)} from the specified {@code fileReadExecutor}.
+     */
+    @Override
+    public final HttpFile get(
+            Executor fileReadExecutor, String path, Clock clock,
+            @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+            MediaTypeResolver mediaTypeResolver) {
 
         requireNonNull(fileReadExecutor, "fileReadExecutor");
         requireNonNull(path, "path");
@@ -63,8 +79,8 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
         requireNonNull(additionalHeaders, "additionalHeaders");
 
         return HttpFile.from(CompletableFuture.supplyAsync(
-                () -> blockingGet(fileReadExecutor, path, clock, contentEncoding, additionalHeaders),
-                fileReadExecutor));
+                () -> blockingGet(fileReadExecutor, path, clock,
+                                  contentEncoding, additionalHeaders, mediaTypeResolver), fileReadExecutor));
     }
 
     /**
@@ -76,11 +92,12 @@ public abstract class AbstractBlockingHttpVfs extends AbstractHttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
-     *
+     * @param mediaTypeResolver the {@link MediaTypeResolver} to determine the {@link MediaType}.
      * @return the {@link HttpFile} at the specified {@code path}
      */
     protected abstract HttpFile blockingGet(Executor fileReadExecutor, String path, Clock clock,
-                                            @Nullable String contentEncoding, HttpHeaders additionalHeaders);
+                                            @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+                                            MediaTypeResolver mediaTypeResolver);
 
     /**
      * {@inheritDoc} This method invokes {@link #blockingCanList(Executor, String)} from the specified

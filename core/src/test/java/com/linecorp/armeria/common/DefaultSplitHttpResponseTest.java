@@ -21,16 +21,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.instanceOf;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.DefaultEventLoop;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -57,8 +59,35 @@ class DefaultSplitHttpResponseTest {
     @Test
     void completeHeadersBeforeConsumeBody() {
         final HttpResponse response = HttpResponse.of(HttpStatus.OK);
-        final SplitHttpResponse bodyStream = response.split();
-        assertThat(bodyStream.headers().join().status()).isEqualTo(HttpStatus.OK);
+        final SplitHttpResponse splitHttpResponse = response.split();
+        assertThat(splitHttpResponse.headers().join().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void completeHeadersBeforeTrailer() {
+        final HttpResponse response = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                           Duration.ofSeconds(1));
+        final SplitHttpResponse splitHttpResponse = response.split();
+        splitHttpResponse.body().subscribe(new Subscriber<HttpData>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.cancel();
+            }
+
+            @Override
+            public void onNext(HttpData httpData) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {}
+        }, new DefaultEventLoop());
+        final AtomicBoolean atomicBoolean = new AtomicBoolean(false);
+        splitHttpResponse.trailers().whenComplete((h, throwable) -> {
+            atomicBoolean.set(splitHttpResponse.headers().isDone());
+        }).join();
+        assertThat(atomicBoolean.get()).isTrue();
     }
 
     @Test

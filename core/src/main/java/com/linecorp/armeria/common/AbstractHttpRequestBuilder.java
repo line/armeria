@@ -16,41 +16,35 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
-import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
-import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
-import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Builds a new {@link HttpRequest}.
  */
-public abstract class AbstractHttpRequestBuilder {
+public abstract class AbstractHttpRequestBuilder
+        extends AbstractHttpMessageBuilder implements HttpRequestSetters {
 
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
-    @Nullable
-    private HttpHeadersBuilder httpTrailers;
     @Nullable
     private QueryParamsBuilder queryParams;
     @Nullable
@@ -58,207 +52,128 @@ public abstract class AbstractHttpRequestBuilder {
     @Nullable
     private List<Cookie> cookies;
     @Nullable
-    private HttpData content;
-    @Nullable
-    private Publisher<? extends HttpData> publisher;
-    @Nullable
     private String path;
     private boolean disablePathParams;
 
-    /**
-     * Shortcut to set GET method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder get(String path) {
         return method(HttpMethod.GET).path(path);
     }
 
-    /**
-     * Shortcut to set POST method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder post(String path) {
         return method(HttpMethod.POST).path(path);
     }
 
-    /**
-     * Shortcut to set PUT method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder put(String path) {
         return method(HttpMethod.PUT).path(path);
     }
 
-    /**
-     * Shortcut to set DELETE method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder delete(String path) {
         return method(HttpMethod.DELETE).path(path);
     }
 
-    /**
-     * Shortcut to set PATCH method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder patch(String path) {
         return method(HttpMethod.PATCH).path(path);
     }
 
-    /**
-     * Shortcut to set OPTIONS method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder options(String path) {
         return method(HttpMethod.OPTIONS).path(path);
     }
 
-    /**
-     * Shortcut to set HEAD method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder head(String path) {
         return method(HttpMethod.HEAD).path(path);
     }
 
-    /**
-     * Shortcut to set TRACE method and path.
-     */
+    @Override
     public AbstractHttpRequestBuilder trace(String path) {
         return method(HttpMethod.TRACE).path(path);
     }
 
-    /**
-     * Sets the method for this request.
-     *
-     * @see HttpMethod
-     */
+    @Override
     public AbstractHttpRequestBuilder method(HttpMethod method) {
         requestHeadersBuilder.method(requireNonNull(method, "method"));
         return this;
     }
 
-    /**
-     * Sets the path for this request.
-     */
+    @Override
     public AbstractHttpRequestBuilder path(String path) {
         requireNonNull(path, "path");
-        checkArgument(!path.isEmpty(), "path is empty.");
         this.path = path;
         return this;
     }
 
-    /**
-     * Sets the content for this request.
-     */
+    @Override
+    public AbstractHttpRequestBuilder content(String content) {
+        return (AbstractHttpRequestBuilder) super.content(content);
+    }
+
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, CharSequence content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
-    /**
-     * Sets the content for this request.
-     */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, String content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
-    /**
-     * Sets the content for this request. The {@code content} is formatted by
-     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
-     */
+    @Override
+    @FormatMethod
+    public AbstractHttpRequestBuilder content(@FormatString String format, Object... content) {
+        return (AbstractHttpRequestBuilder) super.content(format, content);
+    }
+
+    @Override
     @FormatMethod
     public AbstractHttpRequestBuilder content(MediaType contentType, @FormatString String format,
                                               Object... content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(format, "format");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), format, content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, format, content);
     }
 
-    /**
-     * Sets the content for this request. The {@code content} will be wrapped using
-     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
-     */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, byte[] content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        return content(contentType, HttpData.wrap(content));
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
-    /**
-     * Sets the content for this request.
-     */
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, HttpData content) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(content, "content");
-        requestHeadersBuilder.contentType(contentType);
-        this.content = content;
-        return this;
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
-    /**
-     * Sets the {@link Publisher} for this request.
-     */
-    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
-        requireNonNull(contentType, "contentType");
-        requireNonNull(publisher, "publisher");
-        checkState(content == null, "content has been set already");
-        requestHeadersBuilder.contentType(contentType);
-        this.publisher = publisher;
-        return this;
+    @Override
+    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
+        return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
 
-    /**
-     * Adds a header for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/")
-     *            .header("authorization", "foo")
-     *            .build();
-     * }</pre>
-     */
+    @Override
+    public AbstractHttpRequestBuilder contentJson(Object content) {
+        return (AbstractHttpRequestBuilder) super.contentJson(content);
+    }
+
+    @Override
     public AbstractHttpRequestBuilder header(CharSequence name, Object value) {
-        requestHeadersBuilder.setObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
-        return this;
+        return (AbstractHttpRequestBuilder) super.header(name, value);
     }
 
-    /**
-     * Adds multiple headers for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/")
-     *            .headers(HttpHeaders.of("authorization", "foo", "bar", "baz"))
-     *            .build();
-     * }</pre>
-     *
-     * @see HttpHeaders
-     */
+    @Override
     public AbstractHttpRequestBuilder headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        requireNonNull(headers, "headers");
-        requestHeadersBuilder.set(headers);
-        return this;
+        return (AbstractHttpRequestBuilder) super.headers(headers);
     }
 
-    /**
-     * Sets HTTP trailers for this request.
-     */
+    @Override
     public AbstractHttpRequestBuilder trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
-        requireNonNull(trailers, "trailers");
-        if (httpTrailers == null) {
-            httpTrailers = HttpHeaders.builder();
-        }
-        httpTrailers.set(trailers);
-        return this;
+        return (AbstractHttpRequestBuilder) super.trailers(trailers);
     }
 
-    /**
-     * Sets a path param for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/{foo}")
-     *            .pathParam("foo", "bar")
-     *            .build(); // GET `/bar`
-     * }</pre>
-     */
+    @Override
     public AbstractHttpRequestBuilder pathParam(String name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
@@ -270,15 +185,7 @@ public abstract class AbstractHttpRequestBuilder {
         return this;
     }
 
-    /**
-     * Sets multiple path params for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/{foo}/:bar")
-     *            .pathParams(Map.of("foo", 1, "bar", 2))
-     *            .build(); // GET `/1/2`
-     * }</pre>
-     */
+    @Override
     public AbstractHttpRequestBuilder pathParams(Map<String, ?> pathParams) {
         requireNonNull(pathParams, "pathParams");
         if (pathParams.isEmpty()) {
@@ -297,24 +204,13 @@ public abstract class AbstractHttpRequestBuilder {
         return this;
     }
 
-    /**
-     * Disables path parameters substitution. If path parameter is not disabled and a parameter's, specified
-     * using {@code {}} or {@code :}, value is not found, an {@link IllegalStateException} is thrown.
-     */
+    @Override
     public AbstractHttpRequestBuilder disablePathParams() {
         disablePathParams = true;
         return this;
     }
 
-    /**
-     * Sets a query param for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/endpoint")
-     *            .queryParam("foo", "bar")
-     *            .build(); // GET `/endpoint?foo=bar`
-     * }</pre>
-     */
+    @Override
     public AbstractHttpRequestBuilder queryParam(String name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
@@ -325,17 +221,7 @@ public abstract class AbstractHttpRequestBuilder {
         return this;
     }
 
-    /**
-     * Sets multiple query params for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/endpoint")
-     *            .queryParams(QueryParams.of("from", "foo", "limit", 10))
-     *            .build(); // GET `/endpoint?from=foo&limit=10`
-     * }</pre>
-     *
-     * @see QueryParams
-     */
+    @Override
     public AbstractHttpRequestBuilder queryParams(
             Iterable<? extends Entry<? extends String, String>> queryParams) {
         requireNonNull(queryParams, "queryParams");
@@ -346,17 +232,7 @@ public abstract class AbstractHttpRequestBuilder {
         return this;
     }
 
-    /**
-     * Sets a cookie for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/")
-     *            .cookie(Cookie.of("cookie", "foo"))
-     *            .build();
-     * }</pre>
-     *
-     * @see Cookie
-     */
+    @Override
     public AbstractHttpRequestBuilder cookie(Cookie cookie) {
         requireNonNull(cookie, "cookie");
         if (cookies == null) {
@@ -366,18 +242,7 @@ public abstract class AbstractHttpRequestBuilder {
         return this;
     }
 
-    /**
-     * Sets multiple cookies for this request. For example:
-     * <pre>{@code
-     * HttpRequest.builder()
-     *            .get("/")
-     *            .cookies(Cookies.of(Cookie.of("cookie1", "foo"),
-     *                                Cookie.of("cookie2", "bar")))
-     *            .build();
-     * }</pre>
-     *
-     * @see Cookies
-     */
+    @Override
     public AbstractHttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
         requireNonNull(cookies, "cookies");
         if (this.cookies == null) {
@@ -392,27 +257,30 @@ public abstract class AbstractHttpRequestBuilder {
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
+        final Publisher<? extends HttpData> publisher = publisher();
+        final HttpHeadersBuilder httpTrailersBuilder = httpTrailers();
         if (publisher != null) {
-            if (httpTrailers == null) {
+            if (httpTrailersBuilder == null) {
                 return HttpRequest.of(requestHeaders, publisher);
             } else {
                 return HttpRequest.of(requestHeaders,
-                                      StreamMessage.concat(publisher, StreamMessage.of(httpTrailers.build())));
+                                      StreamMessage.concat(publisher,
+                                                           StreamMessage.of(httpTrailersBuilder.build())));
             }
         }
-        if (content == null || content.isEmpty()) {
-            if (content != null) {
-                content.close();
-            }
-            if (httpTrailers == null) {
-                return new EmptyFixedHttpRequest(requestHeaders);
-            }
-            return new OneElementFixedHttpRequest(requestHeaders, httpTrailers.build());
+        final HttpData content = firstNonNull(content(), HttpData.empty());
+        final HttpHeaders httpTrailers;
+        if (httpTrailersBuilder != null) {
+            httpTrailers = httpTrailersBuilder.build();
+        } else {
+            httpTrailers = HttpHeaders.of();
         }
-        if (httpTrailers == null) {
-            return new OneElementFixedHttpRequest(requestHeaders, content);
-        }
-        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers.build());
+        return HttpRequest.of(requestHeaders, content, httpTrailers);
+    }
+
+    @Override
+    final HttpHeadersBuilder headersBuilder() {
+        return requestHeadersBuilder;
     }
 
     private RequestHeaders requestHeaders() {
@@ -420,8 +288,11 @@ public abstract class AbstractHttpRequestBuilder {
         if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
+        final HttpData content = content();
         if (content == null || content.isEmpty()) {
-            requestHeadersBuilder.remove(CONTENT_LENGTH);
+            if (publisher() == null) {
+                requestHeadersBuilder.remove(CONTENT_LENGTH);
+            }
         } else {
             requestHeadersBuilder.contentLength(content.length());
         }

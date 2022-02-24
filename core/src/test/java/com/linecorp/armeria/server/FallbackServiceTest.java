@@ -17,20 +17,19 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class FallbackServiceTest {
@@ -50,11 +49,11 @@ class FallbackServiceTest {
         }
     };
 
-    private static WebClient webClient;
+    private static BlockingWebClient webClient;
 
     @BeforeAll
     static void initWebClient() {
-        webClient = WebClient.of(server.httpUri());
+        webClient = BlockingWebClient.of(server.httpUri());
     }
 
     @BeforeEach
@@ -64,30 +63,28 @@ class FallbackServiceTest {
 
     @Test
     void matched() {
-        final AggregatedHttpResponse res = webClient.get("/").aggregate().join();
+        final AggregatedHttpResponse res = webClient.get("/");
         assertThat(res.headers().status()).isSameAs(HttpStatus.OK);
         assertThat(lastRouteWasFallback).isFalse();
     }
 
     @Test
     void unmatched() {
-        final AggregatedHttpResponse res = webClient.get("/404").aggregate().join();
+        final AggregatedHttpResponse res = webClient.get("/404");
         assertThat(res.headers().status()).isSameAs(HttpStatus.NOT_FOUND);
         assertThat(lastRouteWasFallback).isTrue();
     }
 
     @Test
     void matchedPreflight() {
-        final AggregatedHttpResponse res = webClient.execute(preflightHeaders("/")).aggregate().join();
+        final AggregatedHttpResponse res = webClient.execute(preflightHeaders("/"));
         assertThat(res.headers().status()).isSameAs(HttpStatus.OK);
         assertThat(lastRouteWasFallback).isFalse();
     }
 
     @Test
     void unmatchedPreflight() {
-        final AggregatedHttpResponse res = webClient.execute(preflightHeaders("/404"))
-                                                    .aggregate()
-                                                    .join();
+        final AggregatedHttpResponse res = webClient.execute(preflightHeaders("/404"));
         assertThat(res.headers().status()).isSameAs(HttpStatus.FORBIDDEN);
         assertThat(lastRouteWasFallback).isTrue();
     }

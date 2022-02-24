@@ -24,14 +24,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 
@@ -58,7 +57,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     private static final Logger logger = LoggerFactory.getLogger(AbstractHttp2ConnectionHandler.class);
 
     private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE_GOAWAY = Pattern.compile(
-            "(?:Stream (\\d+) does not exist)", Pattern.CASE_INSENSITIVE);
+            "Stream (\\d+) does not exist", Pattern.CASE_INSENSITIVE);
 
     /**
      * XXX(trustin): Don't know why, but {@link Http2ConnectionHandler} does not close the last stream
@@ -71,6 +70,8 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         return true;
     };
 
+    private final KeepAliveHandler keepAliveHandler;
+
     private boolean closing;
     private boolean handlingConnectionError;
 
@@ -81,8 +82,17 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
      * Creates a new instance.
      */
     protected AbstractHttp2ConnectionHandler(
-            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
+            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings,
+            KeepAliveHandler keepAliveHandler) {
         super(decoder, encoder, initialSettings);
+        this.keepAliveHandler = keepAliveHandler;
+    }
+
+    /**
+     * Returns the {@link KeepAliveHandler} of the current HTTP/2 connection.
+     */
+    public final KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
     }
 
     /**

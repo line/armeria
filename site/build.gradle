@@ -1,12 +1,11 @@
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
+import org.jsoup.Jsoup
 
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import java.util.stream.Collectors
-
-import org.jsoup.Jsoup
 
 buildscript {
     repositories {
@@ -23,8 +22,8 @@ apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
 node {
-    version = '14.16.0'
-    npmVersion = '6.14.12'
+    version = '14.17.4'
+    npmVersion = '6.14.14'
     download = true
     npmInstallCommand = "ci"
 
@@ -64,7 +63,6 @@ task develop(type: NpmTask) {
     dependsOn tasks.generateSiteSources
     args = ['run', 'develop']
 }
-
 
 task eslint(type: NpmTask) {
     dependsOn tasks.generateSiteSources
@@ -145,7 +143,10 @@ class ApiIndexTask extends DefaultTask {
             result.add([simpleClassName, href])
 
             def doc = Jsoup.parse(path.toFile(), 'UTF-8')
-            doc.select('.method-details, .field-details > .member-list > li > .detail').each {
+            doc.select(""".constant-details .member-list .detail,
+                          .constructor-details .member-list .detail,
+                          .field-details .member-list .detail,
+                          .method-details .member-list .detail""").each {
                 def methodSignature = it.attr("id")
                 def hrefWithMethod = href + '#' + methodSignature
 
@@ -188,7 +189,7 @@ class ContributorListTask extends DefaultTask {
         def nextPattern = Pattern.compile(/<(https:\/\/api\.github\.com\/[^>]+)>; rel="next"/)
         for (def i = 0; i < 10; i++) {
             def req = new URL(url).openConnection()
-            if (accessToken != null) {
+            if (accessToken?.trim()) {
                 req.setRequestProperty('Authorization', "token ${accessToken}")
             }
             def resText = req.getInputStream().getText()

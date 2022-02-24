@@ -24,8 +24,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -36,8 +34,8 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -142,9 +140,9 @@ class GrpcStatusMappingTest {
     void serverExceptionMapping(RuntimeException exception, Status status, String description,
                                 Map<Metadata.Key<?>, String> meta) {
         exceptionRef.set(exception);
-        final TestServiceBlockingStub client = Clients.newClient(
-                serverWithMapping.httpUri(GrpcSerializationFormats.PROTO),
-                TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(serverWithMapping.httpUri(),
+                                      TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.emptyCall(Empty.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))
                 .satisfies(throwable -> assertMetadata(throwable, meta, null));
@@ -158,9 +156,8 @@ class GrpcStatusMappingTest {
     void serverExceptionWithGrpcStatusFunction(RuntimeException exception, Status status, String description,
                                                Map<Metadata.Key<?>, String> meta) {
         exceptionRef.set(exception);
-        final TestServiceBlockingStub client = Clients.newClient(
-                serverWithGrpcStatusFunction.httpUri(GrpcSerializationFormats.PROTO),
-                TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client = GrpcClients.newClient(serverWithGrpcStatusFunction.httpUri(),
+                                                                     TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.emptyCall(Empty.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))
                 .satisfies(throwable -> assertMetadata(throwable, meta, "emptyCall"));
@@ -172,11 +169,11 @@ class GrpcStatusMappingTest {
     @Test
     void clientException_decorator() {
         final TestServiceBlockingStub client =
-                Clients.builder(serverWithMapping.httpUri(GrpcSerializationFormats.PROTO))
-                       .decorator((delegate, ctx, req) -> {
-                           throw new UnhandledException();
-                       })
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(serverWithMapping.httpUri())
+                           .decorator((delegate, ctx, req) -> {
+                               throw new UnhandledException();
+                           })
+                           .build(TestServiceBlockingStub.class);
         // Make sure that a client call is closed when a exception is raised in a decorator.
         assertThatThrownBy(() -> client.unaryCall2(SimpleRequest.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, Status.UNKNOWN, null));
@@ -185,25 +182,27 @@ class GrpcStatusMappingTest {
     @Test
     void clientException_interceptor() {
         final TestServiceBlockingStub client =
-                Clients.builder(serverWithMapping.httpUri(GrpcSerializationFormats.PROTO))
-                       .build(TestServiceBlockingStub.class)
-                .withInterceptors(new ClientInterceptor() {
-                    @Override
-                    public <I, O> ClientCall<I, O> interceptCall(
-                            MethodDescriptor<I, O> method, CallOptions callOptions, Channel next) {
-                        return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
-                            @Override
-                            public void start(Listener<O> responseListener, Metadata headers) {
-                                super.start(new SimpleForwardingClientCallListener<O>(responseListener) {
-                                    @Override
-                                    public void onMessage(O message) {
-                                        throw new UnhandledException();
-                                    }
-                                }, headers);
-                            }
-                        };
-                    }
-                });
+                GrpcClients.builder(serverWithMapping.httpUri())
+                           .intercept(new ClientInterceptor() {
+                               @Override
+                               public <I, O> ClientCall<I, O> interceptCall(
+                                       MethodDescriptor<I, O> method, CallOptions callOptions, Channel next) {
+                                   return new SimpleForwardingClientCall<I, O>(
+                                           next.newCall(method, callOptions)) {
+                                       @Override
+                                       public void start(Listener<O> responseListener, Metadata headers) {
+                                           super.start(
+                                                   new SimpleForwardingClientCallListener<O>(responseListener) {
+                                                       @Override
+                                                       public void onMessage(O message) {
+                                                           throw new UnhandledException();
+                                                       }
+                                                   }, headers);
+                                       }
+                                   };
+                               }
+                           })
+                           .build(TestServiceBlockingStub.class);
         // Make sure that a client call is closed when a exception is raised in a client interceptor.
         assertThatThrownBy(() -> client.unaryCall2(SimpleRequest.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, Status.UNKNOWN, null));

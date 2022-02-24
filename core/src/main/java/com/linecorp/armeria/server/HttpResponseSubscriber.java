@@ -22,8 +22,6 @@ import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers
 
 import java.nio.channels.ClosedChannelException;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -39,6 +37,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -256,15 +255,23 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
         // 3. After successfully flushing, the listener requests next data and
         //    the subscriber attempts to write the next data to the stream closed at 2).
-        if (!responseEncoder.isWritable(req.id(), req.streamId())) {
-            if (reqCtx.sessionProtocol().isMultiplex()) {
-                fail(ClosedStreamException.get());
-            } else {
-                fail(ClosedSessionException.get());
+        if (!isWritable()) {
+            Throwable cause = CapturedServiceException.get(reqCtx);
+            if (cause == null) {
+                if (reqCtx.sessionProtocol().isMultiplex()) {
+                    cause = ClosedSessionException.get();
+                } else {
+                    cause = ClosedStreamException.get();
+                }
             }
+            fail(cause);
             return true;
         }
         return false;
+    }
+
+    private boolean isWritable() {
+        return responseEncoder.isWritable(req.id(), req.streamId());
     }
 
     private State setDone(boolean cancel) {
@@ -281,6 +288,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     @Override
     public void onError(Throwable cause) {
         isSubscriptionCompleted = true;
+        if (!isWritable()) {
+            // A session or stream is currently being closing or is closed already.
+            fail(cause);
+            return;
+        }
+
         if (cause instanceof HttpResponseException) {
             // Timeout may occur when the aggregation of the error response takes long.
             // If timeout occurs, the response is sent by newCancellationTask().
@@ -299,7 +312,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         } else if (cause instanceof HttpStatusException) {
             final HttpStatus status = ((HttpStatusException) cause).httpStatus();
             final Throwable cause0 = firstNonNull(cause.getCause(), cause);
-            failAndRespond(cause0, AggregatedHttpResponse.of(status), Http2Error.CANCEL, false);
+            final ServiceConfig serviceConfig = reqCtx.config();
+            final AggregatedHttpResponse res =
+                    serviceConfig.server().config().errorHandler()
+                                 .renderStatus(serviceConfig, req.headers(), status, null, cause0);
+            assert res != null;
+            failAndRespond(cause0, res, Http2Error.CANCEL, false);
         } else if (Exceptions.isStreamCancelling(cause)) {
             failAndReset(cause);
         } else {
@@ -374,11 +392,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         ChannelFuture future;
         final boolean isReset;
         if (oldState == State.NEEDS_HEADERS) { // ResponseHeaders is not sent yet, so we can send the response.
-            final ResponseHeaders headers = res.headers();
+            final ResponseHeaders headers =
+                    mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
             logBuilder().responseHeaders(headers);
 
             final HttpData content = res.content();
-            final HttpHeaders trailers = res.trailers();
+            final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
             final boolean trailersEmpty = trailers.isEmpty();
             future = responseEncoder.writeHeaders(id, streamId, headers,
                                                   content.isEmpty() && trailersEmpty, trailersEmpty);
@@ -527,8 +546,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             if (endOfStream) {
                 if (tryComplete()) {
-                    logBuilder().endRequest();
-                    logBuilder().endResponse();
+                    final Throwable capturedException = CapturedServiceException.get(reqCtx);
+                    if (capturedException != null) {
+                        logBuilder().endRequest(capturedException);
+                        logBuilder().endResponse(capturedException);
+                    } else {
+                        logBuilder().endRequest();
+                        logBuilder().endResponse();
+                    }
                     final ServiceConfig config = reqCtx.config();
                     if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);

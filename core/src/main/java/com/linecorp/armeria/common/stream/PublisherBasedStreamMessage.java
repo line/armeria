@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
@@ -25,8 +24,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -37,10 +34,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.math.LongMath;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+import com.linecorp.armeria.internal.common.stream.SubscriberUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -127,7 +126,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         if (!subscribe1(subscriber, executor, withPooledObjects, notifyCancellation)) {
             final AbortableSubscriber oldSubscriber = this.subscriber;
             assert oldSubscriber != null;
-            failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
+            SubscriberUtil.failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
         }
     }
 
@@ -147,21 +146,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         return true;
-    }
-
-    private static void failLateSubscriber(EventExecutor executor,
-                                           Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
-        final Throwable cause = abortedOrLate(oldSubscriber);
-
-        executor.execute(() -> {
-            try {
-                lateSubscriber.onSubscribe(NoopSubscription.get());
-                lateSubscriber.onError(cause);
-            } catch (Throwable t) {
-                throwIfFatal(t);
-                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
-            }
-        });
     }
 
     @Override

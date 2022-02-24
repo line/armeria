@@ -23,8 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -34,11 +33,15 @@ import org.springframework.context.annotation.Bean;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
+import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -50,28 +53,25 @@ import io.micrometer.core.instrument.Metrics;
  */
 public abstract class AbstractArmeriaAutoConfiguration {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(SessionProtocol.HTTP);
 
     private static final String GRACEFUL_SHUTDOWN = "graceful";
 
     /**
-     * Create a started {@link Server} bean.
+     * Creates a started {@link Server} bean.
      */
     @Bean
     @ConditionalOnMissingBean(Server.class)
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
+            InternalServices internalService,
             Optional<MeterRegistry> meterRegistry,
-            Optional<List<HealthChecker>> healthCheckers,
-            Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
             Optional<List<MetricCollectingServiceConfigurator>> metricCollectingServiceConfigurators,
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
-            Optional<List<DocServiceConfigurator>> docServiceConfigurators) {
+            BeanFactory beanFactory) {
 
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
@@ -88,27 +88,16 @@ public abstract class AbstractArmeriaAutoConfiguration {
             serverBuilder.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
         }
 
-        configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
+        configureServerWithArmeriaSettings(serverBuilder, armeriaSettings, internalService,
                                            armeriaServerConfigurators.orElse(ImmutableList.of()),
                                            armeriaServerBuilderConsumers.orElse(ImmutableList.of()),
-                                           docServiceConfigurators.orElse(ImmutableList.of()),
                                            meterRegistry.orElse(Metrics.globalRegistry),
-                                           healthCheckers.orElse(ImmutableList.of()),
-                                           healthCheckServiceConfigurators.orElse(ImmutableList.of()),
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
-                                           metricCollectingServiceConfigurators.orElse(ImmutableList.of()));
+                                           metricCollectingServiceConfigurators.orElse(ImmutableList.of()),
+                                           beanFactory);
 
-        final Server server = serverBuilder.build();
-
-        server.start().handle((result, t) -> {
-            if (t != null) {
-                throw new IllegalStateException("Armeria server failed to start", t);
-            }
-            return result;
-        }).join();
-        logger.info("Armeria server started at ports: {}", server.activePorts());
-        return server;
+        return serverBuilder.build();
     }
 
     /**
@@ -117,6 +106,33 @@ public abstract class AbstractArmeriaAutoConfiguration {
     @Bean
     public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
+    }
+
+    /**
+     * Creates internal services that should not be exposed to the external network such as {@link DocService},
+     * {@link PrometheusExpositionService} and {@link HealthCheckService}.
+     *
+     * <p>Note that if a service path is either {@code null} or empty, the associated service will not be
+     * initiated. For example, {@link ArmeriaSettings#getHealthCheckPath()} is {@code null},
+     * {@link HealthCheckService} will not be created automatically.
+     *
+     * @see ArmeriaSettings#getDocsPath()
+     * @see ArmeriaSettings#getMetricsPath()
+     * @see ArmeriaSettings#getHealthCheckPath()
+     */
+    @Bean
+    public InternalServices internalServices(
+            ArmeriaSettings settings,
+            Optional<MeterRegistry> meterRegistry,
+            Optional<List<HealthChecker>> healthCheckers,
+            Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
+            Optional<List<DocServiceConfigurator>> docServiceConfigurators,
+            @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort) {
+
+        return InternalServices.of(settings, meterRegistry.orElse(Metrics.globalRegistry),
+                                   healthCheckers.orElse(ImmutableList.of()),
+                                   healthCheckServiceConfigurators.orElse(ImmutableList.of()),
+                                   docServiceConfigurators.orElse(ImmutableList.of()), managementServerPort);
     }
 
     /**
@@ -130,8 +146,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
         if (GRACEFUL_SHUTDOWN.equalsIgnoreCase(shutdown)) {
             return sb -> sb.gracefulShutdownTimeout(duration, duration);
         } else {
-            return sb -> {
-            };
+            return sb -> {};
         }
     }
 }

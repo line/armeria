@@ -37,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -75,6 +74,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -129,7 +129,7 @@ class JettyServiceTest extends WebAppContainerTest {
                     "/jsp/",
                     JettyService.builder()
                                 .handler(newWebAppContext())
-                                .configurator(s -> jettyBeans.addAll(s.getBeans()))
+                                .customizer(s -> jettyBeans.addAll(s.getBeans()))
                                 .build()
                                 .decorate(LoggingService.newDecorator()));
 

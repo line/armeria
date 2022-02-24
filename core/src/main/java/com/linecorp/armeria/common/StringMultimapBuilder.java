@@ -15,9 +15,9 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.StringMultimap.HASH_CODE_SEED;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -29,10 +29,10 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Skeletal builder implementation of {@link StringMultimap} and/or its subtypes.
@@ -609,7 +609,47 @@ abstract class StringMultimapBuilder<
     }
 
     @Override
+    public int hashCode() {
+        final CONTAINER getters = getters();
+        if (getters != null) {
+            return getters.hashCode();
+        } else {
+            return HASH_CODE_SEED;
+        }
+    }
+
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof StringMultimapBuilder)) {
+            return false;
+        }
+
+        final StringMultimapBuilder<?, ?, ?, ?> that = (StringMultimapBuilder<?, ?, ?, ?>) o;
+        if (size() != that.size()) {
+            return false;
+        }
+        if (isEmpty() && that.isEmpty()) {
+            return true;
+        }
+
+        final CONTAINER getters = getters();
+        if (getters != null) {
+            return getters.equals(that.getters());
+        }
+        return false;
+    }
+
+    @Override
     public final String toString() {
-        return getClass().getSimpleName() + firstNonNull(getters(), "[]");
+        final CONTAINER getters = getters();
+        if (getters != null) {
+            return getters.toString();
+        } else {
+            return "[]";
+        }
     }
 }

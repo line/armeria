@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,13 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.channel.Channel;
 
 class DefaultRequestLogTest {
+
+    private static final BiFunction<RequestContext, HttpHeaders, String> headersSanitizer =
+            (ctx, headers) -> "sanitized_headers";
+    private static final BiFunction<RequestContext, Object, String> contentSanitizer =
+            (ctx, content) -> "sanitized_content";
+    private static final BiFunction<RequestContext, HttpHeaders, String> trailersSanitizer =
+            (ctx, trailers) -> "sanitized_trailers";
 
     @Mock
     private RequestContext ctx;
@@ -151,6 +159,14 @@ class DefaultRequestLogTest {
         log.endResponse(error2);
         assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isSameAs(error);
+    }
+
+    @Test
+    void rpcFailure_responseContentWithCause() {
+        final Throwable error = new Throwable("response failed");
+        log.responseContent(RpcResponse.ofFailure(error), null);
+        assertThat(log.responseCause()).isSameAs(error);
+        assertThat(log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)).isEqualTo(true);
     }
 
     @Test
@@ -438,5 +454,127 @@ class DefaultRequestLogTest {
         log.endRequest();
         assertThat(log.name()).isSameAs("test");
         assertThat(log.serviceName()).startsWith(DefaultRequestLogTest.class.getName());
+    }
+
+    @Test
+    void toStringRequestOnlyCache() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        log = new DefaultRequestLog(sctx);
+
+        final String a = log.toStringRequestOnly();
+        assertThat(log.toStringRequestOnly()).isSameAs(a); // The second call must be cached.
+
+        // Cache must be invalidated when request state changes.
+        log.endRequest();
+        final String b = log.toStringRequestOnly();
+        assertThat(b).isNotEqualTo(a);
+        assertThat(log.toStringRequestOnly()).isSameAs(b); // The second call must be cached.
+    }
+
+    @Test
+    void toStringRequestOnlyCacheWithSanitizer() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(
+                        RequestHeaders.of(HttpMethod.GET, "/", "foo", "secret")));
+
+        log = new DefaultRequestLog(sctx);
+        log.requestContent("secret", "secret");
+        log.requestTrailers(HttpHeaders.of("bar", "secret"));
+        log.endRequest();
+
+        // Cache must be invalidated when sanitizers change.
+        final String a = log.toStringRequestOnly();
+        final String b = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(b).isNotEqualTo(a)
+                     .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
+
+        // Must be cached when sanitizers were not changed.
+        final String c = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(c).isSameAs(b);
+
+        // Must not contain the secret.
+        assertThat(c).doesNotContain("secret");
+    }
+
+    @Test
+    void toStringResponseOnlyCache() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        log = new DefaultRequestLog(sctx);
+
+        final String a = log.toStringResponseOnly();
+        assertThat(log.toStringResponseOnly()).isSameAs(a); // The second call must be cached.
+
+        // Cache must be invalidated when request state changes.
+        log.endResponse();
+        final String b = log.toStringResponseOnly();
+        assertThat(b).isNotEqualTo(a);
+        assertThat(log.toStringResponseOnly()).isSameAs(b); // The second call must be cached.
+    }
+
+    @Test
+    void toStringResponseOnlyCacheInvalidationWithSanitizer() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        log = new DefaultRequestLog(sctx);
+        log.responseHeaders(ResponseHeaders.of(HttpStatus.OK, "foo", "secret"));
+        log.responseContent("secret", "secret");
+        log.responseTrailers(HttpHeaders.of("bar", "secret"));
+        log.endResponse();
+
+        // Cache must be invalidated when sanitizers change.
+        final String a = log.toStringResponseOnly();
+        final String b = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(b).isNotEqualTo(a)
+                     .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
+
+        // Must be cached when sanitizers were not changed.
+        final String c = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer);
+        assertThat(c).isSameAs(b);
+
+        // Must not contain the secret.
+        assertThat(c).doesNotContain("secret");
+    }
+
+    @Test
+    void toStringWithoutChildren() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        log = new DefaultRequestLog(sctx);
+        log.endRequest();
+        log.endResponse();
+
+        assertThat(log.toString()).matches("^\\{req=\\{.*}, res=\\{.*}}$");
+    }
+
+    @Test
+    void toStringWithChildren() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        log = new DefaultRequestLog(sctx);
+        final DefaultRequestLog child1 = new DefaultRequestLog(sctx);
+        final DefaultRequestLog child2 = new DefaultRequestLog(sctx);
+        log.addChild(child1);
+        log.addChild(child2);
+        child1.endRequest();
+        child1.endResponse();
+        child2.endRequest();
+        child2.endResponse();
+        log.endRequest();
+        log.endResponse();
+
+        final String logStr = log.toString();
+        assertThat(logStr).doesNotEndWith("\n");
+
+        final String[] lines = logStr.split("\\r?\\n");
+        assertThat(lines).hasSize(4);
+        assertThat(lines[0]).matches("^\\{req=\\{.*}, res=\\{.*}}$");
+        assertThat(lines[1]).matches("^Children:$");
+        assertThat(lines[2]).matches("^\\t\\{req=\\{.*}, res=\\{.*}}$");
+        assertThat(lines[3]).matches("^\\t\\{req=\\{.*}, res=\\{.*}}$");
     }
 }

@@ -15,9 +15,8 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;

@@ -23,8 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -32,7 +30,10 @@ import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 /**
@@ -155,7 +156,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint ratio of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointRatio(double)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
         if (maxEndpointCount != null) {
@@ -172,7 +172,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint count of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointCount(int)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
         if (maxEndpointRatio != null) {
@@ -186,21 +185,26 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     }
 
     /**
+     * Sets the {@link AuthToken} header using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder auth(AuthToken token) {
+        requireNonNull(token, "token");
+        clientOptionsBuilder.auth(token);
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public final HealthCheckedEndpointGroup build() {
         final HealthCheckStrategy healthCheckStrategy;
         if (maxEndpointCount != null) {
-            healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                            .maxEndpointCount(maxEndpointCount)
-                                            .build();
+            healthCheckStrategy = HealthCheckStrategy.ofCount(maxEndpointCount);
         } else {
             if (maxEndpointRatio == null || maxEndpointRatio == 1.0) {
-                healthCheckStrategy = new AllHealthCheckStrategy();
+                healthCheckStrategy = HealthCheckStrategy.all();
             } else {
-                healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                                .maxEndpointRatio(maxEndpointRatio)
-                                                .build();
+                healthCheckStrategy = HealthCheckStrategy.ofRatio(maxEndpointRatio);
             }
         }
 

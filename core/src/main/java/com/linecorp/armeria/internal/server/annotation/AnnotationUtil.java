@@ -36,8 +36,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +43,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A utility class which helps to get annotations from an {@link AnnotatedElement}.

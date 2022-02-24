@@ -21,19 +21,20 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.throttling.ThrottlingHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 
-import io.github.bucket4j.AsyncBucket;
-import io.github.bucket4j.Bucket4j;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.ConfigurationBuilder;
 import io.github.bucket4j.TokensInheritanceStrategy;
+import io.github.bucket4j.distributed.AsyncBucketProxy;
+import io.github.bucket4j.distributed.AsyncBucketProxyAdapter;
 import io.github.bucket4j.local.LocalBucketBuilder;
 
 /**
@@ -51,7 +52,7 @@ public final class TokenBucketThrottlingStrategy<T extends Request> extends Thro
         return new TokenBucketThrottlingStrategyBuilder<>(tokenBucket);
     }
 
-    private final AsyncBucket asyncBucket;
+    private final AsyncBucketProxy asyncBucket;
     private final long minimumBackoffSeconds;
     @Nullable
     private final ThrottlingHeaders headersScheme;
@@ -79,12 +80,12 @@ public final class TokenBucketThrottlingStrategy<T extends Request> extends Thro
                                   @Nullable String name) {
         super(name);
         // construct the bucket builder
-        final LocalBucketBuilder builder = Bucket4j.builder().withNanosecondPrecision();
+        final LocalBucketBuilder builder = Bucket.builder().withNanosecondPrecision();
         for (BandwidthLimit limit : tokenBucket.limits()) {
             builder.addLimit(limit.bandwidth());
         }
         // build the bucket
-        asyncBucket = builder.build().asAsync();
+        asyncBucket = AsyncBucketProxyAdapter.fromSync(builder.build());
         minimumBackoffSeconds = (minimumBackoff == null) ? 0L : minimumBackoff.getSeconds();
         this.headersScheme = headersScheme;
         this.sendQuota = sendQuota;
@@ -99,7 +100,7 @@ public final class TokenBucketThrottlingStrategy<T extends Request> extends Thro
      */
     public CompletableFuture<Void> reconfigure(TokenBucket tokenBucket) {
         // construct the configuration builder
-        final ConfigurationBuilder builder = Bucket4j.configurationBuilder();
+        final ConfigurationBuilder builder = BucketConfiguration.builder();
         for (BandwidthLimit limit : tokenBucket.limits()) {
             builder.addLimit(limit.bandwidth());
         }
@@ -113,7 +114,7 @@ public final class TokenBucketThrottlingStrategy<T extends Request> extends Thro
      * Registers a request with the bucket.
      */
     @Override
-    public CompletionStage<Boolean> accept(final ServiceRequestContext ctx, final T request) {
+    public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {
         return asyncBucket.tryConsumeAndReturnRemaining(1L).thenApply(probe -> {
             final boolean accepted = probe.isConsumed();
             final long remainingTokens = probe.getRemainingTokens();

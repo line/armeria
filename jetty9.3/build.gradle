@@ -1,4 +1,4 @@
-final def JETTY_VERSION = '9.3.27.v20190418'
+final def JETTY_VERSION = '9.3.30.v20211001'
 
 dependencies {
     // Use the classes compiled with the latest Jetty,
@@ -20,6 +20,13 @@ dependencies {
                 // Will fail the build if the override doesn't work
                 strictly JETTY_VERSION
             }
+        }
+    }
+
+    testImplementation("org.eclipse.jdt:ecj") {
+        version {
+            // As a workaround for JSP compiler error on Java 17, forcibly specify the newer version
+            strictly "3.24.0"
         }
     }
 }

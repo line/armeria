@@ -16,12 +16,12 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +38,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -45,9 +46,24 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.auth.AuthToken;
+import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.OAuth1aToken;
+import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.auth.AuthService;
+import com.linecorp.armeria.server.auth.Authorizer;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;
 
@@ -232,7 +248,7 @@ class HealthCheckedEndpointGroupTest {
                      new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    new InfinityUpdateHealthCheckStrategy())) {
+                                                    HealthCheckStrategy.all())) {
 
             assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
 
@@ -258,7 +274,7 @@ class HealthCheckedEndpointGroupTest {
                      new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    new InfinityUpdateHealthCheckStrategy())) {
+                                                    HealthCheckStrategy.all())) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -287,7 +303,7 @@ class HealthCheckedEndpointGroupTest {
                      new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    new InfinityUpdateHealthCheckStrategy())) {
+                                                    HealthCheckStrategy.all())) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -322,42 +338,123 @@ class HealthCheckedEndpointGroupTest {
         assertThat(newCheckerCount).hasValue(1);
     }
 
-    private static final class MockEndpointGroup extends DynamicEndpointGroup {
-        void set(Endpoint... endpoints) {
-            setEndpoints(ImmutableList.copyOf(endpoints));
+    @Test
+    void authTest() throws Exception {
+        final ServerExtension server = new ServerExtension() {
+            @Override
+            protected void configure(ServerBuilder sb) {
+                final HttpService ok = new AbstractHttpService() {
+                    @Override
+                    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                        return HttpResponse.of(HttpStatus.OK);
+                    }
+                };
+
+                // Auth with HTTP basic
+                final Map<String, String> usernameToPassword = ImmutableMap.of("brown", "cony", "pangyo",
+                                                                               "choco");
+                final Authorizer<BasicToken> httpBasicAuthorizer = (ctx, token) -> {
+                    final String username = token.username();
+                    final String password = token.password();
+                    return completedFuture(password.equals(usernameToPassword.get(username)));
+                };
+                sb.service(
+                        "/basic",
+                        ok.decorate(AuthService.builder().addBasicAuth(httpBasicAuthorizer).newDecorator())
+                          .decorate(LoggingService.newDecorator()));
+
+                // Auth with OAuth1a
+                final Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
+                        completedFuture("dummy_signature".equals(token.signature()) &&
+                                        "dummy_consumer_key@#$!".equals(token.consumerKey()));
+                sb.service(
+                        "/oauth1a",
+                        ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
+                          .decorate(LoggingService.newDecorator()));
+
+                // Auth with OAuth2
+                final Authorizer<OAuth2Token> oAuth2Authorizer = (ctx, token) ->
+                        completedFuture("dummy_oauth2_token".equals(token.accessToken()));
+                sb.service(
+                        "/oauth2",
+                        ok.decorate(AuthService.builder().addOAuth2(oAuth2Authorizer).newDecorator())
+                          .decorate(LoggingService.newDecorator()));
+            }
+        };
+        server.start();
+
+        try (HealthCheckedEndpointGroup basicUnauthorized =
+                     HealthCheckedEndpointGroup.builder(server.httpEndpoint(), "/basic")
+                                               .useGet(true)
+                                               .build()) {
+            assertThat(basicUnauthorized.endpoints()).isEmpty();
         }
+
+        try (HealthCheckedEndpointGroup basicAuthorized =
+                     HealthCheckedEndpointGroup.builder(server.httpEndpoint(), "/basic")
+                                               .useGet(true)
+                                               .auth(AuthToken.ofBasic("brown", "cony"))
+                                               .build()) {
+            assertThat(basicAuthorized.whenReady().get()).usingElementComparator(new EndpointComparator())
+                                                         .containsOnly(server.httpEndpoint());
+        }
+
+        try (HealthCheckedEndpointGroup oauth1aUnauthorized =
+                     HealthCheckedEndpointGroup.builder(server.httpEndpoint(), "/oauth1a")
+                                               .useGet(true)
+                                               .build()) {
+            assertThat(oauth1aUnauthorized.endpoints()).isEmpty();
+        }
+
+        try (HealthCheckedEndpointGroup oauth1aAuthorized =
+                     HealthCheckedEndpointGroup.builder(server.httpEndpoint(), "/oauth1a")
+                                               .useGet(true)
+                                               .auth(AuthToken.builderForOAuth1a()
+                                                              .realm("dummy_realm")
+                                                              .consumerKey("dummy_consumer_key@#$!")
+                                                              .token("dummy_oauth1a_token")
+                                                              .signatureMethod("dummy")
+                                                              .signature("dummy_signature")
+                                                              .timestamp("0")
+                                                              .nonce("dummy_nonce")
+                                                              .version("1.0")
+                                                              .build())
+                                               .build()) {
+            oauth1aAuthorized.whenReady().join();
+            assertThat(oauth1aAuthorized.endpoints()).usingElementComparator(new EndpointComparator())
+                                                     .containsOnly(server.httpEndpoint());
+        }
+
+        try (HealthCheckedEndpointGroup oauth2Unauthorized =
+                     HealthCheckedEndpointGroup.builder(server.httpEndpoint(), "/oauth2")
+                                               .useGet(true)
+                                               .build()) {
+            oauth2Unauthorized.whenReady().join();
+            assertThat(oauth2Unauthorized.endpoints()).isEmpty();
+        }
+
+        try (HealthCheckedEndpointGroup oauth2Authorized =
+                     HealthCheckedEndpointGroup.builder(server.httpEndpoint(), "/oauth2")
+                                               .useGet(true)
+                                               .auth(AuthToken.ofOAuth2("dummy_oauth2_token"))
+                                               .build()) {
+            assertThat(oauth2Authorized.whenReady().get()).usingElementComparator(new EndpointComparator())
+                                                          .containsOnly(server.httpEndpoint());
+        }
+
+        server.stop();
     }
 
-    private static final class InfinityUpdateHealthCheckStrategy implements HealthCheckStrategy {
-        private List<Endpoint> candidates;
-        private List<Endpoint> selectedCandidates;
-
-        InfinityUpdateHealthCheckStrategy() {
-            candidates = new ArrayList<>();
-            selectedCandidates = ImmutableList.copyOf(candidates);
-        }
-
-        @Override
-        public void updateCandidates(List<Endpoint> candidates) {
-            this.candidates = candidates;
-            selectedCandidates = ImmutableList.copyOf(candidates);
-        }
-
-        @Override
-        public List<Endpoint> getSelectedEndpoints() {
-            return selectedCandidates;
-        }
-
-        @Override
-        public boolean updateHealth(Endpoint endpoint, double health) {
-            return true;
+    static final class MockEndpointGroup extends DynamicEndpointGroup {
+        void set(Endpoint... endpoints) {
+            setEndpoints(ImmutableList.copyOf(endpoints));
         }
     }
 
     /**
      * A Comparator which includes the weight of an endpoint to compare.
      */
-    private static class EndpointComparator implements Comparator<Endpoint>, Serializable {
+    static class EndpointComparator implements Comparator<Endpoint>, Serializable {
         private static final long serialVersionUID = 6866869171110624149L;
 
         @Override

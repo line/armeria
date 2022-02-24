@@ -19,25 +19,27 @@ package com.linecorp.armeria.common.auth;
 import static com.linecorp.armeria.common.auth.AuthUtil.secureEquals;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * The bearer token of <a href="https://datatracker.ietf.org/doc/rfc6750/">OAuth 2.0 authentication</a>.
  */
-public final class OAuth2Token {
+public final class OAuth2Token extends AuthToken {
 
     /**
      * Creates a new {@link OAuth2Token} from the given {@code accessToken}.
+     *
+     * @deprecated use {@link AuthToken#ofOAuth2(String)} instead.
      */
+    @Deprecated
     public static OAuth2Token of(String accessToken) {
         return new OAuth2Token(accessToken);
     }
 
     private final String accessToken;
 
-    private OAuth2Token(String accessToken) {
+    OAuth2Token(String accessToken) {
         this.accessToken = requireNonNull(accessToken, "accessToken");
     }
 
@@ -51,6 +53,7 @@ public final class OAuth2Token {
     /**
      * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
      */
+    @Override
     public String asHeaderValue() {
         return "Bearer " + accessToken;
     }

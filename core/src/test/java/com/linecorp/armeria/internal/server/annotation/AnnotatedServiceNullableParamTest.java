@@ -20,15 +20,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
@@ -45,6 +44,12 @@ class AnnotatedServiceNullableParamTest {
             sb.annotatedService("/params", new Object() {
                 @Get("/nullable")
                 public String nullable(@Param @Nullable String value) {
+                    return firstNonNull(value, "unspecified");
+                }
+
+                @SuppressWarnings("checkstyle:LegacyNullableAnnotation")
+                @Get("/jsr305_nullable")
+                public String jsr305Nullable(@Param @javax.annotation.Nullable String value) {
                     return firstNonNull(value, "unspecified");
                 }
 
@@ -71,6 +76,13 @@ class AnnotatedServiceNullableParamTest {
                     return firstNonNull(value, "unspecified");
                 }
 
+                @SuppressWarnings("checkstyle:LegacyNullableAnnotation")
+                @Get("/jsr305_nullable")
+                public String jsr305Nullable(
+                        @Header @javax.annotation.Nullable String value) {
+                    return nullable(value);
+                }
+
                 @Get("/other_nullable")
                 public String otherNullable(
                         @Header @reactor.util.annotation.Nullable String value) {
@@ -91,19 +103,19 @@ class AnnotatedServiceNullableParamTest {
     };
 
     @ParameterizedTest
-    @CsvSource({ "/nullable", "/other_nullable", "/default", "/optional" })
+    @CsvSource({ "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional" })
     void params(String path) {
-        final WebClient client = WebClient.of(server.httpUri().resolve("/params"));
-        assertThat(client.get(path + "?value=foo").aggregate().join().contentUtf8()).isEqualTo("foo");
-        assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("unspecified");
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri().resolve("/params"));
+        assertThat(client.get(path + "?value=foo").contentUtf8()).isEqualTo("foo");
+        assertThat(client.get(path).contentUtf8()).isEqualTo("unspecified");
     }
 
     @ParameterizedTest
-    @CsvSource({ "/nullable", "/other_nullable", "/default", "/optional" })
+    @CsvSource({ "/nullable", "/jsr305_nullable", "/other_nullable", "/default", "/optional" })
     void headers(String path) {
-        final WebClient client = WebClient.of(server.httpUri().resolve("/headers"));
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri().resolve("/headers"));
         assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, path, "value", "foo"))
-                         .aggregate().join().contentUtf8()).isEqualTo("foo");
-        assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("unspecified");
+                         .contentUtf8()).isEqualTo("foo");
+        assertThat(client.get(path).contentUtf8()).isEqualTo("unspecified");
     }
 }

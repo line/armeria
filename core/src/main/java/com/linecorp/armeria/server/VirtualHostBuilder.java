@@ -22,7 +22,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
-import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_PATTERN;
+import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
@@ -41,12 +41,12 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -59,8 +59,12 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
+import com.google.common.net.HostAndPort;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -71,6 +75,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -97,6 +102,7 @@ public final class VirtualHostBuilder {
     private String defaultHostname;
     @Nullable
     private String hostnamePattern;
+    private int port = -1;
     @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
@@ -125,6 +131,9 @@ public final class VirtualHostBuilder {
     private boolean shutdownAccessLogWriterOnStop;
     @Nullable
     private AnnotatedServiceExtensions annotatedServiceExtensions;
+    @Nullable
+    private ScheduledExecutorService blockingTaskExecutor;
+    private boolean shutdownBlockingTaskExecutorOnStop;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -135,6 +144,18 @@ public final class VirtualHostBuilder {
     VirtualHostBuilder(ServerBuilder serverBuilder, boolean defaultVirtualHost) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.defaultVirtualHost = defaultVirtualHost;
+    }
+
+    /**
+     * Creates a new {@link VirtualHostBuilder}.
+     *
+     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}
+     * @param port the port that this virtual host binds to
+     */
+    VirtualHostBuilder(ServerBuilder serverBuilder, int port) {
+        this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
+        this.port = port;
+        defaultVirtualHost = true;
     }
 
     /**
@@ -156,6 +177,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the hostname pattern of this {@link VirtualHost}.
+     * If the hostname pattern contains a port number such {@code *.example.com:8080}, the returned virtual host
+     * will be bound to the {@code 8080} port. Otherwise, the virtual host will allow all active ports.
      *
      * @throws UnsupportedOperationException if this is the default {@link VirtualHostBuilder}
      */
@@ -167,14 +190,21 @@ public final class VirtualHostBuilder {
 
         checkArgument(!hostnamePattern.isEmpty(), "hostnamePattern is empty.");
 
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        if (hostAndPort.hasPort()) {
+            port = hostAndPort.getPort();
+            checkArgument(port >= 1 && port <= 65535, "port: %s (expected: 1-65535)", port);
+            hostnamePattern = hostAndPort.getHost();
+        }
+
         final boolean validHostnamePattern;
         if (hostnamePattern.charAt(0) == '*') {
             validHostnamePattern =
                     hostnamePattern.length() >= 3 &&
                     hostnamePattern.charAt(1) == '.' &&
-                    HOSTNAME_PATTERN.matcher(hostnamePattern.substring(2)).matches();
+                    HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern.substring(2)).matches();
         } else {
-            validHostnamePattern = HOSTNAME_PATTERN.matcher(hostnamePattern).matches();
+            validHostnamePattern = HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern).matches();
         }
 
         checkArgument(validHostnamePattern,
@@ -865,6 +895,35 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the
+     *                       {@link Server} stops
+     */
+    public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                   boolean shutdownOnStop) {
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public VirtualHostBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -948,10 +1007,21 @@ public final class VirtualHostBuilder {
                 annotatedServiceExtensions != null ?
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
+        final ScheduledExecutorService blockingTaskExecutor;
+        final boolean shutdownBlockingTaskExecutorOnStop;
+        if (this.blockingTaskExecutor != null) {
+            blockingTaskExecutor = this.blockingTaskExecutor;
+            shutdownBlockingTaskExecutorOnStop = this.shutdownBlockingTaskExecutorOnStop;
+        } else {
+            blockingTaskExecutor = template.blockingTaskExecutor;
+            shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
+        }
+
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
+        assert blockingTaskExecutor != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -971,13 +1041,15 @@ public final class VirtualHostBuilder {
                     }
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
-                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
+                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                               accessLogWriter, shutdownAccessLogWriterOnStop);
+                               accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
+                               shutdownBlockingTaskExecutorOnStop);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
@@ -1041,11 +1113,12 @@ public final class VirtualHostBuilder {
             }
 
             final VirtualHost virtualHost =
-                    new VirtualHost(defaultHostname, hostnamePattern, sslContext,
+                    new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
-                                    shutdownAccessLogWriterOnStop);
+                                    shutdownAccessLogWriterOnStop,
+                                    blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -1159,6 +1232,14 @@ public final class VirtualHostBuilder {
             }
             break;
         }
+    }
+
+    int port() {
+        return port;
+    }
+
+    boolean defaultVirtualHost() {
+        return defaultVirtualHost;
     }
 
     @Override

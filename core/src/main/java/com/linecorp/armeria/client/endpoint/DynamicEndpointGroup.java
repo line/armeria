@@ -27,12 +27,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.AbstractListenable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
@@ -40,9 +41,7 @@ import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
  */
-public class DynamicEndpointGroup
-        extends AbstractListenable<List<Endpoint>>
-        implements EndpointGroup, ListenableAsyncCloseable {
+public class DynamicEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
 
     // An empty list of endpoints we also use as a marker that we have not initialized endpoints yet.
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
@@ -198,7 +197,7 @@ public class DynamicEndpointGroup
 
     private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+            initialEndpointsFuture.complete(endpoints);
         }
     }
 
@@ -240,5 +239,34 @@ public class DynamicEndpointGroup
     @Override
     public final void close() {
         closeable.close();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("selectionStrategy", selectionStrategy.getClass())
+                          .add("endpoints", truncatedEndpoints(endpoints))
+                          .add("numEndpoints", endpoints.size())
+                          .add("initialized", initialEndpointsFuture.isDone())
+                          .toString();
+    }
+
+    /**
+     * Returns a truncated list of at most 10 endpoints.
+     */
+    @UnstableApi
+    protected static List<Endpoint> truncatedEndpoints(List<Endpoint> endpoints) {
+        return truncatedEndpoints(endpoints, 10);
+    }
+
+    /**
+     * Returns a truncated list of at most {@code maxEndpoints} endpoints.
+     * A new copy of the list isn't created if the size of endpoints is less than {@code maxEndpoints}.
+     */
+    private static List<Endpoint> truncatedEndpoints(List<Endpoint> endpoints, int maxEndpoints) {
+        if (endpoints.size() <= maxEndpoints) {
+            return endpoints;
+        }
+        return endpoints.stream().limit(maxEndpoints).collect(toImmutableList());
     }
 }

@@ -42,8 +42,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.Nullable;
-
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -54,6 +52,7 @@ import org.junit.rules.Timeout;
 
 import com.google.common.base.Stopwatch;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
@@ -349,13 +348,38 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void listenerNotificationFailure() throws Exception {
+    public void listenerNotifyStartingFailure() throws Exception {
         final EventListener listener = mock(EventListener.class);
         final AnticipatedException exception = new AnticipatedException();
         final List<String> recording = new ArrayList<>();
         final StartStop startStop = new StartStop(arg -> "foo", arg -> null) {
             @Override
-            protected void notifyStarting(EventListener listener, @Nullable Integer arg) {
+            protected void notifyStarting(EventListener listener, @Nullable Integer arg) throws Exception {
+                throw exception;
+            }
+
+            @Override
+            protected void notificationFailed(EventListener listener, Throwable cause) {
+                recording.add(listener + " " + cause);
+            }
+        };
+
+        startStop.addListener(listener);
+        assertThatThrownBy(() -> startStop.start(true).join())
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .hasRootCause(exception);
+        assertThat(recording).containsExactly(listener + " " + exception);
+    }
+
+    @Test
+    public void listenerNotifyStartedFailure() throws Exception {
+        final EventListener listener = mock(EventListener.class);
+        final AnticipatedException exception = new AnticipatedException();
+        final List<String> recording = new ArrayList<>();
+        final StartStop startStop = new StartStop(arg -> "foo", arg -> null) {
+            @Override
+            protected void notifyStarted(EventListener listener, @Nullable Integer arg,
+                                         @Nullable String result) throws Exception {
                 throw exception;
             }
 

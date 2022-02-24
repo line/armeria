@@ -20,16 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -75,16 +74,16 @@ class AnnotatedServiceRequestLogNameTest {
     };
 
     @Nullable
-    private WebClient client;
+    private BlockingWebClient client;
 
     @BeforeEach
     void setUp() {
-        client = WebClient.of(server.httpUri());
+        client = BlockingWebClient.of(server.httpUri());
     }
 
     @Test
     void logNameShouldBeSet() throws Exception {
-        client.get("/ok").aggregate().join();
+        client.get("/ok");
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.name()).isEqualTo("foo");
@@ -93,7 +92,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void logNameShouldBeSetOnEarlyFailure() throws Exception {
-        client.get("/fail_early").aggregate().join();
+        client.get("/fail_early");
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.name()).isEqualTo("bar");
@@ -102,7 +101,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void defaultServiceName() throws Exception {
-        client.get("/ok").aggregate().join();
+        client.get("/ok");
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo(FooService.class.getName());
@@ -110,7 +109,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void customServiceNameWithClass() throws Exception {
-        client.get("/serviceName/foo").aggregate().join();
+        client.get("/serviceName/foo");
 
         final RequestLog log = logs.take().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("MyBarService");
@@ -119,7 +118,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void customServiceNameWithMethod() throws Exception {
-        final AggregatedHttpResponse response = client.get("/serviceName/bar").aggregate().join();
+        final AggregatedHttpResponse response = client.get("/serviceName/bar");
         assertThat(response.contentUtf8()).isEqualTo("OK");
 
         final RequestLog log = logs.take().whenComplete().join();
@@ -129,7 +128,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void customServiceNameWithDecorator() throws Exception {
-        final AggregatedHttpResponse response = client.get("/decorated/foo").aggregate().join();
+        final AggregatedHttpResponse response = client.get("/decorated/foo");
         assertThat(response.contentUtf8()).isEqualTo("OK");
 
         final RequestLog log = logs.take().whenComplete().join();
@@ -140,7 +139,7 @@ class AnnotatedServiceRequestLogNameTest {
 
     @Test
     void customServiceNameWithConfiguration() throws Exception {
-        AggregatedHttpResponse response = client.get("/configured/foo").aggregate().join();
+        AggregatedHttpResponse response = client.get("/configured/foo");
         assertThat(response.contentUtf8()).isEqualTo("OK");
 
         RequestLog log = logs.take().whenComplete().join();
@@ -148,7 +147,7 @@ class AnnotatedServiceRequestLogNameTest {
         assertThat(log.name()).isEqualTo("ConfiguredLog");
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
 
-        response = client.get("/configured/bar").aggregate().join();
+        response = client.get("/configured/bar");
         assertThat(response.contentUtf8()).isEqualTo("OK");
 
         log = logs.take().whenComplete().join();

@@ -16,13 +16,9 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
 import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
 
 import java.util.List;
-import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -32,6 +28,8 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
 
 import io.netty.channel.EventLoop;
@@ -107,10 +105,10 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             String hostname, @Nullable ResolvedAddressTypes resolvedAddressTypes) {
 
         if (resolvedAddressTypes == null) {
-            if (NetUtil.isIpV4StackPreferred() || !anyInterfaceSupportsIpV6()) {
-                resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
-            } else {
+            if (SystemInfo.hasIpV6()) {
                 resolvedAddressTypes = ResolvedAddressTypes.IPV4_PREFERRED;
+            } else {
+                resolvedAddressTypes = ResolvedAddressTypes.IPV4_ONLY;
             }
         }
 
@@ -190,20 +188,12 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
                 ipAddr = NetUtil.bytesToIpAddress(addrBytes);
             }
 
-            final Endpoint endpoint = port != 0 ? Endpoint.of(hostname, port) : Endpoint.of(hostname);
+            final Endpoint endpoint = Endpoint.unsafeCreate(hostname, port);
             builder.add(endpoint.withIpAddr(ipAddr));
         }
 
         final ImmutableSortedSet<Endpoint> endpoints = builder.build();
-        if (logger().isDebugEnabled()) {
-            logger().debug("{} Resolved: {} (TTL: {})",
-                           logPrefix(),
-                           endpoints.stream()
-                                    .map(Endpoint::ipAddr)
-                                    .collect(Collectors.joining(", ")),
-                           ttl);
-        }
-
+        logDnsResolutionResult(endpoints, ttl);
         return endpoints;
     }
 }

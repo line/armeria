@@ -28,13 +28,12 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.RouteUtil;
 
 final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
@@ -54,12 +53,13 @@ final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
     @Override
     protected HttpFile blockingGet(
             Executor fileReadExecutor, String path, Clock clock,
-            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+            @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+            MediaTypeResolver mediaTypeResolver) {
 
         path = normalizePath(path);
 
         final HttpFileBuilder builder = HttpFile.builder(Paths.get(rootDir + path));
-        return build(builder, clock, path, contentEncoding, additionalHeaders);
+        return build(builder, clock, path, contentEncoding, additionalHeaders, mediaTypeResolver);
     }
 
     @Override
@@ -99,13 +99,13 @@ final class FileSystemHttpVfs extends AbstractBlockingHttpVfs {
                           Clock clock,
                           String pathOrUri,
                           @Nullable String contentEncoding,
-                          HttpHeaders additionalHeaders) {
+                          HttpHeaders additionalHeaders, MediaTypeResolver mediaTypeResolver) {
 
         builder.autoDetectedContentType(false);
         builder.clock(clock);
         builder.setHeaders(additionalHeaders);
 
-        final MediaType contentType = MimeTypeUtil.guessFromPath(pathOrUri, contentEncoding);
+        final MediaType contentType = mediaTypeResolver.guessFromPath(pathOrUri, contentEncoding);
         if (contentType != null) {
             builder.contentType(contentType);
         }

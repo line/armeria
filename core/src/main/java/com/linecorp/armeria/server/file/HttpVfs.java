@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
@@ -67,11 +67,31 @@ public interface HttpVfs {
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
      * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
-     *
      * @return the {@link HttpFile} at the specified {@code path}
+     *
+     * @deprecated Use {@link #get(Executor, String, Clock, String, HttpHeaders, MediaTypeResolver)} instead.
      */
+    @Deprecated
     HttpFile get(Executor fileReadExecutor, String path, Clock clock,
                  @Nullable String contentEncoding, HttpHeaders additionalHeaders);
+
+    /**
+     * Finds the file at the specified {@code path}.
+     *
+     * @param fileReadExecutor the {@link Executor} which will perform the read operations against the file
+     * @param path an absolute path that starts with {@code '/'}, whose component separator is {@code '/'}
+     * @param clock the {@link Clock} which provides the current date and time
+     * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
+     *                        {@code null} to omit the header.
+     * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
+     * @param mediaTypeResolver the {@link MediaTypeResolver} to determine the {@link MediaType}.
+     * @return the {@link HttpFile} at the specified {@code path}
+     */
+    default HttpFile get(Executor fileReadExecutor, String path, Clock clock,
+                         @Nullable String contentEncoding, HttpHeaders additionalHeaders,
+                         MediaTypeResolver mediaTypeResolver) {
+        return get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders);
+    }
 
     /**
      * Returns whether the file at the specified {@code path} is a listable directory.

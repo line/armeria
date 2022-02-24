@@ -36,7 +36,6 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -78,17 +77,21 @@ class UnaryGrpcClientTest {
                             .build();
     }
 
+    private static String getUri(SerializationFormat serializationFormat) {
+        return String.format("%s+%s", serializationFormat, server.httpUri());
+    }
+
     @ParameterizedTest
     @ArgumentsSource(UnsupportedGrpcSerializationFormatArgumentsProvider.class)
     void unsupportedSerializationFormat(SerializationFormat serializationFormat) {
-        assertThrows(IllegalArgumentException.class,
-                     () -> new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat));
+        assertThrows(IllegalStateException.class,
+                     () -> Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class));
     }
 
     @ParameterizedTest
     @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void normal(SerializationFormat serializationFormat) throws Exception {
-        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
+        final UnaryGrpcClient client = Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class);
         final SimpleRequest request = buildRequest("hello");
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -107,7 +110,7 @@ class UnaryGrpcClientTest {
     @ParameterizedTest
     @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void statusException(SerializationFormat serializationFormat) {
-        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
+        final UnaryGrpcClient client = Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class);
         final SimpleRequest request = buildRequest("peanuts");
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThatThrownBy(
@@ -127,7 +130,7 @@ class UnaryGrpcClientTest {
     @ParameterizedTest
     @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void lateStatusException(SerializationFormat serializationFormat) {
-        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
+        final UnaryGrpcClient client = Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class);
         final SimpleRequest request = buildRequest("ice cream");
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThatThrownBy(
@@ -146,7 +149,7 @@ class UnaryGrpcClientTest {
     @ParameterizedTest
     @ArgumentsSource(UnaryGrpcSerializationFormatArgumentsProvider.class)
     void invalidPayload(SerializationFormat serializationFormat) {
-        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
+        final UnaryGrpcClient client = Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class);
         assertThatThrownBy(
                 () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
                                      "foobarbreak".getBytes(StandardCharsets.UTF_8)).join())
@@ -157,7 +160,7 @@ class UnaryGrpcClientTest {
     @ParameterizedTest
     @ArgumentsSource(GrpcWebUnaryGrpcSerializationFormatArgumentsProvider.class)
     void errorHandlingForGrpcWeb(SerializationFormat serializationFormat) {
-        final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(server.httpUri()), serializationFormat);
+        final UnaryGrpcClient client = Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class);
         final SimpleRequest request = buildRequest("two ice creams");
         assertThatThrownBy(
                 () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",

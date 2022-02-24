@@ -32,15 +32,17 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.CookieUtil.initCookie;
 
+import java.util.Arrays;
 import java.util.Date;
-
-import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 
 /**
  * A <a href="https://datatracker.ietf.org/doc/rfc6265/">RFC 6265</a> compliant cookie decoder for client side.
@@ -182,7 +184,7 @@ final class ClientCookieDecoder {
         } else if (length == 7) {
             parse7(builder, header, keyStart, valueStart, valueEnd);
         } else if (length == 8) {
-            parse8(builder, header, keyStart);
+            parse8(builder, header, keyStart, valueStart, valueEnd);
         }
     }
 
@@ -230,9 +232,12 @@ final class ClientCookieDecoder {
     }
 
     private static void parse8(CookieBuilder builder, String header,
-                               int nameStart) {
+                               int nameStart, int valueStart, int valueEnd) {
         if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
             builder.httpOnly(true);
+        } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
+            final String sameSite = computeValue(header, valueStart, valueEnd);
+            builder.sameSite(getValidSameSite(sameSite));
         }
     }
 
@@ -259,6 +264,18 @@ final class ClientCookieDecoder {
                 builder.maxAge(maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0));
             }
         }
+    }
+
+    /**
+     * Returns a valid {@code "SameSite"} attribute.
+     * This method returns {@code "Lax"} as default if the attribute is empty or invalid value.
+     */
+    private static String getValidSameSite(@Nullable String sameSite) {
+        return Arrays.stream(SameSite.values())
+                     .map(SameSite::name)
+                     .filter(name -> name.equalsIgnoreCase(sameSite))
+                     .findFirst()
+                     .orElse(SameSite.Lax.name());
     }
 
     private ClientCookieDecoder() {}

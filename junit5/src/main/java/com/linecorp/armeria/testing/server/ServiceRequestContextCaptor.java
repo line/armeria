@@ -24,10 +24,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -49,6 +48,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  *
  *     @Test
  *     void test() {
+ *         final WebClient client = WebClient.of(server.httpUri());
  *         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
  *         client.get("/hello").aggregate().join();
  *         assertThat(captor.size()).isEqualTo(1);

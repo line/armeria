@@ -24,14 +24,15 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -168,6 +169,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     /**
      * Invoked whenever a new demand is requested.
+     * @param n Newly requested demand
      */
     protected void onRequest(long n) {}
 
@@ -250,14 +252,15 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void doRequest(long n) {
-        onRequest(n);
-
         final long oldDemand = demand;
         if (oldDemand >= Long.MAX_VALUE - n) {
             demand = Long.MAX_VALUE;
         } else {
             demand = oldDemand + n;
         }
+
+        // To make onNext know demand, we need to put this after demand updated.
+        onRequest(n);
 
         if (oldDemand == 0 && !queue.isEmpty()) {
             notifySubscriber0();
@@ -441,7 +444,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * @return {@code true} if the stream has been closed by this method call.
      *         {@code false} if the stream has been closed already by other party.
      */
-    protected final boolean tryClose(Throwable cause) {
+    public final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(new CloseEvent(cause));
             return true;

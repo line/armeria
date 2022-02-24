@@ -23,17 +23,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * The bearer token of <a href="https://oauth.net/core/1.0a/#anchor12">OAuth 1.0a authentication</a>.
  */
-public final class OAuth1aToken {
+public final class OAuth1aToken extends AuthToken {
 
     /**
      * The realm parameter. (optional)
@@ -77,7 +76,10 @@ public final class OAuth1aToken {
 
     /**
      * Returns a new {@link OAuth1aTokenBuilder}.
+     *
+     * @deprecated use {@link AuthToken#builderForOAuth1a()} instead.
      */
+    @Deprecated
     public static OAuth1aTokenBuilder builder() {
         return new OAuth1aTokenBuilder();
     }
@@ -178,6 +180,7 @@ public final class OAuth1aToken {
     /**
      * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
      */
+    @Override
     public String asHeaderValue() {
         if (headerValue != null) {
             return headerValue;

@@ -25,8 +25,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -36,6 +34,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.AsciiString;
@@ -79,10 +78,15 @@ class HttpRequestBuilderTest {
     }
 
     @Test
-    void shouldNotAllowEmptyPath() {
-        assertThatThrownBy(() -> HttpRequest.builder().path(""))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("empty");
+    void shouldAllowEmptyPath() {
+        final HttpRequest request = HttpRequest.builder().get("").build();
+        assertThat(request.path()).isEqualTo("");
+    }
+
+    @Test
+    void buildEmptyPathWithQueryParams() {
+        final HttpRequest request = HttpRequest.builder().get("").queryParam("foo", "bar").build();
+        assertThat(request.path()).isEqualTo("?foo=bar");
     }
 
     @Test
@@ -339,13 +343,13 @@ class HttpRequestBuilderTest {
     @Test
     void buildWithCookies() {
         final HttpRequest request = HttpRequest.builder().get("/")
-                                               .cookie(Cookie.of("cookie1", "foo"))
-                                               .cookies(Cookies.of(Cookie.of("cookie2", "foo"),
-                                                                   Cookie.of("cookie3", "foo")))
+                                               .cookie(Cookie.ofSecure("cookie1", "foo"))
+                                               .cookies(Cookies.of(Cookie.ofSecure("cookie2", "foo"),
+                                                                   Cookie.ofSecure("cookie3", "foo")))
                                                .build();
-        final Cookies cookies = Cookies.of(Cookie.of("cookie1", "foo"),
-                                           Cookie.of("cookie2", "foo"),
-                                           Cookie.of("cookie3", "foo"));
+        final Cookies cookies = Cookies.of(Cookie.ofSecure("cookie1", "foo"),
+                                           Cookie.ofSecure("cookie2", "foo"),
+                                           Cookie.ofSecure("cookie3", "foo"));
         assertThat(request.headers().contains(COOKIE, Cookie.toCookieHeader(cookies))).isTrue();
         assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
     }
@@ -423,7 +427,7 @@ class HttpRequestBuilderTest {
                       .queryParams(QueryParams.of("q", "bar", "f", 10))
                       .header("x-header-1", 5678)
                       .headers(HttpHeaders.of("x-header-2", "value"))
-                      .cookie(Cookie.of("cookie", "value"))
+                      .cookie(Cookie.ofSecure("cookie", "value"))
                       .content(MediaType.PLAIN_TEXT_UTF_8, "test");
         request = requestBuilder.build();
         assertThat(request.path()).isEqualTo("/resource1/resource2/resource4/foo-2/3?q=bar&f=10");

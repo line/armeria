@@ -44,12 +44,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -110,7 +109,7 @@ public final class ContentDisposition {
      * @param type the disposition type like for example {@code inline}, {@code attachment},
      *             or {@code form-data}
      * @param name the name parameter
-     * @param filename the filename parameter that will be be formatted as quoted-string,
+     * @param filename the filename parameter that will be formatted as quoted-string,
      *                 as defined in RFC 2616, section 2.2, and any quote characters within
      *                 the filename value will be escaped with a backslash,
      *                 e.g. {@code "foo\"bar.txt"} becomes {@code "foo\\\"bar.txt"}

@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
-import java.util.List;
 import java.util.Map;
-
-import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,14 +24,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -79,8 +77,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                    "Failed to parse a GraphQL query: " + ctx.query());
         }
 
-        return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions,
-                                                     produceType(req.headers())));
+        return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions));
     }
 
     @Override
@@ -91,49 +88,53 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         }
 
         if (contentType.isJson()) {
-            return HttpResponse.from(request.aggregate().thenApply(req -> {
-                final String body = req.contentUtf8();
-                if (Strings.isNullOrEmpty(body)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                           "Missing request body");
-                }
+            return HttpResponse.from(request.aggregate(ctx.eventLoop()).thenApply(req -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    final String body = req.contentUtf8();
+                    if (Strings.isNullOrEmpty(body)) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                               "Missing request body");
+                    }
 
-                final Map<String, Object> requestMap;
-                try {
-                    requestMap = parseJsonString(body);
-                } catch (JsonProcessingException ex) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                           "Failed to parse a JSON document: " + body);
-                }
+                    final Map<String, Object> requestMap;
+                    try {
+                        requestMap = parseJsonString(body);
+                    } catch (JsonProcessingException ex) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                               "Failed to parse a JSON document: " + body);
+                    }
 
-                final String query = (String) requestMap.get("query");
-                if (Strings.isNullOrEmpty(query)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
-                }
-                final String operationName = (String) requestMap.get("operationName");
-                final Map<String, Object> variables = toMap(requestMap.get("variables"));
-                final Map<String, Object> extensions = toMap(requestMap.get("extensions"));
+                    final String query = (String) requestMap.get("query");
+                    if (Strings.isNullOrEmpty(query)) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
+                    }
+                    final String operationName = (String) requestMap.get("operationName");
+                    final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"));
+                    final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"));
 
-                try {
-                    return executeGraphql(ctx, GraphqlRequest.of(query, operationName, variables, extensions,
-                                                                 produceType(req.headers())));
-                } catch (Exception ex) {
-                    return HttpResponse.ofFailure(ex);
+                    try {
+                        return executeGraphql(ctx,
+                                              GraphqlRequest.of(query, operationName, variables, extensions));
+                    } catch (Exception ex) {
+                        return HttpResponse.ofFailure(ex);
+                    }
                 }
             }));
         }
 
         if (contentType.is(MediaType.GRAPHQL)) {
-            return HttpResponse.from(request.aggregate().thenApply(req -> {
-                final String query = req.contentUtf8();
-                if (Strings.isNullOrEmpty(query)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
-                }
+            return HttpResponse.from(request.aggregate(ctx.eventLoop()).thenApply(req -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    final String query = req.contentUtf8();
+                    if (Strings.isNullOrEmpty(query)) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
+                    }
 
-                try {
-                    return executeGraphql(ctx, GraphqlRequest.of(query));
-                } catch (Exception ex) {
-                    return HttpResponse.ofFailure(ex);
+                    try {
+                        return executeGraphql(ctx, GraphqlRequest.of(query));
+                    } catch (Exception ex) {
+                        return HttpResponse.ofFailure(ex);
+                    }
                 }
             }));
         }
@@ -154,21 +155,22 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         return parseJsonString(value);
     }
 
-    private static Map<String, Object> toMap(@Nullable Object maybeMap) {
+    /**
+     * This only works reliably if maybeMap is from Json, as maps(objects) in Json
+     * can only have string keys.
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
         if (maybeMap == null) {
             return ImmutableMap.of();
         }
 
         if (maybeMap instanceof Map) {
-            final Map<?, ?> variablesMap = (Map<?, ?>) maybeMap;
-            if (variablesMap.isEmpty()) {
+            final Map<?, ?> map = (Map<?, ?>) maybeMap;
+            if (map.isEmpty()) {
                 return ImmutableMap.of();
             }
-
-            final ImmutableMap.Builder<String, Object> builder =
-                    ImmutableMap.builderWithExpectedSize(variablesMap.size());
-            variablesMap.forEach((k, v) -> builder.put(String.valueOf(k), v));
-            return builder.build();
+            return (Map<String, Object>) map;
         } else {
             throw new IllegalArgumentException("Unknown parameter type variables");
         }
@@ -183,35 +185,5 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                MediaType.PLAIN_TEXT,
                                "Unsupported media type. Only JSON compatible types and " +
                                "application/graphql are supported.");
-    }
-
-    /**
-     * Returns the negotiated {@link MediaType}. {@link MediaType#JSON} and {@link MediaType#GRAPHQL_JSON}
-     * are commonly used for the Content-Type of a GraphQL response.
-     * If {@link HttpHeaderNames#ACCEPT} is not specified, {@link MediaType#GRAPHQL_JSON} is used by default.
-     *
-     * <p>Note that the negotiated {@link MediaType} could not be used by the implementation of
-     * {@link AbstractGraphqlService} which may choose to respond in one of several ways
-     * specified the
-     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#body">
-     * specification</a>.
-     */
-    @Nullable
-    private static MediaType produceType(RequestHeaders headers) {
-        final List<MediaType>  acceptTypes = headers.accept();
-        if (acceptTypes.isEmpty()) {
-            // If there is no Accept header in the request, the response MUST include
-            // a Content-Type: application/graphql+json header
-            return MediaType.GRAPHQL_JSON;
-        }
-
-        for (MediaType accept : acceptTypes) {
-            if (accept.is(MediaType.GRAPHQL_JSON) || accept.is(MediaType.JSON)) {
-                return accept;
-            }
-        }
-
-        // Not acceptable
-        return null;
     }
 }

@@ -20,6 +20,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.time.Duration;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -90,7 +91,9 @@ public class ByteBufLeakTest {
             @GetMapping("/flux")
             Flux<String> flux() {
                 addListenerForCountingCompletedRequests();
-                return Flux.just("abc", "def", "ghi", "jkl", "mno");
+                return Flux.just("a", "bc", "def", "hgij", "klmno")
+                           .repeat(10)
+                           .delayElements(Duration.ofMillis(10));
             }
 
             @GetMapping("/empty")
@@ -121,7 +124,9 @@ public class ByteBufLeakTest {
             assertThat(client.get("/mono").aggregate().join().contentUtf8())
                     .isEqualTo("hello, WebFlux!");
             assertThat(client.get("/flux").aggregate().join().contentUtf8())
-                    .isEqualTo("abcdefghijklmno");
+                    .isEqualTo("abcdefhgijklmnoabcdefhgijklmnoabcdefhgijklmnoabcdefhgijklmnoabcdefhgijklmno" +
+                               "abcdefhgijklmnoabcdefhgijklmnoabcdefhgijklmnoabcdefhgijklmnoabcdefhgijklmno" +
+                               "abcdefhgijklmno");
             assertThat(client.get("/empty").aggregate().join().contentUtf8())
                     .isEmpty();
         }

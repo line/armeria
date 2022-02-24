@@ -19,6 +19,7 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINA
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -82,6 +83,8 @@ public class ThriftHttpErrorResponseTest {
     void test(TestParam param) throws Exception {
         final Iface client = Clients.newClient(server.httpUri(BINARY).resolve(param.path), Iface.class);
         assertThatThrownBy(() -> client.hello("foo"))
+                .isInstanceOf(TTransportException.class)
+                .getCause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.CONFLICT);
                 });

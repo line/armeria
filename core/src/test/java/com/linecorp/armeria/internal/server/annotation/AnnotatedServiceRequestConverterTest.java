@@ -39,8 +39,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -52,6 +50,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -63,6 +62,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean1;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean2;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean3;
@@ -722,7 +722,7 @@ class AnnotatedServiceRequestConverterTest {
 
     @Test
     void testRequestConverter() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -730,34 +730,34 @@ class AnnotatedServiceRequestConverterTest {
         final RequestJsonObj1 obj1 = new RequestJsonObj1(1, "abc");
         final String content1 = mapper.writeValueAsString(obj1);
 
-        response = client.post("/1/convert1", content1).aggregate().join();
+        response = client.post("/1/convert1", content1);
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(obj1.toString());
 
         // The order of converters
         final RequestJsonObj1 obj1a = new RequestJsonObj1(2, "abca");
-        response = client.post("/1/convert2", content1).aggregate().join();
+        response = client.post("/1/convert2", content1);
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(obj1a.toString());
 
         // Multiple @RequestConverter annotated parameters
-        response = client.post("/1/convert3", content1).aggregate().join();
+        response = client.post("/1/convert3", content1);
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(HttpMethod.POST.name());
 
         // Conversion to null
-        response = client.post("/1/convert4", content1).aggregate().join();
+        response = client.post("/1/convert4", content1);
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         // Conversion to null that will fail with 400 Bad Request,
         // because the injection target is not annotated with @Nullable.
-        response = client.post("/1/convert5", content1).aggregate().join();
+        response = client.post("/1/convert5", content1);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     void testDefaultRequestConverter_bean1() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -781,7 +781,7 @@ class AnnotatedServiceRequestConverterTest {
                                                       HttpHeaderNames.of("x-client-name"), "TestClient",
                                                       HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders, formData)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders, formData));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
@@ -791,7 +791,7 @@ class AnnotatedServiceRequestConverterTest {
                                        HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
                                        HttpHeaderNames.of("x-client-name"), "TestClient");
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
@@ -801,7 +801,7 @@ class AnnotatedServiceRequestConverterTest {
                                        HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
                                        HttpHeaderNames.of("x-client-name"), "TestClient");
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders));
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Bad Request: seqNum=badParam
@@ -810,7 +810,7 @@ class AnnotatedServiceRequestConverterTest {
                                        HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
                                        HttpHeaderNames.of("x-client-name"), "TestClient");
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders));
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Bad Request: gender=badParam
@@ -819,13 +819,13 @@ class AnnotatedServiceRequestConverterTest {
                                        HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
                                        HttpHeaderNames.of("x-client-name"), "TestClient");
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders));
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     void testDefaultRequestConverter_bean2() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -848,7 +848,7 @@ class AnnotatedServiceRequestConverterTest {
                                                       HttpHeaderNames.of("uid"), "abcd-efgh",
                                                       HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders, formData)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders, formData));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
@@ -859,14 +859,14 @@ class AnnotatedServiceRequestConverterTest {
                                        HttpHeaderNames.of("x-client-name"), "TestClient",
                                        HttpHeaderNames.of("uid"), "abcd-efgh");
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
     }
 
     @Test
     void testDefaultRequestConverter_bean3() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -888,7 +888,7 @@ class AnnotatedServiceRequestConverterTest {
                                                       HttpHeaderNames.of("x-client-name"), "TestClient",
                                                       HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders, formData)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders, formData));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
@@ -898,31 +898,31 @@ class AnnotatedServiceRequestConverterTest {
                                        HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
                                        HttpHeaderNames.of("x-client-name"), "TestClient");
 
-        response = client.execute(AggregatedHttpRequest.of(reqHeaders)).aggregate().join();
+        response = client.execute(AggregatedHttpRequest.of(reqHeaders));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
     }
 
     @Test
     void testDefaultRequestConverter_bean4() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri() + "/3");
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri() + "/3");
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
 
-        response = client.get("/composite1/10").aggregate().join();
+        response = client.get("/composite1/10");
         assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean1.class.getSimpleName() + ":10:20");
 
-        response = client.get("/composite2/10").aggregate().join();
+        response = client.get("/composite2/10");
         assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean2.class.getSimpleName() + ":10:20");
 
-        response = client.get("/composite3/10").aggregate().join();
+        response = client.get("/composite3/10");
         assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean3.class.getSimpleName() + ":10:20");
 
-        response = client.get("/composite4/10").aggregate().join();
+        response = client.get("/composite4/10");
         assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean4.class.getSimpleName() + ":10:20");
 
@@ -930,7 +930,7 @@ class AnnotatedServiceRequestConverterTest {
         final String content1 = mapper.writeValueAsString(obj1);
 
         response = client.execute(AggregatedHttpRequest.of(
-                HttpMethod.POST, "/composite5/10", MediaType.JSON_UTF_8, content1)).aggregate().join();
+                HttpMethod.POST, "/composite5/10", MediaType.JSON_UTF_8, content1));
         assertThat(response.contentUtf8())
                 .isEqualTo(CompositeRequestBean5.class.getSimpleName() + ":10:20:" +
                            obj1.strVal() + ':' + obj1.intVal());
@@ -938,7 +938,7 @@ class AnnotatedServiceRequestConverterTest {
 
     @Test
     void testDefaultRequestConverter_json() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -948,8 +948,7 @@ class AnnotatedServiceRequestConverterTest {
 
         // MediaType.JSON_UTF_8
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/json",
-                                                           MediaType.JSON_UTF_8, content1))
-                         .aggregate().join();
+                                                           MediaType.JSON_UTF_8, content1));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("abc");
 
@@ -957,57 +956,51 @@ class AnnotatedServiceRequestConverterTest {
         // obj1 is not a json-patch+json format, but just check if it's converted by
         // DefaultRequestConverter when it is valid JSON format
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/json",
-                                                           MediaType.JSON_PATCH, content1))
-                         .aggregate().join();
+                                                           MediaType.JSON_PATCH, content1));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("abc");
 
         // "application/vnd.api+json"
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/json",
                                                            MediaType.create("application", "vnd.api+json"),
-                                                           content1))
-                         .aggregate().join();
+                                                           content1));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("abc");
 
         final String invalidJson = "{\"foo:\"bar\"}"; // should be \"foo\"
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/invalidJson",
-                                                           MediaType.JSON_UTF_8, invalidJson))
-                         .aggregate().join();
+                                                           MediaType.JSON_UTF_8, invalidJson));
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     void testDefaultRequestConverter_binary() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response;
 
         final byte[] binary = { 0x00, 0x01, 0x02 };
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/binary",
-                                                           MediaType.OCTET_STREAM, binary))
-                         .aggregate().join();
+                                                           MediaType.OCTET_STREAM, binary));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().array()).isEqualTo(binary);
     }
 
     @Test
     void testDefaultRequestConverter_text() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         AggregatedHttpResponse response;
 
         final byte[] utf8 = "¥".getBytes(StandardCharsets.UTF_8);
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/text",
-                                                           MediaType.PLAIN_TEXT_UTF_8, utf8))
-                         .aggregate().join();
+                                                           MediaType.PLAIN_TEXT_UTF_8, utf8));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().array()).isEqualTo(utf8);
 
         final MediaType textPlain = MediaType.create("text", "plain");
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/text",
-                                                           textPlain, utf8))
-                         .aggregate().join();
+                                                           textPlain, utf8));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         // Response is encoded as UTF-8.
         assertThat(response.content().array()).isEqualTo(utf8);
@@ -1015,9 +1008,9 @@ class AnnotatedServiceRequestConverterTest {
 
     @Test
     void testDefaultRequestConverter_uuid() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final UUID uuid = UUID.randomUUID();
-        final AggregatedHttpResponse response = client.get("/2/default/uuid/" + uuid).aggregate().join();
+        final AggregatedHttpResponse response = client.get("/2/default/uuid/" + uuid);
         assertThat(response.contentUtf8()).isEqualTo(uuid.toString());
     }
 
@@ -1064,7 +1057,7 @@ class AnnotatedServiceRequestConverterTest {
 
     @Test
     void testRedundantlyUsedParameters() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
         final RequestBean4 expectedRequestBean = new RequestBean4(100);
         expectedRequestBean.foo2 = 100;
@@ -1074,7 +1067,7 @@ class AnnotatedServiceRequestConverterTest {
         final RequestHeaders reqHeaders = RequestHeaders.of(HttpMethod.GET, "/2/default/bean4?foo=100",
                                                             HttpHeaderNames.of("foo"), 200);
 
-        final AggregatedHttpResponse response = client.execute(reqHeaders).aggregate().join();
+        final AggregatedHttpResponse response = client.execute(reqHeaders);
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
     }

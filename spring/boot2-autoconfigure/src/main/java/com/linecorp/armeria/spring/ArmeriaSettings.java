@@ -19,8 +19,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
@@ -29,8 +27,11 @@ import com.codahale.metrics.json.MetricsModule;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.netty.channel.EventLoopGroup;
 
 /**
  * Settings for armeria servers. For example:
@@ -62,12 +64,16 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
  *     mime-types: text/*, application/json
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
+ *   internal-services:
+ *     - port: 18080
+ *     - include: docs, health, metrics
  * }</pre>
- * TODO(ide) Adds virtualhost settings
  */
 @ConfigurationProperties(prefix = "armeria")
 @Validated
 public class ArmeriaSettings {
+
+    // TODO(ide) Adds virtualhost settings
 
     /**
      * Port and protocol settings.
@@ -256,6 +262,118 @@ public class ArmeriaSettings {
     }
 
     /**
+     * Properties for internal services such as {@link DocService}, {@link PrometheusExpositionService}, and
+     * {@link HealthCheckService}.
+     */
+    public static class InternalServiceProperties extends Port {
+
+        /**
+         * The {@code include} properties to secure the internal services from normal
+         * {@linkplain #getPorts() ports}.
+         */
+        @Nullable
+        private List<InternalServiceId> include = InternalServiceId.defaultServiceIds();
+
+        /**
+         * Returns the {@code include} property to secure the HTTP endpoints from normal
+         * {@linkplain #getPorts() ports}.
+         */
+        @Nullable
+        public List<InternalServiceId> getInclude() {
+            return include;
+        }
+
+        /**
+         * Sets the IDs of the {@link HttpService}s to secure from normal {@linkplain #getPorts() ports}.
+         *
+         * <table>
+         * <caption>Supported service IDs</caption>
+         *   <tbody>
+         *     <tr>
+         *       <th>ID</th>
+         *       <th>Service</th>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code docs}</td>
+         *       <td>{@link DocService}</td>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code metrics}</td>
+         *       <td>{@link PrometheusExpositionService}</td>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code health}</td>
+         *       <td>{@link HealthCheckService}</td>
+         *     </tr>
+         *     <tr>
+         *       <td>{@code actuator}</td>
+         *       <td>To bind {@code WebOperationService}. Note that this option is only valid when
+         *           {@code "armeria-spring-boot2-actuator-autoconfigure"} is activated.</td>
+         *     </tr>
+         *   </tbody>
+         * </table>
+         *
+         * <p>{@link InternalServiceId#ALL} can be used to include all internal {@link HttpService}s.
+         *
+         * @see InternalServiceId
+         */
+        public void setInclude(List<InternalServiceId> include) {
+            this.include = include;
+        }
+    }
+
+    /**
+     * Configurations for the access log.
+     */
+    public static class AccessLog {
+
+        /**
+         * The access log type that is supposed to be one of
+         * {@code "common"}, {@code "combined"}, {@code "disabled"} or {@code "custom"}.
+         * The default is {@code "disabled"}.
+         */
+        private String type = "disabled";
+
+        /**
+         * The access log format.
+         */
+        @Nullable
+        private String format;
+
+        /**
+         * Returns the access log type.
+         */
+        public String getType() {
+            return type;
+        }
+
+        /**
+         * Sets the access log type that is supposed to be one of
+         * {@code "common"}, {@code "combined"}, {@code "disabled"} or {@code "custom"}.
+         */
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        /**
+         * Returns the access log format.
+         * Please note that this format is used only when the specified {@code type} is {@code "custom"}.
+         */
+        @Nullable
+        public String getFormat() {
+            return format;
+        }
+
+        /**
+         * Sets the access log format.
+         * Please note that this format is used only when the specified {@code type} is {@code "custom"}.
+         */
+        public void setFormat(@Nullable String format) {
+            this.format = format;
+        }
+    }
+
+    /**
      * Whether to auto configure and start the Armeria server.
      * The default is {@code true}.
      */
@@ -276,7 +394,7 @@ public class ArmeriaSettings {
     private String healthCheckPath = "/internal/healthcheck";
 
     /**
-     * The path to serve thrift service documentation on. Should not be exposed
+     * The path to serve the documentation service on. Should not be exposed
      * to the external network. If not set, documentation service will not be
      * registered.
      */
@@ -290,6 +408,14 @@ public class ArmeriaSettings {
      */
     @Nullable
     private String metricsPath = "/internal/metrics";
+
+    /**
+     * The properties for internal services that should not be exposed to the external network.
+     * If not specified, the paths such as {@link #getDocsPath()}, {@link #getMetricsPath()} and
+     * {@link #getHealthCheckPath()} will be served on the normal service {@linkplain #getPorts() ports}.
+     */
+    @Nullable
+    private InternalServiceProperties internalServices;
 
     /**
      * The number of milliseconds to wait after the last processed request to
@@ -326,6 +452,126 @@ public class ArmeriaSettings {
      */
     @Nullable
     private Compression compression;
+
+    /**
+     * The number of threads for {@link EventLoopGroup} that the {@link Server} uses.
+     */
+    @Nullable
+    private Integer workerGroup;
+
+    /**
+     * The number of threads dedicated to the execution of blocking tasks or invocations.
+     */
+    @Nullable
+    private Integer blockingTaskExecutor;
+
+    /**
+     * The maximum allowed number of open connections.
+     */
+    @Nullable
+    private Integer maxNumConnections;
+
+    /**
+     * The idle timeout of a connection for keep-alive.
+     */
+    @Nullable
+    private Duration idleTimeout;
+
+    /**
+     * The interval of the HTTP/2 PING frame.
+     */
+    @Nullable
+    private Duration pingInterval;
+
+    /**
+     * The maximum allowed age of a connection for keep-alive.
+     */
+    @Nullable
+    private Duration maxConnectionAge;
+
+    /**
+     * The maximum allowed number of requests that can be served through one connection.
+     */
+    @Nullable
+    private Integer maxNumRequestsPerConnection;
+
+    /**
+     * The initial connection-level HTTP/2 flow control window size.
+     */
+    @Nullable
+    private String http2InitialConnectionWindowSize;
+
+    /**
+     * The initial stream-level HTTP/2 flow control window size.
+     */
+    @Nullable
+    private String http2InitialStreamWindowSize;
+
+    /**
+     * The maximum number of concurrent streams per HTTP/2 connection.
+     */
+    @Nullable
+    private Long http2MaxStreamsPerConnection;
+
+    /**
+     * The maximum size of HTTP/2 frame that can be received.
+     */
+    @Nullable
+    private String http2MaxFrameSize;
+
+    /**
+     * The maximum size of headers that can be received.
+     */
+    @Nullable
+    private String http2MaxHeaderListSize;
+
+    /**
+     * The maximum length of an HTTP/1 response initial line.
+     */
+    @Nullable
+    private String http1MaxInitialLineLength;
+
+    /**
+     * The maximum length of all headers in an HTTP/1 response.
+     */
+    @Nullable
+    private String http1MaxHeaderSize;
+
+    /**
+     * The maximum length of each chunk in an HTTP/1 response content.
+     */
+    @Nullable
+    private String http1MaxChunkSize;
+
+    /**
+     * The {@link Server}'s access log configuration.
+     */
+    @Nullable
+    private AccessLog accessLog;
+
+    /**
+     * The default access logger name for all {@link VirtualHost}s.
+     */
+    @Nullable
+    private String accessLogger;
+
+    /**
+     * The timeout of a request.
+     */
+    @Nullable
+    private Duration requestTimeout;
+
+    /**
+     * The maximum allowed length of the content decoded at the session layer.
+     */
+    @Nullable
+    private String maxRequestLength;
+
+    /**
+     * Whether the verbose response mode is enabled.
+     */
+    @Nullable
+    private Boolean verboseResponses;
 
     /**
      * Returns the {@link Port}s of the {@link Server}.
@@ -388,6 +634,21 @@ public class ArmeriaSettings {
      */
     public void setMetricsPath(@Nullable String metricsPath) {
         this.metricsPath = metricsPath;
+    }
+
+    /**
+     * Sets the properties of internal services that should not be exposed to the external network.
+     */
+    public void setInternalServices(InternalServiceProperties internalServices) {
+        this.internalServices = internalServices;
+    }
+
+    /**
+     * Returns the properties of internal services that should not be exposed to the external network.
+     */
+    @Nullable
+    public InternalServiceProperties getInternalServices() {
+        return internalServices;
     }
 
     /**
@@ -474,5 +735,305 @@ public class ArmeriaSettings {
      */
     public void setCompression(Compression compression) {
         this.compression = compression;
+    }
+
+    /**
+     * Returns the number of threads for {@link EventLoopGroup} that the {@link Server} uses.
+     */
+    @Nullable
+    public Integer getWorkerGroup() {
+        return workerGroup;
+    }
+
+    /**
+     * Sets the number of threads for {@link EventLoopGroup} that the {@link Server} uses.
+     */
+    public void setWorkerGroup(@Nullable Integer workerGroup) {
+        this.workerGroup = workerGroup;
+    }
+
+    /**
+     * Returns the number of threads dedicated to the execution of blocking tasks or invocations.
+     */
+    @Nullable
+    public Integer getBlockingTaskExecutor() {
+        return blockingTaskExecutor;
+    }
+
+    /**
+     * Sets the number of threads dedicated to the execution of blocking tasks or invocations.
+     */
+    public void setBlockingTaskExecutor(@Nullable Integer blockingTaskExecutor) {
+        this.blockingTaskExecutor = blockingTaskExecutor;
+    }
+
+    /**
+     * Returns the maximum allowed number of open connections.
+     */
+    @Nullable
+    public Integer getMaxNumConnections() {
+        return maxNumConnections;
+    }
+
+    /**
+     * Sets the maximum allowed number of open connections.
+     */
+    public void setMaxNumConnections(@Nullable Integer maxNumConnections) {
+        this.maxNumConnections = maxNumConnections;
+    }
+
+    /**
+     * Returns the idle timeout of a connection for keep-alive.
+     */
+    @Nullable
+    public Duration getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    /**
+     * Sets the idle timeout of a connection for keep-alive.
+     */
+    public void setIdleTimeout(@Nullable Duration idleTimeout) {
+        this.idleTimeout = idleTimeout;
+    }
+
+    /**
+     * Returns the interval of the HTTP/2 PING frame.
+     */
+    @Nullable
+    public Duration getPingInterval() {
+        return pingInterval;
+    }
+
+    /**
+     * Sets the interval of the HTTP/2 PING frame.
+     */
+    public void setPingInterval(@Nullable Duration pingInterval) {
+        this.pingInterval = pingInterval;
+    }
+
+    /**
+     * Returns the maximum allowed age of a connection for keep-alive.
+     */
+    @Nullable
+    public Duration getMaxConnectionAge() {
+        return maxConnectionAge;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection for keep-alive.
+     */
+    public void setMaxConnectionAge(@Nullable Duration maxConnectionAge) {
+        this.maxConnectionAge = maxConnectionAge;
+    }
+
+    /**
+     * Returns the maximum allowed number of requests that can be served through one connection.
+     */
+    @Nullable
+    public Integer getMaxNumRequestsPerConnection() {
+        return maxNumRequestsPerConnection;
+    }
+
+    /**
+     * Sets the maximum allowed number of requests that can be served through one connection.
+     */
+    public void setMaxNumRequestsPerConnection(@Nullable Integer maxNumRequestsPerConnection) {
+        this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
+    }
+
+    /**
+     * Returns the initial connection-level HTTP/2 flow control window size.
+     */
+    @Nullable
+    public String getHttp2InitialConnectionWindowSize() {
+        return http2InitialConnectionWindowSize;
+    }
+
+    /**
+     * Sets the initial connection-level HTTP/2 flow control window size.
+     */
+    public void setHttp2InitialConnectionWindowSize(@Nullable String http2InitialConnectionWindowSize) {
+        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
+    }
+
+    /**
+     * Returns the initial stream-level HTTP/2 flow control window size.
+     */
+    @Nullable
+    public String getHttp2InitialStreamWindowSize() {
+        return http2InitialStreamWindowSize;
+    }
+
+    /**
+     * Sets the initial stream-level HTTP/2 flow control window size.
+     */
+    public void setHttp2InitialStreamWindowSize(@Nullable String http2InitialStreamWindowSize) {
+        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+    }
+
+    /**
+     * Returns the maximum number of concurrent streams per HTTP/2 connection.
+     */
+    @Nullable
+    public Long getHttp2MaxStreamsPerConnection() {
+        return http2MaxStreamsPerConnection;
+    }
+
+    /**
+     * Sets the maximum number of concurrent streams per HTTP/2 connection.
+     */
+    public void setHttp2MaxStreamsPerConnection(@Nullable Long http2MaxStreamsPerConnection) {
+        this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
+    }
+
+    /**
+     * Returns the maximum size of HTTP/2 frame that can be received.
+     */
+    @Nullable
+    public String getHttp2MaxFrameSize() {
+        return http2MaxFrameSize;
+    }
+
+    /**
+     * Sets the maximum size of HTTP/2 frame that can be received.
+     */
+    public void setHttp2MaxFrameSize(@Nullable String http2MaxFrameSize) {
+        this.http2MaxFrameSize = http2MaxFrameSize;
+    }
+
+    /**
+     * Returns the maximum size of headers that can be received.
+     */
+    @Nullable
+    public String getHttp2MaxHeaderListSize() {
+        return http2MaxHeaderListSize;
+    }
+
+    /**
+     * Sets the maximum size of headers that can be received.
+     */
+    public void setHttp2MaxHeaderListSize(@Nullable String http2MaxHeaderListSize) {
+        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+    }
+
+    /**
+     * Returns the maximum length of an HTTP/1 response initial line.
+     */
+    @Nullable
+    public String getHttp1MaxInitialLineLength() {
+        return http1MaxInitialLineLength;
+    }
+
+    /**
+     * Sets the maximum length of an HTTP/1 response initial line.
+     */
+    public void setHttp1MaxInitialLineLength(@Nullable String http1MaxInitialLineLength) {
+        this.http1MaxInitialLineLength = http1MaxInitialLineLength;
+    }
+
+    /**
+     * Returns the maximum length of all headers in an HTTP/1 response.
+     */
+    @Nullable
+    public String getHttp1MaxHeaderSize() {
+        return http1MaxHeaderSize;
+    }
+
+    /**
+     * Sets the maximum length of all headers in an HTTP/1 response.
+     */
+    public void setHttp1MaxHeaderSize(@Nullable String http1MaxHeaderSize) {
+        this.http1MaxHeaderSize = http1MaxHeaderSize;
+    }
+
+    /**
+     * Returns the maximum length of each chunk in an HTTP/1 response content.
+     */
+    @Nullable
+    public String getHttp1MaxChunkSize() {
+        return http1MaxChunkSize;
+    }
+
+    /**
+     * Sets the maximum length of each chunk in an HTTP/1 response content.
+     */
+    public void setHttp1MaxChunkSize(@Nullable String http1MaxChunkSize) {
+        this.http1MaxChunkSize = http1MaxChunkSize;
+    }
+
+    /**
+     * Returns the {@link Server}'s access log configuration.
+     */
+    @Nullable
+    public AccessLog getAccessLog() {
+        return accessLog;
+    }
+
+    /**
+     * Sets the {@link Server}'s access log configuration.
+     */
+    public void setAccessLog(@Nullable AccessLog accessLog) {
+        this.accessLog = accessLog;
+    }
+
+    /**
+     * Returns the default access logger name for all {@link VirtualHost}s.
+     */
+    @Nullable
+    public String getAccessLogger() {
+        return accessLogger;
+    }
+
+    /**
+     * Sets the default access logger name for all {@link VirtualHost}s.
+     */
+    public void setAccessLogger(@Nullable String accessLogger) {
+        this.accessLogger = accessLogger;
+    }
+
+    /**
+     * Returns the timeout of a request.
+     */
+    @Nullable
+    public Duration getRequestTimeout() {
+        return requestTimeout;
+    }
+
+    /**
+     * Sets the timeout of a request.
+     */
+    public void setRequestTimeout(@Nullable Duration requestTimeout) {
+        this.requestTimeout = requestTimeout;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     */
+    @Nullable
+    public String getMaxRequestLength() {
+        return maxRequestLength;
+    }
+
+    /**
+     * Sets the maximum allowed length of the content decoded at the session layer.
+     */
+    public void setMaxRequestLength(@Nullable String maxRequestLength) {
+        this.maxRequestLength = maxRequestLength;
+    }
+
+    /**
+     * Returns whether the verbose response mode is enabled.
+     */
+    @Nullable
+    public Boolean getVerboseResponses() {
+        return verboseResponses;
+    }
+
+    /**
+     * Sets whether the verbose response mode is enabled.
+     */
+    public void setVerboseResponses(@Nullable Boolean verboseResponses) {
+        this.verboseResponses = verboseResponses;
     }
 }

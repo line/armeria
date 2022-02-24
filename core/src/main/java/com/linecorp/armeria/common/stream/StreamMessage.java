@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -545,6 +546,27 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified asynchronous
+     * {@link Function} and emitting the value the future completes with.
+     * The {@link StreamMessage} publishes items in order, non-overlappingly, one after the other finishes.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value nor a future which completes with a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.mapAsync(x -> CompletableFuture.completedFuture(x + 1));
+     * }</pre>
+     */
+    default <U> StreamMessage<U> mapAsync(
+            Function<? super T, ? extends CompletableFuture<? extends U>> function) {
+        requireNonNull(function, "function");
+        return new AsyncMapStreamMessage<>(this, function);
+    }
+
+    /**
      * Transforms an error emitted by this {@link StreamMessage} by applying the specified {@link Function}.
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
@@ -552,8 +574,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      * a {@code null} value.
      *
      * <p>For example:<pre>{@code
-     * StreamMessage streamMessage = StreamMessage.aborted(new IllegalStateException("Something went wrong.");
-     * StreamMessage transformed = streamMessage.mapError(ex -> {
+     * StreamMessage<Void> streamMessage = StreamMessage
+     *     .aborted(new IllegalStateException("Something went wrong."));
+     * StreamMessage<Void> transformed = streamMessage.mapError(ex -> {
      *     if (ex instanceof IllegalStateException) {
      *         return new MyDomainException(ex);
      *     } else {
@@ -565,6 +588,73 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return FuseableStreamMessage.error(this, function);
+    }
+
+    /**
+     * Peeks values emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> ifEvenExistsThenThrow = source.peek(x -> {
+     *      if (x % 2 == 0) {
+     *          throw new IllegalArgumentException();
+     *      }
+     * });
+     * }</pre>
+     */
+    default StreamMessage<T> peek(Consumer<? super T> action) {
+        requireNonNull(action, "action");
+        final Function<T, T> function = obj -> {
+            action.accept(obj);
+            return obj;
+        };
+        return map(function);
+    }
+
+    /**
+     * Peeks values emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
+     * Only values which are an instance of the specified {@code type} are peeked.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Number> source = StreamMessage.of(0.1, 1, 0.2, 2, 0.3, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * List<Number> peeked = source.peek(x -> collected.add(x), Integer.class).collect().join();
+     *
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert peeked.equals(List.of(0.1, 1, 0.2, 2, 0.3, 3));
+     * }</pre>
+     */
+    default <U extends T> StreamMessage<T> peek(Consumer<? super U> action, Class<? extends U> type) {
+        requireNonNull(action, "action");
+        requireNonNull(type, "type");
+        final Function<T, T> function = obj -> {
+            if (type.isInstance(obj)) {
+                //noinspection unchecked
+                action.accept((U) obj);
+            }
+            return obj;
+        };
+        return map(function);
+    }
+
+    /**
+     * Peeks an error emitted by this {@link StreamMessage} and applies the specified {@link Consumer}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Void> streamMessage = StreamMessage
+     *     .aborted(new IllegalStateException("Something went wrong."));
+     * StreamMessage<Void> peeked = streamMessage.peekError(ex -> {
+     *     assert ex instanceof IllegalStateException;
+     * });
+     * }</pre>
+     */
+    default StreamMessage<T> peekError(Consumer<? super Throwable> action) {
+        requireNonNull(action, "action");
+        final Function<? super Throwable, ? extends Throwable> function = obj -> {
+            action.accept(obj);
+            return obj;
+        };
+        return mapError(function);
     }
 
     /**

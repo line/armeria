@@ -31,15 +31,20 @@ includeWithFlags ':rxjava3',                             'java', 'publish', 'rel
 includeWithFlags ':sangria_2.12',     'java', 'publish', 'relocate', 'no_aggregation', 'scala_2.12'
 project(':sangria_2.12').projectDir = file('sangria/sangria_2.12')
 includeWithFlags ':sangria_2.13',     'java', 'publish', 'relocate', 'scala_2.13'
+// Sangria does not support Scala 3 yet. https://github.com/sangria-graphql/sangria/issues/649
 project(':sangria_2.13').projectDir = file('sangria/sangria_2.13')
 includeWithFlags ':scala_2.12',       'java', 'publish', 'relocate', 'no_aggregation', 'scala_2.12'
 project(':scala_2.12').projectDir = file('scala/scala_2.12')
 includeWithFlags ':scala_2.13',       'java', 'publish', 'relocate', 'scala_2.13'
 project(':scala_2.13').projectDir = file('scala/scala_2.13')
+includeWithFlags ':scala_3',       'java', 'publish', 'relocate', 'no_aggregation', 'scala_3'
+project(':scala_3').projectDir = file('scala/scala_3')
 includeWithFlags ':scalapb_2.12',     'java', 'publish', 'relocate', 'no_aggregation', 'scala_2.12'
 project(':scalapb_2.12').projectDir = file('scalapb/scalapb_2.12')
 includeWithFlags ':scalapb_2.13',     'java', 'publish', 'relocate', 'scala-grpc_2.13', 'scala_2.13'
 project(':scalapb_2.13').projectDir = file('scalapb/scalapb_2.13')
+includeWithFlags ':scalapb_3',     'java', 'publish', 'relocate', 'no_aggregation', 'scala_3'
+project(':scalapb_3').projectDir = file('scalapb/scalapb_3')
 
 includeWithFlags ':spring:boot1-autoconfigure',          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot1-starter',                'java', 'publish', 'relocate', 'no_aggregation'
@@ -54,6 +59,7 @@ includeWithFlags ':dropwizard2',                         'java', 'publish', 'rel
 includeWithFlags ':thrift0.9',                           'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':thrift0.13',                          'java', 'publish', 'relocate'
 includeWithFlags ':thrift0.14',                          'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':thrift0.15',                          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate'
@@ -65,7 +71,8 @@ includeWithFlags ':consul',                              'java', 'publish', 'rel
 includeWithFlags ':javadoc',                             'java', 'publish', 'no_aggregation'
 
 // Unpublished Java projects
-includeWithFlags ':benchmarks',                     'java'
+includeWithFlags ':benchmarks:jmh',                 'java', 'kotlin'
+includeWithFlags ':benchmarks:ghz',                 'java'
 includeWithFlags ':it:builders',                    'java'
 includeWithFlags ':it:context-storage',             'java'
 includeWithFlags ':it:dgs',                         'java'
@@ -78,7 +85,9 @@ includeWithFlags ':it:kotlin',                      'java', 'relocate', 'kotlin'
 includeWithFlags ':it:micrometer1.3',               'java', 'relocate'
 includeWithFlags ':it:multipart',                   'java', 'relocate'
 includeWithFlags ':it:nio',                         'java', 'relocate'
+includeWithFlags ':it:okhttp',                      'java', 'relocate'
 includeWithFlags ':it:server',                      'java', 'relocate'
+includeWithFlags ':it:spring:boot2-kotlin',         'java', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot2-mixed',          'java', 'relocate'
 includeWithFlags ':it:spring:boot2-mixed-tomcat9',  'java', 'relocate'
 includeWithFlags ':it:spring:boot2-tomcat8',        'java', 'relocate'

@@ -17,10 +17,19 @@
 package com.linecorp.armeria.grpc.kotlin
 
 import com.linecorp.armeria.client.Clients
+import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.grpc.kotlin.Hello.HelloRequest
 import com.linecorp.armeria.grpc.kotlin.HelloServiceGrpcKt.HelloServiceCoroutineStub
 import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.grpc.GrpcService
+import io.grpc.CallOptions
+import io.grpc.Channel
+import io.grpc.ClientCall
+import io.grpc.ClientInterceptor
+import io.grpc.ForwardingClientCall.SimpleForwardingClientCall
+import io.grpc.ForwardingClientCallListener.SimpleForwardingClientCallListener
+import io.grpc.Metadata
+import io.grpc.MethodDescriptor
 import io.grpc.Status
 import io.grpc.Status.Code
 import io.grpc.StatusException
@@ -35,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.concurrent.atomic.AtomicInteger
 
 class HelloServiceTest {
 
@@ -42,7 +52,7 @@ class HelloServiceTest {
     @MethodSource("uris")
     fun parallelReplyFromServerSideBlockingCall(uri: String) {
         runBlocking {
-            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
+            val helloService = GrpcClients.newClient(uri, HelloServiceCoroutineStub::class.java)
             repeat(30) {
                 launch {
                     val message = helloService.shortBlockingHello(
@@ -76,7 +86,9 @@ class HelloServiceTest {
             repeat(30) {
                 launch {
                     var sequence = 0
-                    helloService.shortBlockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                    helloService.shortBlockingLotsOfReplies(
+                        HelloRequest.newBuilder().setName("Armeria").build()
+                    )
                         .collect {
                             assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                         }
@@ -86,16 +98,64 @@ class HelloServiceTest {
         }
     }
 
+    @Test
+    fun serverShouldSendAdditionalResponseHeaders() {
+        runBlocking {
+            Clients.newContextCaptor().use { captor ->
+                val response = helloService.shortBlockingHello(HelloRequest.newBuilder().setName("Armeria").build())
+                assertThat(response.message).isEqualTo("Hello, Armeria!")
+                val ctx = captor.get()
+                val log = ctx.log().whenComplete().join()
+                assertThat(log.responseHeaders().get("foo")).isEqualTo("bar")
+            }
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("uris")
     fun exceptionMapping(uri: String) {
-        val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
+        val helloService = GrpcClients.newClient(uri, HelloServiceCoroutineStub::class.java)
         assertThatThrownBy {
             runBlocking { helloService.helloError(HelloRequest.newBuilder().setName("Armeria").build()) }
         }.isInstanceOfSatisfying(StatusException::class.java) {
             assertThat(it.status.code).isEqualTo(Code.UNAUTHENTICATED)
             assertThat(it.message).isEqualTo("UNAUTHENTICATED: Armeria is unauthenticated")
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("uris")
+    fun shouldReportCloseExactlyOnceWithNonOK(uri: String) {
+        val closeCalled = AtomicInteger()
+        val helloService = GrpcClients.newClient(uri, HelloServiceCoroutineStub::class.java)
+            .withInterceptors(object : ClientInterceptor {
+                override fun <I, O> interceptCall(
+                    method: MethodDescriptor<I, O>,
+                    options: CallOptions,
+                    next: Channel
+                ): ClientCall<I, O> {
+                    return object : SimpleForwardingClientCall<I, O>(next.newCall(method, options)) {
+                        override fun start(responseListener: Listener<O>, headers: Metadata) {
+                            super.start(object : SimpleForwardingClientCallListener<O>(responseListener) {
+                                override fun onClose(status: Status, trailers: Metadata) {
+                                    closeCalled.incrementAndGet()
+                                    super.onClose(status, trailers)
+                                }
+                            }, headers)
+                        }
+                    }
+                }
+            })
+
+        assertThatThrownBy {
+            runBlocking { helloService.helloError(HelloRequest.newBuilder().setName("Armeria").build()) }
+        }.isInstanceOfSatisfying(StatusException::class.java) {
+            assertThat(it.status.code).isEqualTo(Code.UNAUTHENTICATED)
+            assertThat(it.message).isEqualTo("UNAUTHENTICATED: Armeria is unauthenticated")
+        }
+
+        // Make sure that a call is exactly closed once.
+        assertThat(closeCalled).hasValue(1)
     }
 
     companion object {
@@ -112,7 +172,7 @@ class HelloServiceTest {
 
             blockingServer = newServer(0, true)
             blockingServer.start().join()
-            helloService = Clients.newClient(protoUri(), HelloServiceCoroutineStub::class.java)
+            helloService = GrpcClients.newClient(protoUri(), HelloServiceCoroutineStub::class.java)
         }
 
         @AfterAll

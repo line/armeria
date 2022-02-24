@@ -26,19 +26,19 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -52,8 +52,10 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
+import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
@@ -113,6 +115,26 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} provided by the {@link Supplier}.
+     *
+     * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
+     * @param executor the {@link Executor} that executes the {@link Supplier}.
+     */
+    static HttpResponse from(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(executor, "executor");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.execute(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        });
+        return res;
+    }
+
+    /**
      * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
      * publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
      */
@@ -141,7 +163,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(HttpResponse response, Duration delay) {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
-        return delayed(response, delay, CommonPools.workerGroup().next());
+        return delayed(() -> response, delay);
     }
 
     /**
@@ -152,8 +174,44 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
+        return delayed(() -> response, delay, executor);
+    }
+
+    /**
+     * Invokes the specified {@link Supplier} and creates a new HTTP response that
+     * delegates to the provided {@link HttpResponse} by {@link Supplier}.
+     *
+     * <p>The {@link Supplier} is invoked from the current thread-local {@link RequestContext}'s event loop.
+     * If there's no thread local {@link RequestContext} is set, one of the threads
+     * from {@code CommonPools.workerGroup().next()} will be used.
+     */
+    static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(delay, "delay");
+        return delayed(responseSupplier, delay,
+                       RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                 CommonPools.workerGroup()::next));
+    }
+
+    /**
+     * Invokes the specified {@link Supplier} and creates a new HTTP response that
+     * delegates to the provided {@link HttpResponse} {@link Supplier},
+     * beginning publishing after {@code delay} has passed from the provided {@link ScheduledExecutorService}.
+     */
+    static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier,
+                                Duration delay,
+                                ScheduledExecutorService executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(delay, "delay");
+        requireNonNull(executor, "executor");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.schedule(() -> res.delegate(response), delay.toNanos(), TimeUnit.NANOSECONDS);
+        executor.schedule(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        }, delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }
 
@@ -278,8 +336,7 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse of(HttpStatus status, MediaType mediaType,
                            @FormatString String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
-        return of(status, mediaType,
-                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
+        return of(status, mediaType, HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
     }
 
     /**
@@ -561,6 +618,14 @@ public interface HttpResponse extends Response, HttpMessage {
         return new AbortedHttpResponse(cause);
     }
 
+    /**
+     * Returns a new {@link HttpResponseBuilder}.
+     */
+    @UnstableApi
+    static HttpResponseBuilder builder() {
+        return new HttpResponseBuilder();
+    }
+
     @Override
     CompletableFuture<Void> whenComplete();
 
@@ -604,205 +669,6 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
         return HttpMessageAggregator.aggregateResponse(this, executor, alloc);
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz}
-     * using the default {@link ObjectMapper}
-     * if the HTTP status {@link HttpStatus} of the response is OK status.
-     *
-     * @param clazz the class for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(Class<? extends T> clazz) {
-        return aggregateAs(HttpStatusClass.SUCCESS, clazz);
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef}
-     * using the default {@link ObjectMapper}
-     * if the HTTP status {@link HttpStatus} of the response is OK status.
-     *
-     * @param valueTypeRef the type reference for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(TypeReference<T> valueTypeRef) {
-        return aggregateAs(HttpStatusClass.SUCCESS, valueTypeRef);
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz}
-     * using the default {@link ObjectMapper}
-     * if the HTTP status {@link HttpStatus} of the response matches the expected.
-     *
-     * @param expectedStatus the expected HTTP status
-     * @param clazz the class for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(HttpStatus expectedStatus, Class<? extends T> clazz) {
-        requireNonNull(expectedStatus, "expectedStatus");
-        return aggregateAs(status -> status == expectedStatus, clazz, defaultSubscriberExecutor());
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef}
-     * using the default {@link ObjectMapper}
-     * if the HTTP status {@link HttpStatus} of the response matches the expected.
-     *
-     * @param expectedStatus the expected HTTP status
-     * @param valueTypeRef the type reference for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(HttpStatus expectedStatus, TypeReference<T> valueTypeRef) {
-        requireNonNull(expectedStatus, "expectedStatus");
-        return aggregateAs(status -> status == expectedStatus, valueTypeRef, defaultSubscriberExecutor());
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz}
-     * using the default {@link ObjectMapper}
-     * if the HTTP status {@link HttpStatusClass} of the response matches the expected.
-     *
-     * @param expectedStatusClass the expected class of HTTP status
-     * @param clazz the class for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass,
-                                                 Class<? extends T> clazz) {
-        requireNonNull(expectedStatusClass, "expectedStatusClass");
-        return aggregateAs(expectedStatusClass::contains, clazz, defaultSubscriberExecutor());
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef}
-     * using the default {@link ObjectMapper}
-     * if the HTTP status {@link HttpStatusClass} of the response matches the expected.
-     *
-     * @param expectedStatusClass the expected class of HTTP status
-     * @param valueTypeRef the type reference for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(HttpStatusClass expectedStatusClass,
-                                                 TypeReference<T> valueTypeRef) {
-        requireNonNull(expectedStatusClass, "expectedStatusClass");
-        return aggregateAs(expectedStatusClass::contains, valueTypeRef, defaultSubscriberExecutor());
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz}
-     * using the default {@link ObjectMapper}
-     * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
-     *
-     * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
-     * @param clazz the class for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
-                                                 Class<? extends T> clazz) {
-        return aggregateAs(httpStatusFilter, clazz, defaultSubscriberExecutor());
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef}
-     * using the default {@link ObjectMapper}
-     * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
-     *
-     * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
-     * @param valueTypeRef the type reference for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
-                                                 TypeReference<T> valueTypeRef) {
-        return aggregateAs(httpStatusFilter, valueTypeRef, defaultSubscriberExecutor());
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code clazz}
-     * using the default {@link ObjectMapper}
-     * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
-     *
-     * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
-     * @param clazz the class for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
-                                                 Class<? extends T> clazz,
-                                                 EventExecutor executor) {
-        requireNonNull(clazz, "clazz");
-
-        return aggregateAs(httpStatusFilter, content -> {
-            try {
-                return JacksonUtil.readValue(content, clazz);
-            } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException(
-                        "Failed to decode the response body into an instance: " + content, e);
-            }
-        }, executor);
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance of type {@code valueTypeRef}
-     * using the default {@link ObjectMapper}
-     * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
-     *
-     * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
-     * @param valueTypeRef the type reference for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(Predicate<HttpStatus> httpStatusFilter,
-                                                 TypeReference<T> valueTypeRef,
-                                                 EventExecutor executor) {
-        requireNonNull(valueTypeRef, "valueTypeRef");
-
-        return aggregateAs(httpStatusFilter, content -> {
-            try {
-                return JacksonUtil.readValue(content, valueTypeRef);
-            } catch (JsonProcessingException e) {
-                throw new HttpResponseContentException(content,
-                                                       "Failed to decode the response body into an instance", e);
-            }
-        }, executor);
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully.
-     * The response is converted into an instance by {@code jsonDecoder}
-     * using the default {@link ObjectMapper}
-     * and the specified {@code httpStatusFilter} decides whether the response is to be converted or not.
-     *
-     * @param httpStatusFilter the predicate which decides whether the response is to be converted or not
-     * @param jsonDecoder the type reference for decoded response
-     */
-    default <T> CompletableFuture<T> aggregateAs(Predicate<? super HttpStatus> httpStatusFilter,
-                                                 Function<String, T> jsonDecoder,
-                                                 EventExecutor executor) {
-        requireNonNull(httpStatusFilter, "httpStatusFilter");
-        requireNonNull(jsonDecoder, "jsonDecoder");
-        requireNonNull(executor, "executor");
-
-        return aggregate(executor).thenApply(response -> {
-            if (response.contentType() != null && !response.contentType().isJson()) {
-                throw new HttpUnsupportedMediaTypeException(response.contentType(),
-                                                            ImmutableList.of(MediaType.JSON));
-            }
-
-            if (httpStatusFilter.test(response.status())) {
-                return jsonDecoder.apply(response.contentUtf8());
-            } else {
-                throw new HttpUnsupportedStatusException(response.status());
-            }
-        });
     }
 
     @Override
@@ -907,7 +773,7 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
+     * Transforms the {@link HttpData}s emitted by this {@link HttpResponse} by applying the specified
      * {@link Function}.
      *
      * <p>For example:<pre>{@code
@@ -918,6 +784,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
      * }</pre>
      */
+    @Override
     default HttpResponse mapData(Function<? super HttpData, ? extends HttpData> function) {
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream =
@@ -937,6 +804,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
      * }</pre>
      */
+    @Override
     default HttpResponse mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream = map(obj -> {
@@ -952,7 +820,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Transforms an error emitted by this {@link HttpResponse} by applying the specified {@link Function}.
      *
      * <p>For example:<pre>{@code
-     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong."));
      * HttpResponse transformed = response.mapError(cause -> {
      *     if (cause instanceof IllegalStateException) {
      *         return new MyDomainException(cause);
@@ -966,6 +834,89 @@ public interface HttpResponse extends Response, HttpMessage {
     default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
         requireNonNull(function, "function");
         return of(HttpMessage.super.mapError(function));
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the non-informational {@link ResponseHeaders}
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
+     * HttpResponse peeked = response.peekHeaders(headers -> {
+     *      assert headers.status() == HttpStatus.OK;
+     * });
+     * }</pre>
+     */
+    @UnstableApi
+    default HttpResponse peekHeaders(Consumer<? super ResponseHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(headers -> {
+            if (!headers.status().isInformational()) {
+                action.accept(headers);
+            }
+        }, ResponseHeaders.class);
+        return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@link HttpData}s
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data1,data2");
+     * HttpResponse peeked = response.peekData(data -> {
+     *     assert data.toStringUtf8().equals("data1,data2");
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpResponse peekData(Consumer<? super HttpData> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(action, HttpData.class);
+        return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@linkplain HttpHeaders trailers}
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+     *                                         HttpData.ofUtf8("..."),
+     *                                         HttpHeaders.of("trailer", "foo"));
+     * HttpResponse peeked = response.peekTrailers(trailers -> {
+     *     assert trailers.get("trailer").equals("foo");
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpResponse peekTrailers(Consumer<? super HttpHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(obj -> {
+            if (!(obj instanceof ResponseHeaders)) {
+                action.accept(obj);
+            }
+        }, HttpHeaders.class);
+        return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to an error emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong."));
+     * HttpResponse peeked = response.peekError(cause -> {
+     *     assert cause instanceof IllegalStateException;
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpResponse peekError(Consumer<? super Throwable> action) {
+        requireNonNull(action, "action");
+        return of(HttpMessage.super.peekError(action));
     }
 
     /**

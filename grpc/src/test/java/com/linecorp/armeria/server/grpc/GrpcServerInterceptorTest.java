@@ -24,8 +24,7 @@ import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
@@ -37,7 +36,6 @@ import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
-import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 
@@ -46,11 +44,10 @@ class GrpcServerInterceptorTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service(GrpcService.builder()
-                                  .addService(ServerInterceptors.intercept(
-                                          new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
-                                          NoPassInterceptor.INSTANCE))
+                                  .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                                  .intercept(NoPassInterceptor.INSTANCE)
                                   .build());
         }
     };
@@ -58,8 +55,8 @@ class GrpcServerInterceptorTest {
     @Test
     void closeCallByInterceptor() {
         final TestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .build(TestServiceBlockingStub.class);
         final Throwable cause = catchThrowable(() -> client.unaryCall(SimpleRequest.getDefaultInstance()));
         assertThat(cause).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) cause).getStatus()).isEqualTo(Status.PERMISSION_DENIED);

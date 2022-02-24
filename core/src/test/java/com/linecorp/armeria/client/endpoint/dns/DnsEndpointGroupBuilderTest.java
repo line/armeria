@@ -38,6 +38,10 @@ class DnsEndpointGroupBuilderTest {
         assertThat(new Builder("my-host.com").hostname()).isEqualTo("my-host.com");
         assertThat(new Builder("MY-HOST.COM").hostname()).isEqualTo("my-host.com");
 
+        // Trailing dot
+        assertThat(new Builder("my-host.com.").hostname()).isEqualTo("my-host.com.");
+        assertThat(new Builder("MY-HOST.COM.").hostname()).isEqualTo("my-host.com.");
+
         // IDN
         assertThat(new Builder("아르메리아").hostname()).isEqualTo("xn--2w2b2dxu436ada");
     }

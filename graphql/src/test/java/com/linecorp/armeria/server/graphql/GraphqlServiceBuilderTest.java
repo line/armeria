@@ -20,13 +20,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.File;
+import java.io.UncheckedIOException;
+import java.net.URISyntaxException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.common.collect.ImmutableList;
 
 import graphql.execution.instrumentation.SimpleInstrumentation;
+import graphql.schema.GraphQLSchema;
+import graphql.schema.GraphQLTypeVisitor;
 import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.schema.idl.RuntimeWiring;
+import graphql.schema.idl.SchemaGenerator;
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
 
 class GraphqlServiceBuilderTest {
 
@@ -45,12 +61,77 @@ class GraphqlServiceBuilderTest {
     }
 
     @Test
+    void specifySchemaUrl() throws Exception {
+        final GraphqlService service = new GraphqlServiceBuilder().schemaUrls("classpath:test.graphqls")
+                                                                  .build();
+        assertThat(service).isNotNull();
+    }
+
+    @Test
+    void notFoundSpecifySchemaUrl() throws Exception {
+        assertThatThrownBy(() -> {
+            new GraphqlServiceBuilder().schemaUrls("test.graphqls")
+                                       .build();
+        }).isInstanceOf(UncheckedIOException.class).hasMessageContaining("java.io.FileNotFoundException");
+    }
+
+    @Test
+    void specifySchema() throws Exception {
+        final GraphQLSchema schema = makeGraphQLSchema();
+        final GraphqlService service = new GraphqlServiceBuilder().schema(schema).build();
+        assertThat(service).isNotNull();
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideSpecifySchemaArguments")
+    void specifySchema(List<String> urls, List<RuntimeWiringConfigurator> runtimeWiringConfigurators,
+                       List<GraphQLTypeVisitor> typeVisitors) throws Exception {
+        final GraphQLSchema schema = makeGraphQLSchema();
+        final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
+        builder.schema(schema);
+
+        urls.forEach(builder::schemaUrls);
+        runtimeWiringConfigurators.forEach(builder::runtimeWiring);
+        typeVisitors.forEach(builder::typeVisitors);
+
+        assertThatThrownBy(builder::build)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot add schemaUrl(or File), runtimeWiringConfigurator and " +
+                            "typeVisitor when GraphqlSchema is specified.");
+    }
+
+    private static Stream<Arguments> provideSpecifySchemaArguments() throws URISyntaxException {
+        return Stream.of(
+                Arguments.of(ImmutableList.of("classpath:test.graphqls"), ImmutableList.of(),
+                             ImmutableList.of()),
+                Arguments.of(ImmutableList.of(),
+                             ImmutableList.of((RuntimeWiringConfigurator) builder -> {
+                                 // noop
+                             }),
+                             ImmutableList.of()),
+                Arguments.of(ImmutableList.of(), ImmutableList.of(),
+                             ImmutableList.of(new GraphQLTypeVisitorStub()))
+        );
+    }
+
+    private GraphQLSchema makeGraphQLSchema() throws URISyntaxException {
+        final File graphqlSchemaFile =
+                new File(getClass().getResource("/test.graphqls").toURI());
+        final TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry();
+        final SchemaParser parser = new SchemaParser();
+        typeDefinitionRegistry.merge(parser.parse(graphqlSchemaFile));
+
+        return new SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry,
+                                                          RuntimeWiring.newRuntimeWiring().build());
+    }
+
+    @Test
     void successful() throws Exception {
         final File graphqlSchemaFile =
                 new File(getClass().getResource("/test.graphqls").toURI());
         final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
         final DataLoader<String, String> dataLoader =
-                DataLoader.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
+                DataLoaderFactory.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
         final GraphqlService service = builder.schemaFile(graphqlSchemaFile)
                                               .instrumentation(SimpleInstrumentation.INSTANCE)
                                               .configureDataLoaderRegistry(dlr -> {
@@ -58,7 +139,8 @@ class GraphqlServiceBuilderTest {
                                               })
                                               .runtimeWiring(it -> {
                                                   // noop
-                                              }).typeVisitors(new GraphQLTypeVisitorStub())
+                                              })
+                                              .typeVisitors(new GraphQLTypeVisitorStub())
                                               .configureGraphql(it -> {
                                                   // noop
                                               }).build();

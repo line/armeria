@@ -29,7 +29,11 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientDecoration;
@@ -38,8 +42,10 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
+import com.linecorp.armeria.client.grpc.protocol.UnaryGrpcClient;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -49,6 +55,8 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.Channel;
+import io.grpc.ClientInterceptor;
+import io.grpc.ClientInterceptors;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.stub.AbstractStub;
@@ -57,6 +65,8 @@ import io.grpc.stub.AbstractStub;
  * A {@link DecoratingClientFactory} that creates a gRPC client.
  */
 final class GrpcClientFactory extends DecoratingClientFactory {
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcClientFactory.class);
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
@@ -81,6 +91,11 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     @Override
     public Set<Scheme> supportedSchemes() {
         return SUPPORTED_SCHEMES;
+    }
+
+    @Override
+    public boolean isClientTypeSupported(Class<?> clientType) {
+        return clientType != UnaryGrpcClient.class;
     }
 
     @Override
@@ -121,21 +136,33 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         final GrpcJsonMarshaller jsonMarshaller;
         if (GrpcSerializationFormats.isJson(serializationFormat)) {
-            jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY)
-                                    .apply(serviceDescriptor);
+            try {
+                jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY)
+                                        .apply(serviceDescriptor);
+            } catch (Exception e) {
+                logger.warn("Failed to instantiate a JSON marshaller for gRPC-JSON. " +
+                            "Consider using a different serialization format with {}.serializationFormat() " +
+                            "or using {}.ofGson() instead.",
+                            GrpcClientBuilder.class.getName(), GrpcJsonMarshaller.class.getName(), e);
+                throw e;
+            }
         } else {
             jsonMarshaller = null;
         }
 
-        final ArmeriaChannel channel = new ArmeriaChannel(
-                newParams,
-                httpClient,
-                meterRegistry(),
-                scheme.sessionProtocol(),
-                serializationFormat,
-                jsonMarshaller,
-                simpleMethodNames);
-
+        final ArmeriaChannel armeriaChannel =
+                new ArmeriaChannel(newParams, httpClient, meterRegistry(), scheme.sessionProtocol(),
+                                   serializationFormat, jsonMarshaller, simpleMethodNames);
+        final Iterable<? extends ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
+        final Channel channel;
+        if (!Iterables.isEmpty(interceptors)) {
+            final Channel intercepted =
+                    ClientInterceptors.intercept(armeriaChannel,
+                                                 Iterables.toArray(interceptors, ClientInterceptor.class));
+            channel = new UnwrappableChannel(intercepted, armeriaChannel);
+        } else {
+            channel = armeriaChannel;
+        }
         final Object clientStub = clientStubFactory.newClientStub(clientType, channel);
         requireNonNull(clientStub, "clientStubFactory.newClientStub() returned null");
         checkState(clientType.isAssignableFrom(clientStub.getClass()),
@@ -161,7 +188,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         boolean foundRetryingClient = false;
         final HttpClient noopClient = (ctx, req) -> null;
-        for (Function<? super HttpClient, ? extends HttpClient> decorator: decorators) {
+        for (Function<? super HttpClient, ? extends HttpClient> decorator : decorators) {
             final HttpClient decorated = decorator.apply(noopClient);
             if (decorated instanceof RetryingClient) {
                 foundRetryingClient = true;

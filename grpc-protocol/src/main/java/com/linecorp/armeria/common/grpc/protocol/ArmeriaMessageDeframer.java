@@ -52,10 +52,9 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
@@ -88,7 +87,7 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
     // Valid type is always positive.
     private static final int UNINITIALIZED_TYPE = -1;
 
-    private final int maxMessageSizeBytes;
+    private final int maxMessageLength;
 
     private int currentType = UNINITIALIZED_TYPE;
     private int requiredLength = HEADER_LENGTH;
@@ -101,8 +100,8 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
      * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or
      * response.
      */
-    public ArmeriaMessageDeframer(int maxMessageSizeBytes) {
-        this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
+    public ArmeriaMessageDeframer(int maxMessageLength) {
+        this.maxMessageLength = maxMessageLength > 0 ? maxMessageLength : Integer.MAX_VALUE;
     }
 
     @Override
@@ -134,12 +133,12 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
 
         // Update the required length to include the length of the frame.
         requiredLength = in.readInt();
-        if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
+        if (requiredLength < 0 || requiredLength > maxMessageLength) {
             throw new ArmeriaStatusException(
                     StatusCodes.RESOURCE_EXHAUSTED,
                     String.format("%s: Frame size %d exceeds maximum: %d. ",
                                   DEBUG_STRING, requiredLength,
-                                  maxMessageSizeBytes));
+                                  maxMessageLength));
         }
 
         // Store type and continue reading the frame body.
@@ -182,7 +181,7 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
             final InputStream unlimitedStream =
                     decompressor.decompress(new ByteBufInputStream(buf, true));
             return new DeframedMessage(
-                    new SizeEnforcingInputStream(unlimitedStream, maxMessageSizeBytes, DEBUG_STRING),
+                    new SizeEnforcingInputStream(unlimitedStream, maxMessageLength, DEBUG_STRING),
                     currentType);
         } catch (IOException e) {
             throw new RuntimeException(e);

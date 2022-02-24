@@ -15,15 +15,11 @@
  */
 package com.linecorp.armeria.server.jetty;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import javax.annotation.Nullable;
 
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EndPoint;
@@ -33,6 +29,7 @@ import org.eclipse.jetty.util.Callback;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class ArmeriaEndPoint implements EndPoint {
@@ -60,7 +57,7 @@ final class ArmeriaEndPoint implements EndPoint {
 
     ArmeriaEndPoint(ServiceRequestContext ctx, @Nullable String hostname) {
         this.ctx = ctx;
-        this.hostname = firstNonNull(hostname, ctx.config().virtualHost().defaultHostname());
+        this.hostname = hostname != null ? hostname : ctx.config().virtualHost().defaultHostname();
     }
 
     @Override

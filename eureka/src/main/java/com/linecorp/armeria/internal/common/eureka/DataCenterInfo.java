@@ -20,13 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * The data center information.

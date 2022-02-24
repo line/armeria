@@ -22,8 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +31,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -95,11 +94,6 @@ abstract class HttpResponseDecoder {
     }
 
     @Nullable
-    final HttpResponseWrapper getResponse(int id, boolean remove) {
-        return remove ? removeResponse(id) : getResponse(id);
-    }
-
-    @Nullable
     final HttpResponseWrapper removeResponse(int id) {
         if (closing) {
             // `unfinishedResponses` will be removed by `failUnfinishedResponses()`
@@ -125,6 +119,10 @@ abstract class HttpResponseDecoder {
 
         unfinishedResponses++;
         return true;
+    }
+
+    final void decrementUnfinishedResponses() {
+        unfinishedResponses--;
     }
 
     final void failUnfinishedResponses(Throwable cause) {

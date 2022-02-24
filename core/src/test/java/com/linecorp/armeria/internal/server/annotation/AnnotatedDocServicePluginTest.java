@@ -42,8 +42,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -53,6 +51,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.RequestBean2.InsideBean;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
@@ -190,7 +189,14 @@ class AnnotatedDocServicePluginTest {
         route = withMethodAndTypes(Route.builder().path("/service/{value}/test/:value2/something"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
-                EndpointInfo.builder("*", "/service/{value}/test/{value2}/something")
+                EndpointInfo.builder("*", "/service/:value/test/:value2/something")
+                            .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+                            .build());
+
+        route = withMethodAndTypes(Route.builder().path("/service/{value}/test/{*value2}"));
+        endpointInfo = endpointInfo(route, hostnamePattern);
+        assertThat(endpointInfo).isEqualTo(
+                EndpointInfo.builder("*", "/service/:value/test/:*value2")
                             .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                             .build());
 

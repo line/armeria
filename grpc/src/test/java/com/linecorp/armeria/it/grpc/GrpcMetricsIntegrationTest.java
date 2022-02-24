@@ -23,8 +23,6 @@ import static org.awaitility.Awaitility.given;
 
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
-
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -38,11 +36,12 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -190,7 +189,7 @@ public class GrpcMetricsIntegrationTest {
         assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL,
                                    "http.status", "200", "grpc.status", "0")).isEqualTo(0.0);
         assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL,
-                                   "http.status", "500", "grpc.status", "2")).isEqualTo(225.0);
+                                   "http.status", "500", "grpc.status", "2")).isEqualTo(54.0);
     }
 
     @Nullable
@@ -218,11 +217,11 @@ public class GrpcMetricsIntegrationTest {
 
     private static void makeRequest(String name) throws Exception {
         final TestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                       .factory(clientFactory)
-                       .decorator(MetricCollectingClient.newDecorator(
-                               GrpcMeterIdPrefixFunction.of("client")))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .factory(clientFactory)
+                           .decorator(MetricCollectingClient.newDecorator(
+                                   GrpcMeterIdPrefixFunction.of("client")))
+                           .build(TestServiceBlockingStub.class);
 
         final SimpleRequest request =
                 SimpleRequest.newBuilder()

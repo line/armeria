@@ -24,14 +24,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
 /**
@@ -90,6 +91,11 @@ public class ServiceRequestContextWrapper
     @Override
     public Map<String, String> pathParams() {
         return delegate().pathParams();
+    }
+
+    @Override
+    public QueryParams queryParams() {
+        return delegate().queryParams();
     }
 
     @Override

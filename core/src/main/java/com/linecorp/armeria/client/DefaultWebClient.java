@@ -25,11 +25,11 @@ import java.net.URI;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -37,6 +37,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
+
+    @Nullable
+    private BlockingWebClient blockingWebClient;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
@@ -75,12 +78,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
-            String path = uri.getRawPath();
-            if (Strings.isNullOrEmpty(path)) {
-                path = query == null ? "/" : "/?" + query;
-            } else if (query != null) {
-                path = path + '?' + query;
-            }
+            final String path = pathWithQuery(uri, query);
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(path));
             return execute(endpoint, newReq, protocol, requestOptions);
         }
@@ -110,13 +108,12 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             return abortRequestAndReturnFailureResponse(req, cause);
         }
+        final String newPath = pathAndQuery.toString();
+        if (!newPath.equals(req.path())) {
+            req = req.withHeaders(req.headers().toBuilder().path(newPath));
+        }
         return execute(protocol, endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req, requestOptions);
-    }
-
-    @Override
-    public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
-        return execute(aggregatedReq.toHttpRequest());
     }
 
     private static HttpResponse abortRequestAndReturnFailureResponse(
@@ -126,7 +123,25 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     }
 
     @Override
+    public BlockingWebClient blocking() {
+        if (blockingWebClient != null) {
+            return blockingWebClient;
+        }
+        return blockingWebClient = new DefaultBlockingWebClient(this);
+    }
+
+    @Override
     public HttpClient unwrap() {
         return (HttpClient) super.unwrap();
+    }
+
+    static String pathWithQuery(URI uri, @Nullable String query) {
+        String path = uri.getRawPath();
+        if (Strings.isNullOrEmpty(path)) {
+            path = query == null ? "/" : "/?" + query;
+        } else if (query != null) {
+            path = path + '?' + query;
+        }
+        return path;
     }
 }

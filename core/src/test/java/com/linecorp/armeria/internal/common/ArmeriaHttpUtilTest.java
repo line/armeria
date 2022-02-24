@@ -20,9 +20,9 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.decodePath;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.parseDirectives;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toArmeria;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientHeader;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerHeader;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientHeader;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientHeaders;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerHeaders;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientHeaders;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -35,8 +35,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -47,6 +52,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 
@@ -58,7 +64,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
@@ -80,23 +85,43 @@ class ArmeriaHttpUtilTest {
         assertThat(concatPaths("/a", "b")).isEqualTo("/a/b");
         assertThat(concatPaths("/a", "/b")).isEqualTo("/a/b");
         assertThat(concatPaths("/a/", "/b")).isEqualTo("/a/b");
+
+        assertThat(concatPaths("/a", "")).isEqualTo("/a");
+        assertThat(concatPaths("/a/", "")).isEqualTo("/a/");
+        assertThat(concatPaths("/a", "?foo=bar")).isEqualTo("/a?foo=bar");
+        assertThat(concatPaths("/a/", "?foo=bar")).isEqualTo("/a/?foo=bar");
     }
 
-    @Test
-    void testDecodePath() throws Exception {
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void testDecodePath(boolean isPathParam) throws Exception {
+        final Function<String, String> decodeFunc;
+        if (isPathParam) {
+            decodeFunc = ArmeriaHttpUtil::decodePathParam;
+        } else {
+            decodeFunc = ArmeriaHttpUtil::decodePath;
+        }
+
         // Fast path
         final String pathThatDoesNotNeedDecode = "/foo_bar_baz";
-        assertThat(decodePath(pathThatDoesNotNeedDecode)).isSameAs(pathThatDoesNotNeedDecode);
+        assertThat(decodeFunc.apply(pathThatDoesNotNeedDecode)).isSameAs(pathThatDoesNotNeedDecode);
 
         // Slow path
-        assertThat(decodePath("/foo%20bar\u007fbaz")).isEqualTo("/foo bar\u007fbaz");
-        assertThat(decodePath("/%C2%A2")).isEqualTo("/¢"); // Valid UTF-8 sequence
-        assertThat(decodePath("/%20\u0080")).isEqualTo("/ �"); // Unallowed character
-        assertThat(decodePath("/%")).isEqualTo("/�"); // No digit
-        assertThat(decodePath("/%1")).isEqualTo("/�"); // Only a single digit
-        assertThat(decodePath("/%G0")).isEqualTo("/�"); // First digit is not hex.
-        assertThat(decodePath("/%0G")).isEqualTo("/�"); // Second digit is not hex.
-        assertThat(decodePath("/%C3%28")).isEqualTo("/�("); // Invalid UTF-8 sequence
+        assertThat(decodeFunc.apply("/foo%20bar\u007fbaz")).isEqualTo("/foo bar\u007fbaz");
+        assertThat(decodeFunc.apply("/%C2%A2")).isEqualTo("/¢"); // Valid UTF-8 sequence
+        assertThat(decodeFunc.apply("/%20\u0080")).isEqualTo("/ �"); // Unallowed character
+        assertThat(decodeFunc.apply("/%")).isEqualTo("/�"); // No digit
+        assertThat(decodeFunc.apply("/%1")).isEqualTo("/�"); // Only a single digit
+        assertThat(decodeFunc.apply("/%G0")).isEqualTo("/�"); // First digit is not hex.
+        assertThat(decodeFunc.apply("/%0G")).isEqualTo("/�"); // Second digit is not hex.
+        assertThat(decodeFunc.apply("/%C3%28")).isEqualTo("/�("); // Invalid UTF-8 sequence
+
+        // %2F (/) must be decoded only for path parameters.
+        if (isPathParam) {
+            assertThat(decodeFunc.apply("/%2F")).isEqualTo("//");
+        } else {
+            assertThat(decodeFunc.apply("/%2F")).isEqualTo("/%2F");
+        }
     }
 
     @Test
@@ -166,7 +191,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ClientHeader(in, out, AsciiString::toString);
+        toNettyHttp1ClientHeaders(in, out, Http1HeaderNaming.ofDefault());
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
     }
@@ -181,7 +206,7 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.COOKIE, "k=l;")
                                           .build();
 
-        final Http2Headers out = toNettyHttp2ClientHeader(in);
+        final Http2Headers out = toNettyHttp2ClientHeaders(in);
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
     }
@@ -204,7 +229,7 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void endOfStreamSet() {
-        final Http2Headers in = new DefaultHttp2Headers();
+        final Http2Headers in = new ArmeriaHttp2Headers();
         in.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
         final HttpHeaders out = toArmeria(in, true, true);
         assertThat(out.isEndOfStream()).isTrue();
@@ -215,7 +240,7 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void endOfStreamSetEmpty() {
-        final Http2Headers in = new DefaultHttp2Headers();
+        final Http2Headers in = new ArmeriaHttp2Headers();
         final HttpHeaders out = toArmeria(in, true, true);
         assertThat(out.isEndOfStream()).isTrue();
 
@@ -225,27 +250,22 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void inboundCookiesMustBeMergedForHttp2() {
-        final Http2Headers in = new DefaultHttp2Headers();
+        final Http2Headers in = new ArmeriaHttp2Headers();
 
+        in.add(HttpHeaderNames.METHOD, "GET");
+        in.add(HttpHeaderNames.SCHEME, "http");
+        in.add(HttpHeaderNames.AUTHORITY, "foo.com");
+        in.add(HttpHeaderNames.PATH, "/");
         in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
         in.add(HttpHeaderNames.COOKIE, "e=f;g=h");
         in.addObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final HttpHeaders out = toArmeria(in, true, false);
+        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(null, in, false, "http", null);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
-                .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
-    }
-
-    @Test
-    void stripUserInfo() {
-        assertThat(ArmeriaHttpUtil.stripUserInfo("foo")).isEqualTo("foo");
-        assertThat(ArmeriaHttpUtil.stripUserInfo("info@foo")).isEqualTo("foo");
-        assertThat(ArmeriaHttpUtil.stripUserInfo("@foo.bar")).isEqualTo("foo.bar");
-        assertThatThrownBy(() -> ArmeriaHttpUtil.stripUserInfo("info@"))
-                .isInstanceOf(IllegalArgumentException.class);
+                .containsExactly("a=b; c=d; e=f;g=h; i=j; k=l;");
     }
 
     @Test
@@ -263,26 +283,57 @@ class ArmeriaHttpUtilTest {
         final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
         when(ctx.channel()).thenReturn(channel);
 
-        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig());
+        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http");
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
         assertThat(armeriaHeaders.authority()).isEqualTo("bar");
-
-        final HttpRequest absoluteUriReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                                       "http://example.com/hello", headers);
-        armeriaHeaders = toArmeria(ctx, absoluteUriReq, serverConfig());
-        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
-        assertThat(armeriaHeaders.authority()).isEqualTo("bar");
+        assertThat(armeriaHeaders.scheme()).isEqualTo("http");
+        assertThat(armeriaHeaders.path()).isEqualTo("/hello");
 
         // Remove Host header.
         headers.remove(HttpHeaderNames.HOST);
-        armeriaHeaders = toArmeria(ctx, originReq, serverConfig());
+        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https");
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
         assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
+        assertThat(armeriaHeaders.scheme()).isEqualTo("https");
+        assertThat(armeriaHeaders.path()).isEqualTo("/hello");
+    }
 
-        armeriaHeaders = toArmeria(ctx, absoluteUriReq, serverConfig());
-        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("example.com");
-        assertThat(armeriaHeaders.authority()).isEqualTo("example.com");
+    @Test
+    void pathValidation() throws Exception {
+        final InetSocketAddress socketAddress = new InetSocketAddress(36462);
+        final Channel channel = mock(Channel.class);
+        when(channel.localAddress()).thenReturn(socketAddress);
+
+        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        when(ctx.channel()).thenReturn(channel);
+
+        // Should not be overly strict, e.g. allow `"` in the path.
+        final HttpRequest doubleQuoteReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/\"?\"",
+                                       new DefaultHttpHeaders());
+        RequestHeaders armeriaHeaders = toArmeria(ctx, doubleQuoteReq, serverConfig(), "http");
+        assertThat(armeriaHeaders.path()).isEqualTo("/\"?\"");
+
+        // Should accept an asterisk request.
+        final HttpRequest asteriskReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*", new DefaultHttpHeaders());
+        armeriaHeaders = toArmeria(ctx, asteriskReq, serverConfig(), "http");
+        assertThat(armeriaHeaders.path()).isEqualTo("*");
+
+        // Should reject an absolute URI.
+        final HttpRequest absoluteUriReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                                       "http://example.com/hello", new DefaultHttpHeaders());
+        assertThatThrownBy(() -> toArmeria(ctx, absoluteUriReq, serverConfig(), "http"))
+                .isInstanceOf(URISyntaxException.class)
+                .hasMessageContaining("neither origin form nor asterisk form");
+
+        // Should not accept a path that starts with an asterisk.
+        final HttpRequest badAsteriskReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*/", new DefaultHttpHeaders());
+        assertThatThrownBy(() -> toArmeria(ctx, badAsteriskReq, serverConfig(), "http"))
+                .isInstanceOf(URISyntaxException.class)
+                .hasMessageContaining("neither origin form nor asterisk form");
     }
 
     @Test
@@ -381,7 +432,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ServerHeader(in, out);
+        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault());
         assertThat(out).isEqualTo(new DefaultHttpHeaders()
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.TRAILER, "foo")
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.HOST, "bar"));
@@ -414,6 +465,22 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CONTENT_RANGE, "dummy")
                                           .add(HttpHeaderNames.TRAILER, "dummy")
                                           .build();
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerTrailers(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get("foo")).isEqualTo("bar");
+    }
+
+    @Test
+    void excludeDisallowedInResponseHeaders() {
+        final ResponseHeadersBuilder in = ResponseHeaders.builder()
+                                                         .add(HttpHeaderNames.STATUS, "200")
+                                                         .add(HttpHeaderNames.AUTHORITY, "dummy")
+                                                         .add(HttpHeaderNames.METHOD, "dummy")
+                                                         .add(HttpHeaderNames.PATH, "dummy")
+                                                         .add(HttpHeaderNames.SCHEME, "dummy");
+        final Http2Headers nettyHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(in);
+        assertThat(nettyHeaders.size()).isOne();
+        assertThat(nettyHeaders.get(HttpHeaderNames.STATUS)).isEqualTo("200");
     }
 
     @Test
@@ -425,20 +492,28 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CACHE_CONTROL, "dummy")
                                           .build();
 
-        final io.netty.handler.codec.http.HttpHeaders out =
+        final io.netty.handler.codec.http.HttpHeaders clientOutHeaders =
                 new DefaultHttpHeaders();
-        toNettyHttp1ClientHeader(in, out, Http1HeaderNaming.traditional());
+        toNettyHttp1ClientHeaders(in, clientOutHeaders, Http1HeaderNaming.traditional());
+        assertThat(clientOutHeaders).isEqualTo(new DefaultHttpHeaders()
+                                                       .add("foo", "bar")
+                                                       .add("Authorization", "dummy")
+                                                       .add("Content-Length", "dummy")
+                                                       .add("Cache-Control", "dummy"));
 
-        assertThat(out).isEqualTo(new DefaultHttpHeaders()
-                                          .add("foo", "bar")
-                                          .add("Authorization", "dummy")
-                                          .add("Content-Length", "dummy")
-                                          .add("Cache-Control", "dummy"));
+        final io.netty.handler.codec.http.HttpHeaders serverOutHeaders =
+                new DefaultHttpHeaders();
+        toNettyHttp1ServerHeaders(in, serverOutHeaders, Http1HeaderNaming.traditional());
+        assertThat(serverOutHeaders).isEqualTo(new DefaultHttpHeaders()
+                                                       .add("foo", "bar")
+                                                       .add("Authorization", "dummy")
+                                                       .add("Content-Length", "dummy")
+                                                       .add("Cache-Control", "dummy"));
     }
 
     @Test
     void convertedHeaderTypes() {
-        final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
+        final Http2Headers in = new ArmeriaHttp2Headers().set("a", "b");
 
         // Request headers without pseudo headers.
         assertThat(toArmeria(in, true, false)).isInstanceOf(HttpHeaders.class)
@@ -481,7 +556,7 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void toArmeriaRequestHeaders() {
-        final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
+        final Http2Headers in = new ArmeriaHttp2Headers().set("a", "b");
 
         final InetSocketAddress socketAddress = new InetSocketAddress(36462);
         final Channel channel = mock(Channel.class);
@@ -521,6 +596,19 @@ class ArmeriaHttpUtilTest {
         assertThat("Armeria/1.0.0").containsPattern(pattern);
         assertThat("Armeria/1.0.0-SNAPSHOT").containsPattern(pattern);
         assertThat(ArmeriaHttpUtil.SERVER_HEADER).containsPattern(pattern);
+    }
+
+    @Test
+    void disallowedResponseHeaderNames() {
+        for (AsciiString headerName : ImmutableList.of(HttpHeaderNames.METHOD,
+                                                       HttpHeaderNames.AUTHORITY,
+                                                       HttpHeaderNames.SCHEME,
+                                                       HttpHeaderNames.PATH,
+                                                       HttpHeaderNames.PROTOCOL)) {
+            assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames().contains(headerName)).isTrue();
+        }
+        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).doesNotContain(HttpHeaderNames.STATUS);
+        assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).doesNotContain(HttpHeaderNames.LOCATION);
     }
 
     private static ServerConfig serverConfig() {

@@ -73,7 +73,7 @@ SamlServiceProvider ssp =
                            .hostname("your-service-domain-name")
                            // Specify an authorizer in order to authenticate a request.
                            .authorizer(new Authorizer<HttpRequest>() { ... })
-                           // Speicify an SAML single sign-on handler
+                           // Specify a SAML single sign-on handler
                            // which sends a response to an end user
                            // after he or she is authenticated or not.
                            .ssoHandler(new SamlSingleSignOnHandler() { ... })
@@ -134,8 +134,7 @@ class MySamlSingleSignOnHandler implements SamlSingleSignOnHandler {
 
         // Note that you MUST NOT use this example in a real world application. You may consider encoding
         // the value using JSON Web Tokens to prevent tempering.
-        final Cookie cookie = Cookie.builder("username", username)
-                                    .httpOnly(true)
+        final Cookie cookie = Cookie.secureBuilder("username", username)
                                     .domain("localhost")
                                     .maxAge(60)
                                     .path("/")

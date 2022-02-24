@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
@@ -158,8 +158,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private Object rawResponseContent;
 
+    // Fields for caching the string representation.
     private volatile int requestStrFlags = -1;
+    @Nullable
+    private Object requestStrHeadersSanitizer;
+    @Nullable
+    private Object requestStrContentSanitizer;
+    @Nullable
+    private Object requestStrTrailersSanitizer;
     private volatile int responseStrFlags = -1;
+    @Nullable
+    private Object responseStrHeadersSanitizer;
+    @Nullable
+    private Object responseStrContentSanitizer;
+    @Nullable
+    private Object responseStrTrailersSanitizer;
     @Nullable
     private String requestStr;
     @Nullable
@@ -631,10 +644,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void startRequest(long requestStartTimeNanos, long requestStartTimeMicros) {
-        if (!isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
-            this.requestStartTimeNanos = requestStartTimeNanos;
-            this.requestStartTimeMicros = requestStartTimeMicros;
+        if (isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
+            return;
         }
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
 
         updateFlags(RequestLogProperty.REQUEST_START_TIME);
     }
@@ -1252,6 +1266,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
             if (rpcResponse.cause() != null) {
                 responseCause = rpcResponse.cause();
+                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }
         }
 
@@ -1344,7 +1359,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.responseEndTimeNanos = responseEndTimeNanos;
         if (responseHeaders == null) {
-            responseHeaders = DUMMY_RESPONSE_HEADERS;
+            if (responseCause instanceof HttpStatusException) {
+                responseHeaders = ResponseHeaders.of(((HttpStatusException) responseCause).httpStatus());
+            } else {
+                responseHeaders = DUMMY_RESPONSE_HEADERS;
+            }
         }
         if (this.responseCause == null) {
             if (responseCause instanceof HttpStatusException ||
@@ -1362,36 +1381,48 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public String toString() {
         final String req = toStringRequestOnly();
         final String res = toStringResponseOnly();
-
-        // Create a StringBuilder with the initial capacity not considering the children's log length.
-        // The children will be empty in most of the cases, so it is OK.
-        final StringBuilder buf = new StringBuilder(5 + req.length() + 6 + res.length() + 1);
-        buf.append("{req=")  // 5 chars
-           .append(req)
-           .append(", res=") // 6 chars
-           .append(res)
-           .append('}');     // 1 char
         final int numChildren = children != null ? children.size() : 0;
-        if (numChildren > 0) {
-            buf.append(", {");
-            for (int i = 0; i < numChildren; i++) {
-                buf.append('[');
-                buf.append(children.get(i));
-                buf.append(']');
-                if (i != numChildren - 1) {
-                    buf.append(", ");
-                }
+
+        if (numChildren == 0) {
+            try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+                return toStringWithoutChildren(ttl.stringBuilder(), req, res).toString();
             }
-            buf.append('}');
+        } else {
+            return toStringWithChildren(req, res, numChildren);
+        }
+    }
+
+    private String toStringWithChildren(String req, String res, int numChildren) {
+        assert children != null;
+
+        final StringBuilder buf = toStringWithoutChildren(new StringBuilder(1024), req, res);
+        buf.append(System.lineSeparator())
+           .append("Children:");
+
+        for (int i = 0; i < numChildren; i++) {
+            buf.append(System.lineSeparator());
+            buf.append('\t');
+            buf.append(children.get(i));
         }
         return buf.toString();
     }
 
+    private static StringBuilder toStringWithoutChildren(StringBuilder buf, String req, String res) {
+        return buf.append("{req=")
+                  .append(req)
+                  .append(", res=")
+                  .append(res)
+                  .append('}');
+    }
+
     @Override
     public String toStringRequestOnly(
-            BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+            BiFunction<? super RequestContext, ? super RequestHeaders,
+                    ? extends @Nullable Object> headersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> contentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> trailersSanitizer) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1399,7 +1430,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         // Only interested in the bits related with request.
         final int flags = this.flags & RequestLogProperty.FLAGS_REQUEST_COMPLETE;
-        if (requestStrFlags == flags) {
+        if (requestStrFlags == flags &&
+            requestStrHeadersSanitizer == headersSanitizer &&
+            requestStrContentSanitizer == contentSanitizer &&
+            requestStrTrailersSanitizer == trailersSanitizer) {
             assert requestStr != null;
             return requestStr;
         }
@@ -1488,6 +1522,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             requestStr = buf.toString();
         }
+
+        requestStrHeadersSanitizer = headersSanitizer;
+        requestStrContentSanitizer = contentSanitizer;
+        requestStrTrailersSanitizer = trailersSanitizer;
         requestStrFlags = flags;
 
         return requestStr;
@@ -1495,9 +1533,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public String toStringResponseOnly(
-            BiFunction<? super RequestContext, ? super ResponseHeaders, ?> headersSanitizer,
-            BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+            BiFunction<? super RequestContext, ? super ResponseHeaders,
+                    ? extends @Nullable Object> headersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable Object> contentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable Object> trailersSanitizer) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1505,7 +1546,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         // Only interested in the bits related with response.
         final int flags = this.flags & RequestLogProperty.FLAGS_RESPONSE_COMPLETE;
-        if (responseStrFlags == flags) {
+        if (responseStrFlags == flags &&
+            responseStrHeadersSanitizer == headersSanitizer &&
+            responseStrContentSanitizer == contentSanitizer &&
+            responseStrTrailersSanitizer == trailersSanitizer) {
             assert responseStr != null;
             return responseStr;
         }
@@ -1590,13 +1634,18 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             responseStr = buf.toString();
         }
+
+        responseStrHeadersSanitizer = headersSanitizer;
+        responseStrContentSanitizer = contentSanitizer;
+        responseStrTrailersSanitizer = trailersSanitizer;
         responseStrFlags = flags;
 
         return responseStr;
     }
 
-    private <T> String sanitize(BiFunction<? super RequestContext, ? super T, ?> headersSanitizer,
-                                T requestHeaders) {
+    private <T> String sanitize(
+            BiFunction<? super RequestContext, ? super T, ? extends @Nullable Object> headersSanitizer,
+            T requestHeaders) {
         final Object sanitized = headersSanitizer.apply(ctx, requestHeaders);
         return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
@@ -1880,9 +1929,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public String toStringRequestOnly(
-                BiFunction<? super RequestContext, ? super RequestHeaders, ?> headersSanitizer,
-                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+                BiFunction<? super RequestContext, ? super RequestHeaders,
+                        ? extends @Nullable Object> headersSanitizer,
+                BiFunction<? super RequestContext, Object,
+                        ? extends @Nullable Object> contentSanitizer,
+                BiFunction<? super RequestContext, ? super HttpHeaders,
+                        ? extends @Nullable Object> trailersSanitizer) {
 
             return DefaultRequestLog.this.toStringRequestOnly(
                     headersSanitizer, contentSanitizer, trailersSanitizer);
@@ -1955,9 +2007,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public String toStringResponseOnly(
-                BiFunction<? super RequestContext, ? super ResponseHeaders, ?> headersSanitizer,
-                BiFunction<? super RequestContext, Object, ?> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders, ?> trailersSanitizer) {
+                BiFunction<? super RequestContext, ? super ResponseHeaders,
+                        ? extends @Nullable Object> headersSanitizer,
+                BiFunction<? super RequestContext, Object,
+                        ? extends @Nullable Object> contentSanitizer,
+                BiFunction<? super RequestContext, ? super HttpHeaders,
+                        ? extends @Nullable Object> trailersSanitizer) {
 
             return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer,
                                                                trailersSanitizer);

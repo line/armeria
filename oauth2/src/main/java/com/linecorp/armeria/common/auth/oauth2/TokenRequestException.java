@@ -30,11 +30,10 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.ResponseParserUti
 
 import java.util.LinkedHashMap;
 
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**

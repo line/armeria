@@ -22,7 +22,6 @@ import static org.awaitility.Awaitility.await;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.junit.Rule;
@@ -44,6 +43,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -353,9 +354,9 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testMetrics() {
-        Clients.newClient(newUrl("gproto+h2c") + '/', HelloServiceBlockingStub.class)
-               .hello(HelloRequest.getDefaultInstance())
-               .getMessage();
+        GrpcClients.newClient(newUrl("h2c") + '/', HelloServiceBlockingStub.class)
+                   .hello(HelloRequest.getDefaultInstance())
+                   .getMessage();
 
         final String metricReport = WebClient.of(newUrl("http"))
                                              .get("/internal/metrics")

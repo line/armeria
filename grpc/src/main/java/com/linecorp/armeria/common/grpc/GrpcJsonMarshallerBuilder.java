@@ -20,14 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 
 import io.grpc.ServiceDescriptor;

@@ -23,12 +23,9 @@ class DefaultCookieTest {
 
     @Test
     void toBuilder() {
-        final Cookie cookie = Cookie.builder("a", "b")
+        final Cookie cookie = Cookie.secureBuilder("a", "b")
                                     .domain("c")
                                     .path("/d")
-                                    .httpOnly(true)
-                                    .secure(true)
-                                    .sameSite("Strict")
                                     .valueQuoted(true)
                                     .build();
         assertThat(cookie.toBuilder().build()).isEqualTo(cookie);
@@ -36,16 +33,16 @@ class DefaultCookieTest {
 
     @Test
     void mutation() {
-        final Cookie cookie = Cookie.of("a", "b").withMutations(mutator -> mutator.name("c").value("d"));
-        assertThat(cookie).isEqualTo(Cookie.of("c", "d"));
+        final Cookie cookie = Cookie.ofSecure("a", "b").withMutations(mutator -> mutator.name("c").value("d"));
+        assertThat(cookie).isEqualTo(Cookie.ofSecure("c", "d"));
     }
 
     @Test
     void trimDomainDot() {
-        Cookie cookie = Cookie.builder("a", "b").domain("foo.com.").build();
+        Cookie cookie = Cookie.secureBuilder("a", "b").domain("foo.com.").build();
         assertThat(cookie.domain()).isNull();
 
-        cookie = Cookie.builder("a", "b").domain(".foo.com").build();
+        cookie = Cookie.secureBuilder("a", "b").domain(".foo.com").build();
         assertThat(cookie.domain()).isEqualTo("foo.com");
     }
 }

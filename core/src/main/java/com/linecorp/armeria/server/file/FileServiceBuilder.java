@@ -25,8 +25,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Clock;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 import com.linecorp.armeria.common.CacheControl;
@@ -35,6 +33,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a new {@link FileService} and its {@link FileServiceConfig}. Use the factory methods in
@@ -52,11 +52,13 @@ public final class FileServiceBuilder {
     String entryCacheSpec = DEFAULT_ENTRY_CACHE_SPEC;
     int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
     boolean serveCompressedFiles;
+    private boolean autoDecompress;
     boolean autoIndex;
     boolean canSetMaxCacheEntries = true;
     boolean canSetEntryCacheSpec = true;
     @Nullable
     HttpHeadersBuilder headers;
+    MediaTypeResolver mediaTypeResolver = MediaTypeResolver.ofDefault();
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -113,6 +115,22 @@ public final class FileServiceBuilder {
      */
     public FileServiceBuilder serveCompressedFiles(boolean serveCompressedFiles) {
         this.serveCompressedFiles = serveCompressedFiles;
+        return this;
+    }
+
+    /**
+     * Sets whether pre-compressed files could be served after being decompressed, when a client does not
+     * {@link HttpHeaderNames#ACCEPT_ENCODING accept} a compressed file. The compressed file will be
+     * automatically decompressed depending on the extension of the compressed file.
+     * For example, files compressed with gzip should have the extension {@code ".gz"} and
+     * compressed with brotli should have the extension {@code ".br"}.
+     *
+     * <p>Note that this option is valid only when {@link #serveCompressedFiles(boolean)} is enabled.
+     *
+     * @see #serveCompressedFiles(boolean)
+     */
+    public FileServiceBuilder autoDecompress(boolean autoDecompress) {
+        this.autoDecompress = autoDecompress;
         return this;
     }
 
@@ -211,17 +229,31 @@ public final class FileServiceBuilder {
     }
 
     /**
+     * Sets the {@link MediaTypeResolver} that determines a file's {@link MediaType} using its path.
+     * If not set, {@link MediaTypeResolver#ofDefault()} is used by default.
+     */
+    public FileServiceBuilder mediaTypeResolver(MediaTypeResolver mediaTypeResolver) {
+        this.mediaTypeResolver = requireNonNull(mediaTypeResolver, "mediaTypeResolver");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link FileService} based on the properties of this builder.
      */
     public FileService build() {
+        if (autoDecompress && !serveCompressedFiles) {
+            throw new IllegalStateException("Should enable serveCompressedFiles when autoDecompress is set");
+        }
+
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                serveCompressedFiles, autoIndex, buildHeaders()));
+                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(),
+                mediaTypeResolver.orElse(MediaTypeResolver.ofDefault())));
     }
 
     @Override
     public String toString() {
         return FileServiceConfig.toString(this, vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                                          serveCompressedFiles, autoIndex, headers);
+                                          serveCompressedFiles, autoIndex, headers, mediaTypeResolver);
     }
 }

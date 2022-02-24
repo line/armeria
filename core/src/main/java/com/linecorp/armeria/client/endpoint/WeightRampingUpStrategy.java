@@ -33,9 +33,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.Ticker;
 
@@ -134,14 +134,20 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
             this.executor = executor;
-            final List<Endpoint> initialEndpoints =
-                    new ArrayList<>(deduplicateEndpoints(endpointGroup.endpoints()).values());
-            endpointSelector = new WeightedRandomDistributionEndpointSelector(initialEndpoints);
-            endpointsFinishedRampingUp.addAll(initialEndpoints);
+
+            final AtomicBoolean initialized = new AtomicBoolean();
             endpointGroup.addListener(newEndpoints -> {
-                // Use the executor so the order of endpoints change is guaranteed.
-                executor.execute(() -> updateEndpoints(newEndpoints));
-            });
+                final List<Endpoint> dedupEndpoints =
+                        new ArrayList<>(deduplicateEndpoints(newEndpoints).values());
+                if (initialized.compareAndSet(false, true)) {
+                    endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
+                    endpointsFinishedRampingUp.addAll(dedupEndpoints);
+                } else {
+                    // Use the executor so the order of endpoints change is guaranteed.
+                    executor.execute(() -> updateEndpoints(newEndpoints));
+                }
+            }, true);
+
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }

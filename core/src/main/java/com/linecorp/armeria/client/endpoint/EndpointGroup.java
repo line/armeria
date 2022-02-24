@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Listenable;
+import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
 
 /**
  * A list of {@link Endpoint}s.
@@ -148,7 +149,16 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
     CompletableFuture<List<Endpoint>> whenReady();
 
     @Override
-    default void addListener(Consumer<? super List<Endpoint>> listener) {}
+    default void addListener(Consumer<? super List<Endpoint>> listener) {
+        addListener(listener, false);
+    }
+
+    /**
+     * Adds a {@link Consumer} that will be invoked when this {@link EndpointGroup} changes its value.
+     * If {@code notifyLatestEndpoints} is set to true and the {@link #whenReady()} is completed already,
+     * the {@link Consumer} will be invoked immediately with the current {@link #endpoints()}.
+     */
+    default void addListener(Consumer<? super List<Endpoint>> listener, boolean notifyLatestEndpoints) {}
 
     @Override
     default void removeListener(Consumer<?> listener) {}

@@ -35,11 +35,11 @@ import java.lang.reflect.Modifier;
 import java.util.BitSet;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.IntMath;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
@@ -51,7 +51,7 @@ import io.netty.util.AsciiString;
  */
 public final class HttpHeaderNames {
 
-    // Forked from Guava 27.1 at 8e174e76971449665658a800af6dd350806cc934
+    // Forked from Guava 31.0 at 7396bab41807702f2ce94517d0f58b8e52f603f8
     // Changes:
     // - Added pseudo headers
     // - Added Accept-Patch
@@ -63,11 +63,7 @@ public final class HttpHeaderNames {
     //   - X-WebKit-CSP
     //   - X-WebKit-CSP-Report-Only
     // - Removed Sec-Metadata headers (too early to add)
-    //   - Sec-Fetch-Dest
-    //   - Sec-Fetch-Mode
-    //   - Sec-Fetch-Site
-    //   - Sec-Fetch-User
-    //   - Sec-Metadata
+    //   - Sec-CH-Prefers-Color-Scheme
 
     private static final BitSet PROHIBITED_NAME_CHARS;
     private static final String[] PROHIBITED_NAME_CHAR_NAMES;
@@ -204,6 +200,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString COOKIE = create("Cookie");
     /**
+     * The HTTP <a href="https://fetch.spec.whatwg.org/#cross-origin-resource-policy-header">{@code
+     * Cross-Origin-Resource-Policy}</a> header field name.
+     */
+    public static final AsciiString CROSS_ORIGIN_RESOURCE_POLICY = create("Cross-Origin-Resource-Policy");
+    /**
      * The HTTP <a href="https://datatracker.ietf.org/doc/rfc8470/">{@code "Early-Data"}</a> header field
      * name.
      */
@@ -267,6 +268,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString ORIGIN = create("Origin");
     /**
+     * The HTTP <a href="https://github.com/WICG/origin-isolation">{@code Origin-Isolation}</a> header
+     * field name.
+     */
+    public static final AsciiString ORIGIN_ISOLATION = create("Origin-Isolation");
+    /**
      * The HTTP {@code "Prefer"} header field name.
      */
     public static final AsciiString PREFER = create("Prefer");
@@ -301,6 +307,11 @@ public final class HttpHeaderNames {
      * The HTTP {@code "Upgrade"} header field name.
      */
     public static final AsciiString UPGRADE = create("Upgrade");
+    /**
+     * The HTTP <a href="https://w3c.github.io/webappsec-upgrade-insecure-requests/#preference">{@code
+     * Upgrade-Insecure-Requests}</a> header field name.
+     */
+    public static final AsciiString UPGRADE_INSECURE_REQUESTS = create("Upgrade-Insecure-Requests");
     /**
      * The HTTP {@code "User-Agent"} header field name.
      */
@@ -409,6 +420,21 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CONTENT_TRANSFER_ENCODING = create("Content-Transfer-Encoding");
     /**
+     * The HTTP <a href="https://wicg.github.io/cross-origin-embedder-policy/#COEP">{@code
+     * Cross-Origin-Embedder-Policy}</a> header field name.
+     */
+    public static final AsciiString CROSS_ORIGIN_EMBEDDER_POLICY = create("Cross-Origin-Embedder-Policy");
+    /**
+     * The HTTP <a href="https://wicg.github.io/cross-origin-embedder-policy/#COEP-RO">{@code
+     * Cross-Origin-Embedder-Policy-Report-Only}</a> header field name.
+     */
+    public static final AsciiString CROSS_ORIGIN_EMBEDDER_POLICY_REPORT_ONLY =
+            create("Cross-Origin-Embedder-Policy-Report-Only");
+    /**
+     * The HTTP Cross-Origin-Opener-Policy header field name.
+     */
+    public static final AsciiString CROSS_ORIGIN_OPENER_POLICY = create("Cross-Origin-Opener-Policy");
+    /**
      * The HTTP {@code "ETag"} header field name.
      */
     public static final AsciiString ETAG = create("ETag");
@@ -428,6 +454,10 @@ public final class HttpHeaderNames {
      * The HTTP {@code "Location"} header field name.
      */
     public static final AsciiString LOCATION = create("Location");
+    /**
+     * The HTTP {@code Keep-Alive} header field name.
+     */
+    public static final AsciiString KEEP_ALIVE = create("Keep-Alive");
     /**
      * The HTTP <a href="https://googlechrome.github.io/OriginTrials/#header">{@code "Origin-Trial"}</a>
      * header field name.
@@ -519,6 +549,37 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString X_CONTENT_TYPE_OPTIONS = create("X-Content-Type-Options");
     /**
+     * The HTTP <a
+     * href="https://iabtechlab.com/wp-content/uploads/2019/06/VAST_4.2_final_june26.pdf">{@code
+     * X-Device-IP}</a> header field name. Header used for VAST requests to provide the IP address of
+     * the device on whose behalf the request is being made.
+     */
+    public static final AsciiString X_DEVICE_IP = create("X-Device-IP");
+    /**
+     * The HTTP <a
+     * href="https://iabtechlab.com/wp-content/uploads/2019/06/VAST_4.2_final_june26.pdf">{@code
+     * X-Device-Referer}</a> header field name. Header used for VAST requests to provide the {@link
+     * #REFERER} header value that the on-behalf-of client would have used when making a request
+     * itself.
+     */
+    public static final AsciiString X_DEVICE_REFERER = create("X-Device-Referer");
+    /**
+     * The HTTP <a
+     * href="https://iabtechlab.com/wp-content/uploads/2019/06/VAST_4.2_final_june26.pdf">{@code
+     * X-Device-Accept-Language}</a> header field name. Header used for VAST requests to provide the
+     * {@link #ACCEPT_LANGUAGE} header value that the on-behalf-of client would have used when making
+     * a request itself.
+     */
+    public static final AsciiString X_DEVICE_ACCEPT_LANGUAGE = create("X-Device-Accept-Language");
+    /**
+     * The HTTP <a
+     * href="https://iabtechlab.com/wp-content/uploads/2019/06/VAST_4.2_final_june26.pdf">{@code
+     * X-Device-Requested-With}</a> header field name. Header used for VAST requests to provide the
+     * {@link #X_REQUESTED_WITH} header value that the on-behalf-of client would have used when making
+     * a request itself.
+     */
+    public static final AsciiString X_DEVICE_REQUESTED_WITH = create("X-Device-Requested-With");
+    /**
      * The HTTP {@code "X-Do-Not-Track"} header field name.
      */
     public static final AsciiString X_DO_NOT_TRACK = create("X-Do-Not-Track");
@@ -557,6 +618,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PUBLIC_KEY_PINS_REPORT_ONLY = create("Public-Key-Pins-Report-Only");
     /**
+     * The HTTP {@code X-Request-ID} header field name.
+     */
+    public static final AsciiString X_REQUEST_ID = create("X-Request-ID");
+    /**
      * The HTTP {@code "X-Requested-With"} header field name.
      */
     public static final AsciiString X_REQUESTED_WITH = create("X-Requested-With");
@@ -594,20 +659,186 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PING_TO = create("Ping-To");
     /**
+     * The HTTP <a
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#as_a_server_admin_can_i_distinguish_prefetch_requests_from_normal_requests">{@code
+     * Purpose}</a> header field name.
+     */
+    public static final AsciiString PURPOSE = create("Purpose");
+    /**
+     * The HTTP <a
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#as_a_server_admin_can_i_distinguish_prefetch_requests_from_normal_requests">{@code
+     * X-Purpose}</a> header field name.
+     */
+    public static final AsciiString X_PURPOSE = create("X-Purpose");
+    /**
+     * The HTTP <a
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Link_prefetching_FAQ#as_a_server_admin_can_i_distinguish_prefetch_requests_from_normal_requests">{@code
+     * X-Moz}</a> header field name.
+     */
+    public static final AsciiString X_MOZ = create("X-Moz");
+    /**
+     * The HTTP <a
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Device-Memory">{@code
+     * Device-Memory}</a> header field name.
+     */
+    public static final AsciiString DEVICE_MEMORY = create("Device-Memory");
+    /**
+     * The HTTP <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Downlink">{@code
+     * Downlink}</a> header field name.
+     */
+    public static final AsciiString DOWNLINK = create("Downlink");
+    /**
+     * The HTTP <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ECT">{@code
+     * ECT}</a> header field name.
+     */
+    public static final AsciiString ECT = create("ECT");
+    /**
+     * The HTTP <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/RTT">{@code
+     * RTT}</a> header field name.
+     */
+    public static final AsciiString RTT = create("RTT");
+    /**
+     * The HTTP <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Save-Data">{@code
+     * Save-Data}</a> header field name.
+     */
+    public static final AsciiString SAVE_DATA = create("Save-Data");
+    /**
+     * The HTTP <a
+     * href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Viewport-Width">{@code
+     * Viewport-Width}</a> header field name.
+     */
+    public static final AsciiString VIEWPORT_WIDTH = create("Viewport-Width");
+    /**
+     * The HTTP <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Width">{@code
+     * Width}</a> header field name.
+     */
+    public static final AsciiString WIDTH = create("Width");
+    /**
+     * The HTTP <a href="https://www.w3.org/TR/permissions-policy-1/">{@code Permissions-Policy}</a>
+     * header field name.
+     */
+    public static final AsciiString PERMISSIONS_POLICY = create("Permissions-Policy");
+    /**
+     * The HTTP <a
+     * href="https://datatracker.ietf.org/doc/html/rfc8942">{@code
+     * Accept-CH}</a> header field name.
+     */
+    public static final AsciiString ACCEPT_CH = create("Accept-CH");
+    /**
+     * The HTTP <a
+     * href="https://datatracker.ietf.org/doc/html/draft-davidben-http-client-hint-reliability-03.txt#section-3">{@code
+     * Critical-CH}</a> header field name.
+     */
+    public static final AsciiString CRITICAL_CH = create("Critical-CH");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua">{@code Sec-CH-UA}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_CH_UA = create("Sec-CH-UA");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-arch">{@code
+     * Sec-CH-UA-Arch}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_ARCH = create("Sec-CH-UA-Arch");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-model">{@code
+     * Sec-CH-UA-Model}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_MODEL = create("Sec-CH-UA-Model");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-platform">{@code
+     * Sec-CH-UA-Platform}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_PLATFORM = create("Sec-CH-UA-Platform");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-platform-version">{@code
+     * Sec-CH-UA-Platform-Version}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_PLATFORM_VERSION = create("Sec-CH-UA-Platform-Version");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-full-version">{@code
+     * Sec-CH-UA-Full-Version}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_FULL_VERSION = create("Sec-CH-UA-Full-Version");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-mobile">{@code
+     * Sec-CH-UA-Mobile}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_MOBILE = create("Sec-CH-UA-Mobile");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-bitness">{@code
+     * Sec-CH-UA-Bitness}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_BITNESS = create("Sec-CH-UA-Bitness");
+    /**
+     * The HTTP <a href="https://w3c.github.io/webappsec-fetch-metadata/">{@code Sec-Fetch-Dest}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_FETCH_DEST = create("Sec-Fetch-Dest");
+    /**
+     * The HTTP <a href="https://w3c.github.io/webappsec-fetch-metadata/">{@code Sec-Fetch-Mode}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_FETCH_MODE = create("Sec-Fetch-Mode");
+    /**
+     * The HTTP <a href="https://w3c.github.io/webappsec-fetch-metadata/">{@code Sec-Fetch-Site}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_FETCH_SITE = create("Sec-Fetch-Site");
+    /**
+     * The HTTP <a href="https://w3c.github.io/webappsec-fetch-metadata/">{@code Sec-Fetch-User}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_FETCH_USER = create("Sec-Fetch-User");
+    /**
+     * The HTTP <a href="https://w3c.github.io/webappsec-fetch-metadata/">{@code Sec-Metadata}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_METADATA = create("Sec-Metadata");
+    /**
      * The HTTP <a href="https://datatracker.ietf.org/doc/rfc8473/">{@code
      * Sec-Token-Binding}</a> header field name.
      */
     public static final AsciiString SEC_TOKEN_BINDING = create("Sec-Token-Binding");
     /**
-     * The HTTP <a href="https://datatracker.ietf.org/doc/draft-ietf-tokbind-ttrp/">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/draft-ietf-tokbind-ttrp">{@code
      * Sec-Provided-Token-Binding-ID}</a> header field name.
      */
     public static final AsciiString SEC_PROVIDED_TOKEN_BINDING_ID = create("Sec-Provided-Token-Binding-ID");
     /**
-     * The HTTP <a href="https://datatracker.ietf.org/doc/draft-ietf-tokbind-ttrp/">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/draft-ietf-tokbind-ttrp">{@code
      * Sec-Referred-Token-Binding-ID}</a> header field name.
      */
     public static final AsciiString SEC_REFERRED_TOKEN_BINDING_ID = create("Sec-Referred-Token-Binding-ID");
+    /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6455">{@code Sec-WebSocket-Accept}</a> header
+     * field name.
+     */
+    public static final AsciiString SEC_WEBSOCKET_ACCEPT = create("Sec-WebSocket-Accept");
+    /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6455">{@code Sec-WebSocket-Extensions}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = create("Sec-WebSocket-Extensions");
+    /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6455">{@code Sec-WebSocket-Key}</a> header
+     * field name.
+     */
+    public static final AsciiString SEC_WEBSOCKET_KEY = create("Sec-WebSocket-Key");
+    /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6455">{@code Sec-WebSocket-Protocol}</a>
+     * header field name.
+     */
+    public static final AsciiString SEC_WEBSOCKET_PROTOCOL = create("Sec-WebSocket-Protocol");
+    /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6455">{@code Sec-WebSocket-Version}</a> header
+     * field name.
+     */
+    public static final AsciiString SEC_WEBSOCKET_VERSION = create("Sec-WebSocket-Version");
+    /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc8586">{@code CDN-Loop}</a> header field name.
+     */
+    public static final AsciiString CDN_LOOP = create("CDN-Loop");
 
     private static final Map<CharSequence, AsciiString> map;
     private static final Map<AsciiString, String> inverseMap;

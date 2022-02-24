@@ -23,8 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.Splitter;
 import com.google.common.math.LongMath;
 
@@ -37,6 +35,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 
@@ -142,6 +141,11 @@ public abstract class AbstractHttpFile implements HttpFile {
     protected final String generateEntityTag(HttpFileAttributes attrs) {
         requireNonNull(attrs, "attrs");
         return entityTagFunction != null ? entityTagFunction.apply(pathOrUri(), attrs) : null;
+    }
+
+    @Nullable
+    BiFunction<String, HttpFileAttributes, String> entityTagFunction() {
+        return entityTagFunction;
     }
 
     @Override

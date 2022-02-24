@@ -21,15 +21,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.lang.reflect.ParameterizedType;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -40,6 +38,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -314,7 +313,7 @@ public class AnnotatedServiceHandlersOrderTest {
     }
 
     private static AggregatedHttpResponse executeRequest(AggregatedHttpRequest req) {
-        final WebClient client = WebClient.of(server.httpUri());
-        return client.execute(req).aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        return client.execute(req);
     }
 }

@@ -15,17 +15,24 @@
  */
 
 @file:JvmName("ArmeriaCoroutineUtil")
+@file:Suppress("unused")
 
 package com.linecorp.armeria.internal.common.kotlin
 
-import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil
+import com.linecorp.armeria.server.ServiceRequestContext
+import io.netty.util.concurrent.EventExecutor
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.future.future
+import org.reactivestreams.Publisher
 import java.lang.reflect.Method
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.jvm.kotlinFunction
@@ -33,20 +40,48 @@ import kotlin.reflect.jvm.kotlinFunction
 /**
  * Invokes a suspending function and returns [CompletableFuture].
  */
+@OptIn(DelicateCoroutinesApi::class)
 internal fun callKotlinSuspendingMethod(
     method: Method,
     obj: Any,
     args: Array<Any>,
     executorService: ExecutorService,
-    ctx: RequestContext
+    ctx: ServiceRequestContext
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not a kotlin function" }
-    val coroutineContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
-    // if `coroutineContext` contains a coroutine dispatcher, executorService is not used.
-    val newContext = executorService.asCoroutineDispatcher() + coroutineContext
-    return GlobalScope.future(newContext) {
-        kFunction
+    val future = GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
+        val response = kFunction
             .callSuspend(obj, *args)
             .let { if (it == Unit) null else it }
+
+        if (response != null && ctx.isCancelled) {
+            // A request has been canceled. Release the response resources to prevent leaks.
+            StreamMessageUtil.closeOrAbort(response)
+        }
+        response
     }
+
+    // Propagate cancellation to upstream.
+    ctx.whenRequestCancelled().thenAccept { cause ->
+        if (!future.isDone) {
+            future.completeExceptionally(cause)
+        }
+    }
+
+    return future
+}
+
+/**
+ * Converts [Flow] into [Publisher].
+ * @see FlowCollectingPublisher
+ */
+internal fun <T : Any> Flow<T>.asPublisher(
+    executor: EventExecutor,
+    ctx: ServiceRequestContext
+): Publisher<T> = FlowCollectingPublisher(this, executor, newCoroutineCtx(executor, ctx))
+
+private fun newCoroutineCtx(executorService: ExecutorService, ctx: ServiceRequestContext): CoroutineContext {
+    val userContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
+    val requestContext = ArmeriaRequestCoroutineContext(ctx)
+    return executorService.asCoroutineDispatcher() + requestContext + userContext
 }

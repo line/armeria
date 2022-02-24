@@ -22,8 +22,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,6 +44,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -72,9 +71,10 @@ class MultipartIntegrationTest {
                             assertThat(dispositionA.type()).isEqualTo("form-data");
                             Flux.from(bodyPart.content())
                                 .map(HttpData::toStringUtf8)
-                                .collectList().subscribe(contents -> {
-                                assertThat(contents).containsExactly("contentA");
-                            });
+                                .collectList()
+                                .subscribe(contents -> {
+                                    assertThat(contents).containsExactly("contentA");
+                                });
                         } else {
                             assertThat(bodyPart.headers().contentType()).isEqualTo(MediaType.JSON);
                             final ContentDisposition dispositionB = bodyPart.headers().contentDisposition();
@@ -82,11 +82,12 @@ class MultipartIntegrationTest {
                             assertThat(dispositionB.type()).isEqualTo("form-data");
                             Flux.from(bodyPart.content())
                                 .map(HttpData::toStringUtf8)
-                                .collectList().subscribe(contents -> {
-                                assertThat(contents).containsExactly("{\"foo\":\"bar\"}");
-                                writer.write(ResponseHeaders.of(200));
-                                writer.close();
-                            });
+                                .collectList()
+                                .subscribe(contents -> {
+                                    assertThat(contents).containsExactly("{\"foo\":\"bar\"}");
+                                    writer.write(ResponseHeaders.of(200));
+                                    writer.close();
+                                });
                         }
                     });
                 return writer;
@@ -193,9 +194,12 @@ class MultipartIntegrationTest {
             });
 
             sb.service("/echo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(r -> HttpResponse
-                    .of(HttpStatus.OK, requireNonNull(r.contentType(), "contentType"), r.content()))
-                    .exceptionally(HttpResponse::ofFailure));
+                return HttpResponse.from(
+                        req.aggregate()
+                           .thenApply(r -> HttpResponse.of(HttpStatus.OK,
+                                                           requireNonNull(r.contentType(), "contentType"),
+                                                           r.content()))
+                           .exceptionally(HttpResponse::ofFailure));
             });
 
             sb.service("/multipart/response/simple", (ctx, req) -> {

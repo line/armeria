@@ -19,9 +19,9 @@ package com.linecorp.armeria.client.circuitbreaker;
 import java.time.Duration;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Stores configurations of circuit breaker.

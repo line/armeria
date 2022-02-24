@@ -16,12 +16,11 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
@@ -51,17 +50,17 @@ public final class GrpcWebTrailers {
      * <p>This method is useful when {@link RetryRuleWithContent} needs {@link GrpcHeaderNames#GRPC_STATUS}
      * to decide whether to retry. For example:
      * <pre>{@code
-     * Clients.builder(grpcServerUri)
-     *        .decorator(RetryingClient.newDecorator(
-     *                RetryRuleWithContent.onResponse((ctx, response) -> {
-     *                    // Note that we should aggregate the response to get the trailers.
-     *                    return response.aggregate().thenApply(aggregated -> {
-     *                        HttpHeaders trailers = GrpcWebTrailers.get(ctx);
-     *                        // Retry if the 'grpc-status' is not equal to 0.
-     *                        return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
-     *                    });
-     *                })))
-     *        .build(MyGrpcStub.class);
+     * GrpcClients.builder(grpcServerUri)
+     *            .decorator(RetryingClient.newDecorator(
+     *                    RetryRuleWithContent.onResponse((ctx, response) -> {
+     *                        // Note that we should aggregate the response to get the trailers.
+     *                        return response.aggregate().thenApply(aggregated -> {
+     *                            HttpHeaders trailers = GrpcWebTrailers.get(ctx);
+     *                            // Retry if the 'grpc-status' is not equal to 0.
+     *                            return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS) != 0;
+     *                        });
+     *                    })))
+     *            .build(MyGrpcStub.class);
      * }</pre>
      */
     @Nullable

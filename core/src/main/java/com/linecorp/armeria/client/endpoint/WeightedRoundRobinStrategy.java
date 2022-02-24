@@ -22,13 +22,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
@@ -54,16 +53,22 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
     private static final class WeightedRoundRobinSelector extends AbstractEndpointSelector {
 
         private final AtomicInteger sequence = new AtomicInteger();
+        @Nullable
         private volatile EndpointsAndWeights endpointsAndWeights;
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            endpointsAndWeights = new EndpointsAndWeights(endpointGroup.endpoints());
-            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
+            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints),
+                                      true);
         }
 
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
+            final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
+            if (endpointsAndWeights == null) {
+                // 'endpointGroup' has not been initialized yet.
+                return null;
+            }
             final int currentSequence = sequence.getAndIncrement();
             return endpointsAndWeights.selectEndpoint(currentSequence);
         }

@@ -19,9 +19,9 @@ package com.linecorp.armeria.client.proxy;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * SOCKS4 proxy configuration.

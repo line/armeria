@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -109,12 +110,26 @@ class HttpClientSniTest {
     }
 
     @Test
-    void testCustomAuthorityWithAdditionalHeaders() throws Exception {
+    void disallowCustomAuthorityWithAdditionalHeadersInBaseURI() throws Exception {
         final WebClient client = WebClient.builder("https://127.0.0.1:" + httpsPort)
                                           .factory(clientFactory)
                                           .build();
         try (SafeCloseable unused = Clients.withHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response = client.get("/").aggregate().get();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo("b.com: CN=b.com");
+        }
+    }
+
+    @Test
+    void allowCustomAuthorityWithAdditionalHeadersInNonBaseURI() throws Exception {
+        final WebClient client = WebClient.builder()
+                                          .factory(clientFactory)
+                                          .decorator(LoggingClient.newDecorator())
+                                          .build();
+        try (SafeCloseable unused = Clients.withHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
+            final AggregatedHttpResponse response =
+                    client.get("https://127.0.0.1:" + httpsPort).aggregate().get();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
         }

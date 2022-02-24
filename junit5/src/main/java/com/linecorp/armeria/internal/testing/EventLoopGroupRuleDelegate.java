@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.internal.testing;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.netty.channel.EventLoopGroup;

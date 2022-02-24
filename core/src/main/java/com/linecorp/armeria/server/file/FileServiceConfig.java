@@ -21,12 +21,13 @@ import static java.util.Objects.requireNonNull;
 import java.time.Clock;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
@@ -41,18 +42,23 @@ public final class FileServiceConfig {
     private final String entryCacheSpec;
     private final int maxCacheEntrySizeBytes;
     private final boolean serveCompressedFiles;
+    private final boolean autoDecompress;
     private final boolean autoIndex;
     private final HttpHeaders headers;
+    private final MediaTypeResolver mediaTypeResolver;
 
     FileServiceConfig(HttpVfs vfs, Clock clock, @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
-                      boolean serveCompressedFiles, boolean autoIndex, HttpHeaders headers) {
+                      boolean serveCompressedFiles, boolean autoDecompress, boolean autoIndex,
+                      HttpHeaders headers, MediaTypeResolver mediaTypeResolver) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.entryCacheSpec = validateEntryCacheSpec(entryCacheSpec);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         this.serveCompressedFiles = serveCompressedFiles;
+        this.autoDecompress = autoDecompress;
         this.autoIndex = autoIndex;
         this.headers = requireNonNull(headers, "headers");
+        this.mediaTypeResolver = requireNonNull(mediaTypeResolver, "mediaTypeResolver");
     }
 
     @Nullable
@@ -117,6 +123,14 @@ public final class FileServiceConfig {
     }
 
     /**
+     * Returns whether pre-compressed files should be automatically decompressed if there is no
+     * {@link HttpHeaderNames#ACCEPT_ENCODING} corresponding to the compressed file.
+     */
+    public boolean autoDecompress() {
+        return autoDecompress;
+    }
+
+    /**
      * Returns whether a directory listing for a directory without an {@code index.html} file will be
      * auto-generated.
      */
@@ -131,16 +145,24 @@ public final class FileServiceConfig {
         return headers;
     }
 
+    /**
+     * Returns the {@link MediaTypeResolver} used for resolving the {@link MediaType} of a file.
+     */
+    public MediaTypeResolver mediaTypeResolver() {
+        return mediaTypeResolver;
+    }
+
     @Override
     public String toString() {
         return toString(this, vfs(), clock(), entryCacheSpec(), maxCacheEntrySizeBytes(),
-                        serveCompressedFiles(), autoIndex(), headers());
+                        serveCompressedFiles(), autoIndex(), headers(), mediaTypeResolver());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
                            @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                            boolean serveCompressedFiles, boolean autoIndex,
-                           @Nullable Iterable<Entry<AsciiString, String>> headers) {
+                           @Nullable Iterable<Entry<AsciiString, String>> headers,
+                           MediaTypeResolver mediaTypeResolver) {
 
         return MoreObjects.toStringHelper(holder).omitNullValues()
                           .add("vfs", vfs)
@@ -150,6 +172,7 @@ public final class FileServiceConfig {
                           .add("serveCompressedFiles", serveCompressedFiles)
                           .add("autoIndex", autoIndex)
                           .add("headers", headers)
+                          .add("mediaTypeResolver", mediaTypeResolver)
                           .toString();
     }
 }

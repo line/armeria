@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceType;
 import org.apache.curator.x.discovery.UriSpec;
@@ -36,6 +34,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
 import com.linecorp.armeria.internal.testing.FlakyTest;

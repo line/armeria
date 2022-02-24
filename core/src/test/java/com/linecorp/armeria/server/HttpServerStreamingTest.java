@@ -153,7 +153,7 @@ class HttpServerStreamingTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("413 Request Entity Too Large");
+        assertThat(res.contentUtf8()).startsWith("Status: 413\n");
     }
 
     @ParameterizedTest
@@ -165,7 +165,7 @@ class HttpServerStreamingTest {
         final byte[] content = new byte[maxContentLength + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
     }
 
     @ParameterizedTest

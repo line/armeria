@@ -20,9 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.time.Clock;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.RouteUtil;
 
 final class ClassPathHttpVfs extends AbstractBlockingHttpVfs {
@@ -51,13 +50,14 @@ final class ClassPathHttpVfs extends AbstractBlockingHttpVfs {
 
     @Override
     protected HttpFile blockingGet(
-            Executor fileReadExecutor, String path, Clock clock,
-            @Nullable String contentEncoding, HttpHeaders additionalHeaders) {
+            Executor fileReadExecutor, String path, Clock clock, @Nullable String contentEncoding,
+            HttpHeaders additionalHeaders, MediaTypeResolver mediaTypeResolver) {
 
         RouteUtil.ensureAbsolutePath(path, "path");
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
         final HttpFileBuilder builder = HttpFile.builder(classLoader, resourcePath);
-        return FileSystemHttpVfs.build(builder, clock, path, contentEncoding, additionalHeaders);
+        return FileSystemHttpVfs.build(builder, clock, path, contentEncoding, additionalHeaders,
+                                       mediaTypeResolver);
     }
 
     @Override

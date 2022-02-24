@@ -22,8 +22,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
@@ -43,6 +41,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -288,9 +289,10 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                         decodeException(cause, thriftMethod.declaredExceptions()));
     }
 
-    private static Exception decodeException(Throwable cause,
-                                             @Nullable Class<?>[] declaredThrowableExceptions) {
-        if (cause instanceof RuntimeException || cause instanceof TException) {
+    static Exception decodeException(Throwable cause, @Nullable Class<?>[] declaredThrowableExceptions) {
+        if (cause instanceof TException ||
+            cause instanceof UnprocessedRequestException ||
+            cause instanceof FailFastException) {
             return (Exception) cause;
         }
 

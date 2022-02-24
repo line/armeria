@@ -21,7 +21,7 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
@@ -30,7 +30,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.NetUtil;
 
-@DisabledIf(value = "io.netty.util.NetUtil#isIpV4StackPreferred", disabledReason = "IPv6 disabled")
+@EnabledIf(value = "com.linecorp.armeria.common.util.SystemInfo#hasIpV6", disabledReason = "IPv6 disabled")
 class ServerEphemeralLocalPortTest {
 
     @RegisterExtension

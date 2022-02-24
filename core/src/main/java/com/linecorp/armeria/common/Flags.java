@@ -32,7 +32,6 @@ import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
@@ -53,6 +52,7 @@ import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
@@ -61,6 +61,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientService;
@@ -174,6 +175,8 @@ public final class Flags {
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
             System.getProperty(PREFIX + "requestContextStorageProvider");
 
+    private static final boolean WARN_NETTY_VERSIONS = getBoolean("warnNettyVersions", true);
+
     private static final boolean USE_EPOLL = getBoolean("useEpoll", TransportType.EPOLL.isAvailable(),
                                                         value -> TransportType.EPOLL.isAvailable() || !value);
 
@@ -277,7 +280,7 @@ public final class Flags {
     private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
             getInt("defaultMaxClientNumRequestsPerConnection",
                    DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
-                    value -> value >= 0);
+                   value -> value >= 0);
 
     private static final long DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
@@ -442,6 +445,9 @@ public final class Flags {
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
             getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
 
+    private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
+            getBoolean("allowDoubleDotsInQueryString", false);
+
     static {
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
@@ -556,6 +562,18 @@ public final class Flags {
     @Nullable
     public static String requestContextStorageProvider() {
         return REQUEST_CONTEXT_STORAGE_PROVIDER;
+    }
+
+    /**
+     * Returns whether to log a warning message when any Netty version issues are detected, such as
+     * version inconsistencies or missing version information in Netty JARs.
+     *
+     * <p>The default value of this flag is {@code true}, which means a warning message will be logged
+     * if any Netty version issues are detected, which may lead to unexpected behavior. Specify the
+     * {@code -Dcom.linecorp.armeria.warnNettyVersions=false} to disable this flag.</p>
+     */
+    public static boolean warnNettyVersions() {
+        return WARN_NETTY_VERSIONS;
     }
 
     /**
@@ -1187,7 +1205,7 @@ public final class Flags {
      * @see ExceptionVerbosity
      *
      * @deprecated Use {@link LoggingService} or log exceptions using
-     *             {@link ServerBuilder#exceptionHandler(com.linecorp.armeria.server.ExceptionHandler)}.
+     *             {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
      */
     @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
@@ -1322,6 +1340,20 @@ public final class Flags {
      */
     public static boolean useLegacyRouteDecoratorOrdering() {
         return DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+    }
+
+    /**
+     * Returns whether to allow double dots ({@code ..}) in a request path query string.
+     *
+     * <p>Note that double dots in a query string can lead to a vulnerability if a query param value contains
+     * an improper path such as {@code /download?path=../../secrets.txt}. Therefore, extra caution should be
+     * taken when enabling this option, and you may need additional validations at the application level.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true} JVM option to enable it.
+     */
+    public static boolean allowDoubleDotsInQueryString() {
+        return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
     }
 
     @Nullable

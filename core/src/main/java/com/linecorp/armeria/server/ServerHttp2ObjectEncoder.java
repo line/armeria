@@ -13,39 +13,42 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2Error;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
-    private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private boolean hasCalledChannelClose;
 
-    ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                             KeepAliveHandler keepAliveHandler,
+    ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
+                             AbstractHttp2ConnectionHandler connectionHandler,
                              boolean enableDateHeader, boolean enableServerHeader) {
-        super(ctx, encoder);
-        assert keepAliveHandler instanceof Http2ServerKeepAliveHandler ||
-               keepAliveHandler instanceof NoopKeepAliveHandler;
-        this.keepAliveHandler = keepAliveHandler;
+        super(connectionHandlerCtx, connectionHandler);
+        assert keepAliveHandler() instanceof Http2ServerKeepAliveHandler ||
+               keepAliveHandler() instanceof NoopKeepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
     }
@@ -61,7 +64,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         }
 
         // TODO(alexc-db): decouple this from headers write and do it from inside the KeepAliveHandler.
-        if (!hasCalledChannelClose && keepAliveHandler.needToCloseConnection()) {
+        if (!hasCalledChannelClose && keepAliveHandler().needToCloseConnection()) {
             // Initiates channel close, connection will be closed after all streams are closed.
             ctx().channel().close();
             hasCalledChannelClose = true;
@@ -74,35 +77,35 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
-        final Http2Stream stream = encoder().connection().stream(streamId);
+        final Http2Stream stream = findStream(streamId);
         if (stream == null) {
             return false;
         }
         return stream.isHeadersSent();
     }
 
-    private Http2Headers convertHeaders(HttpHeaders inputHeaders, boolean isTrailersEmpty) {
-        final Http2Headers outHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(inputHeaders);
-        if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+    @Nullable
+    Http2Stream findStream(int streamId) {
+        return encoder().connection().stream(streamId);
+    }
+
+    private Http2Headers convertHeaders(ResponseHeaders inputHeaders, boolean isTrailersEmpty) {
+        final HttpHeadersBuilder builder = inputHeaders.toBuilder();
+        if (enableServerHeader && !inputHeaders.contains(HttpHeaderNames.SERVER)) {
+            builder.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
+        }
+
+        if (enableDateHeader && !inputHeaders.contains(HttpHeaderNames.DATE)) {
+            builder.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
+        }
+
+        if (!isTrailersEmpty && inputHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
             // prevent the trailers from being sent so we go ahead and remove content-length to force
             // chunked encoding.
-            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            builder.remove(HttpHeaderNames.CONTENT_LENGTH);
         }
-
-        if (enableServerHeader && !outHeaders.contains(HttpHeaderNames.SERVER)) {
-            outHeaders.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
-        }
-
-        if (enableDateHeader && !outHeaders.contains(HttpHeaderNames.DATE)) {
-            outHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
-        }
-        return outHeaders;
-    }
-
-    @Override
-    public KeepAliveHandler keepAliveHandler() {
-        return keepAliveHandler;
+        return ArmeriaHttpUtil.toNettyHttp2ServerHeaders(builder);
     }
 
     @Override
@@ -114,12 +117,45 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        final Http2Headers converted = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(headers);
+        final Http2Headers converted = ArmeriaHttpUtil.toNettyHttp2ServerTrailers(headers);
         onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, true, ctx().newPromise());
     }
 
     private void onKeepAliveReadOrWrite() {
-        keepAliveHandler.onReadOrWrite();
+        keepAliveHandler().onReadOrWrite();
+    }
+
+    @Override
+    public ChannelFuture writeErrorResponse(int id, int streamId,
+                                            ServiceConfig serviceConfig,
+                                            @Nullable RequestHeaders headers, HttpStatus status,
+                                            @Nullable String message, @Nullable Throwable cause) {
+
+        ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
+                id, streamId, serviceConfig, headers, status, message, cause);
+
+        final Http2Stream stream = findStream(streamId);
+        if (stream != null) {
+            // Ensure to flush the error response if it's flow-controlled so that it is sent
+            // before an RST_STREAM frame.
+            final Http2RemoteFlowController flowController = encoder().flowController();
+            if (flowController.hasFlowControlled(stream)) {
+                try {
+                    flowController.writePendingBytes();
+                } catch (Http2Exception ignored) {
+                    // Just best-effort
+                }
+            }
+
+            // Send RST_STREAM if the peer may still send something.
+            if (stream.state().localSideOpen()) {
+                future = encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(),
+                                                  ctx().voidPromise());
+                ctx().flush();
+            }
+        }
+
+        return future;
     }
 }

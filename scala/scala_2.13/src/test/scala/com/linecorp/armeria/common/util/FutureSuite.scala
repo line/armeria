@@ -33,7 +33,9 @@ class FutureSuite extends FunSuite {
     val scalaFuture: Future[Unit] = javaFuture.toScala
 
     javaFuture.complete(null)
-    assert(Await.result(scalaFuture, 10.seconds).isInstanceOf[Unit])
+    // `()` is a `BoxedUnit` that can not be cast into `Unit` in Scala3.
+    // https://stackoverflow.com/questions/32289511/boxedunit-vs-unit-in-scala
+    assert(Await.result(scalaFuture, 10.seconds).getClass.getName == "void")
   }
 
   test("CompletionStage[HttpResponse].toHttpResponse") {

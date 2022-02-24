@@ -54,8 +54,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,8 +75,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
@@ -294,8 +291,9 @@ public final class AnnotatedServiceFactory {
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
                         .addAll(baseExceptionHandlers).build();
 
-        final ResponseHeadersBuilder defaultHeaders = ResponseHeaders.builder(defaultResponseStatus(method));
+        final HttpStatus defaultStatus = defaultResponseStatus(method);
 
+        final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
         final HttpHeadersBuilder defaultTrailers = HttpHeaders.builder();
         final String classAlias = clazz.getName();
         final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
@@ -308,13 +306,13 @@ public final class AnnotatedServiceFactory {
         setAdditionalHeader(defaultTrailers, method, "trailer", methodAlias, "method",
                             AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
 
-        if (defaultHeaders.status().isContentAlwaysEmpty() && !defaultTrailers.isEmpty()) {
+        if (defaultStatus.isContentAlwaysEmpty() && !defaultTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
                         "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
-                        defaultHeaders.status().code(), methodAlias);
+                        defaultStatus.code(), methodAlias);
         }
 
-        final ResponseHeaders responseHeaders = defaultHeaders.build();
+        final HttpHeaders responseHeaders = defaultHeaders.build();
         final HttpHeaders responseTrailers = defaultTrailers.build();
 
         final boolean needToUseBlockingTaskExecutor =
@@ -327,8 +325,8 @@ public final class AnnotatedServiceFactory {
                     getAnnotatedValueResolvers(req, route, method, clazz, needToUseBlockingTaskExecutor);
             return new AnnotatedServiceElement(
                     route,
-                    new AnnotatedService(object, method, resolvers, eh, res, route, responseHeaders,
-                                         responseTrailers, needToUseBlockingTaskExecutor),
+                    new AnnotatedService(object, method, resolvers, eh, res, route, defaultStatus,
+                                         responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
                     decorator(method, clazz));
         }).collect(toImmutableList());
     }

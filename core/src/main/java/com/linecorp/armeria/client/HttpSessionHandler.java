@@ -27,8 +27,6 @@ import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +37,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -54,7 +53,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.proxy.ProxyConnectException;
@@ -215,6 +213,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return false;
         }
 
+        assert responseDecoder != null;
+        responseDecoder.decrementUnfinishedResponses();
+
         // The response has been closed even before its request is sent.
         assert protocol != null;
 
@@ -337,12 +338,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 this.requestEncoder = requestEncoder;
                 this.responseDecoder = responseDecoder;
             } else if (protocol == H2 || protocol == H2C) {
-                final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-                final Http2ClientConnectionHandler clientHandler =
-                        ctx.pipeline().get(Http2ClientConnectionHandler.class);
-                requestEncoder = new ClientHttp2ObjectEncoder(ctx, handler.encoder(),
-                                                              protocol, clientHandler.keepAliveHandler());
-                responseDecoder = clientHandler.responseDecoder();
+                final ChannelHandlerContext connectionHandlerCtx =
+                        ctx.pipeline().context(Http2ClientConnectionHandler.class);
+                final Http2ClientConnectionHandler connectionHandler =
+                        (Http2ClientConnectionHandler) connectionHandlerCtx.handler();
+                requestEncoder = new ClientHttp2ObjectEncoder(connectionHandlerCtx,
+                                                              connectionHandler, protocol);
+                responseDecoder = connectionHandler.responseDecoder();
             } else {
                 throw new Error(); // Should never reach here.
             }

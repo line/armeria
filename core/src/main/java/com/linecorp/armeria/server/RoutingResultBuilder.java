@@ -20,11 +20,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.RoutingResult.LOWEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
@@ -97,7 +96,7 @@ public final class RoutingResultBuilder {
      */
     public RoutingResultBuilder rawParam(String name, String value) {
         pathParams().put(requireNonNull(name, "name"),
-                         ArmeriaHttpUtil.decodePath(requireNonNull(value, "value")));
+                         ArmeriaHttpUtil.decodePathParam(requireNonNull(value, "value")));
         return this;
     }
 

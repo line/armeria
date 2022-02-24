@@ -30,11 +30,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
@@ -50,7 +49,8 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
                        boolean lastModifiedEnabled,
                        @Nullable BiFunction<String, HttpFileAttributes, String> entityTagFunction,
                        HttpHeaders headers) {
-        super(contentTypeAutoDetectionEnabled ? MimeTypeUtil.guessFromPath(path.toString()) : null,
+        super(contentTypeAutoDetectionEnabled ?
+              MediaTypeResolver.ofDefault().guessFromPath(path.toString(), null) : null,
               clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
         this.path = requireNonNull(path, "path");
     }

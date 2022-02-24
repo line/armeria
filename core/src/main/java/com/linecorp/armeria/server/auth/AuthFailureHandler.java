@@ -15,12 +15,11 @@
  */
 package com.linecorp.armeria.server.auth;
 
-import javax.annotation.Nullable;
-
 import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;

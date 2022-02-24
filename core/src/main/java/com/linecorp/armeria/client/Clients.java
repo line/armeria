@@ -21,8 +21,6 @@ import java.net.URI;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -31,12 +29,13 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
- * If you are creating an {@link WebClient}, it is recommended to use the factory methods in
+ * If you are creating a {@link WebClient}, it is recommended to use the factory methods in
  * {@link WebClient}.
  */
 public final class Clients {

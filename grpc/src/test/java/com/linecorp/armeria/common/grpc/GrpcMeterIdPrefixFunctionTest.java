@@ -25,8 +25,6 @@ import static org.awaitility.Awaitility.given;
 
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -39,11 +37,13 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -190,10 +190,11 @@ class GrpcMeterIdPrefixFunctionTest {
     private TestServiceBlockingStub newClient(SerializationFormat serializationFormat,
                                               PrometheusMeterRegistry registry) {
         clientFactory = ClientFactory.builder().meterRegistry(registry).build();
-        return Clients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
-                      .factory(clientFactory)
-                      .decorator(MetricCollectingClient.newDecorator(GrpcMeterIdPrefixFunction.of("client")))
-                      .build(TestServiceBlockingStub.class);
+        return GrpcClients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
+                          .factory(clientFactory)
+                          .decorator(MetricCollectingClient.newDecorator(
+                                  GrpcMeterIdPrefixFunction.of("client")))
+                          .build(TestServiceBlockingStub.class);
     }
 
     @Nullable

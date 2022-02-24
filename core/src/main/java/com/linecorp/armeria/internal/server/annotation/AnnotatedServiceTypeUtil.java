@@ -36,10 +36,9 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 
@@ -151,7 +150,7 @@ final class AnnotatedServiceTypeUtil {
         if (methodHandle == null) {
             return null;
         }
-        return (str) -> {
+        return str -> {
             try {
                 return (T) methodHandle.invokeWithArguments(str);
             } catch (InvocationTargetException e) {

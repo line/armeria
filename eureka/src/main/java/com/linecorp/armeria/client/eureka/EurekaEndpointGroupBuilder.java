@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
@@ -46,10 +44,13 @@ import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -129,6 +130,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder appName(String appName) {
         requireNonNull(appName, "appName");
+        checkArgument(!appName.isEmpty(), "appName is empty.");
         checkState(vipAddress == null && secureVipAddress == null,
                    "cannot set appName with the %s.", vipAddress != null ? "vipAddress" : "secureVipAddress");
         this.appName = appName;
@@ -144,6 +146,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder instanceId(String instanceId) {
         requireNonNull(instanceId, "instanceId");
+        checkArgument(!instanceId.isEmpty(), "instanceId is empty.");
         checkState(vipAddress == null && secureVipAddress == null,
                    "cannot set instanceId with the %s.",
                    vipAddress != null ? "vipAddress" : "secureVipAddress");
@@ -160,6 +163,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder vipAddress(String vipAddress) {
         requireNonNull(vipAddress, "vipAddress");
+        checkArgument(!vipAddress.isEmpty(), "vipAddress is empty.");
         checkState(appName == null && instanceId == null && secureVipAddress == null,
                    "cannot set vipAddress with the %s.",
                    secureVipAddress != null ? "secureVipAddress" : "appName or instanceId");
@@ -176,6 +180,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
      */
     public EurekaEndpointGroupBuilder secureVipAddress(String secureVipAddress) {
         requireNonNull(secureVipAddress, "secureVipAddress");
+        checkArgument(!secureVipAddress.isEmpty(), "secureVipAddress is empty.");
         checkState(appName == null && instanceId == null && vipAddress == null,
                    "cannot set secureVipAddress with the %s.",
                    vipAddress != null ? "vipAddress" : "appName or instanceId");
@@ -378,5 +383,20 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     @Override
     public EurekaEndpointGroupBuilder auth(OAuth2Token token) {
         return (EurekaEndpointGroupBuilder) super.auth(token);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder auth(AuthToken token) {
+        return (EurekaEndpointGroupBuilder) super.auth(token);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder followRedirects() {
+        return (EurekaEndpointGroupBuilder) super.followRedirects();
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (EurekaEndpointGroupBuilder) super.followRedirects(redirectConfig);
     }
 }

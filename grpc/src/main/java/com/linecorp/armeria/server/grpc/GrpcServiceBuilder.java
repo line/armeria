@@ -33,8 +33,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,14 +43,18 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -118,16 +120,27 @@ public final class GrpcServiceBuilder {
     @Nullable
     private GrpcStatusFunction statusFunction;
 
+    @Nullable
+    private ImmutableList.Builder<ServerInterceptor> interceptors;
+
+    @Nullable
+    private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
+
+    @Nullable
+    private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxRequestMessageLength = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
-    private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
+    private int maxResponseMessageLength = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
     private Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory =
             GrpcJsonMarshaller::of;
 
     private boolean enableUnframedRequests;
+
+    private boolean enableHttpJsonTranscoding;
 
     private boolean useBlockingTaskExecutor;
 
@@ -262,6 +275,29 @@ public final class GrpcServiceBuilder {
         return addService(path, bindableService.bindService(), methodDescriptor);
     }
 
+    /**
+     * Adds {@linkplain ServerInterceptor server interceptors} into the gRPC service. The last
+     * interceptor will have its {@link ServerInterceptor#interceptCall} called first.
+     *
+     * @param interceptors array of interceptors to apply to the service.
+     */
+    public GrpcServiceBuilder intercept(ServerInterceptor... interceptors) {
+        requireNonNull(interceptors, "interceptors");
+        return intercept(ImmutableList.copyOf(interceptors));
+    }
+
+    /**
+     * Adds {@linkplain ServerInterceptor server interceptors} into the gRPC service. The last
+     * interceptor will have its {@link ServerInterceptor#interceptCall} called first.
+     *
+     * @param interceptors list of interceptors to apply to the service.
+     */
+    public GrpcServiceBuilder intercept(Iterable<? extends ServerInterceptor> interceptors) {
+        requireNonNull(interceptors, "interceptors");
+        this.interceptors().addAll(interceptors);
+        return this;
+    }
+
     private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
         checkState(protoReflectionServiceInterceptor == null,
                    "Attempting to add a ProtoReflectionService but one is already present. " +
@@ -354,23 +390,50 @@ public final class GrpcServiceBuilder {
      * and {@link ServerBuilder#requestTimeoutMillis(long)}
      * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
      * to very high values and set this to the expected limit of individual messages in the stream.
+     *
+     * @deprecated Use {@link #maxRequestMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
-        checkArgument(maxInboundMessageSizeBytes > 0,
-                      "maxInboundMessageSizeBytes must be >0");
-        this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        return this;
+        return maxRequestMessageLength(maxInboundMessageSizeBytes);
     }
 
     /**
      * Sets the maximum size in bytes of an individual outgoing message. If not set, all messages will be sent.
      * This can be a safety valve to prevent overflowing network connections with large messages due to business
      * logic bugs.
+     * @deprecated Use {@link #maxResponseMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxOutboundMessageSizeBytes(int maxOutboundMessageSizeBytes) {
-        checkArgument(maxOutboundMessageSizeBytes > 0,
-                      "maxOutboundMessageSizeBytes must be >0");
-        this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        return maxResponseMessageLength(maxOutboundMessageSizeBytes);
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual request message. If not set, will use
+     * {@link VirtualHost#maxRequestLength()}. To support long-running RPC streams, it is recommended to
+     * set {@link ServerBuilder#maxRequestLength(long)}
+     * (or {@link VirtualHostBuilder#maxRequestLength(long)})
+     * and {@link ServerBuilder#requestTimeoutMillis(long)}
+     * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
+     * to very high values and set this to the expected limit of individual messages in the stream.
+     */
+    public GrpcServiceBuilder maxRequestMessageLength(int maxRequestMessageLength) {
+        checkArgument(maxRequestMessageLength > 0,
+                      "maxRequestMessageLength: %s (expected: > 0)", maxRequestMessageLength);
+        this.maxRequestMessageLength = maxRequestMessageLength;
+        return this;
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual response message. If not set, all messages will be sent.
+     * This can be a safety valve to prevent overflowing network connections with large messages due to business
+     * logic bugs.
+     */
+    public GrpcServiceBuilder maxResponseMessageLength(int maxResponseMessageLength) {
+        checkArgument(maxResponseMessageLength > 0,
+                      "maxResponseMessageLength: %s (expected: > 0)", maxResponseMessageLength);
+        this.maxResponseMessageLength = maxResponseMessageLength;
         return this;
     }
 
@@ -392,6 +455,55 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder enableUnframedRequests(boolean enableUnframedRequests) {
         this.enableUnframedRequests = enableUnframedRequests;
+        return this;
+    }
+
+    /**
+     * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
+     * service.
+     * @param unframedGrpcErrorHandler The function which maps the error response to an {@link HttpResponse}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder unframedGrpcErrorHandler(UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
+        this.unframedGrpcErrorHandler = unframedGrpcErrorHandler;
+        return this;
+    }
+
+    /**
+     * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
+     *
+     * <p>Limitations:
+     * <ul>
+     *     <li>Only unary methods (single request, single response) are supported.</li>
+     *     <li>
+     *         Message compression is not supported.
+     *         {@link EncodingService} should be used instead for
+     *         transport level encoding.
+     *     </li>
+     *     <li>
+     *         Transcoding will not work if the {@link GrpcService} is configured with
+     *         {@link ServerBuilder#serviceUnder(String, HttpService)}.
+     *     </li>
+     * </ul>
+     *
+     * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder enableHttpJsonTranscoding(boolean enableHttpJsonTranscoding) {
+        this.enableHttpJsonTranscoding = enableHttpJsonTranscoding;
+        return this;
+    }
+
+    /**
+     * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
+     * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder httpJsonTranscodingErrorHandler(
+            UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler) {
+        requireNonNull(httpJsonTranscodingErrorHandler, "httpJsonTranscodingErrorHandler");
+        this.httpJsonTranscodingErrorHandler = httpJsonTranscodingErrorHandler;
         return this;
     }
 
@@ -598,6 +710,13 @@ public final class GrpcServiceBuilder {
         };
     }
 
+    private ImmutableList.Builder<ServerInterceptor> interceptors() {
+        if (interceptors == null) {
+            interceptors = ImmutableList.builder();
+        }
+        return interceptors;
+    }
+
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
@@ -610,12 +729,24 @@ public final class GrpcServiceBuilder {
         if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
             final ServerInterceptor coroutineContextInterceptor =
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+            interceptors().add(coroutineContextInterceptor);
+        }
+        if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+        }
+        if (!enableHttpJsonTranscoding && httpJsonTranscodingErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
+                    "is enabled");
+        }
+        if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
-                        ServerInterceptors.intercept(entry.service(), coroutineContextInterceptor);
+                        ServerInterceptors.intercept(entry.service(), interceptors.build());
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
             }
             handlerRegistry = newRegistryBuilder.build();
@@ -630,7 +761,7 @@ public final class GrpcServiceBuilder {
             statusFunction = this.statusFunction;
         }
 
-        final GrpcService grpcService = new FramedGrpcService(
+        GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 handlerRegistry
                         .methods()
@@ -644,11 +775,23 @@ public final class GrpcServiceBuilder {
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
                 statusFunction,
-                maxOutboundMessageSizeBytes,
+                maxRequestMessageLength, maxResponseMessageLength,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                maxInboundMessageSizeBytes);
-        return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry) : grpcService;
+                enableUnframedRequests || enableHttpJsonTranscoding);
+        if (enableUnframedRequests) {
+            grpcService = new UnframedGrpcService(
+                    grpcService, handlerRegistry,
+                    unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
+                                                     : UnframedGrpcErrorHandler.of());
+        }
+        if (enableHttpJsonTranscoding) {
+            grpcService = HttpJsonTranscodingService.of(
+                    grpcService,
+                    httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
+                                                            : UnframedGrpcErrorHandler.ofJson());
+        }
+        return grpcService;
     }
 }

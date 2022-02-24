@@ -53,11 +53,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
@@ -91,7 +90,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     static final byte COMPRESSED_TRAILERS = (byte) ((1 << 7) | COMPRESSED);
 
     private final ByteBufAllocator alloc;
-    private final int maxOutboundMessageSize;
+    private final int maxMessageLength;
     private final boolean encodeBase64;
 
     private boolean messageCompression = true;
@@ -103,9 +102,9 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     /**
      * Constructs an {@link ArmeriaMessageFramer} to write messages to a gRPC request or response.
      */
-    public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize, boolean encodeBase64) {
+    public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxMessageLength, boolean encodeBase64) {
         this.alloc = requireNonNull(alloc, "alloc");
-        this.maxOutboundMessageSize = maxOutboundMessageSize;
+        this.maxMessageLength = maxMessageLength;
         this.encodeBase64 = encodeBase64;
     }
 
@@ -149,7 +148,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
                     buf.release();
                 }
                 final int length = maybeEncodedBuf.readableBytes();
-                if (maxOutboundMessageSize >= 0 && length > maxOutboundMessageSize) {
+                if (maxMessageLength >= 0 && length > maxMessageLength) {
                     maybeEncodedBuf.release();
                     throw newMessageTooLargeException(length);
                 }
@@ -202,7 +201,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
 
     private ByteBuf write(ByteBuf message, boolean compressed, boolean webTrailers) {
         final int messageLength = message.readableBytes();
-        if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
+        if (maxMessageLength >= 0 && messageLength > maxMessageLength) {
             message.release();
             throw newMessageTooLargeException(messageLength);
         }
@@ -241,7 +240,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         return new ArmeriaStatusException(
                 StatusCodes.RESOURCE_EXHAUSTED,
                 String.format("message too large %d > %d", messageLength,
-                              maxOutboundMessageSize));
+                              maxMessageLength));
     }
 
     private void verifyNotClosed() {

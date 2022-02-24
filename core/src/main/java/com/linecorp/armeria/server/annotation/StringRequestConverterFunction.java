@@ -19,10 +19,9 @@ package com.linecorp.armeria.server.annotation;
 import java.lang.reflect.ParameterizedType;
 import java.nio.charset.Charset;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

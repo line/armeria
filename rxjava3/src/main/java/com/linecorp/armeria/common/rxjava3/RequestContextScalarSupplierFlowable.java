@@ -23,8 +23,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
-import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
+import io.reactivex.rxjava3.operators.ConditionalSubscriber;
+import io.reactivex.rxjava3.operators.ScalarSupplier;
 
 final class RequestContextScalarSupplierFlowable<T> extends Flowable<T> implements ScalarSupplier<T> {
     private final Publisher<T> source;

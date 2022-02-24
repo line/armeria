@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
@@ -153,12 +152,16 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 this.requestHeaders = null;
                 subscriber.onNext(requestHeaders);
             } else {
-                askUpstreamForElement();
+                whenConsumed().thenRun(() -> {
+                    if (demand() > 0) {
+                        askUpstreamForElement();
+                    }
+                });
             }
         }
     }
 
-    private void askUpstreamForElement() {
+    public void askUpstreamForElement() {
         if (!askedUpstreamForElement) {
             askedUpstreamForElement = true;
             assert upstream != null;
@@ -242,8 +245,10 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                     }
                 } else {
                     // Handler didn't produce anything, which means it needs more elements from the upstream
-                    // to produce something.
-                    askUpstreamForElement();
+                    // to produce something if there is a demand.
+                    if (demand() > 0) {
+                        askUpstreamForElement();
+                    }
                 }
             } catch (Throwable ex) {
                 decoder.processOnError(ex);

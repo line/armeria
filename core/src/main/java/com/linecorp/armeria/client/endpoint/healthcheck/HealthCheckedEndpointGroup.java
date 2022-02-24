@@ -18,32 +18,23 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
@@ -51,13 +42,11 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
-import io.netty.channel.EventLoopGroup;
-import io.netty.util.concurrent.Future;
 
 /**
  * An {@link EndpointGroup} that filters out unhealthy {@link Endpoint}s from an existing {@link EndpointGroup},
@@ -83,8 +72,6 @@ import io.netty.util.concurrent.Future;
 public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
-    private static final ThreadLocal<Boolean> isRefreshingContexts = new ThreadLocal<>();
-    private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -117,9 +104,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
 
-    private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
+    private final Queue<HealthCheckContextGroup> contextGroupChain = new ArrayDeque<>(4);
+
+    // Should not use NonBlockingHashSet whose remove operation does not clear the reference of the value
+    // from the internal array. The remaining value is revived if a new value having the same hash code is
+    // added.
     @VisibleForTesting
-    final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
+    final Set<Endpoint> healthyEndpoints = ConcurrentHashMap.newKeySet();
+    private volatile boolean initialized;
 
     /**
      * Creates a new instance.
@@ -141,113 +133,123 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
 
         clientOptions.factory().whenClosed().thenRun(this::closeAsync);
-        delegate.addListener(this::updateCandidates);
-        delegate.whenReady().join();
-        // There's a chance that delegate.endpoints() differs from delegate.whenReady().join() when
-        // the delegate updates its endpoint after initialized. Also, if the delegate's endpoints are never
-        // updated, delegate.addListener(this::updateCandidates) is never called.
-        // So we should use `delegate.endpoints()` to update candidates at this moment.
-        updateCandidates(delegate.endpoints());
-
-        // Wait until the initial health of all endpoints are determined.
-        final List<DefaultHealthCheckerContext> snapshot;
-        synchronized (contexts) {
-            snapshot = ImmutableList.copyOf(contexts.values());
-        }
-        snapshot.forEach(ctx -> ctx.initialCheckFuture.join());
-
-        // If all endpoints are unhealthy, we will not have called setEndpoints even once, meaning listeners
-        // aren't notified that we've finished an initial health check. We make sure to refresh endpoints once
-        // on initialization to ensure this happens, even if the endpoints are currently empty.
-        refreshEndpoints();
+        delegate.addListener(this::setCandidates, true);
     }
 
-    private void updateCandidates(List<Endpoint> candidates) {
-        healthCheckStrategy.updateCandidates(candidates);
-        refreshContexts();
-    }
+    private void setCandidates(List<Endpoint> candidates) {
+        final List<Endpoint> endpoints = healthCheckStrategy.select(candidates);
+        final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(endpoints.size());
 
-    private void refreshContexts() {
-        if (isRefreshingContexts.get() != null || isClosing()) {
-            return;
-        }
-
-        isRefreshingContexts.set(Boolean.TRUE);
-        try {
-            synchronized (contexts) {
-                final Set<Endpoint> newSelectedEndpoints =
-                        new HashSet<>(healthCheckStrategy.getSelectedEndpoints());
-
-                boolean removed = false;
-                final Set<DefaultHealthCheckerContext> willRemove = new HashSet<>();
-                // Stop the health checkers whose endpoints disappeared and destroy their contexts.
-                for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i =
-                     contexts.entrySet().iterator(); i.hasNext();) {
-                    final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
-                    if (newSelectedEndpoints.remove(e.getKey())) {
-                        // Not a removed endpoint.
-                        continue;
-                    }
-
-                    removed = true;
-                    willRemove.add(e.getValue());
-                    i.remove();
-                }
-
-                if (newSelectedEndpoints.isEmpty()) {
-                    if (!removed) {
-                        // The weight of an endpoint is changed. So we just refresh.
-                        refreshEndpoints();
-                    } else {
-                        willRemove.forEach(DefaultHealthCheckerContext::destroy);
-                    }
-                    return;
-                }
-
-                // At this time newSelectedEndpoints only contains newly appeared endpoints.
-                // Start the health checkers with new contexts.
-                final List<CompletableFuture<?>> initialFutures = new ArrayList<>(newSelectedEndpoints.size());
-                for (Endpoint e : newSelectedEndpoints) {
-                    final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
-                    ctx.init(checkerFactory.apply(ctx));
-                    initialFutures.add(ctx.initialCheckFuture);
-                    contexts.put(e, ctx);
-                }
-                if (!willRemove.isEmpty()) {
-                    // Remove old endpoints after finishing the initial health check of `newSelectedEndpoints`.
-                    CompletableFuture.allOf(initialFutures.toArray(EMPTY_FUTURES))
-                                     .handle((unused, ex) -> {
-                                         willRemove.forEach(DefaultHealthCheckerContext::destroy);
-                                         return null;
-                                     });
+        synchronized (contextGroupChain) {
+            for (Endpoint endpoint : endpoints) {
+                final DefaultHealthCheckerContext context = findContext(endpoint);
+                if (context != null) {
+                    contexts.put(endpoint, context.retain());
+                } else {
+                    contexts.computeIfAbsent(endpoint, this::newCheckerContext);
                 }
             }
-        } finally {
-            isRefreshingContexts.remove();
+
+            final HealthCheckContextGroup contextGroup = new HealthCheckContextGroup(contexts, candidates,
+                                                                                     checkerFactory);
+            // 'updateHealth()' that retrieves 'contextGroupChain' could be invoked while initializing
+            // HealthCheckerContext. For this reason, 'contexts' should be added to 'contextGroupChain'
+            // before 'contextGroup.initialize()'.
+            contextGroupChain.add(contextGroup);
+            contextGroup.initialize();
+
+            // Remove old contexts when the newly created contexts are fully initialized to smoothly transition
+            // to new endpoints.
+            contextGroup.whenInitialized().thenRun(() -> {
+                initialized = true;
+                destroyOldContexts(contextGroup);
+                setEndpoints(allHealthyEndpoints());
+            });
         }
     }
 
-    private void refreshEndpoints() {
-        // Rebuild the endpoint list and notify.
-        setEndpoints(delegate.endpoints().stream()
-                             .filter(healthyEndpoints::contains)
-                             .collect(toImmutableList()));
+    private List<Endpoint> allHealthyEndpoints() {
+        synchronized (contextGroupChain) {
+            return contextGroupChain.stream().flatMap(group -> group.candidates().stream())
+                                    .filter(healthyEndpoints::contains)
+                                    .collect(toImmutableList());
+        }
+    }
+
+    @Nullable
+    private DefaultHealthCheckerContext findContext(Endpoint endpoint) {
+        synchronized (contextGroupChain) {
+            for (HealthCheckContextGroup contextGroup : contextGroupChain) {
+                final DefaultHealthCheckerContext context = contextGroup.contexts().get(endpoint);
+                if (context != null) {
+                    return context;
+                }
+            }
+        }
+        return null;
+    }
+
+    private DefaultHealthCheckerContext newCheckerContext(Endpoint endpoint) {
+        return new DefaultHealthCheckerContext(endpoint, port, protocol, clientOptions, retryBackoff,
+                                               this::updateHealth);
+    }
+
+    private void destroyOldContexts(HealthCheckContextGroup contextGroup) {
+        synchronized (contextGroupChain) {
+            final Iterator<HealthCheckContextGroup> it = contextGroupChain.iterator();
+            while (it.hasNext()) {
+                final HealthCheckContextGroup maybeOldGroup = it.next();
+                if (maybeOldGroup == contextGroup) {
+                    break;
+                }
+                for (DefaultHealthCheckerContext context : maybeOldGroup.contexts().values()) {
+                    context.release();
+                }
+                it.remove();
+            }
+        }
+    }
+
+    private void updateHealth(Endpoint endpoint, boolean health) {
+        final boolean updated;
+        // A healthy endpoint should be a valid checker context.
+        if (health && findContext(endpoint) != null) {
+            updated = healthyEndpoints.add(endpoint);
+        } else {
+            updated = healthyEndpoints.remove(endpoint);
+        }
+
+        // Each new health status will be updated after initialization of the first context group.
+        if (updated && initialized) {
+            setEndpoints(allHealthyEndpoints());
+        }
     }
 
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         // Stop the health checkers in parallel.
         final CompletableFuture<?> stopFutures;
-        synchronized (contexts) {
-            stopFutures = CompletableFuture.allOf(
-                    contexts.values().stream()
-                            .map(ctx -> ctx.destroy().exceptionally(cause -> {
+        synchronized (contextGroupChain) {
+            final ImmutableList.Builder<CompletableFuture<?>> completionFutures = ImmutableList.builder();
+            for (HealthCheckContextGroup group : contextGroupChain) {
+                for (DefaultHealthCheckerContext context : group.contexts().values()) {
+                    try {
+                        final CompletableFuture<?> closeFuture = context.release();
+                        if (closeFuture != null) {
+                            completionFutures.add(closeFuture.exceptionally(cause -> {
                                 logger.warn("Failed to stop a health checker for: {}",
-                                            ctx.endpoint(), cause);
+                                            context.endpoint(), cause);
                                 return null;
-                            }))
-                            .toArray(CompletableFuture[]::new));
-            contexts.clear();
+                            }));
+                        }
+                    } catch (Exception ex) {
+                        logger.warn("Unexpected exception while closing a health checker for: {}",
+                                    context.endpoint(), ex);
+                    }
+                }
+            }
+            stopFutures = CompletableFutures.allAsList(completionFutures.build());
+            contextGroupChain.clear();
         }
 
         stopFutures.handle((unused1, unused2) -> delegate.closeAsync())
@@ -272,219 +274,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public String toString() {
+        final List<Endpoint> endpoints = endpoints();
+        final List<Endpoint> delegateEndpoints = delegate.endpoints();
         return MoreObjects.toStringHelper(this)
-                          .add("chosen", endpoints())
-                          .add("candidates", delegate.endpoints())
+                          .add("endpoints", truncatedEndpoints(endpoints))
+                          .add("numEndpoints", endpoints.size())
+                          .add("candidates", truncatedEndpoints(delegateEndpoints))
+                          .add("numCandidates", delegateEndpoints.size())
+                          .add("selectionStrategy", selectionStrategy().getClass())
+                          .add("initialized", whenReady().isDone())
                           .toString();
-    }
-
-    private final class DefaultHealthCheckerContext
-            extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
-
-        private final Endpoint originalEndpoint;
-        private final Endpoint endpoint;
-
-        /**
-         * Keeps the {@link Future}s which were scheduled via this {@link ScheduledExecutorService}.
-         * Note that this field is also used as a lock.
-         */
-        private final Map<Future<?>, Boolean> scheduledFutures = new IdentityHashMap<>();
-
-        @Nullable
-        private AsyncCloseable handle;
-        final CompletableFuture<?> initialCheckFuture = new EventLoopCheckingFuture<>();
-        private boolean destroyed;
-
-        DefaultHealthCheckerContext(Endpoint endpoint) {
-            originalEndpoint = endpoint;
-
-            final int altPort = port;
-            if (altPort == 0) {
-                this.endpoint = endpoint.withoutDefaultPort(protocol.defaultPort());
-            } else if (altPort == protocol.defaultPort()) {
-                this.endpoint = endpoint.withoutPort();
-            } else {
-                this.endpoint = endpoint.withPort(altPort);
-            }
-        }
-
-        void init(AsyncCloseable handle) {
-            assert this.handle == null;
-            this.handle = handle;
-        }
-
-        CompletableFuture<?> destroy() {
-            assert handle != null : handle;
-            return handle.closeAsync().handle((unused1, unused2) -> {
-                synchronized (scheduledFutures) {
-                    if (destroyed) {
-                        return null;
-                    }
-
-                    destroyed = true;
-
-                    // Cancel all scheduled tasks. Make a copy to prevent ConcurrentModificationException
-                    // when the future's handler removes it from scheduledFutures as a result of
-                    // the cancellation, which may happen on this thread.
-                    if (!scheduledFutures.isEmpty()) {
-                        final ImmutableList<Future<?>> copy = ImmutableList.copyOf(scheduledFutures.keySet());
-                        copy.forEach(f -> f.cancel(false));
-                    }
-                }
-
-                updateHealth(0, true);
-
-                return null;
-            });
-        }
-
-        @Override
-        public Endpoint endpoint() {
-            return endpoint;
-        }
-
-        @Override
-        public SessionProtocol protocol() {
-            return protocol;
-        }
-
-        @Override
-        public ClientOptions clientOptions() {
-            return clientOptions;
-        }
-
-        @Override
-        public ScheduledExecutorService executor() {
-            return this;
-        }
-
-        @Override
-        public long nextDelayMillis() {
-            final long delayMillis = retryBackoff.nextDelayMillis(1);
-            if (delayMillis < 0) {
-                throw new IllegalStateException(
-                        "retryBackoff.nextDelayMillis(1) returned a negative value for " + endpoint +
-                        ": " + delayMillis);
-            }
-
-            return delayMillis;
-        }
-
-        @Override
-        public void updateHealth(double health) {
-            updateHealth(health, false);
-        }
-
-        private void updateHealth(double health, boolean updateEvenIfDestroyed) {
-            final boolean updated;
-            synchronized (scheduledFutures) {
-                if (!updateEvenIfDestroyed && destroyed) {
-                    updated = false;
-                } else if (health > 0) {
-                    updated = healthyEndpoints.add(originalEndpoint);
-                } else {
-                    updated = healthyEndpoints.remove(originalEndpoint);
-                }
-            }
-
-            if (updated) {
-                refreshEndpoints();
-            }
-
-            if (healthCheckStrategy.updateHealth(originalEndpoint, health)) {
-                refreshContexts();
-            }
-
-            initialCheckFuture.complete(null);
-        }
-
-        @Override
-        public void execute(Runnable command) {
-            synchronized (scheduledFutures) {
-                rejectIfDestroyed(command);
-                add(eventLoopGroup().submit(command));
-            }
-        }
-
-        @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            synchronized (scheduledFutures) {
-                rejectIfDestroyed(command);
-                return add(eventLoopGroup().schedule(command, delay, unit));
-            }
-        }
-
-        @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            synchronized (scheduledFutures) {
-                rejectIfDestroyed(callable);
-                return add(eventLoopGroup().schedule(callable, delay, unit));
-            }
-        }
-
-        @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
-                                                      TimeUnit unit) {
-            synchronized (scheduledFutures) {
-                rejectIfDestroyed(command);
-                return add(eventLoopGroup().scheduleAtFixedRate(command, initialDelay, period, unit));
-            }
-        }
-
-        @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-                                                         TimeUnit unit) {
-            synchronized (scheduledFutures) {
-                rejectIfDestroyed(command);
-                return add(eventLoopGroup().scheduleWithFixedDelay(command, initialDelay, delay, unit));
-            }
-        }
-
-        @Override
-        public void shutdown() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isShutdown() {
-            return eventLoopGroup().isShutdown();
-        }
-
-        @Override
-        public boolean isTerminated() {
-            return eventLoopGroup().isTerminated();
-        }
-
-        @Override
-        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-            return eventLoopGroup().awaitTermination(timeout, unit);
-        }
-
-        private EventLoopGroup eventLoopGroup() {
-            return clientOptions.factory().eventLoopGroup();
-        }
-
-        private void rejectIfDestroyed(Object command) {
-            if (destroyed) {
-                throw new RejectedExecutionException(
-                        HealthCheckerContext.class.getSimpleName() + " for '" + endpoint +
-                        "' has been destroyed already. Task: " + command);
-            }
-        }
-
-        private <T extends Future<U>, U> T add(T future) {
-            scheduledFutures.put(future, Boolean.TRUE);
-            future.addListener(f -> {
-                synchronized (scheduledFutures) {
-                    scheduledFutures.remove(f);
-                }
-            });
-            return future;
-        }
     }
 }

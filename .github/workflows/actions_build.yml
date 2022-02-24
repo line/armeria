@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - master
+    tags-ignore:
+      # The release versions will be verified by 'publish-release.yml'
+      - armeria-*
   pull_request:
 
 concurrency:
@@ -13,45 +16,48 @@ concurrency:
 
 jobs:
   build:
+    if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
-    timeout-minutes: 120
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       matrix:
         on: [ self-hosted, macos-latest, windows-latest ]
-        java: [ 16 ]
+        java: [ 17 ]
         include:
           - java: 8
             on: self-hosted
           - java: 11
             on: self-hosted
-          - java: 15
+          - java: 16
             on: self-hosted
             leak: true
-          - java: 16
+          - java: 17
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
             on: macos-latest
             coverage: true
+          - java: 17
+            on: self-hosted
+            snapshot: true
 
     steps:
     - uses: actions/checkout@v2
 
-    - id: setup-jre
-      if: ${{ matrix.java != 16 }}
-      name: Set up JRE ${{ matrix.java }}
+    - id: setup-jdk
+      if: ${{ matrix.java != 17 }}
+      name: Set up JDK ${{ matrix.java }}
       uses: actions/setup-java@v2
       with:
         distribution: 'adopt'
         java-version: ${{ matrix.java }}
-        java-package: jre
 
-    - id: setup-jdk-16
-      name: Set up JDK 16
+    - id: setup-jdk-17
+      name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
         distribution: 'adopt'
-        java-version: '16'
+        java-version: '17'
 
     - if: ${{ matrix.on != 'self-hosted' }}
       name: Restore the cache
@@ -73,9 +79,23 @@ jobs:
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PnoLint \
         -PflakyTests=false \
-        -PbuildJdkVersion=16 \
+        -PbuildJdkVersion=17 \
         -PtestJavaVersion=${{ matrix.java }} \
-        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-16.outputs.path }},${{ steps.setup-jre.outputs.path }}
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+      shell: bash
+
+    - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
+      name: Publish snapshots
+      run: |
+        ./gradlew --no-daemon --stacktrace --max-workers=1 publish
+      env:
+        # Should not use '-P' option with 'secrets' that can cause unexpected results
+        # if secret values contains white spaces or new lines.
+        ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.OSSRH_USER_NAME }}
+        ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.OSSRH_PASSWORD }}
+        ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.GPG_KEY_ID }}
+        ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
+        ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
       shell: bash
 
     - name: Clean up the cache
@@ -100,7 +120,7 @@ jobs:
 
     - name: Collect the test reports
       if: failure()
-      run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+      run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
       shell: bash
 
     - name: Upload the artifacts
@@ -112,17 +132,18 @@ jobs:
         retention-days: 3
 
   lint:
+    if: github.repository == 'line/armeria'
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-16
-        name: Set up JDK 16
+      - id: setup-jdk-17
+        name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '16'
+          java-version: '17'
 
       - name: Run the linters
         run: |
@@ -138,26 +159,41 @@ jobs:
         shell: bash
 
   site:
-    runs-on: self-hosted
+    if: github.repository == 'line/armeria'
+    # ubuntu-latest is preferred for site job.
+    # node_modules need complicated dependencies that are difficult to install on self-hosted runners.
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
 
       - name: Install svgbob_cli
         run: |
-          sudo yum -y install cargo && cargo install svgbob_cli
+          sudo apt-get -y install cargo && cargo install svgbob_cli
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - id: setup-jdk-16
-        name: Set up JDK 16
+      - id: setup-jdk-17
+        name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '16'
+          java-version: '17'
+
+      - name: Restore the cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+          key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
+          restore-keys: |
+            build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
+            build-${{ matrix.java }}-${{ runner.os }}-
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel site
+          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel site
+        shell: bash
 
       - name: Clean up the cache
         run: |
@@ -169,17 +205,18 @@ jobs:
         shell: bash
 
   flaky-tests:
+    if: github.repository == 'line/armeria'
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-16
-        name: Set up JDK 16
+      - id: setup-jdk-17
+        name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '16'
+          java-version: '17'
 
       - name: Run flaky tests
         run: |

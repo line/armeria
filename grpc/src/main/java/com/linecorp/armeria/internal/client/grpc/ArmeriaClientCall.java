@@ -31,14 +31,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -123,8 +124,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
+    private final Compressor compressor;
 
-    private final boolean endpointInitialized;
+    private boolean endpointInitialized;
     @Nullable
     private volatile Runnable pendingTask;
 
@@ -136,7 +138,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Nullable
     private O firstResponse;
-    private boolean cancelCalled;
+    private boolean closed;
 
     private int pendingRequests;
     private volatile int pendingMessages;
@@ -151,6 +153,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             int maxOutboundMessageSizeBytes,
             int maxInboundMessageSizeBytes,
             CallOptions callOptions,
+            Compressor compressor,
             CompressorRegistry compressorRegistry,
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
@@ -164,6 +167,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.method = method;
         this.simpleMethodNames = simpleMethodNames;
         this.callOptions = callOptions;
+        this.compressor = compressor;
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
         this.serializationFormat = serializationFormat;
@@ -171,7 +175,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        endpointInitialized = endpointGroup.whenReady().isDone();
+        endpointInitialized = endpointGroup instanceof Endpoint || endpointGroup instanceof StaticEndpointGroup;
         if (!endpointInitialized) {
             ctx.whenInitialized().handle((unused1, unused2) -> {
                 runPendingTask();
@@ -209,7 +213,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 return;
             }
         } else {
-            compressor = Identity.NONE;
+            compressor = this.compressor;
         }
         requestFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         listener = responseListener;
@@ -290,10 +294,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             cause = new CancellationException("Cancelled without a message or cause");
             logger.warn("Cancelling without a message or cause is suboptimal", cause);
         }
-        if (cancelCalled) {
+        if (closed) {
             return;
         }
-        cancelCalled = true;
         Status status = Status.CANCELLED;
         if (message != null) {
             status = status.withDescription(message);
@@ -443,9 +446,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status, Metadata metadata) {
-        if (cancelCalled) {
-            return;
-        }
         close(status, metadata);
     }
 
@@ -470,6 +470,13 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void close(Status status, Metadata metadata) {
+        if (closed) {
+            // 'close()' could be called twice if a call is closed with non-OK status.
+            // See: https://github.com/line/armeria/issues/3799
+            return;
+        }
+        closed = true;
+
         final Deadline deadline = callOptions.getDeadline();
         if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
             status = Status.DEADLINE_EXCEEDED;
@@ -514,11 +521,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private boolean needsDirectInvocation() {
-        return (endpointInitialized || ctx.whenInitialized().isDone()) && ctx.eventLoop().inEventLoop();
+        return endpointInitialized && ctx.eventLoop().inEventLoop();
     }
 
     private void execute(Runnable task) {
-        if (endpointInitialized || ctx.whenInitialized().isDone()) {
+        if (endpointInitialized) {
             ctx.eventLoop().execute(task);
         } else {
             addPendingTask(task);
@@ -526,6 +533,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void runPendingTask() {
+        // Visibility is guaranteed by the following CAS operation.
+        endpointInitialized = true;
         for (;;) {
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {

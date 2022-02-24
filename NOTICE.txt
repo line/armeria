@@ -157,6 +157,11 @@ This product depends on Brave, distributed by Zipkin.io:
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/openzipkin/brave
 
+This product depends on Brotli4j, distributed by the Brotli4j authors:
+
+  * License: licenses/LICENSE.brotli4j.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/hyperxpro/Brotli4j
+
 This product depends on Caffeine, distributed by Ben Manes:
 
   * License: licenses/LICENSE.caffeine.al20.txt (Apache License v2.0)

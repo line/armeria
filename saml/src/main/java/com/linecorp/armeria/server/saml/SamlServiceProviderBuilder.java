@@ -35,8 +35,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.opensaml.core.criterion.EntityIdCriterion;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.common.messaging.context.SAMLBindingContext;
@@ -59,6 +57,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
@@ -289,9 +288,23 @@ public final class SamlServiceProviderBuilder {
     /**
      * Returns a {@link SamlAssertionConsumerConfigBuilder} to configure a new assertion consumer service
      * of this service provider.
+     *
+     * @deprecated Use {@link #acs(SamlEndpoint)}.
      */
+    @Deprecated
     public SamlAssertionConsumerConfigBuilder acs() {
         final SamlAssertionConsumerConfigBuilder config = new SamlAssertionConsumerConfigBuilder(this);
+        acsConfigBuilders.add(config);
+        return config;
+    }
+
+    /**
+     * Returns a {@link SamlAssertionConsumerConfigBuilder} to configure a new assertion consumer service
+     * of this service provider.
+     */
+    public SamlAssertionConsumerConfigBuilder acs(SamlEndpoint endpoint) {
+        final SamlAssertionConsumerConfigBuilder config =
+                new SamlAssertionConsumerConfigBuilder(this, requireNonNull(endpoint, "endpoint"));
         acsConfigBuilders.add(config);
         return config;
     }
@@ -343,13 +356,10 @@ public final class SamlServiceProviderBuilder {
         if (acsConfigBuilders.isEmpty()) {
             // Add two endpoints by default if there's no ACS endpoint specified by a user.
             assertionConsumerConfigs =
-                    ImmutableList.of(new SamlAssertionConsumerConfigBuilder(this)
-                                             .endpoint(ofHttpPost("/saml/acs/post")).asDefault(),
-                                     new SamlAssertionConsumerConfigBuilder(this)
-                                             .endpoint(ofHttpRedirect("/saml/acs/redirect")))
-                                 .stream()
-                                 .map(SamlAssertionConsumerConfigBuilder::build)
-                                 .collect(toImmutableList());
+                    ImmutableList.of(new SamlAssertionConsumerConfigBuilder(this, ofHttpPost("/saml/acs/post"))
+                                             .asDefault().build(),
+                                     new SamlAssertionConsumerConfigBuilder(
+                                             this, ofHttpRedirect("/saml/acs/redirect")).build());
         } else {
             // If there is only one ACS, it will be automatically a default ACS.
             if (acsConfigBuilders.size() == 1) {

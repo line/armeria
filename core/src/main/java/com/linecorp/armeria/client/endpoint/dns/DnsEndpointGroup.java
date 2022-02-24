@@ -17,13 +17,12 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +35,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 import com.linecorp.armeria.internal.client.DnsUtil;
@@ -195,5 +195,18 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
      */
     final void warnInvalidRecord(DnsRecordType type, ByteBuf content) {
         DnsUtil.warnInvalidRecord(logger(), logPrefix(), type, content);
+    }
+
+    final void logDnsResolutionResult(Collection<Endpoint> endpoints, int ttl) {
+        if (endpoints.isEmpty()) {
+            logger().warn("{} Resolved to empty endpoints (TTL: {})", logPrefix(), ttl);
+        } else {
+            if (logger().isDebugEnabled()) {
+                logger().debug("{} Resolved: {} (TTL: {})",
+                               logPrefix(),
+                               endpoints.stream().map(Object::toString).collect(Collectors.joining(", ")),
+                               ttl);
+            }
+        }
     }
 }

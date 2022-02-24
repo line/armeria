@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,7 +17,11 @@ package com.linecorp.armeria.common.multipart;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import org.reactivestreams.Publisher;
 
@@ -27,7 +31,11 @@ import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
+
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A body part entity.
@@ -138,6 +146,61 @@ public interface BodyPart {
      */
     @CheckReturnValue
     StreamMessage<HttpData> content();
+
+    /**
+     * Writes this {@link BodyPart} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption}s are not specified, they default to {@link StandardOpenOption#CREATE},
+     * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
+     *
+     * @param path the {@link Path} to write to
+     * @param eventExecutor the {@link EventExecutor} to subscribe to this given publisher
+     * @param blockingTaskExecutor the {@link ExecutorService} to which blocking tasks are submitted to handle
+     *                             file I/O events and write operations
+     * @param options the {@link OpenOption}s specifying how the file is opened
+     * @return a {@link CompletableFuture} to handle asynchronous result
+     */
+    CompletableFuture<Void> writeTo(Path path, EventExecutor eventExecutor,
+                                    ExecutorService blockingTaskExecutor, OpenOption... options);
+
+    /**
+     * Writes this {@link BodyPart} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption}s are not specified, they default to {@link StandardOpenOption#CREATE},
+     * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
+     *
+     * @param path the {@link Path} to write to
+     * @param options the {@link OpenOption}s specifying how the file is opened
+     * @return a {@link CompletableFuture} to handle asynchronous result
+     */
+    CompletableFuture<Void> writeTo(Path path, OpenOption... options);
+
+    /**
+     * Aggregates this {@link BodyPart}. The returned {@link CompletableFuture} will be notified when
+     * the {@link BodyPart} is received fully.
+     */
+    CompletableFuture<AggregatedBodyPart> aggregate();
+
+    /**
+     * Aggregates this {@link BodyPart}. The returned {@link CompletableFuture} will be notified when
+     * the {@link BodyPart} is received fully.
+     */
+    CompletableFuture<AggregatedBodyPart> aggregate(EventExecutor executor);
+
+    /**
+     * (Advanced users only) Aggregates this {@link BodyPart}. The returned {@link CompletableFuture}
+     * will be notified when the {@link BodyPart} is received fully.
+     * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
+     * to release it. If you don't know what this means, use {@link #aggregate()}.
+     */
+    CompletableFuture<AggregatedBodyPart> aggregateWithPooledObjects(ByteBufAllocator alloc);
+
+    /**
+     * (Advanced users only) Aggregates this {@link BodyPart}. The returned {@link CompletableFuture}
+     * will be notified when the {@link BodyPart} is received fully.
+     * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
+     * to release it. If you don't know what this means, use {@link #aggregate()}.
+     */
+    CompletableFuture<AggregatedBodyPart> aggregateWithPooledObjects(EventExecutor executor,
+                                                                     ByteBufAllocator alloc);
 
     /**
      * Returns the control name.

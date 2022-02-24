@@ -21,16 +21,17 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 @SuppressWarnings("unchecked")
 final class KotlinUtil {
@@ -47,10 +48,22 @@ final class KotlinUtil {
     private static final MethodHandle CALL_KOTLIN_SUSPENDING_METHOD;
 
     @Nullable
+    private static final Method IS_K_FUNCTION;
+
+    @Nullable
     private static final Method IS_SUSPENDING_FUNCTION;
 
     @Nullable
     private static final Method IS_RETURN_TYPE_UNIT;
+
+    @Nullable
+    private static final Method IS_RETURN_TYPE_NOTHING;
+
+    @Nullable
+    private static final Method K_FUNCTION_RETURN_TYPE;
+
+    @Nullable
+    private static final Method K_FUNCTION_GENERIC_RETURN_TYPE;
 
     static {
         MethodHandle callKotlinSuspendingMethod = null;
@@ -65,7 +78,7 @@ final class KotlinUtil {
                             CompletableFuture.class,
                             ImmutableList.of(Method.class, Object.class,
                                              Object[].class, ExecutorService.class,
-                                             RequestContext.class))
+                                             ServiceRequestContext.class))
             );
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
             // ignore
@@ -73,19 +86,31 @@ final class KotlinUtil {
             CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
         }
 
+        Method isKFunction = null;
         Method isSuspendingFunction = null;
         Method isReturnTypeUnit = null;
+        Method isReturnTypeNothing = null;
+        Method kFunctionReturnType = null;
+        Method kFunctionGenericReturnType = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
 
+            isKFunction = kotlinUtilClass.getMethod("isKFunction", Method.class);
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
+            isReturnTypeNothing = kotlinUtilClass.getMethod("isReturnTypeNothing", Method.class);
+            kFunctionReturnType = kotlinUtilClass.getMethod("kFunctionReturnType", Method.class);
+            kFunctionGenericReturnType = kotlinUtilClass.getMethod("kFunctionGenericReturnType", Method.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
+            IS_K_FUNCTION = isKFunction;
             IS_SUSPENDING_FUNCTION = isSuspendingFunction;
             IS_RETURN_TYPE_UNIT = isReturnTypeUnit;
+            IS_RETURN_TYPE_NOTHING = isReturnTypeNothing;
+            K_FUNCTION_RETURN_TYPE = kFunctionReturnType;
+            K_FUNCTION_GENERIC_RETURN_TYPE = kFunctionGenericReturnType;
         }
 
         boolean isKotlinReflectionPresent = false;
@@ -142,6 +167,20 @@ final class KotlinUtil {
     }
 
     /**
+     * Returns true if a method can be represented by a Kotlin function.
+     */
+    static boolean isKFunction(Method method) {
+        try {
+            return IS_KOTLIN_REFLECTION_PRESENT &&
+                   IS_K_FUNCTION != null &&
+                   isKotlinMethod(method) &&
+                   (boolean) IS_K_FUNCTION.invoke(null, method);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Returns true if a method is a suspending function.
      */
     static boolean isSuspendingFunction(Method method) {
@@ -172,6 +211,36 @@ final class KotlinUtil {
                    (boolean) IS_RETURN_TYPE_UNIT.invoke(null, method);
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    /**
+     * Returns true if a method returns {@code kotlin.Nothing}.
+     */
+    static boolean isReturnTypeNothing(Method method) {
+        try {
+            return IS_RETURN_TYPE_NOTHING != null &&
+                   (boolean) IS_RETURN_TYPE_NOTHING.invoke(null, method);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    static Class<?> kFunctionReturnType(Method method) {
+        assert K_FUNCTION_RETURN_TYPE != null;
+        try {
+            return (Class<?>) K_FUNCTION_RETURN_TYPE.invoke(null, method);
+        } catch (Exception e) {
+            return Exceptions.throwUnsafely(e);
+        }
+    }
+
+    static Type kFunctionGenericReturnType(Method method) {
+        assert K_FUNCTION_GENERIC_RETURN_TYPE != null;
+        try {
+            return (Type) K_FUNCTION_GENERIC_RETURN_TYPE.invoke(null, method);
+        } catch (Exception e) {
+            return Exceptions.throwUnsafely(e);
         }
     }
 

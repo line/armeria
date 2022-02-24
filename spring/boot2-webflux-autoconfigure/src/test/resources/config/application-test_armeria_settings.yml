@@ -1,0 +1,17 @@
+armeria:
+  max-num-connections: 8
+  idle-timeout: 2s
+  ping-interval: 1s
+  max-connection-age: 4s
+  max-num-requests-per-connection: 4
+  http2-initial-connection-window-size: 2mb
+  http2-initial-stream-window-size: 4mb
+  http2-max-streams-per-connection: 1
+  http2-max-frame-size: 32768
+  http2-max-header-list-size: 16384
+  http1-max-initial-line-length: 8192
+  http1-max-header-size: 16384
+  http1-max-chunk-size: 32768
+  request-timeout: 8000
+  max-request-length: 0
+  verbose-responses: true

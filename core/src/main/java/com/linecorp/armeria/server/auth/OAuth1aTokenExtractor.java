@@ -23,8 +23,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +30,8 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth1aTokenBuilder;
 
@@ -67,7 +67,7 @@ final class OAuth1aTokenExtractor implements Function<RequestHeaders, OAuth1aTok
             return null;
         }
 
-        final OAuth1aTokenBuilder builder = OAuth1aToken.builder();
+        final OAuth1aTokenBuilder builder = AuthToken.builderForOAuth1a();
         for (String token : matcher.group("parameters").split(",")) {
             final int sep = token.indexOf('=');
             if (sep == -1 || token.charAt(sep + 1) != '"' || token.charAt(token.length() - 1) != '"') {

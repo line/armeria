@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
@@ -262,29 +264,31 @@ class BraveIntegrationTest {
     void testTimingAnnotations() {
         // Use separate client factory to make sure connection is created.
         try (ClientFactory clientFactory = ClientFactory.builder().build()) {
-            final WebClient client = WebClient.builder(server.httpUri())
-                                              .factory(clientFactory)
-                                              .decorator(BraveClient.newDecorator(newTracing("timed-client")))
-                                              .build();
-            assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+            final BlockingWebClient client =
+                    WebClient.builder(server.httpUri())
+                             .factory(clientFactory)
+                             .decorator(BraveClient.newDecorator(newTracing("timed-client")))
+                             .build()
+                             .blocking();
+            assertThat(client.get("/http").status()).isEqualTo(HttpStatus.OK);
             final MutableSpan[] initialConnectSpans = spanHandler.take(1);
             assertThat(initialConnectSpans[0].annotations())
                     .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
-                    "connection-acquire.start",
-                    "socket-connect.start",
-                    "socket-connect.end",
-                    "connection-acquire.end",
-                    "ws",
-                    "wr");
+                            "connection-acquire.start",
+                            "socket-connect.start",
+                            "socket-connect.end",
+                            "connection-acquire.end",
+                            "ws",
+                            "wr");
 
             // Make another request which will reuse the connection so no connection timing.
-            assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+            assertThat(client.get("/http").status()).isEqualTo(HttpStatus.OK);
 
             final MutableSpan[] secondConnectSpans = spanHandler.take(1);
             assertThat(secondConnectSpans[0].annotations())
                     .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
-                    "ws",
-                    "wr");
+                            "ws",
+                            "wr");
         }
     }
 
@@ -441,7 +445,8 @@ class BraveIntegrationTest {
     @Test
     void testServerTimesOut() throws Exception {
         assertThatThrownBy(() -> timeoutClient.hello("name"))
-                .isInstanceOf(InvalidResponseHeadersException.class);
+                .isInstanceOf(TTransportException.class)
+                .hasCauseInstanceOf(InvalidResponseHeadersException.class);
         final MutableSpan[] spans = spanHandler.take(2);
 
         final MutableSpan serverSpan = findSpan(spans, "service/timeout");
@@ -465,7 +470,8 @@ class BraveIntegrationTest {
 
     private static void testClientTimesOut(HelloService.Iface client) {
         assertThatThrownBy(() -> client.hello("name"))
-                .isInstanceOf(ResponseTimeoutException.class);
+                .isInstanceOf(TTransportException.class)
+                .hasCauseInstanceOf(ResponseTimeoutException.class);
         final MutableSpan[] spans = spanHandler.take(2);
 
         final MutableSpan serverSpan = findSpan(spans, "service/timeout");

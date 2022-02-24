@@ -27,8 +27,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.MoreObjects;
@@ -46,9 +44,12 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -220,9 +221,10 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
                                                  .build();
 
         if (nonBaseClientFactory == null) {
-            nonBaseClientFactory = (p, url) -> WebClient.builder(p, Endpoint.of(url.host(), url.port()))
-                                                        .options(retrofitOptions)
-                                                        .build();
+            nonBaseClientFactory =
+                    (p, url) -> WebClient.builder(p, Endpoint.unsafeCreate(url.host(), url.port()))
+                                         .options(retrofitOptions)
+                                         .build();
         }
 
         retrofitBuilder.callFactory(new ArmeriaCallFactory(
@@ -408,5 +410,20 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ArmeriaRetrofitBuilder auth(OAuth2Token token) {
         return (ArmeriaRetrofitBuilder) super.auth(token);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder auth(AuthToken token) {
+        return (ArmeriaRetrofitBuilder) super.auth(token);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder followRedirects() {
+        return (ArmeriaRetrofitBuilder) super.followRedirects();
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (ArmeriaRetrofitBuilder) super.followRedirects(redirectConfig);
     }
 }

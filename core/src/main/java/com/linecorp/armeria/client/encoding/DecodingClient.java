@@ -21,14 +21,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -39,6 +39,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 
 /**
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
@@ -124,7 +126,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
             return unwrap().execute(ctx, req);
         }
 
-        final List<String> encodings = ImmutableList.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
+        final Set<String> encodings = ImmutableSet.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
         final ImmutableMap.Builder<String, StreamDecoderFactory> factoryBuilder =
                 ImmutableMap.builderWithExpectedSize(encodings.size());
 
@@ -152,11 +154,11 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
         return executeAndDecodeResponse(ctx, req, decoderFactories);
     }
 
-    private HttpDecodedResponse executeAndDecodeResponse(
+    private DefaultHttpDecodedResponse executeAndDecodeResponse(
             ClientRequestContext ctx, HttpRequest req,
             Map<String, StreamDecoderFactory> decoderFactories) throws Exception {
         final HttpResponse res = unwrap().execute(ctx, req);
-        return new HttpDecodedResponse(res, decoderFactories, ctx.alloc(), strictContentEncoding);
+        return new DefaultHttpDecodedResponse(res, decoderFactories, ctx.alloc(), strictContentEncoding);
     }
 
     private static HttpRequest updateAcceptEncoding(ClientRequestContext ctx, HttpRequest req,

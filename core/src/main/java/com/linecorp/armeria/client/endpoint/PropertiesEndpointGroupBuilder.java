@@ -27,11 +27,10 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a {@link PropertiesEndpointGroup}.

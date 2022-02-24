@@ -43,7 +43,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.AsciiString;
 
 /**
  * A set of {@link ClientFactoryOption}s and their respective values.
@@ -232,7 +231,7 @@ public final class ClientFactoryOptions
      * another HTTP/1 header name.
      */
     public static final ClientFactoryOption<Http1HeaderNaming> HTTP1_HEADER_NAMING =
-            ClientFactoryOption.define("HTTP1_HEADER_NAMING", AsciiString::toString);
+            ClientFactoryOption.define("HTTP1_HEADER_NAMING", Http1HeaderNaming.ofDefault());
 
     /**
      * The {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,7 +28,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 import javax.servlet.DispatcherType;
 
 import org.eclipse.jetty.http.HttpFields;
@@ -56,8 +57,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -127,20 +130,31 @@ public final class JettyService implements HttpService {
      * @param jettyServer the Jetty {@link Server}
      */
     public static JettyService of(Server jettyServer) {
-        requireNonNull(jettyServer, "jettyServer");
-        return new JettyService(null, blockingTaskExecutor -> jettyServer);
+        return of(jettyServer, null);
     }
 
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
      *
      * @param jettyServer the Jetty {@link Server}
-     * @param hostname the default hostname
+     * @param hostname the default hostname, or {@code null} to use Armeria's default virtual host name.
      */
-    public static JettyService of(Server jettyServer, String hostname) {
+    public static JettyService of(Server jettyServer, @Nullable String hostname) {
+        return of(jettyServer, hostname, false);
+    }
+
+    /**
+     * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
+     *
+     * @param jettyServer the Jetty {@link Server}
+     * @param hostname the default hostname, or {@code null} to use Armeria's default virtual host name.
+     * @param tlsReverseDnsLookup whether perform reverse DNS lookup for the remote IP address on a TLS
+     *                            connection. See {@link JettyServiceBuilder#tlsReverseDnsLookup(boolean)}
+     *                            for more information.
+     */
+    public static JettyService of(Server jettyServer, @Nullable String hostname, boolean tlsReverseDnsLookup) {
         requireNonNull(jettyServer, "jettyServer");
-        requireNonNull(hostname, "hostname");
-        return new JettyService(hostname, blockingTaskExecutor -> jettyServer);
+        return new JettyService(hostname, tlsReverseDnsLookup, blockingTaskExecutor -> jettyServer);
     }
 
     /**
@@ -155,7 +169,8 @@ public final class JettyService implements HttpService {
     private final Configurator configurator;
 
     @Nullable
-    private String hostname;
+    private final String hostname;
+    private final boolean tlsReverseDnsLookup;
     @Nullable
     private Server server;
     @Nullable
@@ -164,15 +179,18 @@ public final class JettyService implements HttpService {
     private com.linecorp.armeria.server.Server armeriaServer;
     private boolean startedServer;
 
-    private JettyService(@Nullable String hostname, Function<ScheduledExecutorService, Server> serverSupplier) {
-        this(hostname, serverSupplier, unused -> { /* unused */ });
+    private JettyService(@Nullable String hostname, boolean tlsReverseDnsLookup,
+                         Function<ScheduledExecutorService, Server> serverSupplier) {
+        this(hostname, tlsReverseDnsLookup, serverSupplier, unused -> { /* unused */ });
     }
 
     JettyService(@Nullable String hostname,
+                 boolean tlsReverseDnsLookup,
                  Function<ScheduledExecutorService, Server> serverFactory,
                  Consumer<Server> postStopTask) {
 
         this.hostname = hostname;
+        this.tlsReverseDnsLookup = tlsReverseDnsLookup;
         this.serverFactory = serverFactory;
         this.postStopTask = postStopTask;
         configurator = new Configurator();
@@ -268,8 +286,28 @@ public final class JettyService implements HttpService {
                     return null;
                 });
 
-                fillRequest(ctx, aReq, httpChannel.getRequest());
+                final Request jReq = httpChannel.getRequest();
+                fillRequest(ctx, aReq, jReq);
+                final SSLSession sslSession = ctx.sslSession();
+                final boolean needsReverseDnsLookup;
+                if (sslSession != null) {
+                    needsReverseDnsLookup = tlsReverseDnsLookup;
+                    ServletTlsAttributes.fill(sslSession, jReq::setAttribute);
+                } else {
+                    needsReverseDnsLookup = false;
+                }
+
                 ctx.blockingTaskExecutor().execute(() -> {
+                    // Perform a reverse DNS lookup if needed.
+                    if (needsReverseDnsLookup) {
+                        try {
+                            ((InetSocketAddress) ctx.remoteAddress()).getHostName();
+                        } catch (Throwable t) {
+                            logger.warn("{} Failed to perform a reverse DNS lookup:", ctx, t);
+                        }
+                    }
+
+                    // Let Jetty handle the request.
                     try {
                         httpChannel.handle();
                     } catch (Throwable t) {

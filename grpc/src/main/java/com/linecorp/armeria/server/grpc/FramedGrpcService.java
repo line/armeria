@@ -29,8 +29,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +43,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
@@ -57,6 +56,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -72,6 +72,7 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
+import io.netty.util.AttributeKey;
 
 /**
  * The framed {@link GrpcService} implementation.
@@ -79,6 +80,31 @@ import io.grpc.Status;
 final class FramedGrpcService extends AbstractHttpService implements GrpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
+
+    static final AttributeKey<ServerMethodDefinition<?, ?>> RESOLVED_GRPC_METHOD =
+            AttributeKey.valueOf(FramedGrpcService.class, "RESOLVED_GRPC_METHOD");
+
+    private static Map<String, GrpcJsonMarshaller> getJsonMarshallers(
+            HandlerRegistry registry,
+            Set<SerializationFormat> supportedSerializationFormats,
+            Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
+        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
+            return ImmutableMap.of();
+        } else {
+            try {
+                return registry.services().stream()
+                               .map(ServerServiceDefinition::getServiceDescriptor)
+                               .distinct()
+                               .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
+            } catch (Exception e) {
+                logger.warn("Failed to instantiate a JSON marshaller. Consider disabling gRPC-JSON " +
+                            "serialization with {}.supportedSerializationFormats() " +
+                            "or using {}.ofGson() instead.",
+                            GrpcServiceBuilder.class.getName(), GrpcJsonMarshaller.class.getName(), e);
+                return ImmutableMap.of();
+            }
+        }
+    }
 
     private final HandlerRegistry registry;
     private final Set<Route> routes;
@@ -90,7 +116,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
     @Nullable
     private final GrpcStatusFunction statusFunction;
-    private final int maxOutboundMessageSizeBytes;
+    private final int maxResponseMessageLength;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
@@ -98,7 +124,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
 
-    private int maxInboundMessageSizeBytes;
+    private int maxRequestMessageLength;
+    private boolean lookupMethodFromAttribute;
 
     FramedGrpcService(HandlerRegistry registry,
                       Set<Route> routes,
@@ -108,32 +135,25 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
                       @Nullable GrpcStatusFunction statusFunction,
-                      int maxOutboundMessageSizeBytes,
+                      int maxRequestMessageLength, int maxResponseMessageLength,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
-                      int maxInboundMessageSizeBytes) {
+                      boolean lookupMethodFromAttribute) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.useClientTimeoutHeader = useClientTimeoutHeader;
-        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
-            jsonMarshallers = ImmutableMap.of();
-        } else {
-            jsonMarshallers =
-                    registry.services().stream()
-                            .map(ServerServiceDefinition::getServiceDescriptor)
-                            .distinct()
-                            .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
-        }
+        jsonMarshallers = getJsonMarshallers(registry, supportedSerializationFormats, jsonMarshallerFactory);
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.statusFunction = statusFunction;
-        this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        this.maxRequestMessageLength = maxRequestMessageLength;
+        this.maxResponseMessageLength = maxResponseMessageLength;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
-        this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -165,21 +185,24 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
-        final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        if (methodName == null) {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                   MediaType.PLAIN_TEXT_UTF_8,
-                                   "Invalid path.");
-        }
-
-        final ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
+        ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
         if (method == null) {
-            return HttpResponse.of(
-                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
-                            ctx,
-                            defaultHeaders.get(serializationFormat).toBuilder(),
-                            Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
-                            new Metadata()));
+            final String methodName = GrpcRequestUtil.determineMethod(ctx);
+            if (methodName == null) {
+                return HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                       MediaType.PLAIN_TEXT_UTF_8,
+                                       "Invalid path.");
+            }
+
+            method = registry.lookupMethod(methodName);
+            if (method == null) {
+                return HttpResponse.of(
+                        (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                                ctx,
+                                defaultHeaders.get(serializationFormat).toBuilder(),
+                                Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
+                                new Metadata()));
+            }
         }
 
         if (useClientTimeoutHeader) {
@@ -211,7 +234,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 serializationFormat);
         if (call != null) {
             ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-                call.close(Status.CANCELLED.withCause(cancellationCause), new Metadata());
+                Status status = Status.CANCELLED.withCause(cancellationCause);
+                if (cancellationCause instanceof RequestTimeoutException) {
+                    status = status.withDescription("Request timed out");
+                }
+                call.close(status, new Metadata());
                 return null;
             });
             call.startDeframing();
@@ -235,8 +262,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 compressorRegistry,
                 decompressorRegistry,
                 res,
-                maxInboundMessageSizeBytes,
-                maxOutboundMessageSizeBytes,
+                maxRequestMessageLength,
+                maxResponseMessageLength,
                 ctx,
                 serializationFormat,
                 jsonMarshallers.get(methodDescriptor.getServiceName()),
@@ -254,7 +281,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
-                    " - this is likely a bug in the stub implementation.");
+                    " - this is likely a bug in the stub implementation.", t);
             return null;
         }
         if (listener == null) {
@@ -269,8 +296,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public void serviceAdded(ServiceConfig cfg) {
-        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
-            maxInboundMessageSizeBytes = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
+        if (maxRequestMessageLength == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
+            maxRequestMessageLength = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
         }
 
         if (protoReflectionServiceInterceptor != null) {

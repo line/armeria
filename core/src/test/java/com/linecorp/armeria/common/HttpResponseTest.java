@@ -19,12 +19,14 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.List;
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Stopwatch;
 
 class HttpResponseTest {
 
@@ -157,68 +159,87 @@ class HttpResponseTest {
     }
 
     @Test
-    void aggregateAs() {
-        // aggregate as class type
-        final Content content = HttpResponse.of(MediaType.JSON_UTF_8, "{\"id\":1}")
-                                            .aggregateAs(Content.class)
-                                            .join();
-        assertThat(content.id).isEqualTo(1);
+    void httpResponseUsingDeliveredExecutor() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.from(responseSupplier,
+                                                   Executors.newSingleThreadScheduledExecutor());
 
-        // aggregate as type reference
-        final WrapperContent<Content> wrapperContent = HttpResponse.of(MediaType.JSON_UTF_8,
-                                                                       "{\"id\":1,\"name\":\"name\",\"list\":[{\"id\":1},{\"id\":2},{\"id\":3}]}")
-                                                                   .aggregateAs(
-                                                                           new TypeReference<WrapperContent<Content>>() {})
-                                                                   .join();
-        assertThat(wrapperContent.id).isEqualTo(1);
-        assertThat(wrapperContent.name).isEqualTo("name");
-        assertThat(wrapperContent.list.stream().map(item -> item.id)).isEqualTo(ImmutableList.of(1, 2, 3));
-
-        assertThatThrownBy(() ->
-                                   HttpResponse.of(MediaType.JSON_UTF_8, "{\"UnknownField\":1}")
-                                               .aggregateAs(Content.class)
-                                               .join());
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
     }
 
-    static class WrapperContent<T> {
-        private Integer id;
-        private String name;
-        private List<T> list;
+    @Test
+    void delayedHttpResponseWithAggregatedHttpResponseUsingCurrentEventLoopOrCommonPools() {
+        final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse, Duration.ofSeconds(1L));
 
-        WrapperContent() {
-        }
-
-        WrapperContent(Integer id, String name, List<T> list) {
-            this.id = id;
-            this.name = name;
-            this.list = list;
-        }
-
-        public Integer getId() {
-            return id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public List<T> getList() {
-            return list;
-        }
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
     }
 
-    static class Content {
-        private Integer id;
+    @Test
+    void delayedHttpResponseWithAggregatedHttpResponseUsingScheduledExecutorService() {
+        final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse,
+                                                      Duration.ofSeconds(1L),
+                                                      Executors.newSingleThreadScheduledExecutor());
 
-        Content() {
-        }
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
 
-        Content(Integer id) {
-            this.id = id;
-        }
+    @Test
+    void delayedHttpResponseWithHttpResponseUsingCurrentEventLoopOrCommonPools() {
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                      Duration.ofSeconds(1L));
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
 
-        public Integer getId() {
-            return id;
-        }
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseUsingScheduledExecutorService() {
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                      Duration.ofSeconds(1L),
+                                                      Executors.newSingleThreadScheduledExecutor());
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseSupplierCurrentEventLoopOrCommonPools() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(responseSupplier,
+                                                      Duration.ofSeconds(1L));
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseSupplierUsingScheduledExecutorService() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(responseSupplier,
+                                                      Duration.ofSeconds(1L),
+                                                      Executors.newSingleThreadScheduledExecutor());
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
     }
 }

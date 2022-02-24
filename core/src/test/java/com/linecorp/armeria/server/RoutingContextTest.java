@@ -21,14 +21,13 @@ import static org.mockito.Mockito.mock;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 class RoutingContextTest {
 
@@ -113,6 +112,6 @@ class RoutingContextTest {
                                     .serviceUnder("/", service)
                                     .and()
                                     .build();
-        return server.config().findVirtualHost("example.com");
+        return server.config().findVirtualHost("example.com", -1);
     }
 }

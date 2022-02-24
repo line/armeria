@@ -25,7 +25,7 @@ You must have the following files ready for updating a blog post. You can always
 
 <Warning>
 
-To test updating a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implenment-create) for instructions.
+To test updating a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implement-create) for instructions.
 
 </Warning>
 
@@ -52,7 +52,7 @@ public final class BlogService {
 
 ## 2. Handle parameters
 
-For updating a blog post, let's take a blog post ID (`id`) and new blog post information to update with. For [creating a blog post](/tutorials/rest/blog/implenment-create), we've used Armeria's <type://RequestConverter> to convert a request body into a Java object. For a change, let's try using <type://@RequestObject> to convert a request body.
+For updating a blog post, let's take a blog post ID (`id`) and new blog post information to update with. For [creating a blog post](/tutorials/rest/blog/implement-create), we've used Armeria's <type://RequestConverter> to convert a request body into a Java object. For a change, let's try using <type://@RequestObject> to convert a request body.
 
 1. Take in the ID value as a path parameter by adding `/blogs/:id` to the <type://@Put> annotation.
 2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the parameter with <type://@Param>.
@@ -84,7 +84,7 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
     @JsonCreator
     BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
              @JsonProperty("content") String content) {
-        ...
+      ...
     }
   }
   ```
@@ -104,9 +104,9 @@ To update a blog post, copy the following code inside the `updateBlogPost()` met
       // Return a Not Found error. See the next section for instructions
     }
     BlogPost newBlogPost = new BlogPost(id, blogPost.getTitle(),
-                                            blogPost.getContent(),
-                                            oldBlogPost.getCreatedAt(),
-                                            blogPost.getCreatedAt());
+                                        blogPost.getContent(),
+                                        oldBlogPost.getCreatedAt(),
+                                        blogPost.getCreatedAt());
     blogPosts.put(id, newBlogPost); // Update the info in the map
     ...
   }
@@ -231,7 +231,7 @@ You can test this also with Armeria's [Documentation service](/docs/server-docse
 
 In this step, we've implemented a method for an UPDATE operation and used Armeria's annotations; <type://@Put>, <type://@Param>, and <type://@RequestObject>.
 
-Next, at [Step 7. Implement DELETE](/tutorials/rest/blog/implenment-delete), we'll implement a DELETE operation to delete 
+Next, at [Step 7. Implement DELETE](/tutorials/rest/blog/implement-delete), we'll implement a DELETE operation to delete
 blog posts.
 
 <TutorialSteps current={6} />

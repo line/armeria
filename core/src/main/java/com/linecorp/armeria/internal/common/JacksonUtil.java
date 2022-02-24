@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -74,13 +75,12 @@ public final class JacksonUtil {
         return INSTANCE.writeValueAsBytes(value);
     }
 
-    public static <T> T readValue(String content, Class<T> valueType) throws JsonProcessingException {
-        return INSTANCE.readValue(content, valueType);
+    public static <T> T readValue(byte[] bytes, Class<T> clazz) throws IOException {
+        return INSTANCE.readValue(bytes, clazz);
     }
 
-    public static <T> T readValue(String content,
-                                  TypeReference<T> valueTypeRef) throws JsonProcessingException {
-        return INSTANCE.readValue(content, valueTypeRef);
+    public static <T> T readValue(byte[] bytes, TypeReference<T> typeRef) throws IOException {
+        return INSTANCE.readValue(bytes, typeRef);
     }
 
     private JacksonUtil() {}
