@@ -274,9 +274,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public String toString() {
+        final List<Endpoint> endpoints = endpoints();
+        final List<Endpoint> delegateEndpoints = delegate.endpoints();
         return MoreObjects.toStringHelper(this)
-                          .add("chosen", endpoints())
-                          .add("candidates", delegate.endpoints())
+                          .add("endpoints", truncatedEndpoints(endpoints))
+                          .add("numEndpoints", endpoints.size())
+                          .add("candidates", truncatedEndpoints(delegateEndpoints))
+                          .add("numCandidates", delegateEndpoints.size())
+                          .add("selectionStrategy", selectionStrategy().getClass())
+                          .add("initialized", whenReady().isDone())
                           .toString();
     }
 }

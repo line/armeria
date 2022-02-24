@@ -70,7 +70,7 @@ final class HttpClientDelegate implements HttpClient {
             //
             // See `DefaultClientRequestContext.init()` for more information.
             final UnprocessedRequestException cause =
-                    UnprocessedRequestException.of(EmptyEndpointGroupException.get());
+                    UnprocessedRequestException.of(EmptyEndpointGroupException.get(ctx.endpointGroup()));
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }
