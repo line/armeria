@@ -4915,6 +4915,7 @@ merckmsd
 merseine.nu
 mesaverde.museum
 messina.it
+messwithdns.com
 meteorapp.com
 mex.com
 mg
@@ -6790,6 +6791,7 @@ rocher
 rochester.museum
 rockart.museum
 rocks
+rocky.page
 rodeo
 rodoy.no
 rogers
