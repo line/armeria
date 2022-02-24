@@ -428,12 +428,12 @@ public final class Server implements ListenableAsyncCloseable {
                     try {
                         x509Certificate.checkValidity();
                     } catch (CertificateExpiredException | CertificateNotYetValidException e) {
-                        return 1;
+                        return 0;
                     }
-                    return 0;
+                    return 1;
                 };
                 Gauge.builder("armeria.server.certificate.validity", certificateExpirationInfoProvider)
-                     .description("0 if certificate is not expired, 1 if certificate is expired")
+                     .description("1 if certificate is in validity period, 0 if certificate is not in validity period")
                      .tags("CN", commonName)
                      .register(meterRegistry);
 

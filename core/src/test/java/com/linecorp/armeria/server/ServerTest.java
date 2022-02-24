@@ -547,7 +547,7 @@ class ServerTest {
               .tls(ssc.certificate(), ssc.privateKey())
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
         assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isPositive();
     }
 
@@ -562,7 +562,7 @@ class ServerTest {
 
         final Gauge expirationGauge = meterRegistry.find(CERT_EXPIRATION_GAUGE_NAME).gauge();
         assertThat(expirationGauge).isNotNull();
-        assertThat(expirationGauge.value()).isZero();
+        assertThat(expirationGauge.value()).isOne();
 
         final Gauge timeToExpireGauge = meterRegistry.find(CERT_TIME_TO_EXPIRE_GAUGE_NAME).gauge();
         assertThat(timeToExpireGauge).isNotNull();
@@ -581,9 +581,9 @@ class ServerTest {
               .tls(expiredCertificateChain, pk)
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
         assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isPositive();
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isZero();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isOne();
         assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "test.root.armeria").isPositive();
     }
 
@@ -603,7 +603,7 @@ class ServerTest {
               .tls(ssc.certificate(), ssc.privateKey())
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
         assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isEqualTo(-1);
     }
 
@@ -620,9 +620,9 @@ class ServerTest {
               .tls(expiredCertificateChain, pk)
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
         assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isEqualTo(-1);
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isZero();
+        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isOne();
         assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "test.root.armeria").isPositive();
     }
 
