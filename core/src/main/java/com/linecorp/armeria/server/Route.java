@@ -21,13 +21,12 @@ import java.util.Set;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * {@link Route} maps from an incoming HTTP request to an {@link HttpService} based on its path, method,
  * content type and accepted types.
  */
-public interface Route extends Unwrappable {
+public interface Route {
 
     /**
      * Returns the catch-all {@link Route} which matches every request.
@@ -201,9 +200,4 @@ public interface Route extends Unwrappable {
      * Returns a newly-created {@link Route} which adds the specified {@code prefix} to this {@link Route}.
      */
     Route withPrefix(String prefix);
-
-    @Override
-    default Route unwrap() {
-        return this;
-    }
 }

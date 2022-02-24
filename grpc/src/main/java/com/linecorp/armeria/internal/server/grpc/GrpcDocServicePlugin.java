@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.server.grpc;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.server.RouteUtil.innermostRoute;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfoBuilder;
 import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
@@ -159,14 +158,16 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 addServiceDescriptor(serviceInfosBuilder, grpcService);
             }
 
-            final Route route = serviceConfig.route();
             if (grpcService instanceof HttpEndpointSupport) {
                 // grpcService is a HttpJsonTranscodingService.
                 final HttpEndpointSpecification spec =
-                        ((HttpEndpointSupport) grpcService).httpEndpointSpecification(innermostRoute(route));
+                        ((HttpEndpointSupport) grpcService).httpEndpointSpecification(
+                                serviceConfig.mappedRoute()); // Use mappedRoute to find the specification.
                 if (spec != null) {
                     if (filter.test(NAME, spec.serviceName(), spec.methodName())) {
-                        httpEndpoints.add(new HttpEndpoint(serviceConfig, spec.withRoute(route)));
+                        httpEndpoints.add(new HttpEndpoint(serviceConfig,
+                                                           // Use route which has the full path.
+                                                           spec.withRoute(serviceConfig.route())));
                     }
                     continue;
                 } else {
@@ -175,6 +176,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 }
             }
 
+            final Route route = serviceConfig.route();
             final Set<MediaType> supportedMediaTypes = supportedMediaTypes(grpcService);
             if (route.pathType() == RoutePathType.PREFIX) {
                 // The route is PREFIX type when the grpcService is set via route builder:
@@ -195,7 +197,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 // - serverBuilder.service(grpcService);
                 // - serverBuilder.serviceUnder("/prefix", grpcService);
                 final ServerMethodDefinition<?, ?> methodDefinition =
-                        grpcService.methodsByRoute().get(innermostRoute(route));
+                        // Use mappedRoute to find the methodDefinition.
+                        grpcService.methodsByRoute().get(serviceConfig.mappedRoute());
                 assert methodDefinition != null;
                 final EndpointInfo endpointInfo =
                         EndpointInfo.builder(serviceConfig.virtualHost().hostnamePattern(),

@@ -46,9 +46,6 @@ final class DefaultRoute implements Route {
     private final boolean isFallback;
     private final List<Route> excludedRoutes;
 
-    @Nullable
-    private final Route originalRoute;
-
     private final int hashCode;
     private final int complexity;
 
@@ -56,7 +53,7 @@ final class DefaultRoute implements Route {
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates,
-                 boolean isFallback, List<Route> excludedRoutes, @Nullable Route originalRoute) {
+                 boolean isFallback, List<Route> excludedRoutes) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
         this.methods = Sets.immutableEnumSet(methods);
@@ -70,7 +67,6 @@ final class DefaultRoute implements Route {
         this.excludedRoutes = requireNonNull(excludedRoutes, "excludedRoutes")
                 .stream().map(excludedRoute -> excludedRoute.toBuilder().fallback(true).build())
                 .collect(toImmutableList());
-        this.originalRoute = originalRoute;
 
         hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
                                 this.paramPredicates, this.headerPredicates, this.isFallback,
@@ -305,12 +301,7 @@ final class DefaultRoute implements Route {
     public Route withPrefix(String prefix) {
         requireNonNull(prefix, "prefix");
         return new DefaultRoute(pathMapping.withPrefix(prefix), methods, consumes, produces, paramPredicates,
-                                headerPredicates, isFallback, excludedRoutes, this);
-    }
-
-    @Override
-    public Route unwrap() {
-        return originalRoute == null ? this : originalRoute;
+                                headerPredicates, isFallback, excludedRoutes);
     }
 
     @Override

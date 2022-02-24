@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.internal.server.RouteUtil.innermostRoute;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -243,11 +242,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Nullable
     static ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx, HandlerRegistry registry) {
-        final Route route = innermostRoute(ctx.config().route());
-        // method is found using route when the grpcService is set via:
+        final Route mappedRoute = ctx.config().mappedRoute();
+        // method is found using mappedRoute when the grpcService is set via:
         // - serverBuilder.service(grpcService);
         // - serverBuilder.serviceUnder("/prefix", grpcService);
-        final ServerMethodDefinition<?, ?> method = registry.lookupMethod(route);
+        final ServerMethodDefinition<?, ?> method = registry.lookupMethod(mappedRoute);
         if (method != null) {
             return method;
         }

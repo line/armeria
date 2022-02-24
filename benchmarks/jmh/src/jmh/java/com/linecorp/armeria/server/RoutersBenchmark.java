@@ -47,17 +47,20 @@ public class RoutersBenchmark {
         final String defaultLogName = null;
         final String defaultServiceName = null;
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
+        final Route route1 = Route.builder().exact("/grpc.package.Service/Method1").build();
+        final Route route2 = Route.builder().exact("/grpc.package.Service/Method2").build();
         SERVICES = ImmutableList.of(
-                new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
+                new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
                                   true),
-                new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
+                new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
                                   true)
         );
-        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
+        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
+                                             defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              false, CommonPools.blockingTaskExecutor(), true);
         HOST = new VirtualHost(

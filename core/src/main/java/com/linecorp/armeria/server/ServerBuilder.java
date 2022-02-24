@@ -1073,7 +1073,8 @@ public final class ServerBuilder {
      * Binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
      * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
-     * {@code serviceWithRoutes} in the following code will be bound to ({@code "/foo/bar"}):
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
      * <pre>{@code
      * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
      * >     @Override
@@ -1081,12 +1082,13 @@ public final class ServerBuilder {
      * >
      * >     @Override
      * >     public Set<Route> routes() {
-     * >         return Set.of(Route.builder().path("/bar").build());
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
      * >     }
      * > };
      * >
      * > Server.builder()
-     * >       .service("/foo", serviceWithRoutes)
+     * >       .serviceUnder("/foo", serviceWithRoutes)
      * >       .build();
      * }</pre>
      */
@@ -1095,6 +1097,7 @@ public final class ServerBuilder {
         requireNonNull(serviceWithRoutes, "serviceWithRoutes");
         serviceWithRoutes.routes()
                          .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
+                                                  .addMappedRoute(route)
                                                   .build(serviceWithRoutes));
         return this;
     }
@@ -1103,7 +1106,8 @@ public final class ServerBuilder {
      * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
      * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
-     * {@code serviceWithRoutes} in the following code will be bound to ({@code "/foo/bar"}):
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
      * <pre>{@code
      * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
      * >     @Override
@@ -1111,12 +1115,13 @@ public final class ServerBuilder {
      * >
      * >     @Override
      * >     public Set<Route> routes() {
-     * >         return Set.of(Route.builder().path("/bar").build());
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
      * >     }
      * > };
      * >
      * > Server.builder()
-     * >       .service("/foo", serviceWithRoutes)
+     * >       .serviceUnder("/foo", serviceWithRoutes)
      * >       .build();
      * }</pre>
      *
@@ -1135,6 +1140,7 @@ public final class ServerBuilder {
         final HttpService decorated = decorate(serviceWithRoutes, decorators);
         serviceWithRoutes.routes()
                          .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
+                                                  .addMappedRoute(route)
                                                   .build(decorated));
         return this;
     }
@@ -1142,8 +1148,9 @@ public final class ServerBuilder {
     /**
      * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
-     * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
-     * {@code serviceWithRoutes} in the following code will be bound to ({@code "/foo/bar"}):
+     * with the specified {@code pathPrefix} added to each {@link Route}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
      * <pre>{@code
      * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
      * >     @Override
@@ -1151,12 +1158,13 @@ public final class ServerBuilder {
      * >
      * >     @Override
      * >     public Set<Route> routes() {
-     * >         return Set.of(Route.builder().path("/bar").build());
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
      * >     }
      * > };
      * >
      * > Server.builder()
-     * >       .service("/foo", serviceWithRoutes)
+     * >       .serviceUnder("/foo", serviceWithRoutes)
      * >       .build();
      * }</pre>
      *

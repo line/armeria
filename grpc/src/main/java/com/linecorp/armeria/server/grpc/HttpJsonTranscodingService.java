@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.internal.server.RouteUtil.innermostRoute;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -469,8 +468,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Route mappedRoute = ctx.config().route();
-        final TranscodingSpec spec = routeAndSpecs.get(innermostRoute(mappedRoute));
+        final Route mappedRoute = ctx.config().mappedRoute();
+        final TranscodingSpec spec = routeAndSpecs.get(mappedRoute);
         if (spec != null) {
             return serve0(ctx, req, spec);
         }

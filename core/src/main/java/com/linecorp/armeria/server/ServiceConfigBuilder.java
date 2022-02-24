@@ -35,6 +35,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private final HttpService service;
 
     @Nullable
+    private Route mappedRoute;
+    @Nullable
     private String defaultServiceName;
     @Nullable
     private ServiceNaming defaultServiceNaming;
@@ -56,6 +58,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
+    }
+
+    void addMappedRoute(Route mappedRoute) {
+        this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
     }
 
     @Override
@@ -159,7 +165,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         boolean defaultShutdownBlockingTaskExecutorOnStop) {
         return new ServiceConfig(
-                route, service, defaultLogName, defaultServiceName,
+                route, mappedRoute == null ? route : mappedRoute,
+                service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,

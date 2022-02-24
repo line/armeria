@@ -475,7 +475,7 @@ public final class RouteBuilder {
         }
         final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
         return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
-                                paramPredicates, headerPredicates, isFallback, excludedRoutes, null);
+                                paramPredicates, headerPredicates, isFallback, excludedRoutes);
     }
 
     @Override
