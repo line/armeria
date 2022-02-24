@@ -432,7 +432,7 @@ public final class Server implements ListenableAsyncCloseable {
                     }
                     return 0;
                 };
-                Gauge.builder("armeria.server.certificate.expiration", certificateExpirationInfoProvider)
+                Gauge.builder("armeria.server.certificate.validity", certificateExpirationInfoProvider)
                      .description("0 if certificate is not expired, 1 if certificate is expired")
                      .tags("CN", commonName)
                      .register(meterRegistry);
@@ -441,7 +441,7 @@ public final class Server implements ListenableAsyncCloseable {
                     final Duration diff = Duration.between(Instant.now(), x509Certificate.getNotAfter().toInstant());
                     return diff.isNegative() ? -1 : diff.toDays();
                 };
-                Gauge.builder("armeria.server.certificate.time.to.expire", timeToExpireProvider)
+                Gauge.builder("armeria.server.certificate.validity.days", timeToExpireProvider)
                      .description("Duration in day before certificate expires which becomes -1 " +
                                   "if certificate is expired")
                      .tags("CN", commonName)

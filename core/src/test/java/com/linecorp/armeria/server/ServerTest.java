@@ -101,8 +101,8 @@ class ServerTest {
     private static final long requestTimeoutMillis = 500;
     private static final long idleTimeoutMillis = 500;
 
-    private static final String CERT_EXPIRATION_GAUGE_NAME = "armeria.server.certificate.expiration";
-    private static final String CERT_TIME_TO_EXPIRE_GAUGE_NAME = "armeria.server.certificate.time.to.expire";
+    private static final String CERT_EXPIRATION_GAUGE_NAME = "armeria.server.certificate.validity";
+    private static final String CERT_TIME_TO_EXPIRE_GAUGE_NAME = "armeria.server.certificate.validity.days";
 
     private static final EventExecutorGroup asyncExecutorGroup = new DefaultEventExecutorGroup(1);
 
