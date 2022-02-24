@@ -604,7 +604,7 @@ class ServerTest {
               .build();
 
         assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isNegative();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isEqualTo(-1);
     }
 
     @Test
@@ -621,7 +621,7 @@ class ServerTest {
               .build();
 
         assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isNegative();
+        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isEqualTo(-1);
         assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isZero();
         assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "test.root.armeria").isPositive();
     }

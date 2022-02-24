@@ -437,10 +437,12 @@ public final class Server implements ListenableAsyncCloseable {
                      .tags("CN", commonName)
                      .register(meterRegistry);
 
-                final Supplier<Number> timeToExpireProvider = () ->
-                        Duration.between(Instant.now(), x509Certificate.getNotAfter().toInstant()).getSeconds();
+                final Supplier<Number> timeToExpireProvider = () -> {
+                    final Duration diff = Duration.between(Instant.now(), x509Certificate.getNotAfter().toInstant());
+                    return diff.isNegative() ? -1 : diff.toDays();
+                };
                 Gauge.builder("armeria.server.certificate.time.to.expire", timeToExpireProvider)
-                     .description("Duration in second before certificate expires which becomes negative " +
+                     .description("Duration in day before certificate expires which becomes -1 " +
                                   "if certificate is expired")
                      .tags("CN", commonName)
                      .register(meterRegistry);
