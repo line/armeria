@@ -84,7 +84,8 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, Route mappedRoute, HttpService service,
+    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route,
+                          Route mappedRoute, HttpService service,
                           @Nullable String defaultLogName, @Nullable String defaultServiceName,
                           ServiceNaming defaultServiceNaming, long requestTimeoutMillis, long maxRequestLength,
                           boolean verboseResponses, AccessLogWriter accessLogWriter,
@@ -207,9 +208,8 @@ public final class ServiceConfig {
      * >       .serviceUnder("/foo", serviceWithRoutes)
      * >       .build();
      * }</pre>
-     *
-     *  If the service is not an {@link HttpServiceWithRoutes}, the {@link Route} is the same as
-     *  {@link #route()}.
+     * If the service is not an {@link HttpServiceWithRoutes}, the {@link Route} is the same as
+     * {@link #route()}.
      */
     public Route mappedRoute() {
         return mappedRoute;
