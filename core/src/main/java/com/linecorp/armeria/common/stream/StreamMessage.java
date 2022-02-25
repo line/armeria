@@ -563,7 +563,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     default <U> StreamMessage<U> mapAsync(
             Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(function, "function");
-        return new AsyncMapStreamMessage<>(this, function);
+        return new AsyncMapStreamMessage<>(this, function, 1);
     }
 
     /**
@@ -582,10 +582,35 @@ public interface StreamMessage<T> extends Publisher<T> {
      *     streamMessage.mapAsync(x -> CompletableFuture.completedFuture(x + 1));
      * }</pre>
      */
-    default <U> StreamMessage<U> mapAsyncParallel(
+    default <U> StreamMessage<U> mapParallel(
             Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(function, "function");
-        return new ParallelAsyncMapStreamMessage<>(this, function);
+        return new AsyncMapStreamMessage<>(this, function, Long.MAX_VALUE);
+    }
+
+
+    /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified asynchronous
+     * {@link Function} and emitting the value the future completes with.
+     * The {@link StreamMessage} publishes items eagerly in the order that the futures complete.
+     * The number of pending futures will at most be {@code maximumCurrency}
+     * It does not necessarily preserve the order of the original stream.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value nor a future which completes with a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.mapAsync(x -> CompletableFuture.completedFuture(x + 1));
+     * }</pre>
+     */
+    default <U> StreamMessage<U> mapParallel(
+            Function<? super T, ? extends CompletableFuture<? extends U>> function,
+            long maximumConcurrency) {
+        requireNonNull(function, "function");
+        return new AsyncMapStreamMessage<>(this, function, maximumConcurrency);
     }
 
     /**
