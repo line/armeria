@@ -25,6 +25,7 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
@@ -103,6 +104,7 @@ class DecodingServiceTest {
     }
 
     @Test
+    @EnabledIf("io.netty.handler.codec.compression.Brotli#isAvailable")
     void decodingBrotliCompressedPayloadFromClient() throws Throwable {
 
         final WebClient client = WebClient.builder(server.httpUri()).build();

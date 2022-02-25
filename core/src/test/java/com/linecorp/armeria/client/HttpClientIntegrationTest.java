@@ -91,6 +91,7 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.util.AsciiString;
 
 class HttpClientIntegrationTest {
@@ -504,7 +505,8 @@ class HttpClientIntegrationTest {
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
+                Brotli.isAvailable() ? "br" : "gzip");
         assertThat(response.contentUtf8()).isEqualTo(
                 "some content to compress more content to compress");
     }

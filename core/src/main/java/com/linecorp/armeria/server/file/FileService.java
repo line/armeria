@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Objects;
@@ -38,6 +37,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.Splitter;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.compression.Brotli;
 
 /**
  * An {@link HttpService} that serves static files from a file system.
@@ -215,7 +216,7 @@ public final class FileService extends AbstractHttpService {
             }
             if (config().autoDecompress() && encodings.isEmpty()) {
                 needsDecompression = true;
-                Collections.addAll(encodings, ContentEncoding.values());
+                encodings.addAll(ContentEncoding.availableEncodings);
             }
         }
         final boolean decompress = needsDecompression;
@@ -520,6 +521,16 @@ public final class FileService extends AbstractHttpService {
         // be ordered by priority.
         BROTLI(".br", "br", StreamDecoderFactory.brotli()),
         GZIP(".gz", "gzip", StreamDecoderFactory.gzip());
+
+        static final Set<ContentEncoding> availableEncodings;
+
+        static {
+            if (Brotli.isAvailable()) {
+                availableEncodings = Sets.immutableEnumSet(BROTLI, GZIP);
+            } else {
+                availableEncodings = Sets.immutableEnumSet(GZIP);
+            }
+        }
 
         private final String extension;
         final String headerValue;

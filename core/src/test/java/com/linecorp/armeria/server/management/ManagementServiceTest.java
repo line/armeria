@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.management;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -84,7 +85,9 @@ class ManagementServiceTest {
 
     @Test
     void heapDump() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .responseTimeout(Duration.ofSeconds(45)) // Heap dump can take time.
+                                          .build();
         final HttpResponse response = client.get("/internal/management/jvm/heapdump");
         final SplitHttpResponse splitHttpResponse = response.split();
         final ResponseHeaders headers = splitHttpResponse.headers().join();
