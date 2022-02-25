@@ -17,13 +17,45 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Function;
+
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised to send a simplistic HTTP response with minimal content
  * by a {@link Service}. It is a general exception raised by a failed request or a reset stream.
+ *
+ * <p>Note that an {@link HttpStatusException} raised may not be applied to the next decorators if the
+ * {@link HttpStatusException} is not recovered before passed to the next decorator chain.
+ * For that reason, you need to properly handle the thrown {@link HttpStatus} into a normal
+ * {@link HttpResponse} using {@link HttpResponse#recover(Function)} or
+ * {@link HttpStatusException#httpStatus()}.
+ * For example:
+ * <pre>{@code
+ * // Catch an HttpStatusException and convert into an HttpResponse
+ * try {
+ *     throwableService();
+ * } catch (HttpStatusException ex) {
+ *     return HttpResponse.of(ex.httpStatus());
+ * }
+ *
+ * // Recover the HttpStatusException using HttpResponse.recover()
+ * HttpResponse response = ...;
+ * response.recover(ex -> {
+ *     if (ex instanceof HttpStatusException) {
+ *         return HttpResponse.of(((HttpStatusException) ex).httpStatus());
+ *     } else {
+ *         return HttpResponse.ofFailure(ex);
+ *     }
+ * })
+ * }</pre>
+ *
+ * <p>An unhandled {@link HttpStatusException} will be recovered by the default {@link ServerErrorHandler}
+ * in the end. If you want to mutate the {@link HttpResponse} made of the {@link HttpStatusException}, you can
+ * add a custom {@link ServerErrorHandler}.
  *
  * @see HttpResponseException
  */
