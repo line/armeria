@@ -4,6 +4,12 @@ import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
 import { Configuration, DefinePlugin } from 'webpack';
+import WebpackDevServer from 'webpack-dev-server';
+declare module 'webpack' {
+  interface Configuration {
+    devServer?: WebpackDevServer.Configuration;
+  }
+}
 
 import { docServiceDebug } from './src/lib/header-provider';
 
@@ -102,8 +108,7 @@ const config: Configuration = {
   devServer: {
     historyApiFallback: true,
     hot: true,
-    open: true,
-    openPage: 'docs/',
+    open: 'docs/',
     port: 3000,
     proxy: [
       {

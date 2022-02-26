@@ -23,7 +23,7 @@ import RequiredDependencies from '../components/required-dependencies';
 import TutorialSteps from '../components/steps';
 import BaseLayout from './base';
 import pagePath from './page-path';
-import styles from './mdx.module.less';
+import * as styles from './mdx.module.less';
 
 const { Content } = Layout;
 const { Paragraph, Title } = Typography;
@@ -170,8 +170,10 @@ function filterTableCellProps(props: any) {
 const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   useLayoutEffect(() => {
     tocbot.init({
-      tocSelector: `.${styles.pageToc}`,
-      contentSelector: `.${styles.content}`,
+      // We can't use the full CSS class name here because auto-generated CSS class names
+      // sometimes contain a plug sign, such as `mdx-module--pageToc--7+NSp`.
+      tocSelector: 'div[class^="mdx-module--pageToc-"]', // `.${styles.pageToc}`,
+      contentSelector: 'div[class^="mdx-module--content-"]', // `.${styles.content}`,
       headingSelector: 'h1, h2, h3, h4',
       ignoreHiddenElements: true,
     });
@@ -389,7 +391,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
                           </Link>
                         );
                       }
-                      return <>{menuName}</>;
+                      return <span>{menuName}</span>;
                     })()}
                   </li>
                 );

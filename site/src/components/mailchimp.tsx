@@ -7,7 +7,7 @@ import React, { useState, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 
 import Emoji from './emoji';
-import styles from './mailchimp.module.less';
+import * as styles from './mailchimp.module.less';
 
 interface MailchimpProps {
   url?: string;
@@ -19,8 +19,7 @@ const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
   let props: MailchimpProps;
   if (!givenProps.url) {
     props = {
-      url:
-        'https://github.us19.list-manage.com/subscribe/post?u=3447f8227584634e6ee046edf&id=852d70ccdc',
+      url: 'https://github.us19.list-manage.com/subscribe/post?u=3447f8227584634e6ee046edf&id=852d70ccdc',
       botCode: 'b_3447f8227584634e6ee046edf_852d70ccdc',
       buttonType: givenProps.buttonType,
     };
