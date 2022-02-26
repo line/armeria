@@ -34,6 +34,7 @@ import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Queue;
@@ -101,8 +102,8 @@ class ServerTest {
     private static final long requestTimeoutMillis = 500;
     private static final long idleTimeoutMillis = 500;
 
-    private static final String CERT_EXPIRATION_GAUGE_NAME = "armeria.server.certificate.validity";
-    private static final String CERT_TIME_TO_EXPIRE_GAUGE_NAME = "armeria.server.certificate.validity.days";
+    private static final String CERT_VALIDITY_GAUGE_NAME = "armeria.server.certificate.validity";
+    private static final String CERT_VALIDITY_DAYS_GAUGE_NAME = "armeria.server.certificate.validity.days";
 
     private static final EventExecutorGroup asyncExecutorGroup = new DefaultEventExecutorGroup(1);
 
@@ -530,8 +531,8 @@ class ServerTest {
                 .meterRegistry(meterRegistry)
                 .build();
 
-        final Gauge expirationGauge = meterRegistry.find(CERT_EXPIRATION_GAUGE_NAME).gauge();
-        final Gauge timeToExpireGauge = meterRegistry.find(CERT_TIME_TO_EXPIRE_GAUGE_NAME).gauge();
+        final Gauge expirationGauge = meterRegistry.find(CERT_VALIDITY_GAUGE_NAME).gauge();
+        final Gauge timeToExpireGauge = meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME).gauge();
 
         assertThat(expirationGauge).isNull();
         assertThat(timeToExpireGauge).isNull();
@@ -547,8 +548,8 @@ class ServerTest {
               .tls(ssc.certificate(), ssc.privateKey())
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isPositive();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isOne();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isPositive();
     }
 
     @Test
@@ -560,13 +561,45 @@ class ServerTest {
               .tlsSelfSigned()
               .build();
 
-        final Gauge expirationGauge = meterRegistry.find(CERT_EXPIRATION_GAUGE_NAME).gauge();
+        final Gauge expirationGauge = meterRegistry.find(CERT_VALIDITY_GAUGE_NAME).gauge();
         assertThat(expirationGauge).isNotNull();
         assertThat(expirationGauge.value()).isOne();
 
-        final Gauge timeToExpireGauge = meterRegistry.find(CERT_TIME_TO_EXPIRE_GAUGE_NAME).gauge();
+        final Gauge timeToExpireGauge = meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME).gauge();
         assertThat(timeToExpireGauge).isNotNull();
         assertThat(timeToExpireGauge.value()).isPositive();
+    }
+
+    @Test
+    void tlsMetricGivenVirtualHostCertificateNotExpired() throws CertificateException {
+        final String defaultHostName = "virtual.com";
+        final String hostnamePattern = "*.virtual.com";
+        final SelfSignedCertificate ssc = new SelfSignedCertificate(hostnamePattern);
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+
+        Server.builder()
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .meterRegistry(meterRegistry)
+              .tls(ssc.certificate(), ssc.privateKey())
+              .virtualHost(defaultHostName,hostnamePattern)
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .tlsSelfSigned().and()
+              .build();
+
+        final Collection<Gauge> validityGauges = meterRegistry.find(CERT_VALIDITY_GAUGE_NAME).gauges();
+        final Collection<Gauge> daysValidityGauges = meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME).gauges();
+        // One gauge set for defaultVirtualHost and another for *.virtual.com
+        assertThat(validityGauges.size()).isEqualTo(2);
+        assertThat(daysValidityGauges.size()).isEqualTo(2);
+
+        assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
+                                .tag("common_name", hostnamePattern)
+                                .tag("hostname", defaultHostName)
+                                .gauge().value()).isOne();
+        assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
+                                .tag("common_name", hostnamePattern)
+                                .tag("hostname", defaultHostName)
+                                .gauge().value()).isPositive();
     }
 
     @Test
@@ -581,10 +614,10 @@ class ServerTest {
               .tls(expiredCertificateChain, pk)
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isOne();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isPositive();
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isOne();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "test.root.armeria").isPositive();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isOne();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isPositive();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "test.root.armeria").isOne();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "test.root.armeria").isPositive();
     }
 
     @Test
@@ -603,8 +636,8 @@ class ServerTest {
               .tls(ssc.certificate(), ssc.privateKey())
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isEqualTo(-1);
+        assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isZero();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isEqualTo(-1);
     }
 
     @Test
@@ -620,10 +653,10 @@ class ServerTest {
               .tls(expiredCertificateChain, pk)
               .build();
 
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "localhost").isZero();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "localhost").isEqualTo(-1);
-        assertThatGauge(meterRegistry, CERT_EXPIRATION_GAUGE_NAME, "test.root.armeria").isOne();
-        assertThatGauge(meterRegistry, CERT_TIME_TO_EXPIRE_GAUGE_NAME, "test.root.armeria").isPositive();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isZero();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "localhost").isEqualTo(-1);
+        assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "test.root.armeria").isOne();
+        assertThatGauge(meterRegistry, CERT_VALIDITY_DAYS_GAUGE_NAME, "test.root.armeria").isPositive();
     }
 
     @Test
@@ -730,7 +763,7 @@ class ServerTest {
 
     private static AbstractDoubleAssert<?> assertThatGauge(MeterRegistry meterRegistry, String gaugeName,
                                                            String cn) {
-        final Gauge gauge = meterRegistry.find(gaugeName).tag("CN", cn).gauge();
+        final Gauge gauge = meterRegistry.find(gaugeName).tag("common_name", cn).gauge();
         assertThat(gauge).isNotNull();
         return assertThat(gauge.value());
     }

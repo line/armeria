@@ -147,9 +147,10 @@ public final class Server implements ListenableAsyncCloseable {
 
         setupVersionMetrics();
 
-        if (config().sslContextMapping() != null) {
-            final SslContext sslContext = config().sslContextMapping().map(defaultHostname());
-            setupTlsMetrics(sslContext);
+        for (VirtualHost virtualHost : config().virtualHosts()) {
+            if (virtualHost.sslContext() != null) {
+                setupTlsMetrics(virtualHost.sslContext(), virtualHost.defaultHostname());
+            }
         }
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
@@ -415,7 +416,7 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Sets up gauge metric for each server certificate.
      */
-    private void setupTlsMetrics(SslContext sslContext) {
+    private void setupTlsMetrics(SslContext sslContext, String hostname) {
         final MeterRegistry meterRegistry = config().meterRegistry();
 
         final SSLSession sslSession = validateSslContext(sslContext);
@@ -433,18 +434,20 @@ public final class Server implements ListenableAsyncCloseable {
                     return 1;
                 };
                 Gauge.builder("armeria.server.certificate.validity", certificateExpirationInfoProvider)
-                     .description("1 if certificate is in validity period, 0 if certificate is not in validity period")
-                     .tags("CN", commonName)
+                     .description("1 if certificate is in validity period, 0 if certificate is not in " +
+                                  "validity period")
+                     .tags("common_name", commonName, "hostname", hostname)
                      .register(meterRegistry);
 
                 final Supplier<Number> timeToExpireProvider = () -> {
-                    final Duration diff = Duration.between(Instant.now(), x509Certificate.getNotAfter().toInstant());
+                    final Duration diff = Duration.between(Instant.now(),
+                                                           x509Certificate.getNotAfter().toInstant());
                     return diff.isNegative() ? -1 : diff.toDays();
                 };
                 Gauge.builder("armeria.server.certificate.validity.days", timeToExpireProvider)
                      .description("Duration in day before certificate expires which becomes -1 " +
                                   "if certificate is expired")
-                     .tags("CN", commonName)
+                     .tags("common_name", commonName, "hostname", hostname)
                      .register(meterRegistry);
             } catch (Exception ex) {
                 logger.warn("Fail to setup certificate expiration, " + ex.getMessage());
