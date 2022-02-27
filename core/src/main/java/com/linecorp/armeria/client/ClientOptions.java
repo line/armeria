@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcResponse;
@@ -108,7 +109,7 @@ public final class ClientOptions
             "REQUEST_ID_GENERATOR", RequestId::random);
 
     /**
-     * The {@link Supplier} that generates a {@link RequestId}.
+     * The {@link BiPredicate} that defines successful responses.
      */
     public static final ClientOption<BiPredicate<? super RequestContext, ? super RequestLog>> SUCCESS_FUNCTION =
             ClientOption.define("SUCCESS_FUNCTION", ClientOptions::isSuccess);
@@ -316,6 +317,11 @@ public final class ClientOptions
         return new ClientOptionsBuilder(this);
     }
 
+    /**
+     * Default success response classification function which checks
+     * {@link RequestLog#responseCause()} is null, 100 &lt;= {@link HttpStatus} &lt; 400
+     * and {@link RpcResponse#isCompletedExceptionally()} == {@code false}.
+     */
     private static boolean isSuccess(RequestContext ctx, RequestLog log) {
         if (log.responseCause() != null) {
             return false;

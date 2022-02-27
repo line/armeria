@@ -76,6 +76,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
@@ -930,7 +932,8 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * TODO.
+     * Sets the {@link BiPredicate} to define successful responses.
+     * {@link MetricCollectingService} and {@link LoggingService} use this function.
      */
     public VirtualHostBuilder successFunction(
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {

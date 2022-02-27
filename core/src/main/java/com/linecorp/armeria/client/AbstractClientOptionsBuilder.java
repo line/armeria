@@ -28,6 +28,9 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.logging.LoggingRpcClient;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -182,7 +185,10 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * TODO.
+     * Sets the {@link BiPredicate} to allow custom definition of successful responses.
+     * {@link MetricCollectingClient}, {@link LoggingClient} and {@link LoggingRpcClient} will use this custom
+     * definition if set.
+     * If not set, default one in {@link ClientOptions} is used.
      */
     public AbstractClientOptionsBuilder successFunction(
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {

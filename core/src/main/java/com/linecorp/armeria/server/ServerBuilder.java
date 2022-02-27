@@ -63,6 +63,7 @@ import com.google.common.net.HostAndPort;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -82,6 +83,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -814,7 +817,10 @@ public final class ServerBuilder {
     }
 
     /**
-     * TODO.
+     * Defines a custom {@link BiPredicate} to allow custom definition of successful responses.
+     * {@link MetricCollectingService} and {@link LoggingService} will use this custom
+     * definition if set.
+     * If not set, {@link #isSuccess(RequestContext, RequestLog)} is used.
      */
     public ServerBuilder successFunction(
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
@@ -1904,6 +1910,11 @@ public final class ServerBuilder {
         }
     }
 
+    /**
+     * Default success response classification function which checks
+     * {@link RequestLog#responseCause()} is null, 100 &lt;= {@link HttpStatus} &lt; 400
+     * and {@link RpcResponse#isCompletedExceptionally()} == {@code false}.
+     */
     private static boolean isSuccess(RequestContext ctx, RequestLog log) {
         if (log.responseCause() != null) {
             return false;

@@ -328,7 +328,7 @@ public final class ServiceConfig {
     }
 
     /**
-     * TODO.
+     * Returns the {@link BiPredicate} for checking if the response is success.
      */
     public BiPredicate<? super RequestContext, ? super RequestLog> successFunction() {
         return successFunction;

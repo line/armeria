@@ -48,8 +48,6 @@ public abstract class AbstractMetricCollectingBuilder {
 
     /**
      * Returns the {@code successFunction}.
-     *
-     *
      */
     @Nullable
     protected final BiPredicate<? super RequestContext, ? super RequestLog> successFunction() {
@@ -73,7 +71,7 @@ public abstract class AbstractMetricCollectingBuilder {
      * }</pre>
      *
      * @deprecated Use {@link ClientBuilder#successFunction(BiPredicate)} or
-     *                 {@link ServerBuilder#successFunction(BiPredicate)} instead.
+ *                 {@link ServerBuilder#successFunction(BiPredicate)} instead.
      */
     @Deprecated
     public AbstractMetricCollectingBuilder successFunction(

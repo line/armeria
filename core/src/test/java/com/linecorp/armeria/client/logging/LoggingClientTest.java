@@ -271,7 +271,7 @@ class LoggingClientTest {
     }
 
     @Test
-    void shouldLogFailedRequestWhenFailureSamplingRateIsAlways() throws Exception {
+    void shouldLogFailedResponseWhenFailureSamplingRateIsAlways() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
@@ -303,7 +303,7 @@ class LoggingClientTest {
     }
 
     @Test
-    void shouldNotLogFailedRequestWhenSamplingRateIsZero() throws Exception {
+    void shouldNotLogFailedResponseWhenSamplingRateIsZero() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(req);
         final IllegalStateException cause = new IllegalStateException("Failed");

@@ -26,6 +26,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 interface ServiceConfigSetters {
 
@@ -142,7 +144,9 @@ interface ServiceConfigSetters {
     ServiceConfigSetters blockingTaskExecutor(int numThreads);
 
     /**
-     * TODO.
+     * Defines a custom {@link BiPredicate} to allow custom definition of successful requests and responses.
+     * {@link MetricCollectingService} and {@link LoggingService}  use this custom
+     * definition if set.
      */
     ServiceConfigSetters successFunction(
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction);
