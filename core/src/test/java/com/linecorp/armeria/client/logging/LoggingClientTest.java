@@ -271,7 +271,7 @@ class LoggingClientTest {
     }
 
     @Test
-    void shouldLogFailedRequestResponseWhenResponseLogIsSampled() throws Exception {
+    void shouldLogFailedRequestWhenFailureSamplingRateIsAlways() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
@@ -285,7 +285,7 @@ class LoggingClientTest {
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
                              .logger(logger)
-                             .samplingRate(0.0f)
+                             .successSamplingRate(0.0f)
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);
@@ -303,7 +303,7 @@ class LoggingClientTest {
     }
 
     @Test
-    void shouldNotLogFailedRequestResponseWhenResponseLogIsNotSampled() throws Exception {
+    void shouldNotLogFailedRequestWhenSamplingRateIsZero() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
@@ -316,7 +316,6 @@ class LoggingClientTest {
                 LoggingClient.builder()
                              .logger(logger)
                              .samplingRate(0.0f)
-                             .failedSamplingRate(0.0f)
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);

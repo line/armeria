@@ -89,8 +89,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     private final BiFunction<? super RequestContext, ? super Throwable,
             ? extends @Nullable Object> responseCauseSanitizer;
 
-    private final Sampler<? super ServiceRequestContext> sampler;
-    private final Sampler<? super ServiceRequestContext> failedSampler;
+    private final Sampler<? super ServiceRequestContext> successSampler;
+    private final Sampler<? super ServiceRequestContext> failureSampler;
 
     /**
      * Creates a new instance that logs {@link HttpRequest}s and {@link HttpResponse}s at the specified
@@ -115,8 +115,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ServiceRequestContext> sampler,
-            Sampler<? super ServiceRequestContext> failedSampler) {
+            Sampler<? super ServiceRequestContext> successSampler,
+            Sampler<? super ServiceRequestContext> failureSampler) {
 
         super(requireNonNull(delegate, "delegate"));
 
@@ -131,18 +131,18 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        this.sampler = requireNonNull(sampler, "sampler");
-        this.failedSampler = requireNonNull(failedSampler, "failedSampler");
+        this.successSampler = requireNonNull(successSampler, "successSampler");
+        this.failureSampler = requireNonNull(failureSampler, "failureSampler");
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         ctx.log().whenComplete().thenAccept(requestLog -> {
             if (requestLog.responseCause() == null) {
-                if (sampler.isSampled(ctx)) {
+                if (successSampler.isSampled(ctx)) {
                     log(logger, ctx, requestLog, requestLogger, responseLogger);
                 }
-            } else if (failedSampler.isSampled(ctx)) {
+            } else if (failureSampler.isSampled(ctx)) {
                 log(logger, ctx, requestLog, requestLogger, responseLogger);
             }
         });

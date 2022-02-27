@@ -547,7 +547,7 @@ class LoggingServiceTest {
                 LoggingService.builder()
                               .logger(logger)
                               .samplingRate(0.0f)
-                              .failedSamplingRate(0.0f)
+                              .failureSamplingRate(0.0f)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());

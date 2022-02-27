@@ -40,23 +40,31 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
-    private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
+    private Sampler<? super ServiceRequestContext> successSampler = Sampler.always();
 
-    private Sampler<? super ServiceRequestContext> failedSampler = Sampler.always();
+    private Sampler<? super ServiceRequestContext> failureSampler = Sampler.always();
 
     LoggingServiceBuilder() {}
 
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
+     * This method sets both success and failure, if you want to specify different values for the success
+     * and failure samplers, use {@link #successSampler(Sampler)} and * {@link #failureSampler(Sampler)}
+     * instead.
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
-        this.sampler = requireNonNull(sampler, "sampler");
+        requireNonNull(sampler, "sampler");
+        this.successSampler = sampler;
+        this.failureSampler = sampler;
         return this;
     }
 
     /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged.
+     * This method sets both success and failure, if you want to specify different values for the success
+     * and failure samplers, use {@link #successSamplingRate(float)} and
+     * {@link #failureSamplingRate(float)} instead.
      */
     public LoggingServiceBuilder samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
@@ -65,23 +73,43 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Sampler} that determines which failed request needs logging.
+     * Sets the {@link Sampler} that determines which success request needs logging.
      */
-    public LoggingServiceBuilder failedSampler(
-            Sampler<? super ServiceRequestContext> failedSampler) {
-        this.failedSampler = requireNonNull(failedSampler, "failedSampler");
+    public LoggingServiceBuilder successSampler(
+            Sampler<? super ServiceRequestContext> successSampler) {
+        this.successSampler = requireNonNull(successSampler, "successSampler");
         return this;
     }
 
     /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
-     * cause a random sample of the failed requests to be logged.
+     * cause a random sample of the success requests to be logged.
      */
-    public LoggingServiceBuilder failedSamplingRate(float failedSamplingRate) {
-        checkArgument(0.0 <= failedSamplingRate && failedSamplingRate <= 1.0,
-                      "failedSamplingRate: %s (expected: 0.0 <= failedSamplingRate <= 1.0)",
-                      failedSamplingRate);
-        return failedSampler(Sampler.random(failedSamplingRate));
+    public LoggingServiceBuilder successSamplingRate(float successSamplingRate) {
+        checkArgument(0.0 <= successSamplingRate && successSamplingRate <= 1.0,
+                      "successSamplingRate: %s (expected: 0.0 <= successSamplingRate <= 1.0)",
+                      successSamplingRate);
+        return successSampler(Sampler.random(successSamplingRate));
+    }
+
+    /**
+     * Sets the {@link Sampler} that determines which failure request needs logging.
+     */
+    public LoggingServiceBuilder failureSampler(
+            Sampler<? super ServiceRequestContext> failureSampler) {
+        this.failureSampler = requireNonNull(failureSampler, "failureSampler");
+        return this;
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the failure requests to be logged.
+     */
+    public LoggingServiceBuilder failureSamplingRate(float failureSamplingRate) {
+        checkArgument(0.0 <= failureSamplingRate && failureSamplingRate <= 1.0,
+                      "failureSamplingRate: %s (expected: 0.0 <= failureSamplingRate <= 1.0)",
+                      failureSamplingRate);
+        return failureSampler(Sampler.random(failureSamplingRate));
     }
 
     /**
@@ -100,8 +128,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                                   responseContentSanitizer(),
                                   responseTrailersSanitizer(),
                                   responseCauseSanitizer(),
-                                  sampler,
-                                  failedSampler);
+                                  successSampler,
+                                  failureSampler);
     }
 
     /**
@@ -134,8 +162,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     @Override
-    public LoggingServiceBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        return (LoggingServiceBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
+    public LoggingServiceBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
+        return (LoggingServiceBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
     }
 
     @Override

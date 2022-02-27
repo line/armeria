@@ -73,8 +73,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     private final BiFunction<? super RequestContext, ? super Throwable, ? extends @Nullable Object>
             responseCauseSanitizer;
 
-    private final Sampler<? super ClientRequestContext> sampler;
-    private final Sampler<? super ClientRequestContext> failedSampler;
+    private final Sampler<? super ClientRequestContext> successSampler;
+    private final Sampler<? super ClientRequestContext> failureSampler;
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
@@ -99,8 +99,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ClientRequestContext> sampler,
-            Sampler<? super ClientRequestContext> failedSampler) {
+            Sampler<? super ClientRequestContext> successSampler,
+            Sampler<? super ClientRequestContext> failureSampler) {
 
         super(requireNonNull(delegate, "delegate"));
 
@@ -116,18 +116,18 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        this.sampler = requireNonNull(sampler, "sampler");
-        this.failedSampler = requireNonNull(failedSampler, "failedSampler");
+        this.successSampler = requireNonNull(successSampler, "successSampler");
+        this.failureSampler = requireNonNull(failureSampler, "failureSampler");
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
         ctx.log().whenComplete().thenAccept(log -> {
             if (log.responseCause() == null) {
-                if (sampler.isSampled(ctx)) {
+                if (successSampler.isSampled(ctx)) {
                     log(logger, ctx, log, requestLogger, responseLogger);
                 }
-            } else if (failedSampler.isSampled(ctx)) {
+            } else if (failureSampler.isSampled(ctx)) {
                 log(logger, ctx, log, requestLogger, responseLogger);
             }
         });
