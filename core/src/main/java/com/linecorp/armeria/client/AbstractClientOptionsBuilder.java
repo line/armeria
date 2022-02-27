@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -31,6 +32,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -38,6 +40,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * A skeletal builder implementation for {@link ClientOptions}.
@@ -176,6 +179,14 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return option(ClientOptions.REQUEST_ID_GENERATOR, requestIdGenerator);
+    }
+
+    /**
+     * TODO.
+     */
+    public AbstractClientOptionsBuilder successFunction(
+            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        return option(ClientOptions.SUCCESS_FUNCTION, successFunction);
     }
 
     /**

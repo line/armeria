@@ -20,12 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -218,6 +221,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (ServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
+    }
+
+    @Override
+    public ServiceBindingBuilder successFunction(
+            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        return (ServiceBindingBuilder) super.successFunction(successFunction);
     }
 
     @Override

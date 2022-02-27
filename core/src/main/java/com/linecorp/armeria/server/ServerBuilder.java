@@ -44,6 +44,7 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -65,9 +66,11 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -213,6 +216,7 @@ public final class ServerBuilder {
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
+        virtualHostTemplate.successFunction(ServerBuilder::isSuccess);
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -807,6 +811,15 @@ public final class ServerBuilder {
                                                                   .numThreads(numThreads)
                                                                   .build();
         return blockingTaskExecutor(executor, true);
+    }
+
+    /**
+     * TODO.
+     */
+    public ServerBuilder successFunction(
+            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
+        return this;
     }
 
     /**
@@ -1889,6 +1902,24 @@ public final class ServerBuilder {
                             path, service);
             }
         }
+    }
+
+    private static boolean isSuccess(RequestContext ctx, RequestLog log) {
+        if (log.responseCause() != null) {
+            return false;
+        }
+
+        final int statusCode = log.responseHeaders().status().code();
+        if (statusCode < 100 || statusCode >= 400) {
+            return false;
+        }
+
+        final Object responseContent = log.responseContent();
+        if (responseContent instanceof RpcResponse) {
+            return !((RpcResponse) responseContent).isCompletedExceptionally();
+        }
+
+        return true;
     }
 
     @Override

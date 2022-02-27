@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -230,8 +231,27 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, null);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
+                                   RequestMetricSupportTest::isSuccess);
         return ctx;
+    }
+
+    private static boolean isSuccess(RequestContext ctx, RequestLog log) {
+        if (log.responseCause() != null) {
+            return false;
+        }
+
+        final int statusCode = log.responseHeaders().status().code();
+        if (statusCode < 100 || statusCode >= 400) {
+            return false;
+        }
+
+        final Object responseContent = log.responseContent();
+        if (responseContent instanceof RpcResponse) {
+            return !((RpcResponse) responseContent).isCompletedExceptionally();
+        }
+
+        return true;
     }
 
     private static void addLogInfoInDerivedCtx(ClientRequestContext ctx) {
@@ -261,7 +281,8 @@ class RequestMetricSupportTest {
         final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, null);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
+                                   RequestMetricSupportTest::isSuccess);
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -298,7 +319,8 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, null);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
+                                   RequestMetricSupportTest::isSuccess);
 
         ctx.logBuilder().name("BarService", "baz");
 
@@ -316,7 +338,8 @@ class RequestMetricSupportTest {
         final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET,
-                                   MeterIdPrefixFunction.ofDefault("foo"), true, null);
+                                   MeterIdPrefixFunction.ofDefault("foo"), true,
+                                   RequestMetricSupportTest::isSuccess);
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -325,7 +348,8 @@ class RequestMetricSupportTest {
                                         .endpoint(Endpoint.of("example.com", 8080))
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
-                                       MeterIdPrefixFunction.ofDefault("bar"), false, null);
+                                       MeterIdPrefixFunction.ofDefault("bar"), false,
+                                       RequestMetricSupportTest::isSuccess);
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();

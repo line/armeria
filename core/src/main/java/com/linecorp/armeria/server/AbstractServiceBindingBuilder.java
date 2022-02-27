@@ -23,10 +23,13 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -124,6 +127,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters successFunction(
+            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        defaultServiceConfigSetters.successFunction(successFunction);
         return this;
     }
 

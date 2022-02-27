@@ -55,7 +55,8 @@ public class ServiceTest {
                                                     /* defaultServiceName */ null,
                                                     ServiceNaming.of("FooService"), 1, 1, true,
                                                     AccessLogWriter.disabled(), false,
-                                                    CommonPools.blockingTaskExecutor(), true);
+                                                    CommonPools.blockingTaskExecutor(), true,
+                                                    (requestContext, requestLog) -> true);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

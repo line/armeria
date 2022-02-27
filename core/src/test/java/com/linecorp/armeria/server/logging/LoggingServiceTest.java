@@ -513,7 +513,7 @@ class LoggingServiceTest {
     }
 
     @Test
-    void shouldLogFailedRequestResponseWhenResponseLogIsSampled() throws Exception {
+    void shouldLogFailedRequestWhenFailureSamplingRateIsAlways() throws Exception {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
@@ -524,7 +524,7 @@ class LoggingServiceTest {
         final LoggingService service =
                 LoggingService.builder()
                               .logger(logger)
-                              .samplingRate(0.0f)
+                              .successSamplingRate(0.0f)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
@@ -537,7 +537,7 @@ class LoggingServiceTest {
     }
 
     @Test
-    void shouldNotLogFailedRequestResponseWhenResponseLogIsNotSampled() throws Exception {
+    void shouldNotLogFailedRequestWhenSamplingRateIsZero() throws Exception {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
@@ -547,7 +547,6 @@ class LoggingServiceTest {
                 LoggingService.builder()
                               .logger(logger)
                               .samplingRate(0.0f)
-                              .failureSamplingRate(0.0f)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
