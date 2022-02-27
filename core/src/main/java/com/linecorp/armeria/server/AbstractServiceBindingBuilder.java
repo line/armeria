@@ -131,7 +131,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
-    public ServiceConfigSetters successFunction(
+    public AbstractServiceBindingBuilder successFunction(
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
         return this;
