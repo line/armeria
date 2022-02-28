@@ -15,6 +15,7 @@
 *.banzai.cloud
 *.bd
 *.beget.app
+*.build.run
 *.bzz.dapps.earth
 *.ck
 *.cloud.metacentrum.cz
@@ -28,6 +29,7 @@
 *.cryptonomic.net
 *.customer-oci.com
 *.dapps.earth
+*.database.run
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
 *.developer.app
@@ -58,6 +60,7 @@
 *.lclstage.dev
 *.linodeobjects.com
 *.magentosite.cloud
+*.migration.run
 *.mm
 *.moonscale.io
 *.nagoya.jp
