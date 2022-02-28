@@ -63,6 +63,7 @@
     "html-webpack-plugin": "^4.5.2",
     "license-webpack-plugin": "^2.3.18",
     "prettier": "^2.2.1",
+    "sharp": "^0.30.1",
     "style-loader": "^2.0.0",
     "ts-loader": "^8.1.0",
     "ts-node": "^9.1.1",
