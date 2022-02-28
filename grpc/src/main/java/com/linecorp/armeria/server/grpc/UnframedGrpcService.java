@@ -115,7 +115,7 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
         final MediaType framedContentType;
         if (contentType.is(MediaType.PROTOBUF)) {
             framedContentType = GrpcSerializationFormats.PROTO.mediaType();
-        } else if (contentType.is(MediaType.JSON_UTF_8)) {
+        } else if (contentType.isJson()) {
             framedContentType = GrpcSerializationFormats.JSON.mediaType();
         } else {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
