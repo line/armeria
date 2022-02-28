@@ -53,6 +53,7 @@ class ManagementServiceTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            sb.requestTimeout(Duration.ofSeconds(45)); // Heap dump can take time.
             sb.serviceUnder("/internal/management", ManagementService.of());
         }
     };
@@ -86,7 +87,7 @@ class ManagementServiceTest {
     @Test
     void heapDump() throws InterruptedException {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .responseTimeout(Duration.ofSeconds(45)) // Heap dump can take time.
+                                          .responseTimeout(Duration.ofSeconds(50)) // Heap dump can take time.
                                           .build();
         final HttpResponse response = client.get("/internal/management/jvm/heapdump");
         final SplitHttpResponse splitHttpResponse = response.split();
