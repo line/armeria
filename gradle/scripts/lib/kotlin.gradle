@@ -3,7 +3,7 @@ configure(projectsWithFlags('kotlin')) {
     apply plugin: 'kotlin'
 
     def target = "1.8"
-    def compilerArgs = ["-Xjsr305=strict", "-java-parameters"]
+    def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
     compileKotlin {
         kotlinOptions.jvmTarget = target
         kotlinOptions.freeCompilerArgs = compilerArgs
