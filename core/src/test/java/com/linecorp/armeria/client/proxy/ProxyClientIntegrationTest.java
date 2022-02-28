@@ -595,8 +595,8 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testProxy_connectionTimeoutFailure_throwsException() throws Exception {
-        final int proxyMessageDelayMillis = 1_000;
-        final int connectTimeoutMillis = 500;
+        final int proxyMessageDelayMillis = 5_000;
+        final int connectTimeoutMillis = 1_000;
 
         channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
