@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageU
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -704,5 +705,37 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(destination, "destination");
         requireNonNull(options, "options");
         return StreamMessages.writeTo(map(mapper), destination, options);
+    }
+
+    /**
+     * Adapts this {@link StreamMessage} to {@link InputStream}.
+     * See {@link StreamMessageInputStream} for more information.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
+     * InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
+     * byte[] expected = ImmutableList.of("foo", "bar", "baz")
+     *                                .stream()
+     *                                .map(String::getBytes)
+     *                                .reduce(Bytes::concat).get();
+     *
+     * ByteBuf result = Unpooled.buffer();
+     * int read;
+     * while ((read = inputStream.read()) != -1) {
+     *     result.writeByte(read);
+     * }
+     *
+     * int readableBytes = result.readableBytes();
+     * byte[] actual = new byte[readableBytes];
+     * for (int i = 0; i < readableBytes; i++) {
+     *     actual[i] = result.readByte();
+     * }
+     * assert Arrays.equals(actual, expected);
+     * assert inputStream.available() == 0;
+     * }</pre>
+     */
+    default InputStream asInputStream(Function<? super T, ? extends HttpData> httpDataConverter) {
+        requireNonNull(httpDataConverter, "httpDataConverter");
+        return StreamMessageInputStream.of(this, httpDataConverter);
     }
 }
