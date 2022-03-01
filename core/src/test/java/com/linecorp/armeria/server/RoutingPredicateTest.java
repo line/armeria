@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -49,10 +49,16 @@ class RoutingPredicateTest {
     }
 
     @Test
+    void or() {
+        assertThat(parse("b=2 || !a").name()).isEqualTo("b_eq_2_or_not_a");
+    }
+
+    @Test
     void preserveSpacesInValue() {
         assertThat(parse("a=b").name()).isNotEqualTo(parse("a= b").name());
         assertThat(parse("a= b").name()).isNotEqualTo(parse("a=b ").name());
         assertThat(parse("a!= b").name()).isNotEqualTo(parse("a!=b ").name());
+        assertThat(parse(" a!= b || b= a").name()).isNotEqualTo(parse(" a!=b || b=a ").name());
     }
 
     @Test
@@ -60,6 +66,7 @@ class RoutingPredicateTest {
         assertThat(parse("a=b").name()).isEqualTo(parse("a =b").name());
         assertThat(parse(" a=b").name()).isEqualTo(parse("a =b").name());
         assertThat(parse(" a!=b").name()).isEqualTo(parse("a !=b").name());
+        assertThat(parse(" a!=b || b=a").name()).isEqualTo(parse(" a !=b ||b =a").name());
     }
 
     @Test
@@ -70,6 +77,13 @@ class RoutingPredicateTest {
         assertThatThrownBy(() -> ofParams("!a=b")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> ofParams("!!a")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> ofParams("!")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("!a ||| b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("a=3 ||| !b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("a ||| b=3")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("a |||| b=3")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("!a ||")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("!a || ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("a<5 || b<=4 ||")).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static RoutingPredicate<QueryParams> parse(String expression) {

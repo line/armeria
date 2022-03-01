@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -89,6 +89,28 @@ class MatchesParamTest {
                 public String matchesPercentEncoded2() {
                     return "my-param=%2F";
                 }
+
+                @Get("/matches/or")
+                @MatchesParam("my-param=2 || my-other-param")
+                public String matchesOneOrAnother() {
+                    return "my-param=2 || my-other-param";
+                }
+
+                @Get("/matches/or")
+                public String fallback5() {
+                    return "fallback";
+                }
+
+                @Get("/matches/orMultipleConditions")
+                @MatchesParam(" !my-other-param || my-param= 2 || my-other-other-param || my-other-param=3")
+                public String matchesOneOrAnother2() {
+                    return "!my-other-param || my-param= 2 || my-other-other-param || my-other-param=3";
+                }
+
+                @Get("/matches/orMultipleConditions")
+                public String fallback6() {
+                    return "fallback";
+                }
             });
         }
     };
@@ -140,5 +162,50 @@ class MatchesParamTest {
                          .aggregate().join().contentUtf8()).isEqualTo("my-param=/");
         assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=%252F"))
                          .aggregate().join().contentUtf8()).isEqualTo("my-param=%2F");
+    }
+
+    @Test
+    void or() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/or?my-param=2"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=2 || my-other-param");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/or?my-other-param"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=2 || my-other-param");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/or?my-param=3"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/or?!my-other-param"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/or"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/or?my-param"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void orMultipleConditions() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/orMultipleConditions"))
+                         .aggregate().join().contentUtf8())
+                .isEqualTo("!my-other-param || my-param= 2 || my-other-other-param || my-other-param=3");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET,
+                                                 "/matches/orMultipleConditions?my-other-param&my-param= 2"))
+                         .aggregate().join().contentUtf8())
+                .isEqualTo("!my-other-param || my-param= 2 || my-other-other-param || my-other-param=3");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET,
+                                                 "/matches/orMultipleConditions?my-other-param" +
+                                                         "&my-other-other-param"))
+                         .aggregate().join().contentUtf8())
+                .isEqualTo("!my-other-param || my-param= 2 || my-other-other-param || my-other-param=3");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET,
+                                                 "/matches/orMultipleConditions?my-other-param=3"))
+                         .aggregate().join().contentUtf8())
+                .isEqualTo("!my-other-param || my-param= 2 || my-other-other-param || my-other-param=3");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET,
+                                                 "/matches/orMultipleConditions?my-other-param"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET,
+                                                 "/matches/orMultipleConditions?my-other-param&my-param=10"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET,
+                                                 "/matches/orMultipleConditions?my-other-param=20"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 }

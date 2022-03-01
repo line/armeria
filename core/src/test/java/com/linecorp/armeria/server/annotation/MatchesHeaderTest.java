@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -90,6 +90,29 @@ class MatchesHeaderTest {
                 public String fallback5() {
                     return "fallback";
                 }
+
+                @Get("/matches/or")
+                @MatchesHeader("my-header=2 || my-other-header")
+                public String matchesOneOrAnother() {
+                    return "my-header=2 || my-other-header";
+                }
+
+                @Get("/matches/or")
+                public String fallback6() {
+                    return "fallback";
+                }
+
+                @Get("/matches/multiple")
+                @MatchesHeader("my-header=2 || my-other-header")
+                @MatchesHeader("other-header")
+                public String matchesMultiple() {
+                    return "(my-header=2 || my-other-header) && other-header";
+                }
+
+                @Get("/matches/multiple")
+                public String fallback7() {
+                    return "fallback";
+                }
             });
         }
     };
@@ -148,6 +171,41 @@ class MatchesHeaderTest {
                          .aggregate().join().contentUtf8()).isEqualTo("multiple");
         assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
                 HttpMethod.GET, "/multiple", "my-header", "my-value", "your-header", "your-value")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void or() {
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/or", "my-header", "2")))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-header=2 || my-other-header");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/or", "my-other-header", "3")))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-header=2 || my-other-header");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/or", "other-header", "3")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void matchesMultiple() {
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/multiple", "my-header", "2", "other-header", "3")))
+                         .aggregate().join().contentUtf8())
+                .isEqualTo("(my-header=2 || my-other-header) && other-header");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/multiple", "my-other-header", "3", "other-header",
+                                 "3")))
+                         .aggregate().join().contentUtf8())
+                .isEqualTo("(my-header=2 || my-other-header) && other-header");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/multiple", "other-header", "3")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/multiple", "my-header", "2")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                                 HttpMethod.GET, "/matches/multiple", "my-other-header", "3")))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 }
