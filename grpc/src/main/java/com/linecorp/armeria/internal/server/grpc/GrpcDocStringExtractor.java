@@ -27,7 +27,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import com.google.protobuf.DescriptorProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,7 +149,9 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
     // would have path [MESSAGE_TYPE_FIELD_NUMBER, 0, NESTED_TYPE_FIELD_NUMBER, 2, FIELD_FIELD_NUMBER, 1]
     @Nullable
     private static String getFullName(FileDescriptorProto descriptor, List<Integer> path) {
-        if (!canDocumentPath(path)) return null;
+        if (!canDocumentPath(path)) {
+            return null;
+        }
 
         String fullNameSoFar = descriptor.getPackage();
         switch (path.get(0)) {
