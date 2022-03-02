@@ -34,7 +34,7 @@ import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 final class StreamMessageInputStream<T> extends InputStream {
 
-    public static <T> StreamMessageInputStream<T> of(
+    static <T> StreamMessageInputStream<T> of(
             StreamMessage<T> source, Function<? super T, ? extends HttpData> httpDataConverter) {
         return new StreamMessageInputStream<>(source, httpDataConverter);
     }

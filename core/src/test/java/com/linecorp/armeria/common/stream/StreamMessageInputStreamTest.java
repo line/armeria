@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
@@ -34,10 +34,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;
 
-public class StreamMessageInputStreamTest {
+class StreamMessageInputStreamTest {
 
     @Test
-    public void readStrings() throws Exception {
+    void readStrings() throws Exception {
         final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
         final InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
         final byte[] expected = ImmutableList.of("foo", "bar", "baz")
@@ -61,7 +61,7 @@ public class StreamMessageInputStreamTest {
     }
 
     @Test
-    public void readIntegers() throws Exception {
+    void readIntegers() throws Exception {
         final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         final InputStream inputStream = streamMessage
                 .asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
@@ -86,7 +86,7 @@ public class StreamMessageInputStreamTest {
     }
 
     @Test
-    public void readWithStreamMessageOperators() throws Exception {
+    void readWithStreamMessageOperators() throws Exception {
         final StreamMessage<Integer> streamMessage = StreamMessage
                 .of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                 .filter(x -> x % 2 == 0)
@@ -114,7 +114,7 @@ public class StreamMessageInputStreamTest {
     }
 
     @Test
-    public void readWithOffset() throws Exception {
+    void readWithOffset() throws Exception {
         final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] {1, 2, 3, 4, 5});
         final InputStream inputStream = streamMessage.asInputStream(HttpData::wrap);
 
@@ -127,7 +127,7 @@ public class StreamMessageInputStreamTest {
     }
 
     @Test
-    public void close() throws Exception {
+    void close() throws Exception {
         final Publisher<Integer> publisher = Flux.range(1, 10);
         final StreamMessage<Integer> streamMessage = new PublisherBasedStreamMessage<>(publisher);
         final InputStream inputStream = streamMessage
@@ -162,7 +162,7 @@ public class StreamMessageInputStreamTest {
     }
 
     @Test
-    public void available() throws Exception {
+    void available() throws Exception {
         final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] {1, 2, 3, 4, 5});
         final InputStream inputStream = streamMessage.asInputStream(HttpData::wrap);
         final byte[] expected = {1, 2, 3, 4};
@@ -188,7 +188,7 @@ public class StreamMessageInputStreamTest {
     }
 
     @Test
-    public void streamMessage_aborted() throws Exception {
+    void streamMessage_aborted() throws Exception {
         final Publisher<Integer> publisher = Flux.range(1, 10);
         final StreamMessage<Integer> streamMessage = new PublisherBasedStreamMessage<>(publisher);
         final StreamMessage<Integer> aborted = streamMessage
@@ -220,7 +220,7 @@ public class StreamMessageInputStreamTest {
     }
 
     @Test
-    public void streamMessage_error_thrown() throws Exception {
+    void streamMessage_error_thrown() throws Exception {
         final Publisher<Integer> publisher = Flux.range(1, 10);
         final StreamMessage<Integer> streamMessage = new PublisherBasedStreamMessage<>(publisher)
                 .peek(x -> {
