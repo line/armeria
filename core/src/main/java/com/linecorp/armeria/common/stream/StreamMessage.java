@@ -680,7 +680,6 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Writes this {@link StreamMessage} to the given {@link Path} with {@link OpenOption}s.
-     * See {@link StreamMessages#writeTo} for the details.
      *
      * <p>Example:<pre>{@code
      * Path destination = Paths.get("foo.bin");
@@ -689,10 +688,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      *     bufs[i] = Unpooled.wrappedBuffer(Integer.toString(i).getBytes());
      * }
      * StreamMessage<ByteBuf> streamMessage = StreamMessage.of(bufs);
-     * streamMessage.writeTo( x -> HttpData.wrap(x),destination).join;
+     * streamMessage.writeTo(HttpData::wrap, destination).join();
      *
-     * assert Files.readAllBytes(destination).contains(bufs.map(ByteBuf::array).reduce(Bytes::concat).get());
+     * assert assert Files.readString(destination).equals("0123456789");
      * }</pre>
+     *
+     * @see StreamMessages#writeTo(StreamMessage, Path, OpenOption...)
      */
     default CompletableFuture<Void> writeTo(Function<? super T, ? extends HttpData> mapper, Path destination,
             OpenOption... options) {

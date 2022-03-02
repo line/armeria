@@ -32,7 +32,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.google.common.primitives.Bytes;
-import io.netty.buffer.Unpooled;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -53,6 +53,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import reactor.test.StepVerifier;
 
 class StreamMessageTest {
@@ -289,7 +290,7 @@ class StreamMessageTest {
     void writeToFile(@TempDir Path tempDir) throws IOException {
         final ByteBuf[] bufs = new ByteBuf[10];
         for (int i = 0; i < 10; i++) {
-            bufs[i]= Unpooled.wrappedBuffer(Integer.toString(i).getBytes());
+            bufs[i] = Unpooled.wrappedBuffer(Integer.toString(i).getBytes());
         }
         final byte[] expected = Arrays.stream(bufs)
                 .map(ByteBuf::array)
@@ -297,7 +298,7 @@ class StreamMessageTest {
 
         final StreamMessage<ByteBuf> publisher = StreamMessage.of(bufs);
         final Path destination = tempDir.resolve("foo.bin");
-        publisher.writeTo( x -> HttpData.wrap(x), destination).join();
+        publisher.writeTo(x -> HttpData.wrap(x), destination).join();
         final byte[] bytes = Files.readAllBytes(destination);
 
         assertThat(bytes).contains(expected);
