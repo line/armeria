@@ -49,6 +49,10 @@ class GrpcDocStringExtractorTest {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService/UnaryCall2",
                 " Another method with one request followed by one response.\n");
+
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.options.MyService/MyMethod",
+                " This is my method.\n");
     }
 
     @Test

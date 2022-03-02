@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import com.google.protobuf.DescriptorProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,11 +116,42 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                          .collect(toImmutableMap(Entry::getKey, Entry::getValue));
     }
 
+    // A path can be documented if it is not an option.
+    // First, the option documentations are not supported in DocService yet.
+    // Second, the option documentations cause duplicate keys to appear while parsing the file
+    // which makes DocService fail to initialize.
+    private static boolean canDocumentPath(List<Integer> path) {
+        switch (path.get(0)) {
+            case FileDescriptorProto.MESSAGE_TYPE_FIELD_NUMBER:
+                return true;
+            case FileDescriptorProto.ENUM_TYPE_FIELD_NUMBER:
+                // If this is an enum option, skip it.
+                if (path.size() > 2 && path.get(2) == EnumDescriptorProto.OPTIONS_FIELD_NUMBER) {
+                    return false;
+                }
+                return true;
+            case FileDescriptorProto.SERVICE_FIELD_NUMBER:
+                if (path.size() > 2) {
+                    // If there is a fifth path, it means the target is an `option` and we can skip it.
+                    if (path.size() > 4) {
+                        return false;
+                    }
+
+                    return path.get(2) != ServiceDescriptorProto.OPTIONS_FIELD_NUMBER;
+                }
+                return true;
+            default:
+                return false;
+        }
+    }
+
     // A path is field number and indices within a list of types, going through a tree of protobuf
     // descriptors. For example, the 2nd field of the 3rd nested message in the 1st message in a file
     // would have path [MESSAGE_TYPE_FIELD_NUMBER, 0, NESTED_TYPE_FIELD_NUMBER, 2, FIELD_FIELD_NUMBER, 1]
     @Nullable
     private static String getFullName(FileDescriptorProto descriptor, List<Integer> path) {
+        if (!canDocumentPath(path)) return null;
+
         String fullNameSoFar = descriptor.getPackage();
         switch (path.get(0)) {
             case FileDescriptorProto.MESSAGE_TYPE_FIELD_NUMBER:
@@ -129,11 +161,6 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                 final EnumDescriptorProto enumDescriptor = descriptor.getEnumType(path.get(1));
                 return appendEnumToFullName(enumDescriptor, path, fullNameSoFar);
             case FileDescriptorProto.SERVICE_FIELD_NUMBER:
-                // If there is a fifth path, it means the target is an `option` and we can skip it.
-                if (path.size() > 4) {
-                    return null;
-                }
-
                 final ServiceDescriptorProto serviceDescriptor = descriptor.getService(path.get(1));
                 fullNameSoFar = appendNameComponent(fullNameSoFar, serviceDescriptor.getName());
                 if (path.size() > 2) {
