@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -31,6 +32,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 final class StreamMessageInputStream<T> extends InputStream {
@@ -61,7 +63,7 @@ final class StreamMessageInputStream<T> extends InputStream {
             try {
                 return in.read();
             } catch (IOException e) {
-                return -1;
+                return Exceptions.throwUnsafely(e);
             }
         });
     }
@@ -72,7 +74,7 @@ final class StreamMessageInputStream<T> extends InputStream {
             try {
                 return in.read(b, off, len);
             } catch (IOException e) {
-                return -1;
+                return Exceptions.throwUnsafely(e);
             }
         });
     }
@@ -86,7 +88,9 @@ final class StreamMessageInputStream<T> extends InputStream {
             try {
                 inputStream = subscriber.nextStream();
             } catch (InterruptedException e) {
-                return -1;
+                final InterruptedIOException ioe = new InterruptedIOException();
+                ioe.initCause(e);
+                throw ioe;
             }
         }
         return function.apply(inputStream);
