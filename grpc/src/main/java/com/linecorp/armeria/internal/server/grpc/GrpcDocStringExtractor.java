@@ -129,7 +129,7 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                 final EnumDescriptorProto enumDescriptor = descriptor.getEnumType(path.get(1));
                 return appendEnumToFullName(enumDescriptor, path, fullNameSoFar);
             case FileDescriptorProto.SERVICE_FIELD_NUMBER:
-                // If there is a fifth path, it means this is an `option`/`extension` and skip it.
+                // If there is a fifth path, it means the target is an `option` and we can skip it.
                 if (path.size() > 4) {
                     return null;
                 }
