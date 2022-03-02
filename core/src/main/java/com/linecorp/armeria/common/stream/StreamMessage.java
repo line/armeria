@@ -690,7 +690,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * StreamMessage<ByteBuf> streamMessage = StreamMessage.of(bufs);
      * streamMessage.writeTo(HttpData::wrap, destination).join();
      *
-     * assert assert Files.readString(destination).equals("0123456789");
+     * assert Files.readString(destination).equals("0123456789");
      * }</pre>
      *
      * @see StreamMessages#writeTo(StreamMessage, Path, OpenOption...)
