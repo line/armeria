@@ -1742,7 +1742,6 @@ corvette.museum
 cosenza.it
 costume.museum
 couchpotatofries.org
-couk.me
 council.aero
 country
 countryestate.museum
@@ -8240,7 +8239,6 @@ uk.oxa.cloud
 uk.primetel.cloud
 uk.reclaim.cloud
 uk0.bigv.io
-ukco.me
 uki.kumamoto.jp
 ukiha.fukuoka.jp
 ullensaker.no
