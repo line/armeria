@@ -41,8 +41,8 @@ final class StreamMessageInputStream<T> extends InputStream {
 
     private final StreamMessageInputStreamSubscriber<T> subscriber;
     @Nullable
-    private InputStream inputStream;
-    private boolean closed;
+    private volatile InputStream inputStream;
+    private volatile boolean closed;
 
     private StreamMessageInputStream(StreamMessage<T> source,
                                      Function<? super T, ? extends HttpData> httpDataConverter) {
