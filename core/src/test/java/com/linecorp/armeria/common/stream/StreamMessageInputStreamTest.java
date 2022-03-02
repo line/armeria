@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
@@ -153,12 +154,40 @@ class StreamMessageInputStreamTest {
             actual[i] = result.readByte();
         }
         assertThat(actual).isEqualTo(expected);
+        assertThatNoException().isThrownBy(inputStream::close);
         assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
-                                             .hasMessage("Stream closed");
-        assertThatThrownBy(inputStream::close).isInstanceOf(IOException.class)
                                              .hasMessage("Stream closed");
         assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
                                                   .hasMessage("Stream closed");
+    }
+
+    @Test
+    void closeBeforeRead() throws IOException {
+        final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
+        final InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
+        assertThat(inputStream.available()).isZero();
+
+        assertThatNoException().isThrownBy(inputStream::close);
+        assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
+                                             .hasMessage("Stream closed");
+        assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
+                                                  .hasMessage("Stream closed");
+    }
+
+    @Test
+    void closeMultipleTimes() throws IOException {
+        final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
+        final InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
+        assertThat(inputStream.read()).isNotEqualTo(-1);
+        assertThat(inputStream.available()).isGreaterThan(0);
+
+        for (int i = 0; i < 10; i++) {
+            assertThatNoException().isThrownBy(inputStream::close);
+            assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
+                                                 .hasMessage("Stream closed");
+            assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
+                                                      .hasMessage("Stream closed");
+        }
     }
 
     @Test

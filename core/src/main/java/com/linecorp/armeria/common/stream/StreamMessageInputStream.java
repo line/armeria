@@ -98,7 +98,9 @@ final class StreamMessageInputStream<T> extends InputStream {
 
     @Override
     public void close() throws IOException {
-        checkClosed();
+        if (closed) {
+            return;
+        }
         closed = true;
         subscriber.cancel();
     }
@@ -186,7 +188,9 @@ final class StreamMessageInputStream<T> extends InputStream {
                 return;
             }
             closed = true;
-            upstream.join().cancel();
+            if (upstream.isDone()) {
+                upstream.join().cancel();
+            }
         }
     }
 }
