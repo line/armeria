@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
@@ -39,7 +40,9 @@ final class StreamMessageInputStream<T> extends InputStream {
         return new StreamMessageInputStream<>(source, httpDataConverter);
     }
 
+    private final StreamMessage<T> source;
     private final StreamMessageInputStreamSubscriber<T> subscriber;
+    private final AtomicBoolean subscribed = new AtomicBoolean();
     @Nullable
     private volatile InputStream inputStream;
     private volatile boolean closed;
@@ -48,8 +51,8 @@ final class StreamMessageInputStream<T> extends InputStream {
                                      Function<? super T, ? extends HttpData> httpDataConverter) {
         requireNonNull(source, "source");
         requireNonNull(httpDataConverter, "httpDataConverter");
+        this.source = source;
         subscriber = new StreamMessageInputStreamSubscriber<>(httpDataConverter);
-        source.subscribe(subscriber);
     }
 
     @Override
@@ -76,6 +79,9 @@ final class StreamMessageInputStream<T> extends InputStream {
 
     private int read(Function<InputStream, Integer> function) throws IOException {
         checkClosed();
+        if (subscribed.compareAndSet(false, true)) {
+            source.subscribe(subscriber);
+        }
         if (inputStream == null || inputStream.available() == 0) {
             try {
                 inputStream = subscriber.nextStream();
