@@ -21,6 +21,7 @@ import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -70,8 +71,8 @@ public abstract class AbstractMetricCollectingBuilder {
      *         .newDecorator();
      * }</pre>
      *
-     * @deprecated Use {@link ClientBuilder#successFunction(BiPredicate)} or
- *                 {@link ServerBuilder#successFunction(BiPredicate)} instead.
+     * @deprecated Use {@link ClientBuilder#successFunction(SuccessFunction)} or
+     *                 {@link ServerBuilder#successFunction(SuccessFunction)} instead.
      */
     @Deprecated
     public AbstractMetricCollectingBuilder successFunction(
