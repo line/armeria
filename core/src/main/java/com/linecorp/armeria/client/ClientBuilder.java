@@ -21,21 +21,19 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
-import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -185,8 +183,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ClientBuilder successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+    public ClientBuilder successFunction(SuccessFunction successFunction) {
         return (ClientBuilder) super.successFunction(successFunction);
     }
 

@@ -19,7 +19,6 @@ import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
-import java.util.function.BiPredicate;
 
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -400,7 +400,7 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        final BiPredicate<RequestContext, RequestLog> successFunction = (context, log) -> {
+        final SuccessFunction successFunction = (context, log) -> {
             final int statusCode = log.responseHeaders().status().code();
             return (statusCode >= 200 && statusCode < 400) || statusCode == 409;
         };

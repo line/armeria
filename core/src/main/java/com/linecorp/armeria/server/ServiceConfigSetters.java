@@ -18,10 +18,9 @@ package com.linecorp.armeria.server;
 
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -144,10 +143,9 @@ interface ServiceConfigSetters {
     ServiceConfigSetters blockingTaskExecutor(int numThreads);
 
     /**
-     * Defines a custom {@link BiPredicate} to allow custom definition of successful requests and responses.
+     * Defines a custom {@link SuccessFunction} to allow custom definition of successful requests and responses.
      * {@link MetricCollectingService} and {@link LoggingService}  use this custom
      * definition if set.
      */
-    ServiceConfigSetters successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction);
+    ServiceConfigSetters successFunction(SuccessFunction successFunction);
 }

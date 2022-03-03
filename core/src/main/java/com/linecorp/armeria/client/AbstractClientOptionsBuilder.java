@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -35,15 +34,14 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
-import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * A skeletal builder implementation for {@link ClientOptions}.
@@ -185,13 +183,12 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the {@link BiPredicate} to allow custom definition of successful responses.
+     * Sets the {@link SuccessFunction} to allow custom definition of successful responses.
      * {@link MetricCollectingClient}, {@link LoggingClient} and {@link LoggingRpcClient} will use this custom
      * definition if set.
      * If not set, default one in {@link ClientOptions} is used.
      */
-    public AbstractClientOptionsBuilder successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+    public AbstractClientOptionsBuilder successFunction(SuccessFunction successFunction) {
         return option(ClientOptions.SUCCESS_FUNCTION, successFunction);
     }
 

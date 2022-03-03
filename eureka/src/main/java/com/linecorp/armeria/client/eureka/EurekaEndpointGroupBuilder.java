@@ -49,6 +49,7 @@ import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -314,6 +315,11 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     @Override
     public EurekaEndpointGroupBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (EurekaEndpointGroupBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder successFunction(SuccessFunction successFunction) {
+        return (EurekaEndpointGroupBuilder) super.successFunction(successFunction);
     }
 
     @Override

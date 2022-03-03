@@ -23,14 +23,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -63,7 +61,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
     @Nullable
-    private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+    private SuccessFunction successFunction;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -180,8 +178,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+    public ServiceConfigSetters successFunction(SuccessFunction successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         return this;
     }

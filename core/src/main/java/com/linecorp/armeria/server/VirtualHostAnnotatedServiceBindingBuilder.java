@@ -23,15 +23,13 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
@@ -259,8 +257,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     @Override
-    public VirtualHostAnnotatedServiceBindingBuilder successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+    public VirtualHostAnnotatedServiceBindingBuilder successFunction(SuccessFunction successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
         return this;
     }

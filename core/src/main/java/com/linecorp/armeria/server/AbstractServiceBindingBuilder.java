@@ -23,13 +23,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -131,8 +129,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
-    public AbstractServiceBindingBuilder successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+    public AbstractServiceBindingBuilder successFunction(SuccessFunction successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
         return this;
     }

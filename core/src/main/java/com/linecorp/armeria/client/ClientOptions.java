@@ -31,13 +31,10 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
@@ -109,10 +106,10 @@ public final class ClientOptions
             "REQUEST_ID_GENERATOR", RequestId::random);
 
     /**
-     * The {@link BiPredicate} that defines successful responses.
+     * The {@link SuccessFunction} that defines successful responses.
      */
-    public static final ClientOption<BiPredicate<? super RequestContext, ? super RequestLog>> SUCCESS_FUNCTION =
-            ClientOption.define("SUCCESS_FUNCTION", ClientOptions::isSuccess);
+    public static final ClientOption<SuccessFunction> SUCCESS_FUNCTION =
+            ClientOption.define("SUCCESS_FUNCTION", SuccessFunction.ofDefault());
 
     /**
      * A {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
@@ -297,7 +294,7 @@ public final class ClientOptions
     /**
      * Returns the {@link BiPredicate} that determine if the request is success.
      */
-    public BiPredicate<? super RequestContext, ? super RequestLog> successFunction() {
+    public SuccessFunction successFunction() {
         return get(SUCCESS_FUNCTION);
     }
 
@@ -315,28 +312,5 @@ public final class ClientOptions
      */
     public ClientOptionsBuilder toBuilder() {
         return new ClientOptionsBuilder(this);
-    }
-
-    /**
-     * Default success response classification function which checks
-     * {@link RequestLog#responseCause()} is null, 100 &lt;= {@link HttpStatus} &lt; 400
-     * and {@link RpcResponse#isCompletedExceptionally()} == {@code false}.
-     */
-    private static boolean isSuccess(RequestContext ctx, RequestLog log) {
-        if (log.responseCause() != null) {
-            return false;
-        }
-
-        final int statusCode = log.responseHeaders().status().code();
-        if (statusCode < 100 || statusCode >= 400) {
-            return false;
-        }
-
-        final Object responseContent = log.responseContent();
-        if (responseContent instanceof RpcResponse) {
-            return !((RpcResponse) responseContent).isCompletedExceptionally();
-        }
-
-        return true;
     }
 }

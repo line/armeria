@@ -21,14 +21,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -54,7 +52,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
     @Nullable
-    private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+    private SuccessFunction successFunction;
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
 
@@ -142,7 +140,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigBuilder successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+            SuccessFunction successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         return this;
     }
@@ -170,7 +168,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         boolean defaultShutdownAccessLogWriterOnStop,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         boolean defaultShutdownBlockingTaskExecutorOnStop,
-                        BiPredicate<? super RequestContext, ? super RequestLog> defaultSuccessFunction) {
+                        SuccessFunction defaultSuccessFunction) {
         return new ServiceConfig(
                 route, service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,

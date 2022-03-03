@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -464,6 +465,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public GrpcClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (GrpcClientBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public GrpcClientBuilder successFunction(SuccessFunction successFunction) {
+        return (GrpcClientBuilder) super.successFunction(successFunction);
     }
 
     @Override

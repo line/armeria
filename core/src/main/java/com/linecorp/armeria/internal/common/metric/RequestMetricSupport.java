@@ -22,11 +22,11 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -52,7 +52,7 @@ public final class RequestMetricSupport {
     public static void setup(
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+            SuccessFunction successFunction) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -70,7 +70,7 @@ public final class RequestMetricSupport {
 
     private static void onRequest(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+            SuccessFunction successFunction) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
@@ -90,7 +90,7 @@ public final class RequestMetricSupport {
 
     private static void onResponse(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+            SuccessFunction successFunction) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
@@ -147,7 +147,7 @@ public final class RequestMetricSupport {
 
     private static void updateMetrics(
             RequestContext ctx, RequestLog log, RequestMetrics metrics,
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+            SuccessFunction successFunction) {
         if (log.requestCause() != null) {
             metrics.failure().increment();
             return;
@@ -159,7 +159,7 @@ public final class RequestMetricSupport {
         metrics.responseLength().record(log.responseLength());
         metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
 
-        if (successFunction.test(ctx, log)) {
+        if (successFunction.isSuccess(ctx, log)) {
             metrics.success().increment();
         } else {
             metrics.failure().increment();

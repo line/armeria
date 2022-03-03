@@ -44,7 +44,6 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -63,12 +62,11 @@ import com.google.common.net.HostAndPort;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -219,7 +217,7 @@ public final class ServerBuilder {
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
-        virtualHostTemplate.successFunction(ServerBuilder::isSuccess);
+        virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -817,13 +815,12 @@ public final class ServerBuilder {
     }
 
     /**
-     * Defines a custom {@link BiPredicate} to allow custom definition of successful responses.
+     * Defines a custom {@link SuccessFunction} to allow custom definition of successful responses.
      * {@link MetricCollectingService} and {@link LoggingService} will use this custom
      * definition if set.
-     * If not set, {@link #isSuccess(RequestContext, RequestLog)} is used.
+     * If not set, {@link SuccessFunction#isSuccess(RequestContext, RequestLog)} is used.
      */
-    public ServerBuilder successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+    public ServerBuilder successFunction(SuccessFunction successFunction) {
         virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
         return this;
     }
@@ -1908,29 +1905,6 @@ public final class ServerBuilder {
                             path, service);
             }
         }
-    }
-
-    /**
-     * Default success response classification function which checks
-     * {@link RequestLog#responseCause()} is null, 100 &lt;= {@link HttpStatus} &lt; 400
-     * and {@link RpcResponse#isCompletedExceptionally()} == {@code false}.
-     */
-    private static boolean isSuccess(RequestContext ctx, RequestLog log) {
-        if (log.responseCause() != null) {
-            return false;
-        }
-
-        final int statusCode = log.responseHeaders().status().code();
-        if (statusCode < 100 || statusCode >= 400) {
-            return false;
-        }
-
-        final Object responseContent = log.responseContent();
-        if (responseContent instanceof RpcResponse) {
-            return !((RpcResponse) responseContent).isCompletedExceptionally();
-        }
-
-        return true;
     }
 
     @Override

@@ -27,7 +27,7 @@ import java.util.function.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -62,7 +62,7 @@ public final class ServiceConfig {
     private final boolean shutdownAccessLogWriterOnStop;
     private final Set<TransientServiceOption> transientServiceOptions;
     private final boolean handlesCorsPreflight;
-    private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+    private final SuccessFunction successFunction;
 
     private final ScheduledExecutorService blockingTaskExecutor;
     private final boolean shutdownBlockingTaskExecutorOnStop;
@@ -77,7 +77,7 @@ public final class ServiceConfig {
                   boolean shutdownAccessLogWriterOnStop,
                   ScheduledExecutorService blockingTaskExecutor,
                   boolean shutdownBlockingTaskExecutorOnStop,
-                  BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+                  SuccessFunction successFunction) {
         this(null, route, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service),
@@ -95,7 +95,7 @@ public final class ServiceConfig {
                           Set<TransientServiceOption> transientServiceOptions,
                           ScheduledExecutorService blockingTaskExecutor,
                           boolean shutdownBlockingTaskExecutorOnStop,
-                          BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+                          SuccessFunction successFunction) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -330,7 +330,7 @@ public final class ServiceConfig {
     /**
      * Returns the {@link BiPredicate} for checking if the response is success.
      */
-    public BiPredicate<? super RequestContext, ? super RequestLog> successFunction() {
+    public SuccessFunction successFunction() {
         return successFunction;
     }
 

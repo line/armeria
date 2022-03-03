@@ -23,6 +23,7 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -163,6 +164,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     public ClientOptionsBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         return (ClientOptionsBuilder) super.setHeaders(headers);
+    }
+
+    @Override
+    public ClientOptionsBuilder successFunction(SuccessFunction successFunction) {
+        return (ClientOptionsBuilder) super.successFunction(successFunction);
     }
 
     @Override

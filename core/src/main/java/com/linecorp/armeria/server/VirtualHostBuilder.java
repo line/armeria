@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -64,9 +63,8 @@ import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
@@ -141,7 +139,7 @@ public final class VirtualHostBuilder {
     private boolean shutdownBlockingTaskExecutorOnStop;
 
     @Nullable
-    private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+    private SuccessFunction successFunction;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -932,11 +930,10 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the {@link BiPredicate} to define successful responses.
+     * Sets the {@link SuccessFunction} to define successful responses.
      * {@link MetricCollectingService} and {@link LoggingService} use this function.
      */
-    public VirtualHostBuilder successFunction(
-            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+    public VirtualHostBuilder successFunction(SuccessFunction successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         return this;
     }
@@ -1035,7 +1032,7 @@ public final class VirtualHostBuilder {
             shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
         }
 
-        final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+        final SuccessFunction successFunction;
         if (this.successFunction != null) {
             successFunction = this.successFunction;
         } else {

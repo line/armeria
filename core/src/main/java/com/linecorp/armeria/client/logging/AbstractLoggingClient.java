@@ -123,7 +123,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
         ctx.log().whenComplete().thenAccept(log -> {
-            if (ctx.options().successFunction().test(ctx, log)) {
+            if (ctx.options().successFunction().isSuccess(ctx, log)) {
                 if (successSampler.isSampled(ctx)) {
                     log(logger, ctx, log, requestLogger, responseLogger);
                 }
