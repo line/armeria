@@ -42,8 +42,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // The options and example message below are defined in
-// Google's protocol buffer documentation.
-// https://developers.google.com/protocol-buffers/docs/proto#extensions
+// Google's protocol buffer documentation. The link is below.
+// https://developers.google.com/protocol-buffers/docs/proto#customoptions
 syntax = "proto3";
 
 package armeria.grpc.testing.options;
