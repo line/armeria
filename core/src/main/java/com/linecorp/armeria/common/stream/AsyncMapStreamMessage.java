@@ -249,12 +249,13 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
 
             if (maxConcurrency > IntMath.saturatedAdd(requestedFromUpstream, pendingFutures)) {
-                final long toRequest = maxConcurrency - pendingFutures - requestedFromUpstream;
+                final int available = maxConcurrency - pendingFutures - requestedFromUpstream;
+                final long toRequest = Math.min(n, available);
                 if (requestedByDownstream != Long.MAX_VALUE) {
                     requestedByDownstream -= toRequest;
                 }
 
-                requestedFromUpstream = IntMath.saturatedAdd(requestedFromUpstream, toRequest);
+                requestedFromUpstream = IntMath.saturatedAdd(requestedFromUpstream, (int) toRequest);
                 upstream.request(toRequest);
             }
         }
