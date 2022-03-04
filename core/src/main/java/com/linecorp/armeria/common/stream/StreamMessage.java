@@ -563,7 +563,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     default <U> StreamMessage<U> mapAsync(
             Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(function, "function");
-        return new AsyncMapStreamMessage<>(this, function, 1);
+        return mapParallel(function, 1);
     }
 
     /**
@@ -585,7 +585,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     default <U> StreamMessage<U> mapParallel(
             Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(function, "function");
-        return new AsyncMapStreamMessage<>(this, function, Long.MAX_VALUE);
+        return mapParallel(function, Long.MAX_VALUE);
     }
 
 
