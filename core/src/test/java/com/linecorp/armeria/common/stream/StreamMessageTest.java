@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import com.google.common.primitives.Bytes;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -46,6 +44,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -293,15 +292,15 @@ class StreamMessageTest {
             bufs[i] = Unpooled.wrappedBuffer(Integer.toString(i).getBytes());
         }
         final byte[] expected = Arrays.stream(bufs)
-                .map(ByteBuf::array)
-                .reduce(Bytes::concat).get();
+                                      .map(ByteBuf::array)
+                                      .reduce(Bytes::concat).get();
 
         final StreamMessage<ByteBuf> publisher = StreamMessage.of(bufs);
         final Path destination = tempDir.resolve("foo.bin");
-        publisher.writeTo(x -> HttpData.wrap(x), destination).join();
+        publisher.writeTo(HttpData::wrap, destination).join();
         final byte[] bytes = Files.readAllBytes(destination);
 
-        assertThat(bytes).contains(expected);
+        assertThat(bytes).isEqualTo(expected);
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
         }

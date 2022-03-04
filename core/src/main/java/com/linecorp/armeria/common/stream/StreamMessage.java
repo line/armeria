@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -680,6 +681,8 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Writes this {@link StreamMessage} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
+     * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
      *
      * <p>Example:<pre>{@code
      * Path destination = Paths.get("foo.bin");
@@ -696,7 +699,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @see StreamMessages#writeTo(StreamMessage, Path, OpenOption...)
      */
     default CompletableFuture<Void> writeTo(Function<? super T, ? extends HttpData> mapper, Path destination,
-            OpenOption... options) {
+                                            OpenOption... options) {
         requireNonNull(mapper, "mapper");
         requireNonNull(destination, "destination");
         requireNonNull(options, "options");
