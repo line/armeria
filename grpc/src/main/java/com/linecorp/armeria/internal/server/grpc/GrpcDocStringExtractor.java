@@ -112,7 +112,13 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                              }
                          })
                          .filter(Objects::nonNull)
-                         .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+                         .collect(
+                             toImmutableMap(Entry::getKey, Entry::getValue, (first, second) -> {
+                                logger.warn("Multiple keys found while parsing proto comments," +
+                                        " skipping entry \"{}\".", second);
+                                return first;
+                            })
+                         );
     }
 
     // A path is field number and indices within a list of types, going through a tree of protobuf
