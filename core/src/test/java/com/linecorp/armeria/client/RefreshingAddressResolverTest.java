@@ -115,8 +115,8 @@ class RefreshingAddressResolverTest {
                              .map(future -> future.join().address())
                              .collect(toImmutableList());
                 assertThat(addresses).containsExactlyInAnyOrder(
-                        InetAddress.getByAddress("foo.com", new byte[] { 1, 1, 1, 1 }),
-                        InetAddress.getByAddress("bar.com", new byte[] { 1, 2, 3, 4 }));
+                        InetAddress.getByAddress("foo.com", new byte[]{ 1, 1, 1, 1 }),
+                        InetAddress.getByAddress("bar.com", new byte[]{ 1, 2, 3, 4 }));
             }
         }
     }
@@ -165,7 +165,7 @@ class RefreshingAddressResolverTest {
                 final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
                 assertThat(cache.estimatedSize()).isOne();
                 assertThat(cache.get("baz.com", this::noopCacheLoader).join().address()).isEqualTo(
-                        InetAddress.getByAddress("baz.com", new byte[] { 1, 1, 1, 1 }));
+                        InetAddress.getByAddress("baz.com", new byte[]{ 1, 1, 1, 1 }));
 
                 // Resolve one more to increase cache hits.
                 resolver.resolve(InetSocketAddress.createUnresolved("baz.com", 36462));
@@ -178,7 +178,7 @@ class RefreshingAddressResolverTest {
                     final CompletableFuture<CacheEntry> future = cache.get("baz.com",
                                                                            this::noopCacheLoader);
                     return future != null && future.join().address().equals(
-                            InetAddress.getByAddress("baz.com", new byte[] { 2, 2, 2, 2 }));
+                            InetAddress.getByAddress("baz.com", new byte[]{ 2, 2, 2, 2 }));
                 });
 
                 assertThat(System.nanoTime() - start).isGreaterThanOrEqualTo(
@@ -259,7 +259,9 @@ class RefreshingAddressResolverTest {
         // TimeoutHandler times out only the first query.
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler())) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            final DnsResolverGroupBuilder builder = builder(server).negativeTtl(60).queryTimeoutMillis(1000);
+            final DnsResolverGroupBuilder builder =
+                    builder(false, server).negativeTtl(60)
+                                          .queryTimeoutMillis(1000);
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
@@ -295,7 +297,8 @@ class RefreshingAddressResolverTest {
                      new DefaultDnsQuestion("foo.com.", A),
                      new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
 
-            final DnsResolverGroupBuilder builder = builder(server1, server2, server3, server4, server5)
+
+            final DnsResolverGroupBuilder builder = builder(false, server1, server2, server3, server4, server5)
                     .negativeTtl(60)
                     .queryTimeoutMillis(1000);
 
@@ -397,14 +400,22 @@ class RefreshingAddressResolverTest {
     }
 
     private static DnsResolverGroupBuilder builder(TestDnsServer... servers) {
+        return builder(true, servers);
+    }
+
+    private static DnsResolverGroupBuilder builder(boolean withCacheOption, TestDnsServer... servers) {
         final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
                 hostname -> DnsServerAddresses.sequential(
                         Stream.of(servers).map(TestDnsServer::addr).collect(toImmutableList())).stream();
-        return new DnsResolverGroupBuilder()
-                .dnsServerAddressStreamProvider(dnsServerAddressStreamProvider)
+        final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
+                .serverAddressStreamProvider(dnsServerAddressStreamProvider)
                 .meterRegistry(PrometheusMeterRegistries.newRegistry())
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .traceEnabled(false);
+        if (withCacheOption) {
+            builder.dnsCache(NoopDnsCache.INSTANCE);
+        }
+        return builder;
     }
 
     private static class TimeoutHandler extends ChannelInboundHandlerAdapter {

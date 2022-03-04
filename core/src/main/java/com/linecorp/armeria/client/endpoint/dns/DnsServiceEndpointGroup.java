@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
+import java.util.function.BiFunction;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -26,16 +27,18 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
-import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS
@@ -65,13 +68,13 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
         return new DnsServiceEndpointGroupBuilder(hostname);
     }
 
-    DnsServiceEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                            EventLoop eventLoop, int minTtl, int maxTtl,
-                            long queryTimeoutMillis, DnsServerAddressStreamProvider serverAddressStreamProvider,
-                            Backoff backoff, String hostname) {
-        super(selectionStrategy, eventLoop, minTtl, maxTtl, queryTimeoutMillis, serverAddressStreamProvider,
-              backoff, ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.SRV)),
-              unused -> {});
+    DnsServiceEndpointGroup(
+            EndpointSelectionStrategy selectionStrategy,
+            EventLoop eventLoop, Backoff backoff, int minTtl, int maxTtl, String hostname,
+            BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> resolverFactory) {
+        super(selectionStrategy, eventLoop,
+              ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.SRV)),
+              backoff, minTtl, maxTtl, unused -> {}, resolverFactory);
         start();
     }
 
@@ -79,29 +82,31 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
     ImmutableSortedSet<Endpoint> onDnsRecords(List<DnsRecord> records, int ttl) throws Exception {
         final ImmutableSortedSet.Builder<Endpoint> builder = ImmutableSortedSet.naturalOrder();
         for (DnsRecord r : records) {
-            if (!(r instanceof DnsRawRecord) || r.type() != DnsRecordType.SRV) {
+            if (!(r instanceof ByteArrayDnsRecord) || r.type() != DnsRecordType.SRV) {
                 continue;
             }
 
-            final ByteBuf content = ((ByteBufHolder) r).content();
-            if (content.readableBytes() <= 6) { // Too few bytes
+            final byte[] content = ((ByteArrayDnsRecord) r).content();
+            if (content.length <= 6) { // Too few bytes
                 warnInvalidRecord(DnsRecordType.SRV, content);
                 continue;
             }
 
-            content.markReaderIndex();
-            content.skipBytes(2);  // priority unused
-            final int weight = content.readUnsignedShort();
-            final int port = content.readUnsignedShort();
+            final ByteBuf contentBuf = Unpooled.wrappedBuffer(content);
+            contentBuf.markReaderIndex();
+            contentBuf.skipBytes(2);  // priority unused
+            final int weight = contentBuf.readUnsignedShort();
+            final int port = contentBuf.readUnsignedShort();
 
             final Endpoint endpoint;
             try {
-                final String target = stripTrailingDot(DefaultDnsRecordDecoder.decodeName(content));
+                final String target = stripTrailingDot(DefaultDnsRecordDecoder.decodeName(contentBuf));
                 endpoint = port > 0 ? Endpoint.of(target, port) : Endpoint.of(target);
             } catch (Exception e) {
-                content.resetReaderIndex();
                 warnInvalidRecord(DnsRecordType.SRV, content);
                 continue;
+            } finally {
+                contentBuf.release();
             }
 
             builder.add(endpoint.withWeight(weight));

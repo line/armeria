@@ -19,11 +19,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
-import java.net.InetSocketAddress;
-import java.time.Duration;
+import java.util.function.BiFunction;
 
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -31,29 +29,24 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.client.dns.AbstractDnsResolverBuilder;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 
 import io.netty.channel.EventLoop;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.resolver.dns.DnsServerAddressStreamProvider;
-import io.netty.resolver.dns.DnsServerAddressStreamProviders;
-import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.concurrent.EventExecutor;
 
-abstract class DnsEndpointGroupBuilder {
+abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
 
     private final String hostname;
     @Nullable
     private EventLoop eventLoop;
-    private int minTtl = 1;
-    private int maxTtl = Integer.MAX_VALUE;
-    private long queryTimeoutMillis = 5000; // 5 seconds
-    private DnsServerAddressStreamProvider serverAddressStreamProvider =
-            DnsServerAddressStreamProviders.platformDefault();
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     DnsEndpointGroupBuilder(String hostname) {
-        this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
-                                                      IDN.ALLOW_UNASSIGNED));
+        this.hostname =
+                Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"), IDN.ALLOW_UNASSIGNED));
     }
 
     final String hostname() {
@@ -73,82 +66,9 @@ abstract class DnsEndpointGroupBuilder {
      */
     public DnsEndpointGroupBuilder eventLoop(EventLoop eventLoop) {
         requireNonNull(eventLoop, "eventLoop");
-        checkArgument(TransportType.isSupported(eventLoop),
-                      "unsupported event loop type: %s", eventLoop);
+        checkArgument(TransportType.isSupported(eventLoop), "unsupported event loop type: %s", eventLoop);
 
         this.eventLoop = eventLoop;
-        return this;
-    }
-
-    final int minTtl() {
-        return minTtl;
-    }
-
-    final int maxTtl() {
-        return maxTtl;
-    }
-
-    /**
-     * Sets the minimum and maximum TTL of the DNS records (in seconds). If the TTL of the DNS record returned
-     * by the DNS server is less than the minimum TTL or greater than the maximum TTL, the TTL from the DNS
-     * server will be ignored and {@code minTtl} or {@code maxTtl} will be used respectively. The default
-     * {@code minTtl} and {@code maxTtl} are {@code 1} and {@link Integer#MAX_VALUE}, which practically tells
-     * to respect the server TTL.
-     */
-    public DnsEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
-        checkArgument(minTtl > 0 && minTtl <= maxTtl,
-                      "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
-        this.minTtl = minTtl;
-        this.maxTtl = maxTtl;
-        return this;
-    }
-
-    /**
-     * Sets the timeout of the DNS query performed by this endpoint group. {@code 0} disables the timeout.
-     *
-     * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
-     */
-    public DnsEndpointGroupBuilder queryTimeout(Duration queryTimeout) {
-        requireNonNull(queryTimeout, "queryTimeout");
-        checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)",
-                      queryTimeout);
-        return queryTimeoutMillis(queryTimeout.toMillis());
-    }
-
-    /**
-     * Sets the timeout of the DNS query performed by this endpoint group in milliseconds.
-     * {@code 0} disables the timeout.
-     *
-     * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
-     */
-    public DnsEndpointGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
-        checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
-        this.queryTimeoutMillis = queryTimeoutMillis;
-        return this;
-    }
-
-    final long queryTimeoutMillis() {
-        return queryTimeoutMillis;
-    }
-
-    final DnsServerAddressStreamProvider serverAddressStreamProvider() {
-        return serverAddressStreamProvider;
-    }
-
-    /**
-     * Sets the DNS server addresses to send queries to. Operating system default is used by default.
-     */
-    public DnsEndpointGroupBuilder serverAddresses(InetSocketAddress... serverAddresses) {
-        return serverAddresses(ImmutableList.copyOf(requireNonNull(serverAddresses, "serverAddresses")));
-    }
-
-    /**
-     * Sets the DNS server addresses to send queries to. Operating system default is used by default.
-     */
-    public DnsEndpointGroupBuilder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
-        requireNonNull(serverAddresses, "serverAddresses");
-        final DnsServerAddresses addrs = DnsServerAddresses.sequential(serverAddresses);
-        serverAddressStreamProvider = hostname -> addrs.stream();
         return this;
     }
 
@@ -176,5 +96,9 @@ abstract class DnsEndpointGroupBuilder {
 
     final EndpointSelectionStrategy selectionStrategy() {
         return selectionStrategy;
+    }
+
+    final BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> dnsResolverFactory() {
+        return dnsResolverFactory(eventLoop().parent());
     }
 }

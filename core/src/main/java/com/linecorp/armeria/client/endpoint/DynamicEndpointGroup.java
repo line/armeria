@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -33,7 +34,6 @@ import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
@@ -245,28 +245,10 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("selectionStrategy", selectionStrategy.getClass())
-                          .add("endpoints", truncatedEndpoints(endpoints))
+                          .add("endpoints", truncate(endpoints, 10))
                           .add("numEndpoints", endpoints.size())
                           .add("initialized", initialEndpointsFuture.isDone())
                           .toString();
     }
 
-    /**
-     * Returns a truncated list of at most 10 endpoints.
-     */
-    @UnstableApi
-    protected static List<Endpoint> truncatedEndpoints(List<Endpoint> endpoints) {
-        return truncatedEndpoints(endpoints, 10);
-    }
-
-    /**
-     * Returns a truncated list of at most {@code maxEndpoints} endpoints.
-     * A new copy of the list isn't created if the size of endpoints is less than {@code maxEndpoints}.
-     */
-    private static List<Endpoint> truncatedEndpoints(List<Endpoint> endpoints, int maxEndpoints) {
-        if (endpoints.size() <= maxEndpoints) {
-            return endpoints;
-        }
-        return endpoints.stream().limit(maxEndpoints).collect(toImmutableList());
-    }
 }

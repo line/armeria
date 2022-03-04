@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
+import static com.linecorp.armeria.internal.client.dns.DnsUtil.extractAddressBytes;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -37,16 +37,15 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
-import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.AbstractAddressResolver;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddress> {
@@ -54,7 +53,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
     private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolver.class);
 
     private final Cache<String, CompletableFuture<CacheEntry>> cache;
-    private final DefaultDnsNameResolver resolver;
+    private final DefaultDnsResolver resolver;
     private final List<DnsRecordType> dnsRecordTypes;
     private final int minTtl;
     private final int maxTtl;
@@ -63,9 +62,9 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
     private volatile boolean resolverClosed;
 
-    RefreshingAddressResolver(EventLoop eventLoop,
+    RefreshingAddressResolver(EventLoop eventLoop, DefaultDnsResolver resolver,
+                              List<DnsRecordType> dnsRecordTypes,
                               Cache<String, CompletableFuture<CacheEntry>> cache,
-                              DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
                               int minTtl, int maxTtl, int negativeTtl, Backoff refreshBackoff) {
         super(eventLoop);
         this.cache = cache;
@@ -91,7 +90,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 dnsRecordTypes.stream()
                               .map(type -> DnsQuestionWithoutTrailingDot.of(hostname, type))
                               .collect(toImmutableList());
-        sendQueries(questions, hostname, result);
+        sendQueries(questions, hostname, result, false);
         result.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
             if (cause != null) {
@@ -138,12 +137,10 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
     }
 
     private void sendQueries(List<DnsQuestion> questions, String hostname,
-                             CompletableFuture<CacheEntry> result) {
-        final Future<List<DnsRecord>> recordsFuture = resolver.sendQueries(questions, hostname);
-        recordsFuture.addListener(f -> {
-            if (!f.isSuccess()) {
-                final Throwable cause = f.cause();
-
+                             CompletableFuture<CacheEntry> result, boolean isRefreshing) {
+        resolver.resolve(questions, hostname, isRefreshing).handle((records, cause) -> {
+            if (cause != null) {
+                cause = Exceptions.peel(cause);
                 // TODO(minwoox): In Netty, DnsNameResolver only caches if the failure was not because of an
                 //                IO error / timeout that was caused by the query itself.
                 //                To figure that out, we need to check the cause of the UnknownHostException.
@@ -158,33 +155,27 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                     hasCacheableCause = false;
                 }
                 result.complete(new CacheEntry(null, -1, questions, cause, hasCacheableCause));
-                return;
+                return null;
             }
 
-            @SuppressWarnings("unchecked")
-            final List<DnsRecord> records = (List<DnsRecord>) f.getNow();
             InetAddress inetAddress = null;
             long ttlMillis = -1;
-            try {
-                for (DnsRecord r : records) {
-                    final byte[] addrBytes = extractAddressBytes(r, logger, hostname);
-                    if (addrBytes == null) {
-                        continue;
-                    }
-                    try {
-                        inetAddress = InetAddress.getByAddress(hostname, addrBytes);
-                        ttlMillis = TimeUnit.SECONDS.toMillis(
-                                Math.max(Math.min(r.timeToLive(), maxTtl), minTtl));
-                        break;
-                    } catch (UnknownHostException e) {
-                        // Should never reach here because we already validated it in extractAddressBytes.
-                        result.complete(new CacheEntry(null, -1, questions, new IllegalArgumentException(
-                                "Invalid address: " + hostname, e), false));
-                        return;
-                    }
+            for (DnsRecord r : records) {
+                final byte[] addrBytes = extractAddressBytes(r, logger, hostname);
+                if (addrBytes == null) {
+                    continue;
                 }
-            } finally {
-                records.forEach(ReferenceCountUtil::safeRelease);
+                try {
+                    inetAddress = InetAddress.getByAddress(hostname, addrBytes);
+                    ttlMillis = TimeUnit.SECONDS.toMillis(
+                            Math.max(Math.min(r.timeToLive(), maxTtl), minTtl));
+                    break;
+                } catch (UnknownHostException e) {
+                    // Should never reach here because we already validated it in extractAddressBytes.
+                    result.complete(new CacheEntry(null, -1, questions, new IllegalArgumentException(
+                            "Invalid address: " + hostname, e), false));
+                    return null;
+                }
             }
 
             final CacheEntry cacheEntry;
@@ -195,6 +186,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 cacheEntry = new CacheEntry(inetAddress, ttlMillis, questions, null, false);
             }
             result.complete(cacheEntry);
+            return null;
         });
     }
 
@@ -296,7 +288,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             final String hostName = address.getHostName();
 
             final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
-            sendQueries(questions, hostName, result);
+            sendQueries(questions, hostName, result, true);
             result.handle((entry, unused) -> {
                 if (resolverClosed) {
                     return null;

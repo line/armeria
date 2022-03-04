@@ -22,13 +22,18 @@ import java.time.Duration;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
+import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 
 /**
  * Builds a new {@link DnsAddressEndpointGroup} that sources its {@link Endpoint} list from the {@code A} or
@@ -65,12 +70,11 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsAddressEndpointGroup}.
      */
     public DnsAddressEndpointGroup build() {
-        return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
-                                           queryTimeoutMillis(), serverAddressStreamProvider(), backoff(),
-                                           resolvedAddressTypes, hostname(), port);
+        return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), backoff(), minTtl(), maxTtl(),
+                                           resolvedAddressTypes, hostname(), port, dnsResolverFactory());
     }
 
-    // Override the return type of the chaining methods in the superclass.
+    // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.
 
     @Override
     public DnsAddressEndpointGroupBuilder eventLoop(EventLoop eventLoop) {
@@ -78,8 +82,20 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     }
 
     @Override
-    public DnsAddressEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
-        return (DnsAddressEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    public DnsAddressEndpointGroupBuilder backoff(Backoff backoff) {
+        return (DnsAddressEndpointGroupBuilder) super.backoff(backoff);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+        return (DnsAddressEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
+    }
+
+    // Override the return type of the chaining methods in the AbstractDnsResolverBuilder.
+
+    @Override
+    public DnsAddressEndpointGroupBuilder traceEnabled(boolean traceEnabled) {
+        return (DnsAddressEndpointGroupBuilder) super.traceEnabled(traceEnabled);
     }
 
     @Override
@@ -93,6 +109,28 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     }
 
     @Override
+    public DnsAddressEndpointGroupBuilder queryTimeoutForEachAttempt(Duration queryTimeoutForEachAttempt) {
+        return (DnsAddressEndpointGroupBuilder) super.queryTimeoutForEachAttempt(queryTimeoutForEachAttempt);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder queryTimeoutMillisForEachAttempt(
+            long queryTimeoutMillisForEachAttempt) {
+        return (DnsAddressEndpointGroupBuilder) super.queryTimeoutMillisForEachAttempt(
+                queryTimeoutMillisForEachAttempt);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder recursionDesired(boolean recursionDesired) {
+        return (DnsAddressEndpointGroupBuilder) super.recursionDesired(recursionDesired);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder maxQueriesPerResolve(int maxQueriesPerResolve) {
+        return (DnsAddressEndpointGroupBuilder) super.maxQueriesPerResolve(maxQueriesPerResolve);
+    }
+
+    @Override
     public DnsAddressEndpointGroupBuilder serverAddresses(InetSocketAddress... serverAddresses) {
         return (DnsAddressEndpointGroupBuilder) super.serverAddresses(serverAddresses);
     }
@@ -103,12 +141,92 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     }
 
     @Override
-    public DnsAddressEndpointGroupBuilder backoff(Backoff backoff) {
-        return (DnsAddressEndpointGroupBuilder) super.backoff(backoff);
+    public DnsAddressEndpointGroupBuilder serverAddressStreamProvider(
+            DnsServerAddressStreamProvider serverAddressStreamProvider) {
+        return (DnsAddressEndpointGroupBuilder) super.serverAddressStreamProvider(serverAddressStreamProvider);
     }
 
     @Override
-    public DnsAddressEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
-        return (DnsAddressEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
+    public DnsAddressEndpointGroupBuilder dnsServerAddressStreamProvider(
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
+        return (DnsAddressEndpointGroupBuilder) super.dnsServerAddressStreamProvider(
+                dnsServerAddressStreamProvider);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder maxPayloadSize(int maxPayloadSize) {
+        return (DnsAddressEndpointGroupBuilder) super.maxPayloadSize(maxPayloadSize);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder optResourceEnabled(boolean optResourceEnabled) {
+        return (DnsAddressEndpointGroupBuilder) super.optResourceEnabled(optResourceEnabled);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder hostsFileEntriesResolver(
+            HostsFileEntriesResolver hostsFileEntriesResolver) {
+        return (DnsAddressEndpointGroupBuilder) super.hostsFileEntriesResolver(hostsFileEntriesResolver);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder dnsQueryLifecycleObserverFactory(
+            DnsQueryLifecycleObserverFactory observerFactory) {
+        return (DnsAddressEndpointGroupBuilder) super.dnsQueryLifecycleObserverFactory(observerFactory);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder disableDnsQueryMetrics() {
+        return (DnsAddressEndpointGroupBuilder) super.disableDnsQueryMetrics();
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder enableDnsQueryMetrics(boolean enable) {
+        return (DnsAddressEndpointGroupBuilder) super.enableDnsQueryMetrics(enable);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder searchDomains(String... searchDomains) {
+        return (DnsAddressEndpointGroupBuilder) super.searchDomains(searchDomains);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder searchDomains(Iterable<String> searchDomains) {
+        return (DnsAddressEndpointGroupBuilder) super.searchDomains(searchDomains);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder ndots(int ndots) {
+        return (DnsAddressEndpointGroupBuilder) super.ndots(ndots);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder decodeIdn(boolean decodeIdn) {
+        return (DnsAddressEndpointGroupBuilder) super.decodeIdn(decodeIdn);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder meterRegistry(MeterRegistry meterRegistry) {
+        return (DnsAddressEndpointGroupBuilder) super.meterRegistry(meterRegistry);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder cacheSpec(String cacheSpec) {
+        return (DnsAddressEndpointGroupBuilder) super.cacheSpec(cacheSpec);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
+        return (DnsAddressEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder negativeTtl(int negativeTtl) {
+        return (DnsAddressEndpointGroupBuilder) super.negativeTtl(negativeTtl);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder dnsCache(DnsCache dnsCache) {
+        return (DnsAddressEndpointGroupBuilder) super.dnsCache(dnsCache);
     }
 }

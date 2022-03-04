@@ -57,30 +57,30 @@ class DnsEndpointGroupBuilderTest {
 
     @Test
     void ttl() {
-        assertThat(builder().minTtl()).isOne();
-        assertThat(builder().maxTtl()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(builder().minTtl0()).isOne();
+        assertThat(builder().maxTtl0()).isEqualTo(Integer.MAX_VALUE);
         final Builder builderWithCustomTtl = builder().ttl(10, 20);
 
-        assertThat(builderWithCustomTtl.minTtl()).isEqualTo(10);
-        assertThat(builderWithCustomTtl.maxTtl()).isEqualTo(20);
+        assertThat(builderWithCustomTtl.minTtl0()).isEqualTo(10);
+        assertThat(builderWithCustomTtl.maxTtl0()).isEqualTo(20);
         assertThatThrownBy(() -> builder().ttl(0, 10)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> builder().ttl(20, 10)).isInstanceOf(IllegalArgumentException.class);
 
         final Builder builderWithSameCustomTtl = builder().ttl(1, 1);
-        assertThat(builderWithSameCustomTtl.minTtl()).isOne();
-        assertThat(builderWithSameCustomTtl.maxTtl()).isOne();
+        assertThat(builderWithSameCustomTtl.minTtl0()).isOne();
+        assertThat(builderWithSameCustomTtl.maxTtl0()).isOne();
     }
 
     @Test
     void serverAddresses() {
         // Should be set by default.
-        assertThat(builder().serverAddressStreamProvider()).isNotNull();
+        assertThat(builder().serverAddressStreamProvider0()).isNotNull();
 
         // Should use the sequential stream when set by a user.
         final DnsServerAddressStreamProvider provider =
                 builder().serverAddresses(new InetSocketAddress("1.1.1.1", 53),
                                           new InetSocketAddress("1.0.0.1", 53))
-                         .serverAddressStreamProvider();
+                         .serverAddressStreamProvider0();
 
         final DnsServerAddressStream stream = provider.nameServerAddressStream("foo.com");
         assertThat(stream.size()).isEqualTo(2);
@@ -104,9 +104,21 @@ class DnsEndpointGroupBuilderTest {
             return (Builder) super.eventLoop(eventLoop);
         }
 
+        int minTtl0() {
+            return minTtl();
+        }
+
+        int maxTtl0() {
+            return maxTtl();
+        }
+
         @Override
         public Builder ttl(int minTtl, int maxTtl) {
             return (Builder) super.ttl(minTtl, maxTtl);
+        }
+
+        DnsServerAddressStreamProvider serverAddressStreamProvider0() {
+            return serverAddressStreamProvider();
         }
 
         @Override

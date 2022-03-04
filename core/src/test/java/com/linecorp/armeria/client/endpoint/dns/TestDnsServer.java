@@ -21,6 +21,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -64,6 +65,7 @@ public final class TestDnsServer implements AutoCloseable {
 
     private final Channel channel;
     private volatile Map<DnsQuestion, DnsResponse> responses;
+    private volatile long delayMillis;
 
     public TestDnsServer(Map<DnsQuestion, DnsResponse> responses) {
         this(responses, null);
@@ -101,6 +103,10 @@ public final class TestDnsServer implements AutoCloseable {
         this.responses = ImmutableMap.copyOf(responses);
     }
 
+    public void setDelayMillis(int delayMillis) {
+        this.delayMillis = delayMillis;
+    }
+
     @Override
     public void close() {
         if (!channel.isOpen()) {
@@ -114,6 +120,14 @@ public final class TestDnsServer implements AutoCloseable {
     private class DnsServerHandler extends SimpleChannelInboundHandler<DatagramDnsQuery> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, DatagramDnsQuery query) {
+            if (delayMillis > 0) {
+                ctx.executor().schedule(() -> respond(ctx, query), delayMillis, TimeUnit.MILLISECONDS);
+            } else {
+                respond(ctx, query);
+            }
+        }
+
+        private void respond(ChannelHandlerContext ctx, DatagramDnsQuery query) {
             final DnsQuestion question = query.recordAt(DnsSection.QUESTION, 0);
             boolean responded = false;
             for (Entry<DnsQuestion, DnsResponse> e : responses.entrySet()) {

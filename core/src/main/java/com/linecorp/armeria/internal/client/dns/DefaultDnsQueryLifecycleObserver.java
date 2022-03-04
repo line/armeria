@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client.dns;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.DnsTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.util.StringUtil;

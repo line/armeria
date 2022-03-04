@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.client;
+package com.linecorp.armeria.internal.client.dns;
 
 import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 
@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.TransportType;
@@ -35,18 +36,16 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
-import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddresses;
-import io.netty.util.concurrent.Future;
 
-class DefaultDnsNameResolverTest {
+class DefaultDnsResolverTest {
 
     /**
      * This test does not check anything but makes the future returned by
-     * {@link DefaultDnsNameResolver#sendQueries(List, String)} is completed even before the DNS responses
+     * {@link DefaultDnsResolver#resolve(List, String)}} is completed even before the DNS responses
      * are received. By doing so, we can make our leak detectors detect any leaks if we forgot to release
      * the DNS responses. See https://github.com/line/armeria/pull/2951 for more information.
      */
@@ -67,21 +66,24 @@ class DefaultDnsNameResolverTest {
                 })) {
 
             final EventLoop eventLoop = CommonPools.workerGroup().next();
-            final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(
-                    new DnsNameResolverBuilder(eventLoop)
-                            .channelType(TransportType.datagramChannelType(eventLoop))
-                            .queryTimeoutMillis(Long.MAX_VALUE)
-                            .nameServerProvider(name -> DnsServerAddresses.sequential(dnsServer.addr())
-                                                                          .stream())
-                            .build(),
-                    eventLoop, 0);
+            final DefaultDnsResolver resolver =
+                    DefaultDnsResolver.of(
+                            new DnsNameResolverBuilder(eventLoop)
+                                    .channelType(TransportType.datagramChannelType(eventLoop))
+                                    .queryTimeoutMillis(Long.MAX_VALUE)
+                                    .nameServerProvider(
+                                            name -> DnsServerAddresses.sequential(dnsServer.addr()).stream())
+                                    .build(),
+                            DnsCache.of(), eventLoop, ImmutableList.of(), 1, 1);
 
-            final Future<List<DnsRecord>> f = resolver.sendQueries(
-                    ImmutableList.of(new DefaultDnsQuestion("foo.com.", DnsRecordType.A),
-                                     new DefaultDnsQuestion("bar.com.", DnsRecordType.A)), "");
+            final DnsQuestionContext ctx = new DnsQuestionContext(eventLoop, 1, true);
+            resolver.resolveAll(ctx,
+                                ImmutableList.of(new DefaultDnsQuestion("foo.com.", DnsRecordType.A),
+                                                 new DefaultDnsQuestion("bar.com.", DnsRecordType.A)),
+                                "");
 
             // Cancel the queries immediately.
-            f.cancel(false);
+            ctx.whenCancelled().cancel(false);
 
             // Wait until the DNS server sends the response.
             Thread.sleep(2000);

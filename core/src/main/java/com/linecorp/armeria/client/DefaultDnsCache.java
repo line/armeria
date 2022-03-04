@@ -1,0 +1,215 @@
+/*
+ * Copyright 2022 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.client;
+
+import static java.util.Objects.requireNonNull;
+
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRecord;
+
+final class DefaultDnsCache implements DnsCache {
+
+    private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
+            ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
+
+    private final List<DnsCacheRemovalListener> listeners = new CopyOnWriteArrayList<>();
+    private final int minTtl;
+    private final int maxTtl;
+    private final Cache<DnsQuestion, CacheValue> cache;
+    private final int negativeTtl;
+
+    DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
+        this.minTtl = minTtl;
+        this.maxTtl = maxTtl;
+        this.negativeTtl = negativeTtl;
+
+        final Caffeine<Object, Object> caffeine = Caffeine.from(cacheSpec);
+        caffeine.removalListener((RemovalListener<DnsQuestion, CacheValue>) (key, value, cause) -> {
+            if (value != null) {
+                value.scheduledFuture.cancel(true);
+            }
+
+            if (key == null || value == null) {
+                // A key or value could be null if collected.
+                return;
+            }
+
+            final UnknownHostException reason = value.cause();
+            final List<DnsRecord> records = value.records();
+            if (reason != null) {
+                for (DnsCacheRemovalListener listener : listeners) {
+                    listener.onRemoval(key, null, reason);
+                }
+            } else if (records != null) {
+                for (DnsCacheRemovalListener listener : listeners) {
+                    listener.onRemoval(key, records, null);
+                }
+            } else {
+                // Should not reach here.
+                throw new Error();
+            }
+        });
+        cache = caffeine.build();
+
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.client.dns.cache");
+        CaffeineMetricSupport.setup(meterRegistry, idPrefix, cache);
+    }
+
+    @Override
+    public void cache(DnsQuestion question, Iterable<? extends DnsRecord> records) {
+        requireNonNull(question, "question");
+        requireNonNull(records, "records");
+        final List<DnsRecord> copied = ImmutableList.copyOf(records);
+
+        final long ttl = copied.stream()
+                              .mapToLong(DnsRecord::timeToLive)
+                              .min()
+                              .orElse(minTtl);
+        final int effectiveTtl = Math.min(maxTtl, Math.max(minTtl, Ints.saturatedCast(ttl)));
+
+        cache.put(question, new CacheValue(cache, question, copied, null, effectiveTtl));
+    }
+
+    @Override
+    public void cache(DnsQuestion question, UnknownHostException cause) {
+        requireNonNull(question, "question");
+        requireNonNull(cause, "cause");
+
+        if (negativeTtl > 0) {
+            cache.put(question, new CacheValue(cache, question, null, cause, negativeTtl));
+        }
+    }
+
+    @Override
+    public List<DnsRecord> get(DnsQuestion question) throws UnknownHostException {
+        requireNonNull(question, "question");
+        final CacheValue entry = cache.getIfPresent(question);
+        if (entry == null) {
+            return null;
+        }
+        final UnknownHostException cause = entry.cause();
+        if (cause != null) {
+            throw cause;
+        }
+        return entry.records();
+    }
+
+    @Override
+    public void remove(DnsQuestion question) {
+        requireNonNull(question, "question");
+        cache.invalidate(question);
+    }
+
+    @Override
+    public void removeAll() {
+        cache.invalidateAll();
+    }
+
+    @Override
+    public void removalListener(DnsCacheRemovalListener listener) {
+        requireNonNull(listener, "listener");
+        listeners.add(listener);
+    }
+
+    private static final class CacheValue {
+
+        @Nullable
+        private final List<DnsRecord> records;
+        @Nullable
+        private final UnknownHostException cause;
+        private final long createdAt;
+        private final ScheduledFuture<?> scheduledFuture;
+
+        private CacheValue(Cache<DnsQuestion, CacheValue> cache, DnsQuestion question,
+                           @Nullable List<DnsRecord> records,
+                           @Nullable UnknownHostException cause, int timeToLive) {
+            assert records != null || cause != null;
+            this.records = records;
+            this.cause = cause;
+            createdAt = System.nanoTime();
+            scheduledFuture = executor.schedule(() -> {
+                cache.asMap().remove(question, this);
+            }, timeToLive, TimeUnit.SECONDS);
+        }
+
+        @Nullable
+        List<DnsRecord> records() {
+            return records;
+        }
+
+        @Nullable
+        UnknownHostException cause() {
+            return cause;
+        }
+
+        boolean isExpired(int timeToLive) {
+            return TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - createdAt) > timeToLive;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof CacheValue)) {
+                return false;
+            }
+            final CacheValue that = (CacheValue) o;
+            return Objects.equal(records, that.records) &&
+                   Objects.equal(cause, that.cause) &&
+                   Objects.equal(scheduledFuture, that.scheduledFuture);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(records, cause, scheduledFuture);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .omitNullValues()
+                              // TODO(ikhoon): limit the size of the records
+                              .add("records", records)
+                              .add("cause", cause)
+                              .add("scheduledFuture", scheduledFuture)
+                              .toString();
+        }
+    }
+}

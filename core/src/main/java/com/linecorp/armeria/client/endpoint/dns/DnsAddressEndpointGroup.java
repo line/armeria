@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
+import static com.linecorp.armeria.internal.client.dns.DnsUtil.extractAddressBytes;
 
 import java.util.List;
+import java.util.function.BiFunction;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -30,16 +31,18 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS address queries ({@code A} and {@code AAAA}).
@@ -82,19 +85,21 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
     private final String hostname;
     private final int port;
 
-    DnsAddressEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
-                            int minTtl, int maxTtl, long queryTimeoutMillis,
-                            DnsServerAddressStreamProvider serverAddressStreamProvider,
-                            Backoff backoff, @Nullable ResolvedAddressTypes resolvedAddressTypes,
-                            String hostname, int port) {
+    DnsAddressEndpointGroup(
+            EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
+            Backoff backoff, int minTtl, int maxTtl,
+            @Nullable ResolvedAddressTypes resolvedAddressTypes, String hostname, int port,
+            BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> resolverFactory) {
 
-        super(selectionStrategy, eventLoop, minTtl, maxTtl, queryTimeoutMillis, serverAddressStreamProvider,
-              backoff, newQuestions(hostname, resolvedAddressTypes),
+        super(selectionStrategy, eventLoop,
+              newQuestions(hostname, resolvedAddressTypes),
+              backoff,
+              minTtl, maxTtl,
               resolverBuilder -> {
                   if (resolvedAddressTypes != null) {
                       resolverBuilder.resolvedAddressTypes(resolvedAddressTypes);
                   }
-              });
+              }, resolverFactory);
 
         this.hostname = hostname;
         this.port = port;
@@ -135,13 +140,15 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
         final ImmutableSortedSet.Builder<Endpoint> builder = ImmutableSortedSet.naturalOrder();
         final boolean hasLoopbackARecords =
                 records.stream()
-                       .filter(r -> r instanceof DnsRawRecord)
-                       .map(DnsRawRecord.class::cast)
-                       .anyMatch(r -> r.type() == DnsRecordType.A &&
-                                     r.content().getByte(r.content().readerIndex()) == 127);
+                       .filter(ByteArrayDnsRecord.class::isInstance)
+                       .map(ByteArrayDnsRecord.class::cast)
+                       .anyMatch(r -> {
+                           final byte[] content = r.content();
+                           return r.type() == DnsRecordType.A && content.length > 0 && content[0] == 127;
+                       });
 
         for (DnsRecord r : records) {
-            if (!(r instanceof DnsRawRecord)) {
+            if (!(r instanceof ByteArrayDnsRecord)) {
                 continue;
             }
 
