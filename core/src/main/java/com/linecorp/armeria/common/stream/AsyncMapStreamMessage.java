@@ -24,6 +24,7 @@ import java.util.function.Function;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.math.IntMath;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -34,12 +35,12 @@ import io.netty.util.concurrent.EventExecutor;
 final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
     private final StreamMessage<T> source;
     private final Function<T, CompletableFuture<U>> function;
-    private final long maxConcurrency;
+    private final int maxConcurrency;
 
     @SuppressWarnings("unchecked")
     AsyncMapStreamMessage(StreamMessage<? extends T> source,
                           Function<? super T, ? extends CompletableFuture<? extends U>> function,
-                          long maxConcurrency) {
+                          int maxConcurrency) {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
@@ -94,21 +95,21 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         private final Subscriber<? super U> downstream;
         private final Function<T, CompletableFuture<U>> function;
         private final EventExecutor executor;
-        private final long maxConcurrency;
+        private final int maxConcurrency;
 
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
 
         private long requestedByDownstream;
-        private long requestedFromUpstream;
-        private long pendingFutures;
+        private int requestedFromUpstream;
+        private int pendingFutures;
         private boolean completed;
 
         AsyncMapSubscriber(Subscriber<? super U> downstream,
                            Function<T, CompletableFuture<U>> function,
                            EventExecutor executor,
-                           long maxConcurrency) {
+                           int maxConcurrency) {
             requireNonNull(downstream, "downstream");
             requireNonNull(function, "function");
             requireNonNull(executor, "executor");
@@ -135,7 +136,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (requestedFromUpstream != Long.MAX_VALUE) {
+            if (requestedFromUpstream != Integer.MAX_VALUE) {
                 requestedFromUpstream--;
             }
 
@@ -247,13 +248,13 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         private void handleRequest(long n) {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
 
-            if (maxConcurrency > LongMath.saturatedAdd(requestedFromUpstream, pendingFutures)) {
+            if (maxConcurrency > IntMath.saturatedAdd(requestedFromUpstream, pendingFutures)) {
                 final long toRequest = maxConcurrency - pendingFutures - requestedFromUpstream;
                 if (requestedByDownstream != Long.MAX_VALUE) {
                     requestedByDownstream -= toRequest;
                 }
 
-                requestedFromUpstream = LongMath.saturatedAdd(requestedFromUpstream, toRequest);
+                requestedFromUpstream = IntMath.saturatedAdd(requestedFromUpstream, toRequest);
                 upstream.request(toRequest);
             }
         }
