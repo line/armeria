@@ -17,11 +17,14 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -128,6 +131,36 @@ class StreamMessageInputStreamTest {
     }
 
     @Test
+    void readByMultipleThreads_allThreadsShouldWaitSubscribed() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(10);
+        final Publisher<Integer> publisher = Flux
+                .range(1, 10)
+                .doOnSubscribe(subscription -> {
+                    try {
+                        latch.await(); // to ensure that all threads are waiting onSubscribe()
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                });
+        final StreamMessage<Integer> streamMessage = new PublisherBasedStreamMessage<>(publisher);
+        final InputStream inputStream = streamMessage
+                .asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
+
+        final List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final Thread t = new Thread(() -> assertDoesNotThrow(() -> {
+                latch.countDown();
+                inputStream.read();
+            }));
+            threads.add(t);
+            t.start();
+        }
+        for (Thread thread : threads) {
+            thread.join();
+        }
+    }
+
+    @Test
     void close() throws Exception {
         final Publisher<Integer> publisher = Flux.range(1, 10);
         final StreamMessage<Integer> streamMessage = new PublisherBasedStreamMessage<>(publisher);
@@ -154,7 +187,7 @@ class StreamMessageInputStreamTest {
             actual[i] = result.readByte();
         }
         assertThat(actual).isEqualTo(expected);
-        assertThatNoException().isThrownBy(inputStream::close);
+        assertDoesNotThrow(inputStream::close);
         assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
                                              .hasMessage("Stream closed");
         assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
@@ -167,7 +200,7 @@ class StreamMessageInputStreamTest {
         final InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
         assertThat(inputStream.available()).isZero();
 
-        assertThatNoException().isThrownBy(inputStream::close);
+        assertDoesNotThrow(inputStream::close);
         assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
                                              .hasMessage("Stream closed");
         assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
@@ -182,7 +215,7 @@ class StreamMessageInputStreamTest {
         assertThat(inputStream.available()).isGreaterThan(0);
 
         for (int i = 0; i < 10; i++) {
-            assertThatNoException().isThrownBy(inputStream::close);
+            assertDoesNotThrow(inputStream::close);
             assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
                                                  .hasMessage("Stream closed");
             assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
