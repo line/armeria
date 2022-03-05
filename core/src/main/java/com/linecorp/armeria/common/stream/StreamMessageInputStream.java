@@ -81,9 +81,7 @@ final class StreamMessageInputStream<T> extends InputStream {
 
     private int read(Function<InputStream, Integer> function) throws IOException {
         ensureOpen();
-        if (subscribed.compareAndSet(false, true)) {
-            source.subscribe(subscriber);
-        }
+        ensureSubscribed();
         if (inputStream == null || inputStream.available() == 0) {
             try {
                 inputStream = subscriber.nextStream();
@@ -120,6 +118,13 @@ final class StreamMessageInputStream<T> extends InputStream {
         }
     }
 
+    private void ensureSubscribed() {
+        if (subscribed.compareAndSet(false, true)) {
+            source.subscribe(subscriber);
+        }
+        subscriber.whenSubscribed.join();
+    }
+
     private static final class StreamMessageInputStreamSubscriber<T> implements Subscriber<T> {
 
         private static final InputStream EMPTY_STREAM = new InputStream() {
@@ -130,7 +135,9 @@ final class StreamMessageInputStream<T> extends InputStream {
         };
 
         private final Function<? super T, ? extends HttpData> httpDataConverter;
-        private final CompletableFuture<Subscription> upstream = new CompletableFuture<>();
+        @Nullable
+        private Subscription upstream;
+        private final CompletableFuture<Void> whenSubscribed = new CompletableFuture<>();
         private final BlockingQueue<InputStream> queue = new LinkedBlockingDeque<>();
         private volatile boolean closed;
 
@@ -142,7 +149,8 @@ final class StreamMessageInputStream<T> extends InputStream {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            upstream.complete(subscription);
+            upstream = subscription;
+            whenSubscribed.complete(null);
         }
 
         @Override
@@ -156,7 +164,7 @@ final class StreamMessageInputStream<T> extends InputStream {
                 queue.add(httpDataConverter.apply(item).toInputStream());
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
-                upstream.join().cancel();
+                upstream.cancel();
                 onError(ex);
             }
         }
@@ -177,9 +185,7 @@ final class StreamMessageInputStream<T> extends InputStream {
             if (closed) {
                 return EMPTY_STREAM;
             }
-            if (queue.isEmpty()) {
-                upstream.join().request(1);
-            }
+            upstream.request(1);
             return queue.take();
         }
 
