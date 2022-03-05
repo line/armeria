@@ -100,7 +100,7 @@ final class StreamMessageInputStream<T> extends InputStream {
             return;
         }
         closed = true;
-        subscriber.cancel();
+        source.abort();
     }
 
     @Override
@@ -187,16 +187,6 @@ final class StreamMessageInputStream<T> extends InputStream {
             }
             upstream.request(1);
             return queue.take();
-        }
-
-        public void cancel() throws IOException {
-            if (closed) {
-                return;
-            }
-            closed = true;
-            if (upstream.isDone()) {
-                upstream.join().cancel();
-            }
         }
     }
 }
