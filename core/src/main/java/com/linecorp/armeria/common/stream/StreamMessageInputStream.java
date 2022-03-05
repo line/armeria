@@ -101,6 +101,9 @@ final class StreamMessageInputStream<T> extends InputStream {
         }
         closed = true;
         source.abort();
+        if (inputStream != null) {
+            inputStream.close();
+        }
     }
 
     @Override
