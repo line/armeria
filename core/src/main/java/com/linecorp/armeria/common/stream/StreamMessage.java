@@ -709,7 +709,6 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Adapts this {@link StreamMessage} to {@link InputStream}.
-     * See {@link StreamMessageInputStream} for more information.
      *
      * <p>For example:<pre>{@code
      * StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
