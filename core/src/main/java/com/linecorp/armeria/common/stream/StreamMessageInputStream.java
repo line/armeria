@@ -80,7 +80,7 @@ final class StreamMessageInputStream<T> extends InputStream {
     }
 
     private int read(Function<InputStream, Integer> function) throws IOException {
-        checkClosed();
+        ensureOpen();
         if (subscribed.compareAndSet(false, true)) {
             source.subscribe(subscriber);
         }
@@ -107,14 +107,14 @@ final class StreamMessageInputStream<T> extends InputStream {
 
     @Override
     public int available() throws IOException {
-        checkClosed();
+        ensureOpen();
         if (inputStream == null) {
             return 0;
         }
         return inputStream.available();
     }
 
-    private void checkClosed() throws IOException {
+    private void ensureOpen() throws IOException {
         if (closed) {
             throw new IOException("Stream closed");
         }
