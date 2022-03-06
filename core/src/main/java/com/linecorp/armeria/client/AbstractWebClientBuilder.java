@@ -43,8 +43,10 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
 
     private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
             Sets.immutableEnumSet(
-                    ImmutableList.<SessionProtocol>builder().addAll(SessionProtocol.httpValues())
-                                 .addAll(SessionProtocol.httpsValues()).build());
+                    ImmutableList.<SessionProtocol>builder()
+                                 .addAll(SessionProtocol.httpValues())
+                                 .addAll(SessionProtocol.httpsValues())
+                                 .build());
 
     @Nullable
     private final URI uri;

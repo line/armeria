@@ -144,8 +144,7 @@ interface ServiceConfigSetters {
 
     /**
      * Defines a custom {@link SuccessFunction} to allow custom definition of successful requests and responses.
-     * {@link MetricCollectingService} and {@link LoggingService}  use this custom
-     * definition if set.
+     * {@link MetricCollectingService} and {@link LoggingService} use this custom definition if set.
      */
     ServiceConfigSetters successFunction(SuccessFunction successFunction);
 }

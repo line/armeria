@@ -31,12 +31,18 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
      */
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {
+        final float successSamplingRate =
+                parameter.successSamplingRate() >= 0.0f ? parameter.successSamplingRate()
+                                                        : parameter.samplingRate();
+        final float failureSamplingRate =
+                parameter.failureSamplingRate() >= 0.0f ? parameter.failureSamplingRate()
+                                                        : parameter.samplingRate();
         return LoggingService.builder()
                              .requestLogLevel(parameter.requestLogLevel())
                              .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
                              .failureResponseLogLevel(parameter.failureResponseLogLevel())
-                             .samplingRate(parameter.samplingRate())
-                             .failureSamplingRate(parameter.failedSamplingRate())
+                             .successSamplingRate(successSamplingRate)
+                             .failureSamplingRate(failureSamplingRate)
                              .newDecorator();
     }
 }

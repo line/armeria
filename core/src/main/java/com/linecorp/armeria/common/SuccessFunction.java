@@ -16,14 +16,35 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
  * A function that accepts {@link RequestContext} and {@link RequestLog} for checking if the response is
- * success.
+ * success. Like {@link ServerBuilder} and {@link WebClientBuilder} are using this interface to decide
+ * the response is success or not for Metric and Logging decorator.
+ *
+ * <p>Example:
+ * <pre>{@code
+ * ServerBuilder sb = ServerBuilder
+ *         .successFunction((ctx, req) -> req.responseHeaders().status().code() == 200
+ *                                        || req.responseHeaders().status().code() == 404)
+ *         .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("myServer")))
+ *         .decorator(LoggingService.newDecorator()));
+ *
+ * WebClient client = WebClient
+ *         .builder(uri)
+ *         .successFunction((ctx, req) -> req.responseHeaders().status().code() == 200
+ *                                        || req.responseHeaders().status().code() == 404)
+ *         .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient")))
+ *         .decorator(LoggingClient.newDecorator()))
+ *         .build();
+ * }
+ * </pre>
  *
  */
 @FunctionalInterface

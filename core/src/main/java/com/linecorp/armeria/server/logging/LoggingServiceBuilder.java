@@ -49,7 +49,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
      * This method sets both success and failure, if you want to specify different values for the success
-     * and failure samplers, use {@link #successSampler(Sampler)} and * {@link #failureSampler(Sampler)}
+     * and failure samplers, use {@link #successSampler(Sampler)} and {@link #failureSampler(Sampler)}
      * instead.
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {

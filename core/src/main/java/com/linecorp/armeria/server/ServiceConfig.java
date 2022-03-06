@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
@@ -328,7 +327,7 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link BiPredicate} for checking if the response is success.
+     * Returns the {@link SuccessFunction} for checking if the response is success.
      */
     public SuccessFunction successFunction() {
         return successFunction;
