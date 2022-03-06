@@ -29,6 +29,7 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.ClearSystemProperty;
 
 import com.google.common.base.Ascii;
 
@@ -87,6 +88,32 @@ class FlagsTest {
                 lookup.findStatic(flags, "dumpOpenSslInfo", MethodType.methodType(boolean.class));
         // // Call Flags.dumpOpenSslInfo();
         assertThat(dumpOpenSslInfoMethodHandle.invoke()).isSameAs(Boolean.TRUE);
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.verboseExceptions")
+    void defaultVerboseExceptionSamplerSpec() {
+        assertThat(Flags.verboseExceptionSamplerSpec()).isEqualTo("rate-limit=10");
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.verboseExceptions")
+    void defaultVerboseExceptionSampler() {
+        assertThat(Flags.verboseExceptionSampler())
+                .usingRecursiveComparison()
+                .isEqualTo(new ExceptionSampler(Flags.verboseExceptionSamplerSpec()));
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses")
+    void defaultPreferredIpV4Addresses() {
+        assertThat(Flags.preferredIpV4Addresses()).isNull();
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.transientServiceOptions")
+    void defaultTransientServiceOptions() {
+        assertThat(Flags.transientServiceOptions()).isEmpty();
     }
 
     private static class FlagsClassLoader extends ClassLoader {

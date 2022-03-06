@@ -377,6 +377,11 @@ This product depends on Bucket4j, distributed by Vladimir Bukhtoyarov:
   * License: licenses/LICENSE.bucket4j.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/vladimir-bukhtoyarov/bucket4j
 
+This product depends on JUnit Pioneer, distributed by JUnit Pioneer Contributors:
+
+  * License: licenses/LICENSE.junit-pioneer.epl20.txt (Eclipse Public License v2.0)
+  * Homepage: https://junit-pioneer.org
+
 DocService Client Web Dependencies
 ==================================
 
