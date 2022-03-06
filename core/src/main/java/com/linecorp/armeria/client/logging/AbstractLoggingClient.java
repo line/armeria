@@ -73,8 +73,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     private final BiFunction<? super RequestContext, ? super Throwable, ? extends @Nullable Object>
             responseCauseSanitizer;
 
-    private final Sampler<? super ClientRequestContext> successSampler;
-    private final Sampler<? super ClientRequestContext> failureSampler;
+    private final Sampler<? super RequestLog> sampler;
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
@@ -116,18 +115,21 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        this.successSampler = requireNonNull(successSampler, "successSampler");
-        this.failureSampler = requireNonNull(failureSampler, "failureSampler");
+        requireNonNull(successSampler, "successSampler");
+        requireNonNull(failureSampler, "failureSampler");
+        sampler = requestLog -> {
+            final ClientRequestContext ctx = (ClientRequestContext) requestLog.context();
+            if (ctx.options().successFunction().isSuccess(ctx, requestLog)) {
+                return successSampler.isSampled(ctx);
+            }
+            return failureSampler.isSampled(ctx);
+        };
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
         ctx.log().whenComplete().thenAccept(log -> {
-            if (ctx.options().successFunction().isSuccess(ctx, log)) {
-                if (successSampler.isSampled(ctx)) {
-                    log(logger, ctx, log, requestLogger, responseLogger);
-                }
-            } else if (failureSampler.isSampled(ctx)) {
+            if (sampler.isSampled(log)) {
                 log(logger, ctx, log, requestLogger, responseLogger);
             }
         });

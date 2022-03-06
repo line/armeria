@@ -89,8 +89,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     private final BiFunction<? super RequestContext, ? super Throwable,
             ? extends @Nullable Object> responseCauseSanitizer;
 
-    private final Sampler<? super ServiceRequestContext> successSampler;
-    private final Sampler<? super ServiceRequestContext> failureSampler;
+    private final Sampler<? super RequestLog> sampler;
 
     /**
      * Creates a new instance that logs {@link HttpRequest}s and {@link HttpResponse}s at the specified
@@ -131,18 +130,21 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        this.successSampler = requireNonNull(successSampler, "successSampler");
-        this.failureSampler = requireNonNull(failureSampler, "failureSampler");
+        requireNonNull(successSampler, "successSampler");
+        requireNonNull(failureSampler, "failureSampler");
+        sampler = requestLog -> {
+            final ServiceRequestContext ctx = (ServiceRequestContext) requestLog.context();
+            if (ctx.config().successFunction().isSuccess(ctx, requestLog)) {
+                return successSampler.isSampled(ctx);
+            }
+            return failureSampler.isSampled(ctx);
+        };
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            if (ctx.config().successFunction().isSuccess(ctx, requestLog)) {
-                if (successSampler.isSampled(ctx)) {
-                    log(logger, ctx, requestLog, requestLogger, responseLogger);
-                }
-            } else if (failureSampler.isSampled(ctx)) {
+            if (sampler.isSampled(requestLog)) {
                 log(logger, ctx, requestLog, requestLogger, responseLogger);
             }
         });
