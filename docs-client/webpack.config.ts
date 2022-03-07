@@ -16,6 +16,7 @@ import { docServiceDebug } from './src/lib/header-provider';
 const armeriaPort = process.env.ARMERIA_PORT || '8080';
 
 const isDev = !!process.env.WEBPACK_DEV;
+const isWindows = process.platform === 'win32';
 
 const config: Configuration = {
   mode: isDev ? 'development' : 'production',
@@ -82,29 +83,7 @@ const config: Configuration = {
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
     mainFields: ['browser', 'module', 'jsnext:main', 'main'],
   },
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: './src/index.html',
-      hash: true,
-    }),
-    new FaviconsWebpackPlugin({
-      logo: './src/images/logo.png',
-      // We don't need the many different icon versions of webapp mode and use light mode
-      // to keep JAR size down.
-      mode: 'light',
-      devMode: 'light',
-    }),
-    new LicenseWebpackPlugin({
-      stats: {
-        warnings: true,
-        errors: true,
-      },
-      outputFilename: '../../../licenses/web-licenses.txt',
-    }) as any,
-    new DefinePlugin({
-      'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
-    }),
-  ],
+  plugins: [],
   devServer: {
     historyApiFallback: true,
     hot: true,
@@ -122,7 +101,40 @@ const config: Configuration = {
         changeOrigin: true,
       },
     ],
+    client: {
+      overlay: {
+        warnings: false,
+        errors: true,
+      },
+    },
   },
 };
+
+// Configure plugins.
+const plugins = config.plugins as any[];
+plugins.push(new HtmlWebpackPlugin({
+  template: './src/index.html',
+  hash: true,
+}));
+plugins.push(new FaviconsWebpackPlugin({
+  logo: './src/images/logo.png',
+  // We don't need the many different icon versions of webapp mode and use light mode
+  // to keep JAR size down.
+  mode: 'light',
+  devMode: 'light',
+}));
+// Do not add LicenseWebpackPlugin on Windows, because otherwise it will fail with a known issue.
+if (!isWindows) {
+  plugins.push(new LicenseWebpackPlugin({
+    stats: {
+      warnings: true,
+      errors: true,
+    },
+    outputFilename: '../../../licenses/web-licenses.txt',
+  }) as any);
+}
+plugins.push(new DefinePlugin({
+  'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
+}));
 
 export default config;
