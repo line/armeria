@@ -2,7 +2,7 @@ import React from 'react';
 // @ts-ignore
 import Reveal from 'react-reveal/Fade';
 
-import styles from './marketing.module.less';
+import * as styles from './marketing.module.less';
 
 interface HighlightProps {
   nowrap?: boolean;

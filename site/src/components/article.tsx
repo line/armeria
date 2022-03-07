@@ -9,7 +9,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import React from 'react';
 
-import styles from './article.module.less';
+import * as styles from './article.module.less';
 
 const { Title, Paragraph } = Typography;
 

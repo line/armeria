@@ -1,6 +1,6 @@
 import React from 'react';
 
-import styles from './project-badge.module.less';
+import * as styles from './project-badge.module.less';
 
 interface ProjectBadgeProps {
   url: string;
