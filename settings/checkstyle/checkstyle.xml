@@ -330,4 +330,15 @@
   <module name="BeforeExecutionExclusionFileFilter">
     <property name="fileNamePattern" value=".*[\\/]gen-src[\\/].*$"/>
   </module>
+  <!-- exclude large forks to make diffing against upstream easier. -->
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="[\\/]common[\\/]MediaType.java" />
+  </module>
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="[\\/]internal[\\/]DefaultAttributeMap.java" />
+  </module>
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="[\\/]reactive[\\/]DefaultSslInfo.java" />
+  </module>
+
 </module>
