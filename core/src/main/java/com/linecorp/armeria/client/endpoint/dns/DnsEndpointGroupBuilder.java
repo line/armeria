@@ -29,7 +29,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.client.dns.AbstractDnsResolverBuilder;
+import com.linecorp.armeria.client.AbstractDnsResolverBuilder;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 
 import io.netty.channel.EventLoop;

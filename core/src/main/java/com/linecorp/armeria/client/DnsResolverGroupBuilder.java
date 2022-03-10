@@ -23,7 +23,6 @@ import java.time.Duration;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.dns.AbstractDnsResolverBuilder;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;

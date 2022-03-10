@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client.dns;
+package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -29,18 +29,19 @@ import java.util.function.BiFunction;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
-import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.BiDnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -54,6 +55,10 @@ import io.netty.resolver.dns.NoopDnsCache;
 import io.netty.resolver.dns.NoopDnsCnameCache;
 import io.netty.util.concurrent.EventExecutor;
 
+/**
+ * A skeletal builder implemtation for DNS resolvers.
+ */
+@UnstableApi
 public abstract class AbstractDnsResolverBuilder {
 
     private DnsCache dnsCache = DnsCache.of();
@@ -61,7 +66,7 @@ public abstract class AbstractDnsResolverBuilder {
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
     private int negativeTtl;
-    private boolean needsToBuildDnsCache;
+    private boolean needsToCreateDnsCache;
 
     private boolean traceEnabled = true;
     private long queryTimeoutMillis = 5000; // 5 seconds.
@@ -85,8 +90,6 @@ public abstract class AbstractDnsResolverBuilder {
 
     @Nullable
     private MeterRegistry meterRegistry;
-    @Nullable
-    private ResolvedAddressTypes resolvedAddressTypes;
 
     protected AbstractDnsResolverBuilder() {}
 
@@ -339,7 +342,7 @@ public abstract class AbstractDnsResolverBuilder {
     public AbstractDnsResolverBuilder cacheSpec(String cacheSpec) {
         requireNonNull(cacheSpec, "cacheSpec");
         this.cacheSpec = cacheSpec;
-        needsToBuildDnsCache = true;
+        needsToCreateDnsCache = true;
         return this;
     }
 
@@ -372,7 +375,7 @@ public abstract class AbstractDnsResolverBuilder {
                       "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
-        needsToBuildDnsCache = true;
+        needsToCreateDnsCache = true;
         return this;
     }
 
@@ -391,7 +394,7 @@ public abstract class AbstractDnsResolverBuilder {
      */
     public AbstractDnsResolverBuilder negativeTtl(int negativeTtl) {
         checkArgument(negativeTtl >= 0, "negativeTtl: %s (expected: >= 0)", negativeTtl);
-        needsToBuildDnsCache = true;
+        needsToCreateDnsCache = true;
         this.negativeTtl = negativeTtl;
         return this;
     }
@@ -406,6 +409,7 @@ public abstract class AbstractDnsResolverBuilder {
      * Therefore, {@link #cacheSpec(String)}, {@link #ttl(int, int)}, and {@link #negativeTtl(int)} are
      * mutually exclusive with {@link #dnsCache(DnsCache)}.
      */
+    @UnstableApi
     public AbstractDnsResolverBuilder dnsCache(DnsCache dnsCache) {
         requireNonNull(dnsCache, "dnsCache");
         this.dnsCache = dnsCache;
@@ -418,7 +422,7 @@ public abstract class AbstractDnsResolverBuilder {
     protected final BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> dnsResolverFactory(
             EventLoopGroup eventLoopGroup) {
 
-        if (needsToBuildDnsCache && dnsCache != DnsCache.of()) {
+        if (needsToCreateDnsCache && dnsCache != DnsCache.of()) {
             throw new IllegalStateException(
                     "Cannot set dnsCache() with cacheSpec(), ttl(), or negativeTtl().");
         }
@@ -475,7 +479,7 @@ public abstract class AbstractDnsResolverBuilder {
             final DnsNameResolver dnsNameResolver = builder.build();
 
             final DnsCache dnsCache;
-            if (needsToBuildDnsCache) {
+            if (needsToCreateDnsCache) {
                 dnsCache = DnsCache.builder()
                                    .cacheSpec(cacheSpec)
                                    .ttl(minTtl, maxTtl)

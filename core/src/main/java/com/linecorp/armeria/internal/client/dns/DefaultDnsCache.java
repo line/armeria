@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client.dns;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,6 +34,8 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.DnsCache;
+import com.linecorp.armeria.client.DnsCacheRemovalListener;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -43,7 +45,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 
-final class DefaultDnsCache implements DnsCache {
+public final class DefaultDnsCache implements DnsCache {
 
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
             ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
@@ -51,16 +53,16 @@ final class DefaultDnsCache implements DnsCache {
     private final List<DnsCacheRemovalListener> listeners = new CopyOnWriteArrayList<>();
     private final int minTtl;
     private final int maxTtl;
-    private final Cache<DnsQuestion, CacheValue> cache;
+    private final Cache<DnsQuestion, CacheEntry> cache;
     private final int negativeTtl;
 
-    DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
+    public DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
 
         final Caffeine<Object, Object> caffeine = Caffeine.from(cacheSpec);
-        caffeine.removalListener((RemovalListener<DnsQuestion, CacheValue>) (key, value, cause) -> {
+        caffeine.removalListener((RemovalListener<DnsQuestion, CacheEntry>) (key, value, cause) -> {
             if (value != null) {
                 value.scheduledFuture.cancel(true);
             }
@@ -103,7 +105,7 @@ final class DefaultDnsCache implements DnsCache {
                               .orElse(minTtl);
         final int effectiveTtl = Math.min(maxTtl, Math.max(minTtl, Ints.saturatedCast(ttl)));
 
-        cache.put(question, new CacheValue(cache, question, copied, null, effectiveTtl));
+        cache.put(question, new CacheEntry(cache, question, copied, null, effectiveTtl));
     }
 
     @Override
@@ -112,14 +114,14 @@ final class DefaultDnsCache implements DnsCache {
         requireNonNull(cause, "cause");
 
         if (negativeTtl > 0) {
-            cache.put(question, new CacheValue(cache, question, null, cause, negativeTtl));
+            cache.put(question, new CacheEntry(cache, question, null, cause, negativeTtl));
         }
     }
 
     @Override
     public List<DnsRecord> get(DnsQuestion question) throws UnknownHostException {
         requireNonNull(question, "question");
-        final CacheValue entry = cache.getIfPresent(question);
+        final CacheEntry entry = cache.getIfPresent(question);
         if (entry == null) {
             return null;
         }
@@ -128,6 +130,12 @@ final class DefaultDnsCache implements DnsCache {
             throw cause;
         }
         return entry.records();
+    }
+
+    @Nullable
+    CacheEntry getEntry(DnsQuestion question) {
+        requireNonNull(question, "question");
+        return cache.getIfPresent(question);
     }
 
     @Override
@@ -147,22 +155,24 @@ final class DefaultDnsCache implements DnsCache {
         listeners.add(listener);
     }
 
-    private static final class CacheValue {
+    static final class CacheEntry {
 
         @Nullable
         private final List<DnsRecord> records;
         @Nullable
         private final UnknownHostException cause;
-        private final long createdAt;
+        private final long creationTimeNanos;
+        private final int timeToLive;
         private final ScheduledFuture<?> scheduledFuture;
 
-        private CacheValue(Cache<DnsQuestion, CacheValue> cache, DnsQuestion question,
+        private CacheEntry(Cache<DnsQuestion, CacheEntry> cache, DnsQuestion question,
                            @Nullable List<DnsRecord> records,
                            @Nullable UnknownHostException cause, int timeToLive) {
             assert records != null || cause != null;
             this.records = records;
             this.cause = cause;
-            createdAt = System.nanoTime();
+            creationTimeNanos = System.nanoTime();
+            this.timeToLive = timeToLive;
             scheduledFuture = executor.schedule(() -> {
                 cache.asMap().remove(question, this);
             }, timeToLive, TimeUnit.SECONDS);
@@ -178,8 +188,12 @@ final class DefaultDnsCache implements DnsCache {
             return cause;
         }
 
-        boolean isExpired(int timeToLive) {
-            return TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - createdAt) > timeToLive;
+        int ttl() {
+            return timeToLive;
+        }
+
+        long creationTimeNanos() {
+            return creationTimeNanos;
         }
 
         @Override
@@ -187,10 +201,10 @@ final class DefaultDnsCache implements DnsCache {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof CacheValue)) {
+            if (!(o instanceof CacheEntry)) {
                 return false;
             }
-            final CacheValue that = (CacheValue) o;
+            final CacheEntry that = (CacheEntry) o;
             return Objects.equal(records, that.records) &&
                    Objects.equal(cause, that.cause) &&
                    Objects.equal(scheduledFuture, that.scheduledFuture);

@@ -24,15 +24,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.primitives.Ints;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsCache.CacheEntry;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -55,6 +58,19 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
     public CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question) {
         requireNonNull(question, "question");
         if (ctx.isRefreshing()) {
+            if (dnsCache instanceof DefaultDnsCache) {
+                final CacheEntry entry = ((DefaultDnsCache) dnsCache).getEntry(question);
+                if (entry != null) {
+                    final int remainingTtl = Ints.saturatedCast(
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - entry.creationTimeNanos()));
+                    if (remainingTtl * 2 <= entry.ttl()) {
+                        // If more than half of the TTL remains, reuse the cached records
+                        // and don't refresh them.
+                        return CompletableFuture.completedFuture(entry.records());
+                    }
+                }
+            }
+
             return resolve0(ctx, question);
         }
 

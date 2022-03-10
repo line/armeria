@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client.dns;
+package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 

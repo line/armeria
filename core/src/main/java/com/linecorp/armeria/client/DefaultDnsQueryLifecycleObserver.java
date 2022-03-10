@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.client.dns;
+package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.DnsTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.util.StringUtil;

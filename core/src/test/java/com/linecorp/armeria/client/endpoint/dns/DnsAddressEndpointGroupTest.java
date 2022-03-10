@@ -25,11 +25,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,12 +46,17 @@ import com.linecorp.armeria.client.retry.Backoff;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
 
 class DnsAddressEndpointGroupTest {
 
@@ -373,39 +384,48 @@ class DnsAddressEndpointGroupTest {
                                .build();
     }
 
-    @Test
-    void queryTimeoutMillisForEachAttempt_searchDomain() throws Exception {
-        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
-                new DefaultDnsQuestion("foo.com.armeria.dev", A),
-                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.armeria.dev", "1.1.1.1"))
-        ))) {
-            try (DnsAddressEndpointGroup group =
-                         DnsAddressEndpointGroup.builder("foo.com")
-                                                .port(8080)
-                                                .serverAddresses(server.addr())
-                                                .searchDomains(ImmutableList.of("armeria.com", "armeria.dev"))
-                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
-                                                .dnsCache(NoopDnsCache.INSTANCE)
-                                                .build()) {
+    private static final Logger logger = LoggerFactory.getLogger(DnsAddressEndpointGroupTest.class);
 
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
+    @CsvSource({ "1", "2", "3" })
+    @ParameterizedTest
+    void queryTimeoutMillisForEachAttempt_searchDomain(int ndots) throws Exception {
+        final List<String> queries = new ArrayList<>();
+        final TimeoutHandler timeoutHandler = new TimeoutHandler(dnsRecord -> {
+            final String name = dnsRecord.name();
+            queries.add(name);
+            if ("foo.com.armeria.dev.".equals(name)) {
+                return 0;
+            } else {
+                return Integer.MAX_VALUE;
             }
+        });
 
-            server.setDelayMillis(2000);
-
-            try (DnsAddressEndpointGroup group =
-                         DnsAddressEndpointGroup.builder("foo.com")
-                                                .port(8080)
-                                                .serverAddresses(server.addr())
-                                                .queryTimeoutMillisForEachAttempt(2000)
-                                                .queryTimeoutMillis(5000)
-                                                .searchDomains(ImmutableList.of("armeria.com", "armeria.dev"))
-                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
-                                                .dnsCache(NoopDnsCache.INSTANCE)
-                                                .build()) {
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
+        try (TestDnsServer server = new TestDnsServer(
+                ImmutableMap.of(new DefaultDnsQuestion("foo.com.armeria.dev", A),
+                                new DefaultDnsResponse(0)
+                                        .addRecord(ANSWER, newAddressRecord("foo.com.armeria.dev", "1.1.1.1"))),
+                timeoutHandler);
+             DnsAddressEndpointGroup group =
+                     DnsAddressEndpointGroup.builder("foo.com")
+                                            .port(8080)
+                                            .serverAddresses(server.addr())
+                                            .queryTimeoutMillisForEachAttempt(1000)
+                                            .queryTimeoutMillis(7000)
+                                            .ndots(ndots)
+                                            // Only "armeria.dev" will be resolved within the timeout.
+                                            .searchDomains(ImmutableList.of("armeria.io", "armeria.com",
+                                                                            "armeria.dev"))
+                                            .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                                            .dnsCache(NoopDnsCache.INSTANCE)
+                                            .build()) {
+            assertThat(group.whenReady().get()).containsExactly(
+                    Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
+            if (ndots == 1) {
+                assertThat(queries).containsExactly("foo.com.", "foo.com.armeria.io.",
+                                                    "foo.com.armeria.com.", "foo.com.armeria.dev.");
+            } else {
+                assertThat(queries).containsExactly("foo.com.armeria.io.", "foo.com.armeria.com.",
+                                                    "foo.com.armeria.dev.");
             }
         }
     }
@@ -434,5 +454,36 @@ class DnsAddressEndpointGroupTest {
         final ByteBuf content = Unpooled.buffer();
         DnsNameEncoder.encodeName(actualName, content);
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
+    }
+
+    private static class TimeoutHandler extends ChannelInboundHandlerAdapter {
+        private final Function<DnsRecord, Integer> delayFunction;
+
+        TimeoutHandler(Function<DnsRecord, Integer> delayFunction) {
+            this.delayFunction = delayFunction;
+        }
+
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof DatagramDnsQuery) {
+                final DatagramDnsQuery dnsQuery = (DatagramDnsQuery) msg;
+                final DnsRecord dnsRecord = dnsQuery.recordAt(DnsSection.QUESTION, 0);
+                final Integer delayMillis = delayFunction.apply(dnsRecord);
+                if (delayMillis == null || delayMillis == 0) {
+                    ctx.fireChannelRead(msg);
+                    return;
+                }
+                if (delayMillis.equals(Integer.MAX_VALUE)) {
+                    // Just release the msg and return so that the client request is timed out.
+                    ReferenceCountUtil.safeRelease(msg);
+                    return;
+                }
+                ctx.executor().schedule(() -> {
+                    ctx.fireChannelRead(msg);
+                }, delayMillis, TimeUnit.MILLISECONDS);
+            }
+            super.channelRead(ctx, msg);
+        }
     }
 }
