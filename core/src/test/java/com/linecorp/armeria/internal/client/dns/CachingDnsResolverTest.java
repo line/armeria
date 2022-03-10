@@ -64,27 +64,17 @@ class CachingDnsResolverTest {
         final CachingDnsResolver dnsResolver = new CachingDnsResolver(delegate, DnsCache.builder().build());
         final DnsQuestionWithoutTrailingDot question =
                 DnsQuestionWithoutTrailingDot.of("foo.com", DnsRecordType.A);
-        DnsQuestionContext ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), 0, true, 0);
+        DnsQuestionContext ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), 0, true);
         List<DnsRecord> records = dnsResolver.resolve(ctx, question).join();
         assertThat(records).containsExactly(fooRecord);
         assertThat(cacheMiss).isTrue();
         cacheMiss.set(false);
 
-        // It has been less than 2 seconds since the cache was created.
-        // So the refresh request should be ignored.
-        ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), 0, true, 2000);
-        records = dnsResolver.resolve(ctx, question).join();
-        assertThat(records).containsExactly(fooRecord);
-        // Make sure that the cached value is served.
-        assertThat(cacheMiss).isFalse();
-        cacheMiss.set(false);
-
-        Thread.sleep(2000);
         // The cache created more than 2 seconds ago should be refreshed.
-        ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), 0, true, 2000);
+        ctx = new DnsQuestionContext(CommonPools.workerGroup().next(), 0, true);
         records = dnsResolver.resolve(ctx, question).join();
         assertThat(records).containsExactly(fooRecord);
-        // Make sure that the cached value is served.
+        // Make sure that the cached value is ignored.
         assertThat(cacheMiss).isTrue();
         cacheMiss.set(false);
     }

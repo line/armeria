@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal.client.dns;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.net.UnknownHostException;
 import java.util.List;
@@ -36,7 +34,6 @@ import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.dns.DefaultDnsCache.CacheEntry;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -117,31 +114,9 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
             throws UnknownHostException {
         if (!ctx.isRefreshing()) {
             return dnsCache.get(question);
-        }
-
-        if (!(dnsCache instanceof DefaultDnsCache)) {
+        } else {
             return null;
         }
-
-        final CacheEntry entry = ((DefaultDnsCache) dnsCache).getEntry(question);
-        if (entry == null) {
-            return null;
-        }
-
-        final long elapsed = NANOSECONDS.toSeconds(System.nanoTime() - entry.creationTimeNanos());
-        if (elapsed < MILLISECONDS.toSeconds(ctx.refreshIntervalMillis())) {
-            // The TTL of the cached entry is still new compared to the refresh interval.
-            // The cached entry will be refreshed in the next iteration.
-            final List<DnsRecord> records = entry.records();
-            if (records != null) {
-                return records;
-            } else {
-                assert entry.cause() != null;
-                throw entry.cause();
-            }
-        }
-
-        return null;
     }
 
     @Override

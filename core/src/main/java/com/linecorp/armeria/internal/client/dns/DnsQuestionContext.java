@@ -27,14 +27,11 @@ final class DnsQuestionContext {
 
     private final long queryTimeoutMillis;
     private final boolean isRefreshing;
-    private final long refreshIntervalMillis;
     private final CompletableFuture<Void> whenCancelled = new CompletableFuture<>();
 
-    DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis,
-                       boolean isRefreshing, long refreshIntervalMillis) {
+    DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis, boolean isRefreshing) {
         this.queryTimeoutMillis = queryTimeoutMillis;
         this.isRefreshing = isRefreshing;
-        this.refreshIntervalMillis = refreshIntervalMillis;
         executor.schedule(() -> whenCancelled.cancel(true), queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
@@ -54,10 +51,6 @@ final class DnsQuestionContext {
         return isRefreshing;
     }
 
-    long refreshIntervalMillis() {
-        return refreshIntervalMillis;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -69,7 +62,6 @@ final class DnsQuestionContext {
 
         final DnsQuestionContext that = (DnsQuestionContext) o;
         return queryTimeoutMillis == that.queryTimeoutMillis && isRefreshing == that.isRefreshing &&
-               refreshIntervalMillis == that.refreshIntervalMillis &&
                whenCancelled.equals(that.whenCancelled);
     }
 
@@ -78,7 +70,6 @@ final class DnsQuestionContext {
         int result = whenCancelled.hashCode();
         result = 31 * result + (int) queryTimeoutMillis;
         result = 31 * result + (isRefreshing ? 1 : 0);
-        result = 31 * result + (int) refreshIntervalMillis;
         return result;
     }
 
@@ -87,7 +78,6 @@ final class DnsQuestionContext {
         return MoreObjects.toStringHelper(this)
                           .add("queryTimeoutMillis", queryTimeoutMillis)
                           .add("isRefreshing", isRefreshing)
-                          .add("refreshIntervalMillis", refreshIntervalMillis)
                           .add("whenCancelled", whenCancelled)
                           .toString();
     }
