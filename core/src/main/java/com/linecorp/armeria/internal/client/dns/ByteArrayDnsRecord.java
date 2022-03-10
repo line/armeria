@@ -37,6 +37,10 @@ public final class ByteArrayDnsRecord implements DnsRecord {
 
     public static DnsRecord copyOf(DnsRecord dnsRecord) {
         requireNonNull(dnsRecord, "dnsRecord");
+        if (dnsRecord instanceof ByteArrayDnsRecord) {
+            return dnsRecord;
+        }
+
         final byte[] content;
         if (dnsRecord instanceof ByteBufHolder) {
             final ByteBuf byteBuf = ((ByteBufHolder) dnsRecord).content();
@@ -56,7 +60,11 @@ public final class ByteArrayDnsRecord implements DnsRecord {
     private final byte[] content;
     private final int hashCode;
 
-    private ByteArrayDnsRecord(String name, DnsRecordType type, int dnsClass, long timeToLive, byte[] content) {
+    ByteArrayDnsRecord(String name, DnsRecordType type, long timeToLive, byte[] content) {
+        this(name, type, DnsRecord.CLASS_IN, timeToLive, content);
+    }
+
+    ByteArrayDnsRecord(String name, DnsRecordType type, int dnsClass, long timeToLive, byte[] content) {
         this.name = name;
         this.type = type;
         this.dnsClass = dnsClass;

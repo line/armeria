@@ -38,6 +38,7 @@ import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddresses;
 
@@ -74,7 +75,8 @@ class DefaultDnsResolverTest {
                                     .nameServerProvider(
                                             name -> DnsServerAddresses.sequential(dnsServer.addr()).stream())
                                     .build(),
-                            DnsCache.of(), eventLoop, ImmutableList.of(), 1, 1);
+                            DnsCache.of(), eventLoop, ImmutableList.of(), 1,
+                            HostsFileEntriesResolver.DEFAULT, 1);
 
             final DnsQuestionContext ctx = new DnsQuestionContext(eventLoop, 1, true);
             resolver.resolveAll(ctx,

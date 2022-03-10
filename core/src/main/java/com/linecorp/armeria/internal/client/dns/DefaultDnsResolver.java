@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.concurrent.EventExecutor;
@@ -44,8 +45,9 @@ public final class DefaultDnsResolver implements SafeCloseable {
 
     private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
-    public static DefaultDnsResolver of(DnsNameResolver delegate, DnsCache dnsCache, EventExecutor eventLoop,
-                                        List<String> searchDomains, int ndots, long queryTimeoutMillis) {
+    public static DefaultDnsResolver of(
+            DnsNameResolver delegate, DnsCache dnsCache, EventExecutor eventLoop, List<String> searchDomains,
+            int ndots, HostsFileEntriesResolver hostsFileEntriesResolver, long queryTimeoutMillis) {
 
         DnsResolver resolver = new DelegatingDnsResolver(delegate, eventLoop);
         resolver = new CachingDnsResolver(resolver, dnsCache);
@@ -53,7 +55,10 @@ public final class DefaultDnsResolver implements SafeCloseable {
             resolver = new SearchDomainDnsResolver(resolver, searchDomains, ndots);
         }
 
-        return new DefaultDnsResolver(resolver, eventLoop, delegate.resolvedAddressTypes(), queryTimeoutMillis);
+        final ResolvedAddressTypes resolvedAddressTypes = delegate.resolvedAddressTypes();
+        resolver = new HostsFileDnsResolver(resolver, hostsFileEntriesResolver, resolvedAddressTypes);
+
+        return new DefaultDnsResolver(resolver, eventLoop, resolvedAddressTypes, queryTimeoutMillis);
     }
 
     private final DnsResolver delegate;

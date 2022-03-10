@@ -56,7 +56,7 @@ import io.netty.resolver.dns.NoopDnsCnameCache;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A skeletal builder implemtation for DNS resolvers.
+ * A skeletal builder implementation for DNS resolvers.
  */
 @UnstableApi
 public abstract class AbstractDnsResolverBuilder {
@@ -84,8 +84,7 @@ public abstract class AbstractDnsResolverBuilder {
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
     private boolean dnsQueryMetricsEnabled = true;
     private List<String> searchDomains = DnsUtil.defaultSearchDomains();
-    // TODO(ikhoon): Fork UnixResolverOptions
-    private int ndots = 1;
+    private int ndots = DnsUtil.defaultNdots();
     private boolean decodeIdn = true;
 
     @Nullable
@@ -419,6 +418,7 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Returns a factory method that creates a {@link DefaultDnsResolver} with the properties set.
      */
+    @UnstableApi
     protected final BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> dnsResolverFactory(
             EventLoopGroup eventLoopGroup) {
 
@@ -428,9 +428,39 @@ public abstract class AbstractDnsResolverBuilder {
         }
         if (queryTimeoutMillisForEachAttempt > -1) {
             checkState(queryTimeoutMillis >= queryTimeoutMillisForEachAttempt,
-                       "queryTimeoutMillis: %s, queryTimeoutMillisForEachAttempt: %s (expected: queryTimeoutMillis >= queryTimeoutMillisForEachAttempt)",
+                       "queryTimeoutMillis: %s, queryTimeoutMillisForEachAttempt: %s (expected: " +
+                       "queryTimeoutMillis >= queryTimeoutMillisForEachAttempt)",
                        queryTimeoutMillis, queryTimeoutMillisForEachAttempt);
         }
+
+        final DnsCache dnsCache;
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        if (needsToCreateDnsCache) {
+            dnsCache = DnsCache.builder()
+                               .cacheSpec(cacheSpec)
+                               .ttl(minTtl, maxTtl)
+                               .negativeTtl(negativeTtl)
+                               .meterRegistry(meterRegistry)
+                               .build();
+        } else {
+            dnsCache = this.dnsCache;
+        }
+
+        final boolean traceEnabled = this.traceEnabled;
+        final long queryTimeoutMillis = this.queryTimeoutMillis;
+        final long queryTimeoutMillisForEachAttempt = this.queryTimeoutMillisForEachAttempt;
+        final boolean recursionDesired = this.recursionDesired;
+        final int maxQueriesPerResolve = this.maxQueriesPerResolve;
+        final int maxPayloadSize = this.maxPayloadSize;
+        final boolean optResourceEnabled = this.optResourceEnabled;
+        final HostsFileEntriesResolver hostsFileEntriesResolver = this.hostsFileEntriesResolver;
+        final DnsServerAddressStreamProvider serverAddressStreamProvider = this.serverAddressStreamProvider;
+        final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
+                this.dnsQueryLifecycleObserverFactory;
+        final boolean dnsQueryMetricsEnabled = this.dnsQueryMetricsEnabled;
+        final List<String> searchDomains = this.searchDomains;
+        final int ndots = this.ndots;
+        final boolean decodeIdn = this.decodeIdn;
 
         return (builder, executor) -> {
             builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
@@ -444,9 +474,11 @@ public abstract class AbstractDnsResolverBuilder {
                    .maxQueriesPerResolve(maxQueriesPerResolve)
                    .maxPayloadSize(maxPayloadSize)
                    .optResourceEnabled(optResourceEnabled)
-                   .hostsFileEntriesResolver(hostsFileEntriesResolver)
+                   // Disable DnsNameResolver from resolving host files and use HostsFileDnsResolver instead.
+                   .hostsFileEntriesResolver(NoopHostFileEntriesResolver.INSTANCE)
                    .nameServerProvider(serverAddressStreamProvider)
-                   // Disable search domains of DnsNameResolver and use SearchDomainDnsResolver instead.
+                   // Disable DnsNameResolver from resolving search domains and use SearchDomainDnsResolver
+                   // instead.
                    .searchDomains(ImmutableList.of())
                    .decodeIdn(decodeIdn);
 
@@ -461,7 +493,6 @@ public abstract class AbstractDnsResolverBuilder {
             }
 
             DnsQueryLifecycleObserverFactory observerFactory = dnsQueryLifecycleObserverFactory;
-            final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
             if (dnsQueryMetricsEnabled) {
                 final DefaultDnsQueryLifecycleObserverFactory defaultObserverFactory =
                         new DefaultDnsQueryLifecycleObserverFactory(
@@ -478,20 +509,8 @@ public abstract class AbstractDnsResolverBuilder {
             }
             final DnsNameResolver dnsNameResolver = builder.build();
 
-            final DnsCache dnsCache;
-            if (needsToCreateDnsCache) {
-                dnsCache = DnsCache.builder()
-                                   .cacheSpec(cacheSpec)
-                                   .ttl(minTtl, maxTtl)
-                                   .negativeTtl(negativeTtl)
-                                   .meterRegistry(meterRegistry)
-                                   .build();
-            } else {
-                dnsCache = this.dnsCache;
-            }
-
-            return DefaultDnsResolver.of(dnsNameResolver, dnsCache, executor,
-                                         searchDomains, ndots, queryTimeoutMillis);
+            return DefaultDnsResolver.of(dnsNameResolver, dnsCache, executor, searchDomains, ndots,
+                                         hostsFileEntriesResolver, queryTimeoutMillis);
         };
     }
 }
