@@ -80,13 +80,14 @@ public final class DefaultDnsResolver implements SafeCloseable {
     }
 
     public CompletableFuture<List<DnsRecord>> resolve(List<DnsQuestion> questions, String logPrefix) {
-        return resolve(questions, logPrefix, false);
+        return resolve(questions, logPrefix, false, 0);
     }
 
     public CompletableFuture<List<DnsRecord>> resolve(List<DnsQuestion> questions, String logPrefix,
-                                                      boolean isRefreshing) {
+                                                      boolean isRefreshing, long refreshingIntervalMillis) {
         assert !questions.isEmpty();
-        final DnsQuestionContext ctx = new DnsQuestionContext(executor, queryTimeoutMillis, isRefreshing);
+        final DnsQuestionContext ctx =
+                new DnsQuestionContext(executor, queryTimeoutMillis, isRefreshing, refreshingIntervalMillis);
         if (questions.size() == 1) {
             return resolveOne(ctx, questions.get(0));
         } else {

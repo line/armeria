@@ -18,21 +18,22 @@ package com.linecorp.armeria.internal.client.dns;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.primitives.Ints;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.DnsCache;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsCache.CacheEntry;
@@ -57,26 +58,9 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
     @Override
     public CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question) {
         requireNonNull(question, "question");
-        if (ctx.isRefreshing()) {
-            if (dnsCache instanceof DefaultDnsCache) {
-                final CacheEntry entry = ((DefaultDnsCache) dnsCache).getEntry(question);
-                if (entry != null) {
-                    final int remainingTtl = Ints.saturatedCast(
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - entry.creationTimeNanos()));
-                    if (remainingTtl * 2 <= entry.ttl()) {
-                        // If more than half of the TTL remains, reuse the cached records
-                        // and don't refresh them.
-                        return CompletableFuture.completedFuture(entry.records());
-                    }
-                }
-            }
-
-            return resolve0(ctx, question);
-        }
-
         final CompletableFuture<List<DnsRecord>> future = new CompletableFuture<>();
         try {
-            final List<DnsRecord> dnsRecords = dnsCache.get(question);
+            final List<DnsRecord> dnsRecords = cachedValue(ctx, question);
             if (dnsRecords != null) {
                 future.complete(dnsRecords);
             } else {
@@ -89,42 +73,75 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
     }
 
     private CompletableFuture<List<DnsRecord>> resolve0(DnsQuestionContext ctx, DnsQuestion question) {
-        final CompletableFuture<List<DnsRecord>> future = inflightRequests.computeIfAbsent(question, key -> {
-            try {
-                // Re-check the DNS cache to avoid duplicate requests.
-                // Because a request could be computed right after the in-flight request is removed.
-                final List<DnsRecord> dnsRecords = dnsCache.get(key);
-                if (dnsRecords != null) {
-                    return CompletableFuture.completedFuture(dnsRecords);
-                }
-            } catch (UnknownHostException e) {
-                return CompletableFutures.exceptionallyCompletedFuture(e);
-            }
-
-            return unwrap().resolve(ctx, key).handle((records, cause) -> {
-                if (records != null) {
-                    final List<DnsRecord> copied = records.stream()
-                                                          .map(ByteArrayDnsRecord::copyOf)
-                                                          .collect(toImmutableList());
-
-                    logger.debug("[{}] Caching DNS records: {}", question.name(), copied);
-                    dnsCache.cache(key, copied);
-                    return copied;
-                } else {
-                    cause = Exceptions.peel(cause);
-                    if (cause instanceof UnknownHostException) {
-                        logger.debug("[{}] Caching a failed DNS query: {}, cause: {}",
-                                     question.name(), question, cause.getMessage());
-                        dnsCache.cache(key, (UnknownHostException) cause);
+        final CompletableFuture<List<DnsRecord>> future =
+                inflightRequests.computeIfAbsent(question, key -> {
+                    try {
+                        // Re-check the DNS cache to avoid duplicate requests.
+                        // Because a request could be computed right after the in-flight request is removed.
+                        final List<DnsRecord> dnsRecords = cachedValue(ctx, key);
+                        if (dnsRecords != null) {
+                            return CompletableFuture.completedFuture(dnsRecords);
+                        }
+                    } catch (UnknownHostException e) {
+                        return CompletableFutures.exceptionallyCompletedFuture(e);
                     }
-                    return Exceptions.throwUnsafely(cause);
-                }
-            });
-        });
+
+                    return unwrap().resolve(ctx, key).handle((records, cause) -> {
+                        if (records != null) {
+                            final List<DnsRecord> copied = records.stream()
+                                                                  .map(ByteArrayDnsRecord::copyOf)
+                                                                  .collect(toImmutableList());
+
+                            logger.debug("[{}] Caching DNS records: {}", question.name(), copied);
+                            dnsCache.cache(key, copied);
+                            return copied;
+                        } else {
+                            cause = Exceptions.peel(cause);
+                            if (cause instanceof UnknownHostException) {
+                                logger.debug("[{}] Caching a failed DNS query: {}, cause: {}",
+                                             question.name(), question, cause.getMessage());
+                                dnsCache.cache(key, (UnknownHostException) cause);
+                            }
+                            return Exceptions.throwUnsafely(cause);
+                        }
+                    });
+                });
 
         // Remove the cached in-flight request.
         future.handle((unused0, unused1) -> inflightRequests.remove(question));
         return future;
+    }
+
+    @Nullable
+    private List<DnsRecord> cachedValue(DnsQuestionContext ctx, DnsQuestion question)
+            throws UnknownHostException {
+        if (!ctx.isRefreshing()) {
+            return dnsCache.get(question);
+        }
+
+        if (!(dnsCache instanceof DefaultDnsCache)) {
+            return null;
+        }
+
+        final CacheEntry entry = ((DefaultDnsCache) dnsCache).getEntry(question);
+        if (entry == null) {
+            return null;
+        }
+
+        final long elapsed = NANOSECONDS.toSeconds(System.nanoTime() - entry.creationTimeNanos());
+        if (elapsed < MILLISECONDS.toSeconds(ctx.refreshIntervalMillis())) {
+            // The TTL of the cached entry is still new compared to the refresh interval.
+            // The cached entry will be refreshed in the next iteration.
+            final List<DnsRecord> records = entry.records();
+            if (records != null) {
+                return records;
+            } else {
+                assert entry.cause() != null;
+                throw entry.cause();
+            }
+        }
+
+        return null;
     }
 
     @Override

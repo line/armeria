@@ -105,7 +105,7 @@ public class DnsServiceEndpointGroupTest {
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
     }
 
-    private static DnsRecord newSrvRecord(String hostname, int weight, int port, String target) {
+    public static DnsRecord newSrvRecord(String hostname, int weight, int port, String target) {
         final ByteBuf content = Unpooled.buffer();
         content.writeShort(1); // priority unused
         content.writeShort(weight);

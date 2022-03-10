@@ -25,7 +25,6 @@ import java.util.function.Function;
 import com.google.common.annotations.VisibleForTesting;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.client.DnsTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
@@ -46,20 +45,16 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
 
     @Override
     public CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question) {
-        final SearchNameQuestionContext searchDomainCtx = new SearchNameQuestionContext(question);
+        final SearchDomainQuestionContext searchDomainCtx =
+                new SearchDomainQuestionContext(question, searchDomains, ndots);
         final DnsQuestion firstQuestion = searchDomainCtx.nextQuestion();
         assert firstQuestion != null;
         return resolve0(ctx, searchDomainCtx, firstQuestion);
     }
 
     private CompletableFuture<List<DnsRecord>> resolve0(DnsQuestionContext ctx,
-                                                        SearchNameQuestionContext searchDomainCtx,
+                                                        SearchDomainQuestionContext searchDomainCtx,
                                                         DnsQuestion question) {
-
-        if (ctx.isCancelled()) {
-            return exceptionallyCompletedFuture(new DnsTimeoutException(
-                    question + " is timed out after " + ctx.queryTimeoutMillis() + " milliseconds."));
-        }
         if (closed) {
             return exceptionallyCompletedFuture(new IllegalStateException("resolver is closed already"));
         }
@@ -89,17 +84,19 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
     }
 
     @VisibleForTesting
-    final class SearchNameQuestionContext {
+    static final class SearchDomainQuestionContext {
 
         private final DnsQuestion original;
         private final String hostname;
-        private final boolean startsWithHostname;
+        private final List<String> searchDomains;
+        private final boolean shouldStartWithHostname;
         private volatile int numAttemptsSoFar;
 
-        private SearchNameQuestionContext(DnsQuestion original) {
+        SearchDomainQuestionContext(DnsQuestion original, List<String> searchDomains, int ndots) {
             this.original = original;
+            this.searchDomains = searchDomains;
             hostname = original.name();
-            startsWithHostname = hasNDots(hostname, ndots);
+            shouldStartWithHostname = hasNDots(hostname, ndots);
         }
 
         private boolean hasNDots(String hostname, int ndots) {
@@ -127,7 +124,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                 if (hostname.endsWith(".") || searchDomains.isEmpty()) {
                     return original;
                 }
-                if (startsWithHostname) {
+                if (shouldStartWithHostname) {
                     return newQuestion(hostname);
                 } else {
                     final String searchDomain = searchDomains.get(0);
@@ -136,14 +133,14 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
             }
 
             int nextSearchDomainPos = numAttemptsSoFar;
-            if (startsWithHostname) {
+            if (shouldStartWithHostname) {
                 nextSearchDomainPos = numAttemptsSoFar - 1;
             }
 
             if (nextSearchDomainPos < searchDomains.size()) {
                 return newQuestion(hostname + '.' + searchDomains.get(nextSearchDomainPos) + '.');
             }
-            if (nextSearchDomainPos == searchDomains.size() && !startsWithHostname) {
+            if (nextSearchDomainPos == searchDomains.size() && !shouldStartWithHostname) {
                 return newQuestion(hostname + '.');
             }
             return null;

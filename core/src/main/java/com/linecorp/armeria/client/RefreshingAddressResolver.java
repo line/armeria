@@ -90,7 +90,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 dnsRecordTypes.stream()
                               .map(type -> DnsQuestionWithoutTrailingDot.of(hostname, type))
                               .collect(toImmutableList());
-        sendQueries(questions, hostname, result, false);
+        sendQueries(questions, hostname, result, false, 0);
         result.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
             if (cause != null) {
@@ -137,8 +137,8 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
     }
 
     private void sendQueries(List<DnsQuestion> questions, String hostname,
-                             CompletableFuture<CacheEntry> result, boolean isRefreshing) {
-        resolver.resolve(questions, hostname, isRefreshing).handle((records, cause) -> {
+                             CompletableFuture<CacheEntry> result, boolean isRefreshing, long refreshInterval) {
+        resolver.resolve(questions, hostname, isRefreshing, refreshInterval).handle((records, cause) -> {
             if (cause != null) {
                 cause = Exceptions.peel(cause);
                 // TODO(minwoox): In Netty, DnsNameResolver only caches if the failure was not because of an
@@ -288,7 +288,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             final String hostName = address.getHostName();
 
             final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
-            sendQueries(questions, hostName, result, true);
+            sendQueries(questions, hostName, result, true, ttlMillis);
             result.handle((entry, unused) -> {
                 if (resolverClosed) {
                     return null;

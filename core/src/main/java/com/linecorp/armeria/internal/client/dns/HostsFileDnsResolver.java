@@ -90,8 +90,7 @@ class HostsFileDnsResolver extends AbstractUnwrappable<DnsResolver> implements D
      */
     private static boolean isLocalWindowsHost(String hostname) {
         return PlatformDependent.isWindows() &&
-               (LOCALHOST.equalsIgnoreCase(hostname) ||
-                (hostname.equalsIgnoreCase(WINDOWS_HOST_NAME)));
+               (LOCALHOST.equalsIgnoreCase(hostname) || hostname.equalsIgnoreCase(WINDOWS_HOST_NAME));
     }
 
     private final HostsFileEntriesResolver hostsFileEntriesResolver;

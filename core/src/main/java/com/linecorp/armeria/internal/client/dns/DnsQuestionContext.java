@@ -20,7 +20,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -28,11 +27,14 @@ final class DnsQuestionContext {
 
     private final long queryTimeoutMillis;
     private final boolean isRefreshing;
+    private final long refreshIntervalMillis;
     private final CompletableFuture<Void> whenCancelled = new CompletableFuture<>();
 
-    DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis, boolean isRefreshing) {
+    DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis,
+                       boolean isRefreshing, long refreshIntervalMillis) {
         this.queryTimeoutMillis = queryTimeoutMillis;
         this.isRefreshing = isRefreshing;
+        this.refreshIntervalMillis = refreshIntervalMillis;
         executor.schedule(() -> whenCancelled.cancel(true), queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
@@ -52,6 +54,10 @@ final class DnsQuestionContext {
         return isRefreshing;
     }
 
+    long refreshIntervalMillis() {
+        return refreshIntervalMillis;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -63,12 +69,17 @@ final class DnsQuestionContext {
 
         final DnsQuestionContext that = (DnsQuestionContext) o;
         return queryTimeoutMillis == that.queryTimeoutMillis && isRefreshing == that.isRefreshing &&
-               Objects.equal(whenCancelled, that.whenCancelled);
+               refreshIntervalMillis == that.refreshIntervalMillis &&
+               whenCancelled.equals(that.whenCancelled);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(queryTimeoutMillis, isRefreshing, whenCancelled);
+        int result = whenCancelled.hashCode();
+        result = 31 * result + (int) queryTimeoutMillis;
+        result = 31 * result + (isRefreshing ? 1 : 0);
+        result = 31 * result + (int) refreshIntervalMillis;
+        return result;
     }
 
     @Override
@@ -76,6 +87,7 @@ final class DnsQuestionContext {
         return MoreObjects.toStringHelper(this)
                           .add("queryTimeoutMillis", queryTimeoutMillis)
                           .add("isRefreshing", isRefreshing)
+                          .add("refreshIntervalMillis", refreshIntervalMillis)
                           .add("whenCancelled", whenCancelled)
                           .toString();
     }
