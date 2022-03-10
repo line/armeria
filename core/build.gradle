@@ -150,14 +150,14 @@ dependencies {
     optionalImplementation 'com.aayushatharva.brotli4j:native-osx-x86_64'
     optionalImplementation 'com.aayushatharva.brotli4j:native-windows-x86_64'
 }
-//
-//if (!rootProject.hasProperty('noWeb')) {
-//    sourceSets {
-//        main {
-//            output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
-//        }
-//    }
-//}
+
+if (!rootProject.hasProperty('noWeb')) {
+    sourceSets {
+        main {
+            output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
+        }
+    }
+}
 
 // Run HttpServerStreamingTest separately with memory constraint.
 tasks.test.exclude '**/HttpServerStreamingTest**'
