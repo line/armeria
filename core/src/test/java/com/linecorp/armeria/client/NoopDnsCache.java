@@ -36,8 +36,9 @@ public enum NoopDnsCache implements DnsCache {
     @Override
     public void cache(DnsQuestion question, UnknownHostException cause) {}
 
+    @Nullable
     @Override
-    public @Nullable List<DnsRecord> get(DnsQuestion question) throws UnknownHostException {
+    public List<DnsRecord> get(DnsQuestion question) throws UnknownHostException {
         return null;
     }
 

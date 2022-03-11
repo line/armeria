@@ -149,6 +149,7 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
         return (DnsServiceEndpointGroupBuilder) super.dnsQueryLifecycleObserverFactory(observerFactory);
     }
 
+    @Deprecated
     @Override
     public DnsServiceEndpointGroupBuilder disableDnsQueryMetrics() {
         return (DnsServiceEndpointGroupBuilder) super.disableDnsQueryMetrics();

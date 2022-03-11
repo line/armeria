@@ -181,6 +181,7 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
         return (DnsAddressEndpointGroupBuilder) super.dnsQueryLifecycleObserverFactory(observerFactory);
     }
 
+    @Deprecated
     @Override
     public DnsAddressEndpointGroupBuilder disableDnsQueryMetrics() {
         return (DnsAddressEndpointGroupBuilder) super.disableDnsQueryMetrics();

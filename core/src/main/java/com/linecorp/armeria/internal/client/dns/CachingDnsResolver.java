@@ -110,11 +110,10 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
     @Nullable
     private List<DnsRecord> cachedValue(DnsQuestionContext ctx, DnsQuestion question)
             throws UnknownHostException {
-        if (!ctx.isRefreshing()) {
-            return dnsCache.get(question);
-        } else {
+        if (ctx.isRefreshing()) {
             return null;
         }
+        return dnsCache.get(question);
     }
 
     @Override

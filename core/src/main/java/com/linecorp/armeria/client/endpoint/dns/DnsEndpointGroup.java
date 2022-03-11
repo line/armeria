@@ -76,6 +76,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         this.resolver = resolver;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
+        assert !this.questions.isEmpty();
         logger = LoggerFactory.getLogger(getClass());
         logPrefix = this.questions.stream()
                                   .map(DnsQuestion::name)

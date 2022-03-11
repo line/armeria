@@ -44,8 +44,8 @@ abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     DnsEndpointGroupBuilder(String hostname) {
-        this.hostname =
-                Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"), IDN.ALLOW_UNASSIGNED));
+        this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
+                                                      IDN.ALLOW_UNASSIGNED));
     }
 
     final String hostname() {
