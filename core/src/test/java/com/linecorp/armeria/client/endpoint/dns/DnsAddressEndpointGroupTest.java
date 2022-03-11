@@ -40,11 +40,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NoopDnsCache;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.retry.Backoff;
 
 import io.netty.buffer.ByteBuf;
@@ -379,19 +376,6 @@ class DnsAddressEndpointGroupTest {
                                    .build();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("(expected: queryTimeoutMillis >= queryTimeoutMillisForEachAttempt)");
-
-        // Should build successfully.
-        DnsAddressEndpointGroup.builder("foo.com")
-                               .dnsCache(DnsCache.of())
-                               .build();
-        final ClientFactory factory =
-                ClientFactory.builder()
-                             .domainNameResolverCustomizer(builder -> {
-                                 builder.dnsCache(DnsCache.of());
-                             }).build();
-        WebClient.builder()
-                 .factory(factory)
-                 .build();
     }
 
     private static final Logger logger = LoggerFactory.getLogger(DnsAddressEndpointGroupTest.class);

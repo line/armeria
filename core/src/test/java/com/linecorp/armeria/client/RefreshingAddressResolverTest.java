@@ -260,7 +260,7 @@ class RefreshingAddressResolverTest {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler())) {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder =
-                    builder(false, server).negativeTtl(60)
+                    builder(false, server).negativeTtl(600)
                                           .queryTimeoutMillis(1000);
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
