@@ -643,8 +643,8 @@ class ServerTest {
     @Test
     void tlsMetricGivenCertificateChainExpired() {
         final InputStream expiredCertificateChain = getClass()
-                .getResourceAsStream("expired-certificate_chain.pem");
-        final InputStream pk = getClass().getResourceAsStream("expire_pk.key");
+                .getResourceAsStream("expired-certificate-chain.pem");
+        final InputStream pk = getClass().getResourceAsStream("expire-pk.key");
 
         final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
