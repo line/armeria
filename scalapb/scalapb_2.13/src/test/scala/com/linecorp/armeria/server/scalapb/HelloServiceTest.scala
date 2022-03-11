@@ -70,7 +70,7 @@ class HelloServiceTest {
         }
 
         override def onError(t: Throwable): Unit =
-        // Should never reach here.
+          // Should never reach here.
           throw new Error(t)
 
         override def onCompleted(): Unit = {
@@ -99,7 +99,7 @@ class HelloServiceTest {
       }
 
       override def onError(t: Throwable): Unit =
-      // Should never reach here.
+        // Should never reach here.
         throw new Error(t)
 
       override def onCompleted(): Unit = {
@@ -131,7 +131,7 @@ class HelloServiceTest {
       }
 
       override def onError(t: Throwable): Unit =
-      // Should never reach here.
+        // Should never reach here.
         throw new Error(t)
 
       override def onCompleted(): Unit = {
@@ -174,7 +174,7 @@ object HelloServiceTest {
   }
 
   private def newClient[A](serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO)(implicit
-                                                                                                      tag: ClassTag[A]): A = {
+      tag: ClassTag[A]): A = {
     GrpcClients
       .builder(server.httpUri(serializationFormat))
       .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
