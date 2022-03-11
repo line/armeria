@@ -5,10 +5,12 @@ import static example.armeria.grpc.Main.configureServices;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -104,15 +106,15 @@ class HelloServiceTest {
     void getLotsOfReplies() {
         final HelloServiceStub helloService = helloService();
         final AtomicBoolean completed = new AtomicBoolean();
+        final AtomicInteger sequence = new AtomicInteger();
         helloService.lotsOfReplies(
                 HelloRequest.newBuilder().setName("Armeria").build(),
                 new StreamObserver<>() {
-                    private int sequence;
 
                     @Override
                     public void onNext(HelloReply value) {
                         assertThat(value.getMessage())
-                                .isEqualTo("Hello, Armeria! (sequence: " + ++sequence + ')');
+                                .isEqualTo("Hello, Armeria! (sequence: " + sequence.incrementAndGet() + ')');
                     }
 
                     @Override
@@ -123,11 +125,14 @@ class HelloServiceTest {
 
                     @Override
                     public void onCompleted() {
-                        assertThat(sequence).isEqualTo(5);
+                        assertThat(sequence.get()).isEqualTo(5);
                         completed.set(true);
                     }
                 });
-        await().untilTrue(completed);
+        await().atMost(Duration.ofSeconds(15))
+               .untilAsserted(() -> assertThat(completed)
+                       .overridingErrorMessage(() -> "sequence is " + sequence.get())
+                       .isTrue());
     }
 
     @Test
