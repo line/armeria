@@ -49,8 +49,7 @@ import brave.propagation.TraceContext;
 class TraceContextPropagationTest {
 
     private static final CurrentTraceContext currentTraceContext =
-            RequestContextCurrentTraceContext.builder()
-                                             .build();
+            RequestContextCurrentTraceContext.builder().build();
 
     private static final Tracing tracing = Tracing.newBuilder()
                                                   .currentTraceContext(currentTraceContext)

@@ -224,7 +224,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
 
     /**
      * Adds a hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
-     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by {@code contextHook} will be called
+     * {@link RequestContextStorage}. The {@link AutoCloseable} returned by {@code contextHook} will be called
      * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
      * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
      *

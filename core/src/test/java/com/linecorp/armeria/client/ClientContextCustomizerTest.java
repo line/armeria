@@ -60,11 +60,11 @@ class ClientContextCustomizerTest {
                              ctx.setAttr(TRACE_ID, traceId);
                          })
                          .decorator((delegate, ctx, req) -> {
-                             final HttpRequest newReq =
-                                     req.mapHeaders(headers -> headers.toBuilder()
-                                                                      .add("X-Trace-ID",
-                                                                           ctx.attr(TRACE_ID))
-                                                                      .build());
+                             final HttpRequest newReq = req.mapHeaders(headers -> {
+                                 return headers.toBuilder()
+                                               .add("X-Trace-ID", ctx.attr(TRACE_ID))
+                                               .build();
+                             });
                              ctx.updateRequest(newReq);
                              return delegate.execute(ctx, newReq);
                          }).build()

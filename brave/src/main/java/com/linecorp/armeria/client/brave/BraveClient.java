@@ -45,7 +45,6 @@ import brave.http.HttpClientRequest;
 import brave.http.HttpClientResponse;
 import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
-import brave.propagation.CurrentTraceContext.Scope;
 
 /**
  * Decorates an {@link HttpClient} to trace outbound {@link HttpRequest}s using
@@ -54,16 +53,6 @@ import brave.propagation.CurrentTraceContext.Scope;
 public final class BraveClient extends SimpleDecoratingHttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(BraveClient.class);
-
-    private static final Scope CLIENT_REQUEST_DECORATING_SCOPE = new Scope() {
-        @Override
-        public void close() {}
-
-        @Override
-        public String toString() {
-            return "ClientRequestDecoratingScope";
-        }
-    };
 
     /**
      * Creates a new tracing {@link HttpClient} decorator using the specified {@link Tracing} instance.

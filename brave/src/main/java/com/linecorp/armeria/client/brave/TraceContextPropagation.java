@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.brave;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -30,7 +32,7 @@ import brave.Span;
 import brave.propagation.TraceContext;
 
 /**
- * Manually propagates of a {@link TraceContext} to a {@link BraveClient}.
+ * Manually propagates a {@link TraceContext} to a {@link BraveClient}.
  */
 @UnstableApi
 public final class TraceContextPropagation {
@@ -50,17 +52,22 @@ public final class TraceContextPropagation {
      *            .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
      *            .build();
      *
-     * Client.builder(...)
-     *       .contextCustomizer(TraceContextPropagation.inject(() -> {
-     *           return threadLocalTracing.currentTraceContext().get();
-     *       })
-     *       .decorator(BraveClient.newDecorator(requestContextTracing))
-     *       .build();
+     * Clients.builder(...)
+     *        .contextCustomizer(TraceContextPropagation.inject(() -> {
+     *            return threadLocalTracing.currentTraceContext().get();
+     *        })
+     *        .decorator(BraveClient.newDecorator(requestContextTracing))
+     *        .build();
      * }</pre>
      */
     @UnstableApi
     public static Consumer<ClientRequestContext> inject(Supplier<TraceContext> traceContextSupplier) {
-        return ctx -> TraceContextUtil.setTraceContext(ctx, traceContextSupplier.get());
+        requireNonNull(traceContextSupplier, "traceContextSupplier");
+        return ctx -> {
+            final TraceContext traceContext = traceContextSupplier.get();
+            requireNonNull(traceContext, "traceContextSupplier.get() returned null");
+            TraceContextUtil.setTraceContext(ctx, traceContext);
+        };
     }
 
     private TraceContextPropagation() {}
