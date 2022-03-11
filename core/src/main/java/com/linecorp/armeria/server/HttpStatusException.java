@@ -28,9 +28,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A {@link RuntimeException} that is raised to send a simplistic HTTP response with minimal content
  * by a {@link Service}. It is a general exception raised by a failed request or a reset stream.
  *
- * <p>Note that an {@link HttpStatusException} raised may not be applied to the next decorators if the
+ * <p>Note that a raised {@link HttpStatusException} may not be applied to the next decorators if the
  * {@link HttpStatusException} is not recovered before passed to the next decorator chain.
- * For that reason, you need to properly handle the thrown {@link HttpStatus} into a normal
+ * For this reason, the thrown {@link HttpStatusException} should be converted into a normal
  * {@link HttpResponse} using {@link HttpResponse#recover(Function)} or
  * {@link HttpStatusException#httpStatus()}.
  * For example:

@@ -30,9 +30,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * by a user. This class holds an {@link HttpResponse} which would be sent back to the client who
  * sent the corresponding request.
  *
- * <p>Note that an {@link HttpResponseException} raised may not be applied to the next decorators if the
- * {@link HttpResponseException} is not recovered before passed to the next decorator chain.
- * For that reason, you need to properly handle the thrown {@link HttpResponse} into a normal
+ * <p>Note that a raised {@link HttpResponseException} may not be applied to the next decorators if the
+ * {@link HttpResponseException} is not recovered before being passed to the next decorator chain.
+ * For this reason, the thrown {@link HttpResponseException} should be converted into a normal
  * {@link HttpResponse} using {@link HttpResponse#recover(Function)} or
  * {@link HttpResponseException#httpResponse()}.
  * For example:
