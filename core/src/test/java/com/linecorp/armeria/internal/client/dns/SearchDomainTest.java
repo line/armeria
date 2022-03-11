@@ -29,7 +29,7 @@ import com.linecorp.armeria.internal.client.dns.SearchDomainDnsResolver.SearchDo
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecordType;
 
-class SearchDomainQuestionContextTest {
+class SearchDomainTest {
 
     @CsvSource({ "foo.com, 1", "bar.foo.com, 1", "bar.foo.com, 2" })
     @ParameterizedTest

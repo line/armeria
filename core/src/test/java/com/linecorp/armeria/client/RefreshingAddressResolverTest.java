@@ -297,7 +297,6 @@ class RefreshingAddressResolverTest {
                      new DefaultDnsQuestion("foo.com.", A),
                      new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
 
-
             final DnsResolverGroupBuilder builder = builder(false, server1, server2, server3, server4, server5)
                     .negativeTtl(60)
                     .queryTimeoutMillis(1000);

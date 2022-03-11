@@ -40,8 +40,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NoopDnsCache;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.retry.Backoff;
 
 import io.netty.buffer.ByteBuf;
@@ -379,9 +382,16 @@ class DnsAddressEndpointGroupTest {
 
         // Should build successfully.
         DnsAddressEndpointGroup.builder("foo.com")
-                               .queryTimeoutMillisForEachAttempt(10)
-                               .queryTimeoutMillis(11)
+                               .dnsCache(DnsCache.of())
                                .build();
+        final ClientFactory factory =
+                ClientFactory.builder()
+                             .domainNameResolverCustomizer(builder -> {
+                                 builder.dnsCache(DnsCache.of());
+                             }).build();
+        WebClient.builder()
+                 .factory(factory)
+                 .build();
     }
 
     private static final Logger logger = LoggerFactory.getLogger(DnsAddressEndpointGroupTest.class);
@@ -462,7 +472,6 @@ class DnsAddressEndpointGroupTest {
         TimeoutHandler(Function<DnsRecord, Integer> delayFunction) {
             this.delayFunction = delayFunction;
         }
-
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
