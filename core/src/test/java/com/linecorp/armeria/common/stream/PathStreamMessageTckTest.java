@@ -64,7 +64,7 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
                 bytes[i] = '0';
             }
             Files.write(path, bytes);
-            return new PathStreamMessage(path, ByteBufAllocator.DEFAULT, null,  0, -1, 1);
+            return StreamMessage.of(path, null, ByteBufAllocator.DEFAULT, 0, Long.MAX_VALUE, 1);
         } catch (IOException e) {
             return Exceptions.throwUnsafely(e);
         }

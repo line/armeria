@@ -213,8 +213,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param path the path of the file.
      * @param start the start position of the file to read from; must be non-negative.
      *              {@code 0} indicates the start of the file.
-     * @param end the end position of the file to read until.
-     *            {@code -1} indicates the end of the file.
+     * @param end the end position of the file to read until, exclusive.
+     *            {@value Long#MAX_VALUE} indicates the end of the file.
      */
     static StreamMessage<HttpData> of(Path path, long start, long end) {
         requireNonNull(path, "path");
@@ -281,7 +281,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer.
      * @param start the start position of the file to read from; must be non-negative.
      *              {@code 0} indicates the start of the file.
-     * @param end the end position of the file to read until.
+     * @param end the end position of the file to read until, exclusive.
      *            {@value Long#MAX_VALUE} indicates the end of the file.
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers.
      */
