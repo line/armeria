@@ -21,8 +21,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -43,8 +41,6 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -68,16 +64,16 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     int attemptsSoFar;
 
-    DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                     EventLoop eventLoop, List<DnsQuestion> questions, Backoff backoff, int minTtl, int maxTtl,
-                     Consumer<DnsNameResolverBuilder> resolverConfigurator,
-                     BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> resolverFactory) {
+    DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
+                     List<DnsQuestion> questions, Backoff backoff, int minTtl, int maxTtl,
+                     DefaultDnsResolver resolver) {
 
         super(selectionStrategy);
 
         this.eventLoop = eventLoop;
         this.backoff = backoff;
         this.questions = questions;
+        this.resolver = resolver;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         logger = LoggerFactory.getLogger(getClass());
@@ -85,10 +81,6 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
                                   .map(DnsQuestion::name)
                                   .distinct()
                                   .collect(Collectors.joining(", "));
-
-        final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop);
-        resolverConfigurator.accept(resolverBuilder);
-        resolver = resolverFactory.apply(resolverBuilder, eventLoop);
     }
 
     final Logger logger() {

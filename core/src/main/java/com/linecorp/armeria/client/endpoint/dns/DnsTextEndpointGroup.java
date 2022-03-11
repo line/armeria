@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
@@ -36,8 +35,6 @@ import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS {@code TXT} records. This is useful for
@@ -74,14 +71,13 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
 
     private final Function<byte[], @Nullable Endpoint> mapping;
 
-    DnsTextEndpointGroup(
-            EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop, Backoff backoff,
-            int minTtl, int maxTtl, String hostname, Function<byte[], @Nullable Endpoint> mapping,
-            BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> resolverFactory) {
+    DnsTextEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop, Backoff backoff,
+                         int minTtl, int maxTtl, String hostname, Function<byte[], @Nullable Endpoint> mapping,
+                         DefaultDnsResolver resolver) {
+
         super(selectionStrategy, eventLoop,
               ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
-              backoff, minTtl, maxTtl,
-              unused -> {}, resolverFactory);
+              backoff, minTtl, maxTtl, resolver);
         this.mapping = mapping;
         start();
     }

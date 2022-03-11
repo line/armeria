@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 
-import com.google.common.base.Objects;
-
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
@@ -31,6 +29,9 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.util.internal.StringUtil;
 
+/**
+ * A {@code byte[]}-based {@link DnsRecord}.
+ */
 public final class ByteArrayDnsRecord implements DnsRecord {
 
     private static final byte[] EMPTY_BYTES = new byte[0];
@@ -70,7 +71,12 @@ public final class ByteArrayDnsRecord implements DnsRecord {
         this.dnsClass = dnsClass;
         this.timeToLive = timeToLive;
         this.content = content;
-        hashCode = Objects.hashCode(name, type, dnsClass, timeToLive) * 31 + Arrays.hashCode(content);
+
+        int hashCode = name.hashCode();
+        hashCode = 31 * hashCode + type.hashCode();
+        hashCode = 31 * hashCode + dnsClass;
+        hashCode = 31 * hashCode + (int) timeToLive;
+        this.hashCode = hashCode * 31 + Arrays.hashCode(content);
     }
 
     @Override

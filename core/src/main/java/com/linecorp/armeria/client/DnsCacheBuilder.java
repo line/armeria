@@ -23,7 +23,6 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.client.dns.DefaultDnsCache;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;

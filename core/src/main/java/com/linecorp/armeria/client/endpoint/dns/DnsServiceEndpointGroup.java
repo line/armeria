@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
-import java.util.function.BiFunction;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -37,8 +36,6 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS
@@ -68,13 +65,12 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
         return new DnsServiceEndpointGroupBuilder(hostname);
     }
 
-    DnsServiceEndpointGroup(
-            EndpointSelectionStrategy selectionStrategy,
-            EventLoop eventLoop, Backoff backoff, int minTtl, int maxTtl, String hostname,
-            BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> resolverFactory) {
+    DnsServiceEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop, Backoff backoff,
+                            int minTtl, int maxTtl, String hostname, DefaultDnsResolver resolver) {
+
         super(selectionStrategy, eventLoop,
               ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.SRV)),
-              backoff, minTtl, maxTtl, unused -> {}, resolverFactory);
+              backoff, minTtl, maxTtl, resolver);
         start();
     }
 

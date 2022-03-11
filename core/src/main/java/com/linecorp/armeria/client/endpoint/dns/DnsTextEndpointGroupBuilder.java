@@ -51,7 +51,7 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
      */
     public DnsTextEndpointGroup build() {
         return new DnsTextEndpointGroup(selectionStrategy(), eventLoop(), backoff(), minTtl(), maxTtl(),
-                                        hostname(), mapping, dnsResolverFactory());
+                                        hostname(), mapping, buildResolver());
     }
 
     // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.

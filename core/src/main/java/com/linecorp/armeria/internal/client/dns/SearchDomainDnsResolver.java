@@ -99,7 +99,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
             shouldStartWithHostname = hasNDots(hostname, ndots);
         }
 
-        private boolean hasNDots(String hostname, int ndots) {
+        private static boolean hasNDots(String hostname, int ndots) {
             for (int idx = hostname.length() - 1, dots = 0; idx >= 0; idx--) {
                 if (hostname.charAt(idx) == '.' && ++dots >= ndots) {
                     return true;

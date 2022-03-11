@@ -19,28 +19,13 @@ package com.linecorp.armeria.internal.client.dns;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
-import io.netty.resolver.dns.DnsNameResolver;
-import io.netty.util.concurrent.EventExecutor;
 
 interface DnsResolver extends Unwrappable, SafeCloseable {
-
-    static DnsResolver of(DnsNameResolver delegate, DnsCache dnsCache, EventExecutor eventLoop,
-                          List<String> searchDomains, int ndots) {
-        final DelegatingDnsResolver defaultResolver = new DelegatingDnsResolver(delegate, eventLoop);
-
-        final CachingDnsResolver cachingResolver = new CachingDnsResolver(defaultResolver, dnsCache);
-        if (searchDomains.isEmpty()) {
-            return cachingResolver;
-        }
-
-        return new SearchDomainDnsResolver(cachingResolver, searchDomains, ndots);
-    }
 
     CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question);
 

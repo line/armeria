@@ -82,9 +82,10 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
 
     RefreshingAddressResolverGroup build(EventLoopGroup eventLoopGroup) {
         return new RefreshingAddressResolverGroup(cacheSpec(), minTtl(), maxTtl(), negativeTtl(),
-                                                  refreshBackoff, resolvedAddressTypes,
-                                                  dnsResolverFactory(eventLoopGroup)
-        );
+                                                  refreshBackoff, resolvedAddressTypes, maybeCreateDnsCache(),
+                                                  searchDomains(), ndots(), queryTimeoutMillis(),
+                                                  hostsFileEntriesResolver(),
+                                                  buildConfigurator(eventLoopGroup));
     }
 
     // Override the return type of the chaining methods in the super class.

@@ -14,8 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.client.dns;
+package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
@@ -30,12 +31,11 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
-import com.linecorp.armeria.client.DnsCache;
-import com.linecorp.armeria.client.DnsCacheRemovalListener;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -45,7 +45,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 
-public final class DefaultDnsCache implements DnsCache {
+final class DefaultDnsCache implements DnsCache {
 
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
             ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
@@ -56,7 +56,7 @@ public final class DefaultDnsCache implements DnsCache {
     private final Cache<DnsQuestion, CacheEntry> cache;
     private final int negativeTtl;
 
-    public DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
+    DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
@@ -100,9 +100,9 @@ public final class DefaultDnsCache implements DnsCache {
         final List<DnsRecord> copied = ImmutableList.copyOf(records);
 
         final long ttl = copied.stream()
-                              .mapToLong(DnsRecord::timeToLive)
-                              .min()
-                              .orElse(minTtl);
+                               .mapToLong(DnsRecord::timeToLive)
+                               .min()
+                               .orElse(minTtl);
         final int effectiveTtl = Math.min(maxTtl, Math.max(minTtl, Ints.saturatedCast(ttl)));
 
         cache.put(question, new CacheEntry(cache, question, copied, null, effectiveTtl));
@@ -132,12 +132,6 @@ public final class DefaultDnsCache implements DnsCache {
         return entry.records();
     }
 
-    @Nullable
-    CacheEntry getEntry(DnsQuestion question) {
-        requireNonNull(question, "question");
-        return cache.getIfPresent(question);
-    }
-
     @Override
     public void remove(DnsQuestion question) {
         requireNonNull(question, "question");
@@ -161,9 +155,8 @@ public final class DefaultDnsCache implements DnsCache {
         private final List<DnsRecord> records;
         @Nullable
         private final UnknownHostException cause;
-        private final long creationTimeNanos;
-        private final int timeToLive;
         private final ScheduledFuture<?> scheduledFuture;
+        int hashCode;
 
         private CacheEntry(Cache<DnsQuestion, CacheEntry> cache, DnsQuestion question,
                            @Nullable List<DnsRecord> records,
@@ -171,8 +164,7 @@ public final class DefaultDnsCache implements DnsCache {
             assert records != null || cause != null;
             this.records = records;
             this.cause = cause;
-            creationTimeNanos = System.nanoTime();
-            this.timeToLive = timeToLive;
+
             scheduledFuture = executor.schedule(() -> {
                 cache.asMap().remove(question, this);
             }, timeToLive, TimeUnit.SECONDS);
@@ -188,14 +180,6 @@ public final class DefaultDnsCache implements DnsCache {
             return cause;
         }
 
-        int ttl() {
-            return timeToLive;
-        }
-
-        long creationTimeNanos() {
-            return creationTimeNanos;
-        }
-
         @Override
         public boolean equals(Object o) {
             if (this == o) {
@@ -207,23 +191,36 @@ public final class DefaultDnsCache implements DnsCache {
             final CacheEntry that = (CacheEntry) o;
             return Objects.equal(records, that.records) &&
                    Objects.equal(cause, that.cause) &&
-                   Objects.equal(scheduledFuture, that.scheduledFuture);
+                   scheduledFuture.equals(that.scheduledFuture);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(records, cause, scheduledFuture);
+            if (hashCode == 0) {
+                int hashCode = scheduledFuture.hashCode();
+                if (records != null) {
+                    hashCode = hashCode * 31 + records.hashCode();
+                }
+                if (cause != null) {
+                    hashCode = hashCode * 31 + cause.hashCode();
+                }
+                return this.hashCode = hashCode;
+            }
+
+            return hashCode;
         }
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .omitNullValues()
-                              // TODO(ikhoon): limit the size of the records
-                              .add("records", records)
-                              .add("cause", cause)
-                              .add("scheduledFuture", scheduledFuture)
-                              .toString();
+            final ToStringHelper builder = MoreObjects.toStringHelper(this)
+                                                      .omitNullValues()
+                                                      .add("cause", cause)
+                                                      .add("scheduledFuture", scheduledFuture);
+            if (records != null) {
+                builder.add("records", truncate(records, 10))
+                       .add("numRecords", records.size());
+            }
+            return builder.toString();
         }
     }
 }

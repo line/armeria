@@ -19,22 +19,21 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.client.AbstractDnsResolverBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.client.AbstractDnsResolverBuilder;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 
 import io.netty.channel.EventLoop;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.util.concurrent.EventExecutor;
 
 abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
 
@@ -98,7 +97,18 @@ abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
         return selectionStrategy;
     }
 
-    final BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> dnsResolverFactory() {
-        return dnsResolverFactory(eventLoop().parent());
+    DefaultDnsResolver buildResolver() {
+        return buildResolver(unused -> {});
+    }
+
+    DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer) {
+        final EventLoop eventLoop = eventLoop();
+        final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop);
+        customizer.accept(resolverBuilder);
+        buildConfigurator(eventLoop.parent()).accept(resolverBuilder, eventLoop);
+
+        return DefaultDnsResolver.of(resolverBuilder.build(), maybeCreateDnsCache(), eventLoop,
+                                     searchDomains(), ndots(), queryTimeoutMillis(),
+                                     hostsFileEntriesResolver());
     }
 }

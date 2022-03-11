@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -70,8 +71,13 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsAddressEndpointGroup}.
      */
     public DnsAddressEndpointGroup build() {
+        final DefaultDnsResolver resolver = buildResolver(builder -> {
+            if (resolvedAddressTypes != null) {
+                builder.resolvedAddressTypes(resolvedAddressTypes);
+            }
+        });
         return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), backoff(), minTtl(), maxTtl(),
-                                           resolvedAddressTypes, hostname(), port, dnsResolverFactory());
+                                           resolvedAddressTypes, hostname(), port, resolver);
     }
 
     // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.client.dns;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
 import java.util.List;
@@ -54,7 +53,6 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
 
     @Override
     public CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question) {
-        requireNonNull(question, "question");
         final CompletableFuture<List<DnsRecord>> future = new CompletableFuture<>();
         try {
             final List<DnsRecord> dnsRecords = cachedValue(ctx, question);

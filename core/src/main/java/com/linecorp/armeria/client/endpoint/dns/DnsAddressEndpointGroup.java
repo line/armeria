@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.endpoint.dns;
 import static com.linecorp.armeria.internal.client.dns.DnsUtil.extractAddressBytes;
 
 import java.util.List;
-import java.util.function.BiFunction;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -40,9 +39,7 @@ import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS address queries ({@code A} and {@code AAAA}).
@@ -85,21 +82,12 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
     private final String hostname;
     private final int port;
 
-    DnsAddressEndpointGroup(
-            EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
-            Backoff backoff, int minTtl, int maxTtl,
-            @Nullable ResolvedAddressTypes resolvedAddressTypes, String hostname, int port,
-            BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> resolverFactory) {
+    DnsAddressEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop, Backoff backoff,
+                            int minTtl, int maxTtl, @Nullable ResolvedAddressTypes resolvedAddressTypes,
+                            String hostname, int port, DefaultDnsResolver resolver) {
 
-        super(selectionStrategy, eventLoop,
-              newQuestions(hostname, resolvedAddressTypes),
-              backoff,
-              minTtl, maxTtl,
-              resolverBuilder -> {
-                  if (resolvedAddressTypes != null) {
-                      resolverBuilder.resolvedAddressTypes(resolvedAddressTypes);
-                  }
-              }, resolverFactory);
+        super(selectionStrategy, eventLoop, newQuestions(hostname, resolvedAddressTypes),
+              backoff, minTtl, maxTtl, resolver);
 
         this.hostname = hostname;
         this.port = port;

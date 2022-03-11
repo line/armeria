@@ -24,7 +24,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.List;
-import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
 
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableList;
@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -43,7 +42,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.dns.BiDnsQueryLifecycleObserverFactory;
-import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsServerAddressStream;
@@ -108,6 +106,13 @@ public abstract class AbstractDnsResolverBuilder {
         requireNonNull(queryTimeout, "queryTimeout");
         checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)", queryTimeout);
         return queryTimeoutMillis(queryTimeout.toMillis());
+    }
+
+    /**
+     * Returns the timeout of the DNS query performed by this resolver in milliseconds.
+     */
+    protected final long queryTimeoutMillis() {
+        return queryTimeoutMillis;
     }
 
     /**
@@ -237,6 +242,13 @@ public abstract class AbstractDnsResolverBuilder {
     }
 
     /**
+     * Returns the {@link HostsFileEntriesResolver}.
+     */
+    protected final HostsFileEntriesResolver hostsFileEntriesResolver() {
+        return hostsFileEntriesResolver;
+    }
+
+    /**
      * Sets the {@link HostsFileEntriesResolver} which is used to first check if the hostname is locally
      * aliased.
      */
@@ -278,6 +290,13 @@ public abstract class AbstractDnsResolverBuilder {
     }
 
     /**
+     * Returns the search domains of the resolver.
+     */
+    protected final List<String> searchDomains() {
+        return searchDomains;
+    }
+
+    /**
      * Sets the search domains of the resolver.
      */
     public AbstractDnsResolverBuilder searchDomains(String... searchDomains) {
@@ -292,6 +311,13 @@ public abstract class AbstractDnsResolverBuilder {
         requireNonNull(searchDomains, "searchDomains");
         this.searchDomains = ImmutableList.copyOf(searchDomains);
         return this;
+    }
+
+    /**
+     * Returns the number of dots which must appear in a name before an initial absolute query is made.
+     */
+    protected final int ndots() {
+        return ndots;
     }
 
     /**
@@ -416,16 +442,38 @@ public abstract class AbstractDnsResolverBuilder {
     }
 
     /**
-     * Returns a factory method that creates a {@link DefaultDnsResolver} with the properties set.
+     * Returns a newly-created {@link DnsCache} if {@link #cacheSpec(String)}, {@link #ttl(int, int)} or
+     * {@link #negativeTtl(int)} is set
+     * . Returns the {@link DnsCache} specified by {@link #dnsCache(DnsCache)} if it is set.
+     * Otherwise, returns the default {@link DnsCache}.
      */
     @UnstableApi
-    protected final BiFunction<DnsNameResolverBuilder, EventExecutor, DefaultDnsResolver> dnsResolverFactory(
-            EventLoopGroup eventLoopGroup) {
-
+    protected final DnsCache maybeCreateDnsCache() {
         if (needsToCreateDnsCache && dnsCache != DnsCache.of()) {
             throw new IllegalStateException(
                     "Cannot set dnsCache() with cacheSpec(), ttl(), or negativeTtl().");
         }
+
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        if (needsToCreateDnsCache) {
+            return DnsCache.builder()
+                           .cacheSpec(cacheSpec)
+                           .ttl(minTtl, maxTtl)
+                           .negativeTtl(negativeTtl)
+                           .meterRegistry(meterRegistry)
+                           .build();
+        } else {
+            return dnsCache;
+        }
+    }
+
+    /**
+     * Builds a configurator that configures a {@link DnsNameResolverBuilder} with the properties set.
+     */
+    @UnstableApi
+    protected final BiConsumer<DnsNameResolverBuilder, EventExecutor> buildConfigurator(
+            EventLoopGroup eventLoopGroup) {
+
         if (queryTimeoutMillisForEachAttempt > -1) {
             checkState(queryTimeoutMillis >= queryTimeoutMillisForEachAttempt,
                        "queryTimeoutMillis: %s, queryTimeoutMillisForEachAttempt: %s (expected: " +
@@ -433,18 +481,7 @@ public abstract class AbstractDnsResolverBuilder {
                        queryTimeoutMillis, queryTimeoutMillisForEachAttempt);
         }
 
-        final DnsCache dnsCache;
         final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
-        if (needsToCreateDnsCache) {
-            dnsCache = DnsCache.builder()
-                               .cacheSpec(cacheSpec)
-                               .ttl(minTtl, maxTtl)
-                               .negativeTtl(negativeTtl)
-                               .meterRegistry(meterRegistry)
-                               .build();
-        } else {
-            dnsCache = this.dnsCache;
-        }
 
         final boolean traceEnabled = this.traceEnabled;
         final long queryTimeoutMillis = this.queryTimeoutMillis;
@@ -453,13 +490,10 @@ public abstract class AbstractDnsResolverBuilder {
         final int maxQueriesPerResolve = this.maxQueriesPerResolve;
         final int maxPayloadSize = this.maxPayloadSize;
         final boolean optResourceEnabled = this.optResourceEnabled;
-        final HostsFileEntriesResolver hostsFileEntriesResolver = this.hostsFileEntriesResolver;
         final DnsServerAddressStreamProvider serverAddressStreamProvider = this.serverAddressStreamProvider;
         final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
                 this.dnsQueryLifecycleObserverFactory;
         final boolean dnsQueryMetricsEnabled = this.dnsQueryMetricsEnabled;
-        final List<String> searchDomains = this.searchDomains;
-        final int ndots = this.ndots;
         final boolean decodeIdn = this.decodeIdn;
 
         return (builder, executor) -> {
@@ -507,10 +541,6 @@ public abstract class AbstractDnsResolverBuilder {
             if (observerFactory != null) {
                 builder.dnsQueryLifecycleObserverFactory(observerFactory);
             }
-            final DnsNameResolver dnsNameResolver = builder.build();
-
-            return DefaultDnsResolver.of(dnsNameResolver, dnsCache, executor, searchDomains, ndots,
-                                         hostsFileEntriesResolver, queryTimeoutMillis);
         };
     }
 }

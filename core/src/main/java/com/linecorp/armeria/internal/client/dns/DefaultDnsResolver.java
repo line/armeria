@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.client.dns;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -45,9 +46,14 @@ public final class DefaultDnsResolver implements SafeCloseable {
 
     private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
-    public static DefaultDnsResolver of(
-            DnsNameResolver delegate, DnsCache dnsCache, EventExecutor eventLoop, List<String> searchDomains,
-            int ndots, HostsFileEntriesResolver hostsFileEntriesResolver, long queryTimeoutMillis) {
+    public static DefaultDnsResolver of(DnsNameResolver delegate, DnsCache dnsCache, EventExecutor eventLoop,
+                                        List<String> searchDomains, int ndots, long queryTimeoutMillis,
+                                        HostsFileEntriesResolver hostsFileEntriesResolver) {
+        requireNonNull(delegate, "delegate");
+        requireNonNull(dnsCache, "dnsCache");
+        requireNonNull(eventLoop, "eventLoop");
+        requireNonNull(searchDomains, "searchDomains");
+        requireNonNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
 
         DnsResolver resolver = new DelegatingDnsResolver(delegate, eventLoop);
         resolver = new CachingDnsResolver(resolver, dnsCache);
@@ -67,8 +73,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
     private final long queryTimeoutMillis;
 
     public DefaultDnsResolver(DnsResolver delegate, EventExecutor executor,
-                              ResolvedAddressTypes resolvedAddressTypes,
-                              long queryTimeoutMillis) {
+                              ResolvedAddressTypes resolvedAddressTypes, long queryTimeoutMillis) {
         this.delegate = delegate;
         this.executor = executor;
         if (resolvedAddressTypes == ResolvedAddressTypes.IPV6_PREFERRED) {

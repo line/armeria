@@ -250,5 +250,4 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
                           .add("initialized", initialEndpointsFuture.isDone())
                           .toString();
     }
-
 }
