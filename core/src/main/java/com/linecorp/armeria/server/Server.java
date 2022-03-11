@@ -450,7 +450,7 @@ public final class Server implements ListenableAsyncCloseable {
                      .tags("common_name", commonName, "hostname", hostname)
                      .register(meterRegistry);
             } catch (Exception ex) {
-                logger.warn("Fail to setup certificate expiration, " + ex.getMessage());
+                logger.warn("Failed to setup certificate expiration. hostname: {}", hostname, ex);
             }
         }
     }
