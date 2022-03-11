@@ -48,7 +48,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -425,26 +424,24 @@ public final class Server implements ListenableAsyncCloseable {
                 final X509Certificate x509Certificate = (X509Certificate) certificate;
                 final String commonName = getCommonName(x509Certificate);
 
-                final Supplier<Number> certificateExpirationInfoProvider = () -> {
-                    try {
-                        x509Certificate.checkValidity();
-                    } catch (CertificateExpiredException | CertificateNotYetValidException e) {
-                        return 0;
-                    }
-                    return 1;
-                };
-                Gauge.builder("armeria.server.certificate.validity", certificateExpirationInfoProvider)
+                Gauge.builder("armeria.server.certificate.validity", x509Certificate, x509Cert -> {
+                         try {
+                             x509Cert.checkValidity();
+                         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+                             return 0;
+                         }
+                         return 1;
+                     })
                      .description("1 if certificate is in validity period, 0 if certificate is not in " +
                                   "validity period")
                      .tags("common_name", commonName, "hostname", hostname)
                      .register(meterRegistry);
 
-                final Supplier<Number> timeToExpireProvider = () -> {
-                    final Duration diff = Duration.between(Instant.now(),
-                                                           x509Certificate.getNotAfter().toInstant());
-                    return diff.isNegative() ? -1 : diff.toDays();
-                };
-                Gauge.builder("armeria.server.certificate.validity.days", timeToExpireProvider)
+                Gauge.builder("armeria.server.certificate.validity.days", x509Certificate, x509Cert -> {
+                         final Duration diff = Duration.between(Instant.now(),
+                                                                x509Cert.getNotAfter().toInstant());
+                         return diff.isNegative() ? -1 : diff.toDays();
+                     })
                      .description("Duration in day before certificate expires which becomes -1 " +
                                   "if certificate is expired")
                      .tags("common_name", commonName, "hostname", hostname)
