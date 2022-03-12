@@ -20,10 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -44,6 +49,8 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
@@ -112,11 +119,46 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         } else {
             f = write(id, converted, false);
             if (endStream) {
-                f = write(id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+                final ChannelPromise promise = channel().newPromise();
+                allOf(promise, ImmutableList.of(f, write(id, LastHttpContent.EMPTY_LAST_CONTENT, true)));
+                f = promise;
             }
         }
         ch.flush();
         return f;
+    }
+
+    private static void allOf(ChannelPromise resultPromise, List<ChannelFuture> futures) {
+        final GenericFutureListener<Future<? super Void>> listener =
+                new GenericFutureListener<Future<? super Void>>() {
+                    private final AtomicInteger counter = new AtomicInteger(futures.size());
+
+                    @Override
+                    public void operationComplete(Future<? super Void> ignore) throws Exception {
+                        if (counter.decrementAndGet() == 0) {
+                            Throwable lastThrowable = null;
+                            for (int i = futures.size() - 1; i >= 0; i--) {
+                                final ChannelFuture future = futures.get(i);
+                                if (!future.isSuccess()) {
+                                    final Throwable cause = future.cause();
+                                    if (lastThrowable != null
+                                        && Flags.verboseExceptionSampler().isSampled(cause.getClass())) {
+                                        cause.addSuppressed(lastThrowable);
+                                    }
+                                    lastThrowable = cause;
+                                }
+                            }
+                            if (lastThrowable != null) {
+                                resultPromise.setFailure(lastThrowable);
+                            } else {
+                                resultPromise.setSuccess();
+                            }
+                        }
+                    }
+                };
+        for (ChannelFuture future : futures) {
+            future.addListener(listener);
+        }
     }
 
     @Override
