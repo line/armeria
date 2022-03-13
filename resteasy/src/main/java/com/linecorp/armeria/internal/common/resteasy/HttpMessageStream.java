@@ -88,26 +88,26 @@ public final class HttpMessageStream {
 
     private final CompletableFuture<HttpHeaders> headersFuture = new CompletableFuture<>();
     private final HttpHeadersBuilder headersBuilder = HttpHeaders.builder();
-    private final ByteBuffersBackedInputStream content;
+    private final ByteBufsInputStream content;
 
     private HttpMessageStream(HttpHeaders headers, Duration timeout) {
         headersBuilder.add(requireNonNull(headers, "headers"));
         headersFuture.complete(headers);
-        content = new ByteBuffersBackedInputStream(timeout);
+        content = new ByteBufsInputStream(timeout);
     }
 
     private HttpMessageStream(HttpHeaders headers) {
         headersBuilder.add(headers);
         headersFuture.complete(headers);
-        content = new ByteBuffersBackedInputStream();
+        content = new ByteBufsInputStream();
     }
 
     private HttpMessageStream(Duration timeout) {
-        content = new ByteBuffersBackedInputStream(timeout);
+        content = new ByteBufsInputStream(timeout);
     }
 
     private HttpMessageStream() {
-        content = new ByteBuffersBackedInputStream();
+        content = new ByteBufsInputStream();
     }
 
     /**

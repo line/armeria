@@ -42,7 +42,7 @@ import com.google.common.collect.ImmutableList;
 
 import io.netty.buffer.Unpooled;
 
-public class ByteBuffersBackedInputStreamTest {
+public class ByteBufsInputStreamTest {
 
     @Test
     void testScanner() {
@@ -68,7 +68,7 @@ public class ByteBuffersBackedInputStreamTest {
     void testPreBuffered() {
         final List<String> strings = ImmutableList.of("first,", "second,", "third,fourth", ",fifth");
 
-        final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream();
+        final ByteBufsInputStream stream = new ByteBufsInputStream();
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
         strings.forEach(s -> stream.add(Unpooled.wrappedBuffer(s.getBytes(StandardCharsets.UTF_8))));
@@ -98,7 +98,7 @@ public class ByteBuffersBackedInputStreamTest {
 
     @Test
     void testEof() throws Exception {
-        final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream();
+        final ByteBufsInputStream stream = new ByteBufsInputStream();
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
 
@@ -114,7 +114,7 @@ public class ByteBuffersBackedInputStreamTest {
 
     @Test
     void testEofAsync() throws Exception {
-        final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream();
+        final ByteBufsInputStream stream = new ByteBufsInputStream();
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
 
@@ -137,7 +137,7 @@ public class ByteBuffersBackedInputStreamTest {
 
     @Test
     void testTimeout() throws Exception {
-        final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream(Duration.ofMillis(100L));
+        final ByteBufsInputStream stream = new ByteBufsInputStream(Duration.ofMillis(100L));
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
 
@@ -156,7 +156,7 @@ public class ByteBuffersBackedInputStreamTest {
 
     @Test
     void testInterrupt() throws Exception {
-        final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream();
+        final ByteBufsInputStream stream = new ByteBufsInputStream();
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
 
@@ -181,7 +181,7 @@ public class ByteBuffersBackedInputStreamTest {
     @ParameterizedTest
     @MethodSource("parametersForBufferedAsync")
     void testBufferedAsync(List<String> strings) throws Exception {
-        final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream();
+        final ByteBufsInputStream stream = new ByteBufsInputStream();
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
 

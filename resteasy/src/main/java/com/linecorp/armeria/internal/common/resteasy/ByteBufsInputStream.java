@@ -44,7 +44,7 @@ import io.netty.buffer.ByteBuf;
  * new {@link ByteBuf} data chunks will be permitted.
  */
 @UnstableApi
-public final class ByteBuffersBackedInputStream extends InputStream {
+public final class ByteBufsInputStream extends InputStream {
 
     private final BlockingQueue<ByteBuf> buffers = new LinkedBlockingQueue<>();
     private final AtomicBoolean eos = new AtomicBoolean(false);
@@ -56,15 +56,15 @@ public final class ByteBuffersBackedInputStream extends InputStream {
     private Throwable interruption;
 
     /**
-     * Constructs {@link ByteBuffersBackedInputStream} with a timeout.
+     * Constructs {@link ByteBufsInputStream} with a timeout.
      * @param timeout {@link Duration} during which the IO will be blocked expecting new data chunks
      *                or EOS flag to be set.
      */
-    public ByteBuffersBackedInputStream(Duration timeout) {
+    public ByteBufsInputStream(Duration timeout) {
         this.timeout = requireNonNull(timeout, "timeout");
     }
 
-    public ByteBuffersBackedInputStream() {
+    public ByteBufsInputStream() {
         timeout = null;
     }
 
