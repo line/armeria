@@ -118,7 +118,7 @@ final class StreamMessageInputStream<T> extends InputStream {
 
         private final Function<? super T, ? extends HttpData> httpDataConverter;
         @Nullable
-        private Subscription upstream;
+        private volatile Subscription upstream;
         private final CompletableFuture<Void> whenSubscribed = new CompletableFuture<>();
         private final ByteBufsInputStream byteBufsInputStream = new ByteBufsInputStream();
 
