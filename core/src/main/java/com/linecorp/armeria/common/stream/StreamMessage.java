@@ -712,7 +712,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * <p>For example:<pre>{@code
      * StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
-     * InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
+     * InputStream inputStream = streamMessage.toInputStream(x -> HttpData.wrap(x.getBytes()));
      * byte[] expected = ImmutableList.of("foo", "bar", "baz")
      *                                .stream()
      *                                .map(String::getBytes)
@@ -733,7 +733,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * assert inputStream.available() == 0;
      * }</pre>
      */
-    default InputStream asInputStream(Function<? super T, ? extends HttpData> httpDataConverter) {
+    default InputStream toInputStream(Function<? super T, ? extends HttpData> httpDataConverter) {
         requireNonNull(httpDataConverter, "httpDataConverter");
         return StreamMessageInputStream.of(this, httpDataConverter);
     }

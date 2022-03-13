@@ -40,7 +40,7 @@ class StreamMessageInputStreamTest {
     @Test
     void readStrings() throws Exception {
         final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
-        final InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
+        final InputStream inputStream = streamMessage.toInputStream(x -> HttpData.wrap(x.getBytes()));
         final byte[] expected = ImmutableList.of("foo", "bar", "baz")
                                              .stream()
                                              .map(String::getBytes)
@@ -65,7 +65,7 @@ class StreamMessageInputStreamTest {
     void readIntegers() throws Exception {
         final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         final InputStream inputStream = streamMessage
-                .asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
+                .toInputStream(x -> HttpData.wrap(x.toString().getBytes()));
         final byte[] expected = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                                              .stream()
                                              .map(x -> x.toString().getBytes())
@@ -93,7 +93,7 @@ class StreamMessageInputStreamTest {
                 .filter(x -> x % 2 == 0)
                 .map(x -> x + 10); // 12, 14, 16, 18, 20
         final InputStream inputStream = streamMessage
-                .asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
+                .toInputStream(x -> HttpData.wrap(x.toString().getBytes()));
         final byte[] expected = ImmutableList.of(12, 14, 16, 18, 20)
                                              .stream()
                                              .map(x -> x.toString().getBytes())
@@ -117,7 +117,7 @@ class StreamMessageInputStreamTest {
     @Test
     void readWithOffset() throws Exception {
         final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] {1, 2, 3, 4, 5});
-        final InputStream inputStream = streamMessage.asInputStream(HttpData::wrap);
+        final InputStream inputStream = streamMessage.toInputStream(HttpData::wrap);
 
         final byte[] result = new byte[5];
         final int len = inputStream.read(result, 1, 3);
@@ -132,7 +132,7 @@ class StreamMessageInputStreamTest {
         final Publisher<Integer> publisher = Flux.range(1, 10);
         final StreamMessage<Integer> streamMessage = new PublisherBasedStreamMessage<>(publisher);
         final InputStream inputStream = streamMessage
-                .asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
+                .toInputStream(x -> HttpData.wrap(x.toString().getBytes()));
         final byte[] expected = ImmutableList.of(1, 2, 3, 4, 5)
                                              .stream()
                                              .map(x -> x.toString().getBytes())
@@ -164,7 +164,7 @@ class StreamMessageInputStreamTest {
     @Test
     void closeBeforeRead() throws IOException {
         final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
-        final InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
+        final InputStream inputStream = streamMessage.toInputStream(x -> HttpData.wrap(x.getBytes()));
         assertThat(inputStream.available()).isZero();
 
         assertDoesNotThrow(inputStream::close);
@@ -177,7 +177,7 @@ class StreamMessageInputStreamTest {
     @Test
     void closeMultipleTimes() throws IOException {
         final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
-        final InputStream inputStream = streamMessage.asInputStream(x -> HttpData.wrap(x.getBytes()));
+        final InputStream inputStream = streamMessage.toInputStream(x -> HttpData.wrap(x.getBytes()));
         assertThat(inputStream.read()).isNotEqualTo(-1);
         assertThat(inputStream.available()).isGreaterThan(0);
 
@@ -193,7 +193,7 @@ class StreamMessageInputStreamTest {
     @Test
     void available() throws Exception {
         final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] {1, 2, 3, 4, 5});
-        final InputStream inputStream = streamMessage.asInputStream(HttpData::wrap);
+        final InputStream inputStream = streamMessage.toInputStream(HttpData::wrap);
         final byte[] expected = {1, 2, 3, 4};
         assertThat(inputStream.available()).isZero();
 
@@ -226,7 +226,7 @@ class StreamMessageInputStreamTest {
                         streamMessage.abort();
                     }
                 });
-        final InputStream inputStream = aborted.asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
+        final InputStream inputStream = aborted.toInputStream(x -> HttpData.wrap(x.toString().getBytes()));
         final byte[] expected = ImmutableList.of(1, 2, 3, 4, 5)
                                              .stream()
                                              .map(x -> x.toString().getBytes())
@@ -258,7 +258,7 @@ class StreamMessageInputStreamTest {
                     }
                 });
         final InputStream inputStream = streamMessage
-                .asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
+                .toInputStream(x -> HttpData.wrap(x.toString().getBytes()));
         final byte[] expected = ImmutableList.of(1, 2, 3, 4, 5)
                                              .stream()
                                              .map(x -> x.toString().getBytes())
