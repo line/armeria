@@ -64,6 +64,9 @@ public final class ByteBufsInputStream extends InputStream {
         this.timeout = requireNonNull(timeout, "timeout");
     }
 
+    /**
+     * Constructs {@link ByteBufsInputStream}.
+     */
     public ByteBufsInputStream() {
         timeout = null;
     }
@@ -154,6 +157,9 @@ public final class ByteBufsInputStream extends InputStream {
         }
     }
 
+    /**
+     * Interrupts this {@link InputStream}.
+     */
     public void interrupt(Throwable interruption) {
         this.interruption = requireNonNull(interruption, "interruption");
         buffers.add(EMPTY_BUFFER); // to wake the BlockingQueue
