@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.ByteBufsInputStream;
 
 import io.netty.util.concurrent.EventExecutor;
 
