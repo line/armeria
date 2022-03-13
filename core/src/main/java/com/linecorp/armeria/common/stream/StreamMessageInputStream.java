@@ -20,10 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
@@ -45,8 +42,6 @@ final class StreamMessageInputStream<T> extends InputStream {
     private final StreamMessage<T> source;
     private final StreamMessageInputStreamSubscriber<T> subscriber;
     private final AtomicBoolean subscribed = new AtomicBoolean();
-    @Nullable
-    private volatile InputStream inputStream;
     private volatile boolean closed;
 
     private StreamMessageInputStream(StreamMessage<T> source,
@@ -82,16 +77,8 @@ final class StreamMessageInputStream<T> extends InputStream {
     private int read(Function<InputStream, Integer> function) throws IOException {
         ensureOpen();
         ensureSubscribed();
-        if (inputStream == null || inputStream.available() == 0) {
-            try {
-                inputStream = subscriber.nextStream();
-            } catch (InterruptedException e) {
-                final InterruptedIOException ioe = new InterruptedIOException();
-                ioe.initCause(e);
-                throw ioe;
-            }
-        }
-        return function.apply(inputStream);
+        subscriber.request();
+        return function.apply(getByteBufsInputStream());
     }
 
     @Override
@@ -101,18 +88,13 @@ final class StreamMessageInputStream<T> extends InputStream {
         }
         closed = true;
         source.abort();
-        if (inputStream != null) {
-            inputStream.close();
-        }
+        getByteBufsInputStream().close();
     }
 
     @Override
     public int available() throws IOException {
         ensureOpen();
-        if (inputStream == null) {
-            return 0;
-        }
-        return inputStream.available();
+        return getByteBufsInputStream().available();
     }
 
     private void ensureOpen() throws IOException {
@@ -128,21 +110,17 @@ final class StreamMessageInputStream<T> extends InputStream {
         subscriber.whenSubscribed.join();
     }
 
-    private static final class StreamMessageInputStreamSubscriber<T> implements Subscriber<T> {
+    private ByteBufsInputStream getByteBufsInputStream() {
+        return subscriber.byteBufsInputStream;
+    }
 
-        private static final InputStream EMPTY_STREAM = new InputStream() {
-            @Override
-            public int read() {
-                return -1;
-            }
-        };
+    private static final class StreamMessageInputStreamSubscriber<T> implements Subscriber<T> {
 
         private final Function<? super T, ? extends HttpData> httpDataConverter;
         @Nullable
         private Subscription upstream;
         private final CompletableFuture<Void> whenSubscribed = new CompletableFuture<>();
-        private final BlockingQueue<InputStream> queue = new LinkedBlockingDeque<>();
-        private volatile boolean closed;
+        private final ByteBufsInputStream byteBufsInputStream = new ByteBufsInputStream();
 
         StreamMessageInputStreamSubscriber(Function<? super T, ? extends HttpData> httpDataConverter) {
             requireNonNull(httpDataConverter, "httpDataConverter");
@@ -159,12 +137,12 @@ final class StreamMessageInputStream<T> extends InputStream {
         @Override
         public void onNext(T item) {
             requireNonNull(item, "item");
-            if (closed) {
+            if (byteBufsInputStream.isEos()) {
                  StreamMessageUtil.closeOrAbort(item);
                  return;
             }
             try {
-                queue.add(httpDataConverter.apply(item).toInputStream());
+                byteBufsInputStream.add(httpDataConverter.apply(item).byteBuf());
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
                 upstream.cancel();
@@ -174,22 +152,19 @@ final class StreamMessageInputStream<T> extends InputStream {
 
         @Override
         public void onError(Throwable cause) {
-            closed = true;
-            queue.add(EMPTY_STREAM); // to wake the BlockingQueue
+            byteBufsInputStream.setEos();
         }
 
         @Override
         public void onComplete() {
-            closed = true;
-            queue.add(EMPTY_STREAM); // to wake the BlockingQueue
+            byteBufsInputStream.setEos();
         }
 
-        public InputStream nextStream() throws InterruptedException {
-            if (closed) {
-                return EMPTY_STREAM;
+        public void request() {
+            if (byteBufsInputStream.isEos()) {
+                return;
             }
             upstream.request(1);
-            return queue.take();
         }
     }
 }

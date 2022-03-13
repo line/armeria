@@ -22,9 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -128,36 +125,6 @@ class StreamMessageInputStreamTest {
         assertThat(len).isEqualTo(3);
         assertThat(result).isEqualTo(new byte[] { 0, 1, 2, 3, 0});
         assertThat(inputStream.available()).isEqualTo(2);
-    }
-
-    @Test
-    void readByMultipleThreads_allThreadsShouldWaitSubscribed() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(10);
-        final Publisher<Integer> publisher = Flux
-                .range(1, 10)
-                .doOnSubscribe(subscription -> {
-                    try {
-                        latch.await(); // to ensure that all threads are waiting onSubscribe()
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                });
-        final StreamMessage<Integer> streamMessage = new PublisherBasedStreamMessage<>(publisher);
-        final InputStream inputStream = streamMessage
-                .asInputStream(x -> HttpData.wrap(x.toString().getBytes()));
-
-        final List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            final Thread t = new Thread(() -> assertDoesNotThrow(() -> {
-                latch.countDown();
-                inputStream.read();
-            }));
-            threads.add(t);
-            t.start();
-        }
-        for (Thread thread : threads) {
-            thread.join();
-        }
     }
 
     @Test
