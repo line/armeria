@@ -33,6 +33,8 @@ import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
 
 class StreamMessageInputStreamTest {
@@ -278,5 +280,30 @@ class StreamMessageInputStreamTest {
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
         assertThat(inputStream.read()).isEqualTo(-1);
+    }
+
+    @Test
+    void toInputStream_executor() throws IOException {
+        final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
+        final EventExecutor executor = ImmediateEventExecutor.INSTANCE;
+        final InputStream inputStream = streamMessage.toInputStream(x -> HttpData.wrap(x.getBytes()), executor);
+        final byte[] expected = ImmutableList.of("foo", "bar", "baz")
+                                             .stream()
+                                             .map(String::getBytes)
+                                             .reduce(Bytes::concat).get();
+
+        final ByteBuf result = Unpooled.buffer();
+        int read;
+        while ((read = inputStream.read()) != -1) {
+            result.writeByte(read);
+        }
+
+        final int readableBytes = result.readableBytes();
+        final byte[] actual = new byte[readableBytes];
+        for (int i = 0; i < readableBytes; i++) {
+            actual[i] = result.readByte();
+        }
+        assertThat(actual).isEqualTo(expected);
+        assertThat(inputStream.available()).isZero();
     }
 }

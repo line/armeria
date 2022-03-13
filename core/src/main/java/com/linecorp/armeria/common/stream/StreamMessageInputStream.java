@@ -32,23 +32,30 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
+import io.netty.util.concurrent.EventExecutor;
+
 final class StreamMessageInputStream<T> extends InputStream {
 
-    static <T> StreamMessageInputStream<T> of(
-            StreamMessage<T> source, Function<? super T, ? extends HttpData> httpDataConverter) {
-        return new StreamMessageInputStream<>(source, httpDataConverter);
+    static <T> StreamMessageInputStream<T> of(StreamMessage<T> source,
+                                              Function<? super T, ? extends HttpData> httpDataConverter,
+                                              EventExecutor executor) {
+        return new StreamMessageInputStream<>(source, httpDataConverter, executor);
     }
 
     private final StreamMessage<T> source;
+    private final EventExecutor executor;
     private final StreamMessageInputStreamSubscriber<T> subscriber;
     private final AtomicBoolean subscribed = new AtomicBoolean();
     private volatile boolean closed;
 
     private StreamMessageInputStream(StreamMessage<T> source,
-                                     Function<? super T, ? extends HttpData> httpDataConverter) {
+                                     Function<? super T, ? extends HttpData> httpDataConverter,
+                                     EventExecutor executor) {
         requireNonNull(source, "source");
         requireNonNull(httpDataConverter, "httpDataConverter");
+        requireNonNull(executor, "executor");
         this.source = source;
+        this.executor = executor;
         subscriber = new StreamMessageInputStreamSubscriber<>(httpDataConverter);
     }
 
@@ -105,7 +112,7 @@ final class StreamMessageInputStream<T> extends InputStream {
 
     private void ensureSubscribed() {
         if (subscribed.compareAndSet(false, true)) {
-            source.subscribe(subscriber);
+            source.subscribe(subscriber, executor);
         }
         subscriber.whenSubscribed.join();
     }

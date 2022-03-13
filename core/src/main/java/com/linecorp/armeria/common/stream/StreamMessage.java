@@ -734,7 +734,18 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     default InputStream toInputStream(Function<? super T, ? extends HttpData> httpDataConverter) {
+        return toInputStream(httpDataConverter, defaultSubscriberExecutor());
+    }
+
+    /**
+     * Adapts this {@link StreamMessage} to {@link InputStream}.
+     *
+     * @param executor the executor to subscribe
+     */
+    default InputStream toInputStream(Function<? super T, ? extends HttpData> httpDataConverter,
+                                      EventExecutor executor) {
         requireNonNull(httpDataConverter, "httpDataConverter");
-        return StreamMessageInputStream.of(this, httpDataConverter);
+        requireNonNull(executor, "executor");
+        return StreamMessageInputStream.of(this, httpDataConverter, defaultSubscriberExecutor());
     }
 }
