@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
@@ -490,13 +491,14 @@ public final class Flags {
         TRANSPORT_TYPE = type;
     }
 
-    private static final Path DEFAULT_MULTIPART_LOCATION;
+    private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION;
 
     static {
-        DEFAULT_MULTIPART_LOCATION = Paths.get(get("multipartLocation",
-                                                   System.getProperty("java.io.tmpdir") +
-                                                   "/armeria/multipart-files",
-                                                   ignore -> true));
+        DEFAULT_MULTIPART_UPLOADS_LOCATION = Paths.get(get("defaultMultipartUploadsLocation",
+                                                           System.getProperty("java.io.tmpdir") +
+                                                           File.separatorChar + "armeria" +
+                                                           File.separatorChar + "multipart-uploads",
+                                                           ignore -> true));
     }
 
     /**
@@ -1357,8 +1359,8 @@ public final class Flags {
     /**
      * Returns the {@link Path} that is used to store uploaded file through multipart/form-data.
      */
-    public static Path defaultMultipartLocation() {
-        return DEFAULT_MULTIPART_LOCATION;
+    public static Path defaultMultipartUploadsLocation() {
+        return DEFAULT_MULTIPART_UPLOADS_LOCATION;
     }
 
     /**

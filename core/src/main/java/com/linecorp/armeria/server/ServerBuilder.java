@@ -198,7 +198,7 @@ public final class ServerBuilder {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private Path multipartLocation = Flags.defaultMultipartLocation();
+    private Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -787,8 +787,8 @@ public final class ServerBuilder {
      *
      * @param path the path of the directory stores the file.
      */
-    public ServerBuilder multipartLocation(Path path) {
-        this.multipartLocation = requireNonNull(path, "path");
+    public ServerBuilder multipartUploadsLocation(Path path) {
+        this.multipartUploadsLocation = requireNonNull(path, "path");
         return this;
     }
 
@@ -1833,7 +1833,7 @@ public final class ServerBuilder {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming, multipartLocation);
+                http1HeaderNaming, multipartUploadsLocation);
     }
 
     /**
@@ -1913,6 +1913,6 @@ public final class ServerBuilder {
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null, false,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, multipartLocation);
+                enableServerHeader, enableDateHeader, multipartUploadsLocation);
     }
 }

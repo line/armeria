@@ -52,10 +52,10 @@ final class FileAggregatedMultipart {
 
     static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
                                                                          HttpRequest req) {
-        final Path multipartLocation = ctx.config().server().config().multipartLocation();
+        final Path multipartUploadsLocation = ctx.config().server().config().multipartUploadsLocation();
         return Multipart.from(req).collect(bodyPart -> {
             if (bodyPart.filename() != null) {
-                return resolveTmpFile(multipartLocation, ctx.blockingTaskExecutor().withoutContext())
+                return resolveTmpFile(multipartUploadsLocation, ctx.blockingTaskExecutor().withoutContext())
                         .thenComposeAsync(
                                 path -> bodyPart.writeTo(path)
                                                 .thenApply(ignore -> Maps.<String, Object>immutableEntry(
