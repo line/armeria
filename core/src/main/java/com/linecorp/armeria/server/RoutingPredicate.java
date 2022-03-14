@@ -116,28 +116,28 @@ final class RoutingPredicate<T> {
                                          Function<String, U> nameConverter,
                                          Function<U, Predicate<T>> containsPredicate,
                                          BiFunction<U, String, Predicate<T>> equalsPredicate) {
-        final NamedPredicate<T> namedPredicate;
-        final NamedPredicate<T> orNamedPredicate = buildOrNamedPredicate(predicateExpr,
-                                                                         nameConverter,
-                                                                         containsPredicate,
-                                                                         equalsPredicate);
-        if (orNamedPredicate != null) {
-            namedPredicate = orNamedPredicate;
+        final RoutingPredicate<T> routingPredicate;
+        final RoutingPredicate<T> orRoutingPredicate = buildOrRoutingPredicate(predicateExpr,
+                                                                               nameConverter,
+                                                                               containsPredicate,
+                                                                               equalsPredicate);
+        if (orRoutingPredicate != null) {
+            routingPredicate = orRoutingPredicate;
         } else {
-            namedPredicate = buildSingleExprNamedPredicate(predicateExpr,
-                                                           nameConverter,
-                                                           containsPredicate,
-                                                           equalsPredicate);
+            routingPredicate = buildSingleExprRoutingPredicate(predicateExpr,
+                                                               nameConverter,
+                                                               containsPredicate,
+                                                               equalsPredicate);
         }
-        checkArgument(namedPredicate != null,
+        checkArgument(routingPredicate != null,
                       "Invalid predicate: %s (expected: '%s', '%s' or '%s')",
                       predicateExpr, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern(), "A combination of " +
                               "the previous predicates separated by '||'");
-        return new RoutingPredicate<>(namedPredicate.name, namedPredicate.predicate);
+        return new RoutingPredicate<>(routingPredicate.name, routingPredicate.delegate);
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildOrNamedPredicate(
+    private static <T, U> RoutingPredicate<T> buildOrRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
             Function<U, Predicate<T>> containsPredicate,
             BiFunction<U, String, Predicate<T>> equalsPredicate) {
@@ -153,43 +153,43 @@ final class RoutingPredicate<T> {
             return Streams
                     .stream(OR_SPLITTER.split(predicateExpr))
                     .map(expression -> {
-                        final NamedPredicate<T> namedPredicate =
-                                buildSingleExprNamedPredicate(expression,
-                                                              nameConverter,
-                                                              containsPredicate,
-                                                              equalsPredicate);
-                        checkArgument(namedPredicate != null && !expression.isEmpty(),
+                        final RoutingPredicate<T> routingPredicate =
+                                buildSingleExprRoutingPredicate(expression,
+                                                                nameConverter,
+                                                                containsPredicate,
+                                                                equalsPredicate);
+                        checkArgument(routingPredicate != null && !expression.isEmpty(),
                                       "Invalid predicate: %s. Expression: %s (expected: '%s' or " +
                                               "'%s')",
                                       predicateExpr,
                                       expression,
                                       CONTAIN_PATTERN.pattern(),
                                       COMPARE_PATTERN.pattern());
-                        return namedPredicate;
+                        return routingPredicate;
                     })
-                    .reduce(NamedPredicate.empty(), NamedPredicate::or);
+                    .reduce(empty(), RoutingPredicate::or);
         }
         return null;
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildSingleExprNamedPredicate(
+    private static <T, U> RoutingPredicate<T> buildSingleExprRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
             Function<U, Predicate<T>> containsPredicate,
             BiFunction<U, String, Predicate<T>> equalsPredicate) {
-        final NamedPredicate<T> namedPredicate;
-        final NamedPredicate<T> containNamedPredicate =
-                buildContainNamedPredicate(predicateExpr, nameConverter, containsPredicate);
-        if (containNamedPredicate != null) {
-            namedPredicate = containNamedPredicate;
+        final RoutingPredicate<T> routingPredicate;
+        final RoutingPredicate<T> containRoutingPredicate =
+                buildContainRoutingPredicate(predicateExpr, nameConverter, containsPredicate);
+        if (containRoutingPredicate != null) {
+            routingPredicate = containRoutingPredicate;
         } else {
-            namedPredicate = buildCompareNamedPredicate(predicateExpr, nameConverter, equalsPredicate);
+            routingPredicate = buildCompareRoutingPredicate(predicateExpr, nameConverter, equalsPredicate);
         }
-        return namedPredicate;
+        return routingPredicate;
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildCompareNamedPredicate(
+    private static <T, U> RoutingPredicate<T> buildCompareRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
             BiFunction<U, String, Predicate<T>> equalsPredicate) {
         final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicateExpr);
@@ -203,17 +203,17 @@ final class RoutingPredicate<T> {
             final Predicate<T> predicate = equalsPredicate.apply(nameConverter.apply(name), value);
             final String noWsValue = WHITESPACE_PATTERN.matcher(value).replaceAll("_");
             if ("=".equals(comparator)) {
-                return NamedPredicate.eq(name, noWsValue, predicate);
+                return eq(name, noWsValue, predicate);
             } else {
                 assert "!=".equals(comparator);
-                return NamedPredicate.notEq(name, noWsValue, predicate);
+                return notEq(name, noWsValue, predicate);
             }
         }
         return null;
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildContainNamedPredicate(
+    private static <T, U> RoutingPredicate<T> buildContainRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
             Function<U, Predicate<T>> containsPredicate) {
         final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
@@ -221,9 +221,9 @@ final class RoutingPredicate<T> {
             final U name = nameConverter.apply(containMatcher.group(2));
             final Predicate<T> predicate = containsPredicate.apply(name);
             if ("!".equals(containMatcher.group(1))) {
-                return NamedPredicate.negated(containMatcher.group(2), predicate);
+                return negated(containMatcher.group(2), predicate);
             } else {
-                return NamedPredicate.of(predicateExpr, predicate);
+                return from(predicateExpr, predicate);
             }
         }
         return null;
@@ -289,46 +289,37 @@ final class RoutingPredicate<T> {
                           .toString();
     }
 
-    private static final class NamedPredicate<T> {
-        private final String name;
-        private final Predicate<T> predicate;
+    private static <T> RoutingPredicate<T> eq(String name, String value, Predicate<T> predicate) {
+        return new RoutingPredicate<>(name + "_eq_" + value, predicate);
+    }
 
-        private NamedPredicate(String name, Predicate<T> predicate) {
-            this.name = requireNonNull(name, "name");
-            this.predicate = requireNonNull(predicate, "delegate");
-        }
+    private static <T> RoutingPredicate<T> notEq(String name, String value, Predicate<T> predicate) {
+        return new RoutingPredicate<>(name + "_ne_" + value, predicate.negate());
+    }
 
-        static <T> NamedPredicate<T> eq(String name, String value, Predicate<T> predicate) {
-            return new NamedPredicate<>(name + "_eq_" + value, predicate);
-        }
+    private static <T> RoutingPredicate<T> negated(String name, Predicate<T> predicate) {
+        return new RoutingPredicate<>("not_" + name, predicate.negate());
+    }
 
-        static <T> NamedPredicate<T> notEq(String name, String value, Predicate<T> predicate) {
-            return new NamedPredicate<>(name + "_ne_" + value, predicate.negate());
-        }
+    private static <T> RoutingPredicate<T> from(String name, Predicate<T> predicate) {
+        return new RoutingPredicate<>(name, predicate);
+    }
 
-        static <T> NamedPredicate<T> negated(String name, Predicate<T> predicate) {
-            return new NamedPredicate<>("not_" + name, predicate.negate());
-        }
+    private static <T> RoutingPredicate<T> empty() {
+        return new RoutingPredicate<>("", x -> false);
+    }
 
-        static <T> NamedPredicate<T> of(String name, Predicate<T> predicate) {
-            return new NamedPredicate<>(name, predicate);
-        }
-
-        static <T> NamedPredicate<T> empty() {
-            return new NamedPredicate<>("", x -> false);
-        }
-
-        static <T> NamedPredicate<T> or(NamedPredicate<T> current, NamedPredicate<T> other) {
-            if (current.name.isEmpty()) {
-                return new NamedPredicate<>(other.name + "_or_", current.predicate.or(other.predicate));
-            } else {
-                if (current.name.endsWith("_or_")) {
-                    return new NamedPredicate<>(current.name + other.name,
-                                                current.predicate.or(other.predicate));
-                }
-                return new NamedPredicate<>(current.name + "_or_" + other.name,
-                                            current.predicate.or(other.predicate));
+    private static <T> RoutingPredicate<T> or(RoutingPredicate<T> current, RoutingPredicate<T> other) {
+        final String currentName = String.valueOf(current.name);
+        if (currentName.isEmpty()) {
+            return new RoutingPredicate<>(other.name + "_or_", current.delegate.or(other.delegate));
+        } else {
+            if (currentName.endsWith("_or_")) {
+                return new RoutingPredicate<>(currentName + other.name,
+                                              current.delegate.or(other.delegate));
             }
+            return new RoutingPredicate<>(currentName + "_or_" + other.name,
+                                          current.delegate.or(other.delegate));
         }
     }
 }
