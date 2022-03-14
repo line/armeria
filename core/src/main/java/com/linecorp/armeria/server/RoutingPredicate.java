@@ -21,13 +21,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,12 +116,12 @@ final class RoutingPredicate<T> {
                                          Function<String, U> nameConverter,
                                          Function<U, Predicate<T>> containsPredicate,
                                          BiFunction<U, String, Predicate<T>> equalsPredicate) {
-        final Optional<NamedPredicate<T>> namedPredicate;
-        final Optional<NamedPredicate<T>> orNamedPredicate = buildOrNamedPredicate(predicateExpr,
-                                                                                   nameConverter,
-                                                                                   containsPredicate,
-                                                                                   equalsPredicate);
-        if (orNamedPredicate.isPresent()) {
+        final NamedPredicate<T> namedPredicate;
+        final NamedPredicate<T> orNamedPredicate = buildOrNamedPredicate(predicateExpr,
+                                                                         nameConverter,
+                                                                         containsPredicate,
+                                                                         equalsPredicate);
+        if (orNamedPredicate != null) {
             namedPredicate = orNamedPredicate;
         } else {
             namedPredicate = buildSingleExprNamedPredicate(predicateExpr,
@@ -129,60 +129,58 @@ final class RoutingPredicate<T> {
                                                            containsPredicate,
                                                            equalsPredicate);
         }
-        checkArgument(namedPredicate.isPresent(),
+        checkArgument(namedPredicate != null,
                       "Invalid predicate: %s (expected: '%s', '%s' or '%s')",
                       predicateExpr, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern(),
                       OR_PATTERN.pattern());
-        return new RoutingPredicate<>(namedPredicate.get().name, namedPredicate.get().predicate);
+        return new RoutingPredicate<>(namedPredicate.name, namedPredicate.predicate);
     }
 
-    private static <T, U> Optional<NamedPredicate<T>> buildOrNamedPredicate(String predicateExpr,
-                                                                            Function<String, U> nameConverter,
-                                                                            Function<U, Predicate<T>>
-                                                                                    containsPredicate,
-                                                                            BiFunction<U, String, Predicate<T>>
-                                                                                    equalsPredicate) {
+    @Nullable
+    private static <T, U> NamedPredicate<T> buildOrNamedPredicate(String predicateExpr,
+                                                                  Function<String, U> nameConverter,
+                                                                  Function<U, Predicate<T>>
+                                                                          containsPredicate,
+                                                                  BiFunction<U, String, Predicate<T>>
+                                                                          equalsPredicate) {
         final Matcher orMatcher = OR_PATTERN.matcher(predicateExpr);
         if (orMatcher.find()) {
             checkArgument(!predicateExpr.endsWith("|"), "Invalid predicate: %s (expected: '%s')",
                           predicateExpr, TRAILING_PIPE_PATTERN.matcher(predicateExpr).replaceAll(""));
-            return Optional
-                    .of(Arrays
-                                .stream(OR_PATTERN.split(predicateExpr))
-                                .map(String::trim)
-                                .map(expression -> {
-                                    final Optional<NamedPredicate<T>> namedPredicate =
-                                            buildSingleExprNamedPredicate(expression,
-                                                                          nameConverter,
-                                                                          containsPredicate,
-                                                                          equalsPredicate);
-                                    checkArgument(namedPredicate.isPresent() && !expression.isEmpty(),
-                                                  "Invalid predicate: %s. Expression: %s (expected: '%s' or " +
-                                                          "'%s')",
-                                                  predicateExpr,
-                                                  expression,
-                                                  CONTAIN_PATTERN.pattern(),
-                                                  COMPARE_PATTERN.pattern());
-                                    return namedPredicate.get();
-                                })
-                                .reduce(NamedPredicate.empty(), NamedPredicate::or)
-                    );
+            return Arrays
+                    .stream(OR_PATTERN.split(predicateExpr))
+                    .map(String::trim)
+                    .map(expression -> {
+                        final NamedPredicate<T> namedPredicate =
+                                buildSingleExprNamedPredicate(expression,
+                                                              nameConverter,
+                                                              containsPredicate,
+                                                              equalsPredicate);
+                        checkArgument(namedPredicate != null && !expression.isEmpty(),
+                                      "Invalid predicate: %s. Expression: %s (expected: '%s' or " +
+                                              "'%s')",
+                                      predicateExpr,
+                                      expression,
+                                      CONTAIN_PATTERN.pattern(),
+                                      COMPARE_PATTERN.pattern());
+                        return namedPredicate;
+                    })
+                    .reduce(NamedPredicate.empty(), NamedPredicate::or);
         }
-        return Optional.empty();
+        return null;
     }
 
-    private static <T, U> Optional<NamedPredicate<T>> buildSingleExprNamedPredicate(String predicateExpr,
-                                                                                    Function<String, U>
-                                                                                            nameConverter,
-                                                                                    Function<U, Predicate<T>>
-                                                                                            containsPredicate,
-                                                                                    BiFunction<U, String,
-                                                                                            Predicate<T>>
-                                                                                            equalsPredicate) {
-        final Optional<NamedPredicate<T>> namedPredicate;
-        final Optional<NamedPredicate<T>> containNamedPredicate =
+    @Nullable
+    private static <T, U> NamedPredicate<T> buildSingleExprNamedPredicate(String predicateExpr,
+                                                                          Function<String, U> nameConverter,
+                                                                          Function<U, Predicate<T>>
+                                                                                  containsPredicate,
+                                                                          BiFunction<U, String, Predicate<T>>
+                                                                                      equalsPredicate) {
+        final NamedPredicate<T> namedPredicate;
+        final NamedPredicate<T> containNamedPredicate =
                 buildContainNamedPredicate(predicateExpr, nameConverter, containsPredicate);
-        if (containNamedPredicate.isPresent()) {
+        if (containNamedPredicate != null) {
             namedPredicate = containNamedPredicate;
         } else {
             namedPredicate = buildCompareNamedPredicate(predicateExpr, nameConverter, equalsPredicate);
@@ -190,12 +188,11 @@ final class RoutingPredicate<T> {
         return namedPredicate;
     }
 
-    private static <T, U> Optional<NamedPredicate<T>> buildCompareNamedPredicate(String predicateExpr,
-                                                                                 Function<String, U>
-                                                                                         nameConverter,
-                                                                                 BiFunction<U, String,
-                                                                                         Predicate<T>>
-                                                                                         equalsPredicate) {
+    @Nullable
+    private static <T, U> NamedPredicate<T> buildCompareNamedPredicate(String predicateExpr,
+                                                                       Function<String, U> nameConverter,
+                                                                       BiFunction<U, String, Predicate<T>>
+                                                                               equalsPredicate) {
         final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicateExpr);
         if (compareMatcher.matches()) {
             assert compareMatcher.groupCount() == 3;
@@ -207,31 +204,31 @@ final class RoutingPredicate<T> {
             final Predicate<T> predicate = equalsPredicate.apply(nameConverter.apply(name), value);
             final String noWsValue = WHITESPACE_PATTERN.matcher(value).replaceAll("_");
             if ("=".equals(comparator)) {
-                return Optional.of(NamedPredicate.eq(name, noWsValue, predicate));
+                return NamedPredicate.eq(name, noWsValue, predicate);
             } else {
                 assert "!=".equals(comparator);
-                return Optional.of(NamedPredicate.notEq(name, noWsValue, predicate));
+                return NamedPredicate.notEq(name, noWsValue, predicate);
             }
         }
-        return Optional.empty();
+        return null;
     }
 
-    private static <T, U> Optional<NamedPredicate<T>> buildContainNamedPredicate(String predicateExpr,
-                                                                                 Function<String, U>
-                                                                                         nameConverter,
-                                                                                 Function<U, Predicate<T>>
-                                                                                         containsPredicate) {
+    @Nullable
+    private static <T, U> NamedPredicate<T> buildContainNamedPredicate(String predicateExpr,
+                                                                       Function<String, U> nameConverter,
+                                                                       Function<U, Predicate<T>>
+                                                                                   containsPredicate) {
         final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
         if (containMatcher.matches()) {
             final U name = nameConverter.apply(containMatcher.group(2));
             final Predicate<T> predicate = containsPredicate.apply(name);
             if ("!".equals(containMatcher.group(1))) {
-                return Optional.of(NamedPredicate.negated(containMatcher.group(2), predicate));
+                return NamedPredicate.negated(containMatcher.group(2), predicate);
             } else {
-                return Optional.of(NamedPredicate.of(predicateExpr, predicate));
+                return NamedPredicate.of(predicateExpr, predicate);
             }
         }
-        return Optional.empty();
+        return null;
     }
 
     private final CharSequence name;
