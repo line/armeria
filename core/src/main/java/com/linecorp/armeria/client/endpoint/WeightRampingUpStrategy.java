@@ -184,11 +184,10 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         // Only executed by the executor.
         private void updateEndpoints(List<Endpoint> newEndpoints) {
             unhandledNewEndpoints = null;
-            Set<EndpointAndStep> newlyAddedEndpoints = null;
+            final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
             if (rampingUpTaskWindowNanos > 0) {
                 // Check whether we can ramp up with the previous ramped up endpoints which are at the last
                 // of the rampingUpEndpointsEntries.
-                newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
                 if (shouldRampUpWithPreviousRampedUpEntry()) {
                     if (!newlyAddedEndpoints.isEmpty()) {
                         updateWeightAndStep(newlyAddedEndpoints);
@@ -204,10 +203,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                     unhandledNewEndpoints = newlyAddedEndpoints;
                     return;
                 }
-            }
-
-            if (newlyAddedEndpoints == null) {
-                newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
             }
 
             if (newlyAddedEndpoints.isEmpty()) {
