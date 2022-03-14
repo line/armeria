@@ -303,9 +303,9 @@ public class MyAnnotatedService {
 
 </Tip>
 
-If the type is `List<?>` or `Set<?>`, multiple parameters exist with the same name in a query string can be
-injected, e.g. `/hello1?number=1&number=2&number=3`. Or you can use a comma-delimited parameter:
-`/hello1?number=1,2,3` You can use <type://@Default> annotation or `Optional<?>` class here, too.
+If multiple parameters exist with the same name in a query string, they can be injected as a `List<?>`
+or `Set<?>`, e.g. `/hello1?number=1&number=2&number=3`. You can use <type://@Default> annotation
+or `Optional<?>` class here, too.
 
 ```java
 public class MyAnnotatedService {
@@ -322,6 +322,15 @@ public class MyAnnotatedService {
     public HttpResponse hello3(@Param("number")
                                Optional<List<Integer>> numbers) { ... }
 }
+```
+
+If you specify query delimiter while building an annotated service, a single parameter will be converted into
+separated values if the parameter is mapped to a `List<?>` or `Set<?>`, e.g. `/hello1?number=1,2,3`.
+
+```java
+sb.annotatedService()
+  .useQueryDelimiter(",")
+  .build(new MyAnnotatedService());
 ```
 
 If an HTTP `POST` request with a `Content-Type: x-www-form-urlencoded` header is received and
