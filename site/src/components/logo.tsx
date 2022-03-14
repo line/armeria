@@ -1,6 +1,6 @@
 import React from 'react';
 
-import styles from './logo.module.less';
+import * as styles from './logo.module.less';
 
 interface LogoProps {
   className?: string;

@@ -398,7 +398,7 @@ When a project has a `java` flag:
     files.
     - Consider adding dependency tasks to the `generateSources` task to do
       other source generation jobs.
-  - Thrift compiler 0.14 will be used by default. Override `thriftVersion`
+  - Thrift compiler 0.16 will be used by default. Override `thriftVersion`
     property if you prefer 0.9:
 
     ```groovy

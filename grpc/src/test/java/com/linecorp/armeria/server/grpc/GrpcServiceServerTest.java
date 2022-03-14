@@ -59,6 +59,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
@@ -392,6 +393,7 @@ class GrpcServiceServerTest {
             sb.workerGroup(1);
             sb.maxRequestLength(0);
 
+            sb.decorator(LoggingService.newDecorator());
             sb.service(
                     GrpcService.builder()
                                .maxRequestMessageLength(MAX_MESSAGE_SIZE)
@@ -699,7 +701,7 @@ class GrpcServiceServerTest {
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.staticUnaryCall(request));
 
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
 
         checkRequestLogStatus(grpcStatus -> {
             assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
@@ -792,6 +794,7 @@ class GrpcServiceServerTest {
         final UnitTestServiceStub stub =
                 GrpcClients.builder(protocol + "://127.0.0.1:" + server.httpPort() + '/')
                            .factory(factory)
+                           .decorator(LoggingClient.newDecorator())
                            .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
         final StreamObserver<SimpleRequest> stream = stub.streamClientCancels(
@@ -1267,7 +1270,7 @@ class GrpcServiceServerTest {
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         final RpcResponse rpcRes = (RpcResponse) log.responseContent();
-        assertThat(rpcReq).isNull();
+        assertThat(rpcReq).isNotNull();
         assertThat((Object) rpcRes).isNotNull();
 
         assertThat(rpcRes.cause()).isNotNull();

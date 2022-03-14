@@ -23,7 +23,9 @@ import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageU
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -675,5 +677,32 @@ public interface StreamMessage<T> extends Publisher<T> {
             Function<? super Throwable, ? extends StreamMessage<T>> function) {
         requireNonNull(function, "function");
         return new RecoverableStreamMessage<>(this, function, /* allowResuming */ true);
+    }
+
+    /**
+     * Writes this {@link StreamMessage} to the given {@link Path} with {@link OpenOption}s.
+     * If the {@link OpenOption} is not specified, defaults to {@link StandardOpenOption#CREATE},
+     * {@link StandardOpenOption#TRUNCATE_EXISTING} and {@link StandardOpenOption#WRITE}.
+     *
+     * <p>Example:<pre>{@code
+     * Path destination = Paths.get("foo.bin");
+     * ByteBuf[] bufs = new ByteBuf[10];
+     * for(int i = 0; i < 10; i++) {
+     *     bufs[i] = Unpooled.wrappedBuffer(Integer.toString(i).getBytes());
+     * }
+     * StreamMessage<ByteBuf> streamMessage = StreamMessage.of(bufs);
+     * streamMessage.writeTo(HttpData::wrap, destination).join();
+     *
+     * assert Files.readString(destination).equals("0123456789");
+     * }</pre>
+     *
+     * @see StreamMessages#writeTo(StreamMessage, Path, OpenOption...)
+     */
+    default CompletableFuture<Void> writeTo(Function<? super T, ? extends HttpData> mapper, Path destination,
+                                            OpenOption... options) {
+        requireNonNull(mapper, "mapper");
+        requireNonNull(destination, "destination");
+        requireNonNull(options, "options");
+        return StreamMessages.writeTo(map(mapper), destination, options);
     }
 }
