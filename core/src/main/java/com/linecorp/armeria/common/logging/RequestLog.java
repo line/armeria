@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
@@ -120,6 +121,11 @@ public interface RequestLog extends RequestOnlyLog {
     default long totalDurationNanos() {
         return responseEndTimeNanos() - requestStartTimeNanos();
     }
+
+    /**
+     * Returns the HTTP response status of the specified {@link ResponseHeaders}.
+     */
+    HttpStatus responseStatus();
 
     /**
      * Returns the length of the response content.

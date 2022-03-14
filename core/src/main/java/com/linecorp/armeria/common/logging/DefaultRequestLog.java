@@ -1165,6 +1165,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public HttpStatus responseStatus() {
+        return responseHeaders().status();
+    }
+
+    @Override
     public Throwable responseCause() {
         ensureAvailable(RequestLogProperty.RESPONSE_CAUSE);
         return responseCause;
@@ -1963,6 +1968,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public long responseEndTimeNanos() {
             return responseEndTimeNanos;
+        }
+
+        @Override
+        public HttpStatus responseStatus() {
+            return responseHeaders().status();
         }
 
         @Override
