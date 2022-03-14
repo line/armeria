@@ -144,8 +144,13 @@ final class RoutingPredicate<T> {
                                                                   BiFunction<U, String, Predicate<T>>
                                                                           equalsPredicate) {
         if (predicateExpr.contains("||")) {
-            checkArgument(!predicateExpr.endsWith("|"), "Invalid predicate: %s (expected: '%s')",
-                          predicateExpr, TRAILING_PIPE_PATTERN.matcher(predicateExpr).replaceAll(""));
+            if (predicateExpr.endsWith("|")) {
+                throw new IllegalArgumentException("Invalid predicate: " + predicateExpr +
+                                                           "(expected: '" +
+                                                           TRAILING_PIPE_PATTERN.matcher(predicateExpr)
+                                                                                .replaceAll("") +
+                                                           "')");
+            }
 
             return Streams
                     .stream(OR_SPLITTER.split(predicateExpr))
