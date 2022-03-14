@@ -277,7 +277,7 @@ class GrpcServiceBuilderTest {
 
         final GrpcServiceBuilder builder = GrpcService.builder()
                                                       .addService(firstTestService)
-                                                      .addService("foo", secondTestService);
+                                                      .addService("/foo", secondTestService);
 
         final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
         assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
