@@ -125,13 +125,13 @@ class HelloServiceTest {
 
                     @Override
                     public void onCompleted() {
-                        assertThat(sequence.get()).isEqualTo(5);
+                        assertThat(sequence).hasValue(5);
                         completed.set(true);
                     }
                 });
         await().atMost(Duration.ofSeconds(15))
                .untilAsserted(() -> assertThat(completed)
-                       .overridingErrorMessage(() -> "sequence is " + sequence.get())
+                       .overridingErrorMessage(() -> "sequence is " + sequence)
                        .isTrue());
     }
 

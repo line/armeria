@@ -11,16 +11,17 @@ import example.armeria.grpc.scala.HelloServiceTest.{GrpcSerializationProvider, n
 import example.armeria.grpc.scala.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
 import example.armeria.grpc.scala.hello.{HelloReply, HelloRequest}
 import io.grpc.stub.StreamObserver
-import java.time
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
-import java.util.stream
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
+
+import java.time
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
+import java.util.stream
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -73,13 +74,13 @@ class HelloServiceTest {
           throw new Error(t)
 
         override def onCompleted(): Unit = {
-          assertThat(sequence.get()).isEqualTo(5)
+          assertThat(sequence).overridingErrorMessage(() => s"sequence is $sequence").hasValue(5)
           completed.set(true)
         }
       }
     )
 
-    await().atMost(time.Duration.ofSeconds(15)).untilAsserted(() => { assertThat(completed.get()).isTrue() })
+    await().atMost(time.Duration.ofSeconds(15)).untilAsserted(() => { assertThat(completed).isTrue() })
   }
 
   @ArgumentsSource(classOf[GrpcSerializationProvider])
@@ -112,7 +113,7 @@ class HelloServiceTest {
       request.onNext(HelloRequest(name))
     request.onCompleted()
 
-    await().untilAsserted(() => assertThat(completed.get()).isTrue())
+    await().untilAsserted(() => assertThat(completed).isTrue())
   }
 
   @ArgumentsSource(classOf[GrpcSerializationProvider])
@@ -144,7 +145,7 @@ class HelloServiceTest {
       request.onNext(HelloRequest(name))
     request.onCompleted()
 
-    await().untilAsserted(() => assertThat(completed.get()).isTrue())
+    await().untilAsserted(() => assertThat(completed).isTrue())
   }
 }
 
