@@ -137,12 +137,10 @@ final class RoutingPredicate<T> {
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildOrNamedPredicate(String predicateExpr,
-                                                                  Function<String, U> nameConverter,
-                                                                  Function<U, Predicate<T>>
-                                                                          containsPredicate,
-                                                                  BiFunction<U, String, Predicate<T>>
-                                                                          equalsPredicate) {
+    private static <T, U> NamedPredicate<T> buildOrNamedPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            Function<U, Predicate<T>> containsPredicate,
+            BiFunction<U, String, Predicate<T>> equalsPredicate) {
         if (predicateExpr.contains("||")) {
             if (predicateExpr.endsWith("|")) {
                 throw new IllegalArgumentException("Invalid predicate: " + predicateExpr +
@@ -175,12 +173,10 @@ final class RoutingPredicate<T> {
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildSingleExprNamedPredicate(String predicateExpr,
-                                                                          Function<String, U> nameConverter,
-                                                                          Function<U, Predicate<T>>
-                                                                                  containsPredicate,
-                                                                          BiFunction<U, String, Predicate<T>>
-                                                                                  equalsPredicate) {
+    private static <T, U> NamedPredicate<T> buildSingleExprNamedPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            Function<U, Predicate<T>> containsPredicate,
+            BiFunction<U, String, Predicate<T>> equalsPredicate) {
         final NamedPredicate<T> namedPredicate;
         final NamedPredicate<T> containNamedPredicate =
                 buildContainNamedPredicate(predicateExpr, nameConverter, containsPredicate);
@@ -193,10 +189,9 @@ final class RoutingPredicate<T> {
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildCompareNamedPredicate(String predicateExpr,
-                                                                       Function<String, U> nameConverter,
-                                                                       BiFunction<U, String, Predicate<T>>
-                                                                               equalsPredicate) {
+    private static <T, U> NamedPredicate<T> buildCompareNamedPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            BiFunction<U, String, Predicate<T>> equalsPredicate) {
         final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicateExpr);
         if (compareMatcher.matches()) {
             assert compareMatcher.groupCount() == 3;
@@ -218,10 +213,9 @@ final class RoutingPredicate<T> {
     }
 
     @Nullable
-    private static <T, U> NamedPredicate<T> buildContainNamedPredicate(String predicateExpr,
-                                                                       Function<String, U> nameConverter,
-                                                                       Function<U, Predicate<T>>
-                                                                               containsPredicate) {
+    private static <T, U> NamedPredicate<T> buildContainNamedPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            Function<U, Predicate<T>> containsPredicate) {
         final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
         if (containMatcher.matches()) {
             final U name = nameConverter.apply(containMatcher.group(2));
