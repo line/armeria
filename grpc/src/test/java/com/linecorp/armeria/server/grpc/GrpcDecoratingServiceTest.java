@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -58,6 +58,7 @@ class GrpcDecoratingServiceTest {
                                   .addService(new TestServiceImpl())
                                   .addService(new MetricsServiceImpl())
                                   .addService(new ReconnectServiceImpl())
+                                  .addService("/foo", new FooTestServiceImpl())
                                   .build());
         }
     };
@@ -65,11 +66,13 @@ class GrpcDecoratingServiceTest {
     private static String FIRST_TEST_RESULT = "";
     private static String SECOND_TEST_RESULT = "";
     private static String THIRD_TEST_RESULT = "";
+    private static String FOURTH_TEST_RESULT = "";
 
     @Test
     void methodDecorators() {
-        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                                      .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri(
+                                                                  GrpcSerializationFormats.PROTO))
+                                                          .build(TestServiceBlockingStub.class);
         client.unaryCall(SimpleRequest.getDefaultInstance());
         assertThat(FIRST_TEST_RESULT)
                 .isEqualTo("FirstDecorator/SecondDecorator/MethodFirstDecorator/MethodSecondDecorator");
@@ -77,20 +80,42 @@ class GrpcDecoratingServiceTest {
 
     @Test
     void serviceDecorators() {
-        final MetricsServiceBlockingStub client = Clients.builder(
-                                                                 server.httpUri(GrpcSerializationFormats.PROTO))
-                                                         .build(MetricsServiceBlockingStub.class);
+        final MetricsServiceBlockingStub client = GrpcClients.builder(server.httpUri(
+                                                                     GrpcSerializationFormats.PROTO))
+                                                             .build(MetricsServiceBlockingStub.class);
         client.getGauge(GaugeRequest.getDefaultInstance());
         assertThat(SECOND_TEST_RESULT).isEqualTo("ThirdDecorator");
     }
 
     @Test
     void nonDecorators() {
-        final ReconnectServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                       .build(ReconnectServiceBlockingStub.class);
+        final ReconnectServiceBlockingStub client = GrpcClients.builder(server.httpUri(
+                                                                       GrpcSerializationFormats.PROTO))
+                                                               .build(ReconnectServiceBlockingStub.class);
         client.start(Empty.getDefaultInstance());
         assertThat(THIRD_TEST_RESULT).isEqualTo("");
+    }
+
+    @Test
+    void prefixService() {
+        final TestServiceBlockingStub client = GrpcClients
+                .builder(server.httpUri(
+                        GrpcSerializationFormats.PROTO))
+                .decorator((delegate, ctx, req) -> {
+                    final String path = req.path();
+                    final HttpRequest newReq = req.mapHeaders(
+                            headers -> headers.toBuilder()
+                                              .path(path.replace(
+                                                      "armeria.grpc.testing.TestService",
+                                                      "foo"))
+                                              .build());
+                    ctx.updateRequest(newReq);
+                    return delegate.execute(ctx, newReq);
+                })
+                .build(TestServiceBlockingStub.class);
+        client.unaryCall(SimpleRequest.getDefaultInstance());
+        assertThat(FOURTH_TEST_RESULT)
+                .isEqualTo("FourthDecorator/MethodThirdDecorator");
     }
 
     private static class FirstDecorator implements DecoratingHttpServiceFunction {
@@ -123,6 +148,16 @@ class GrpcDecoratingServiceTest {
         }
     }
 
+    private static class FourthDecorator implements DecoratingHttpServiceFunction {
+        @Override
+        public HttpResponse serve(HttpService delegate,
+                                  ServiceRequestContext ctx,
+                                  HttpRequest req) throws Exception {
+            FOURTH_TEST_RESULT += "FourthDecorator/";
+            return delegate.serve(ctx, req);
+        }
+    }
+
     private static class MethodFirstDecorator implements DecoratingHttpServiceFunction {
         @Override
         public HttpResponse serve(HttpService delegate,
@@ -143,6 +178,16 @@ class GrpcDecoratingServiceTest {
         }
     }
 
+    private static class MethodThirdDecorator implements DecoratingHttpServiceFunction {
+        @Override
+        public HttpResponse serve(HttpService delegate,
+                                  ServiceRequestContext ctx,
+                                  HttpRequest req) throws Exception {
+            FOURTH_TEST_RESULT += "MethodThirdDecorator";
+            return delegate.serve(ctx, req);
+        }
+    }
+
     @Decorator(FirstDecorator.class)
     @Decorator(SecondDecorator.class)
     private static class TestServiceImpl extends TestServiceImplBase {
@@ -153,6 +198,19 @@ class GrpcDecoratingServiceTest {
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onNext(SimpleResponse.newBuilder()
                                                   .setUsername("test user")
+                                                  .build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Decorator(FourthDecorator.class)
+    private static class FooTestServiceImpl extends TestServiceImplBase {
+
+        @Override
+        @Decorator(MethodThirdDecorator.class)
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder()
+                                                  .setUsername("foo user")
                                                   .build());
             responseObserver.onCompleted();
         }

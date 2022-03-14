@@ -776,7 +776,7 @@ public final class GrpcServiceBuilder {
     private void collectDecorators(Class<?> clazz, @Nullable String path,
                                    ServerServiceDefinition serverServiceDefinition) {
         final String serviceName =
-                path != null ? path : serverServiceDefinition.getServiceDescriptor().getName();
+                path != null ? path : '/' + serverServiceDefinition.getServiceDescriptor().getName();
         // In gRPC, A method name is unique.
         final Map<String, Method> methods = new HashMap<>();
         for (Method method : getAllMethods(clazz, withModifier(Modifier.PUBLIC))) {
@@ -797,7 +797,7 @@ public final class GrpcServiceBuilder {
             }
             final List<DecoratorAndOrder> decorators = DecoratorUtil.collectDecorators(clazz, method);
             if (!decorators.isEmpty()) {
-                methodDecoratorBuilder.put('/' + serviceName + '/' + targetMethodName, decorators);
+                methodDecoratorBuilder.put(serviceName + '/' + targetMethodName, decorators);
             }
         }
     }
