@@ -63,12 +63,14 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
+import com.linecorp.armeria.server.AnnotatedServiceBindingBuilder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
+import com.linecorp.armeria.server.VirtualHostAnnotatedServiceBindingBuilder;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
@@ -451,6 +453,9 @@ public final class Flags {
 
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getBoolean("allowDoubleDotsInQueryString", false);
+
+    @Nullable
+    private static final String QUERY_DELIMITER = System.getProperty(PREFIX + "queryDelimiter");
 
     static {
         TransportType type = null;
@@ -1376,6 +1381,24 @@ public final class Flags {
      */
     public static boolean allowDoubleDotsInQueryString() {
         return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
+    }
+
+    /**
+     * Returns the default query parameter delimiter used for an annotated service.
+     *
+     * <p>Note that this flag works only when the resolve target class type is collection and the number of
+     * values of the query parameter is one.</p>
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link AnnotatedServiceBindingBuilder#useQueryDelimiter(String)} or
+     * {@link VirtualHostAnnotatedServiceBindingBuilder#useQueryDelimiter(String)}.</p>
+     *
+     * <p>The default value of this flags is {@code null}. Specify the
+     * {@code -Dcom.linecorp.armeria.queryDelimiter=<string>} JVM option to override the default value</p>
+     */
+    @Nullable
+    public static String queryDelimiter() {
+        return QUERY_DELIMITER;
     }
 
     @Nullable

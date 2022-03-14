@@ -30,6 +30,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -69,6 +70,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
 
+    @Nullable
+    private String queryDelimiter = Flags.queryDelimiter();
     private boolean useBlockingTaskExecutor;
     private String pathPrefix = "/";
     @Nullable
@@ -155,6 +158,18 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      */
     public AnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
+    /**
+     * Sets the query parameter delimiter. By default, this {@link AnnotatedServiceBindingBuilder} uses
+     * {@link Flags#queryDelimiter()}.
+     *
+     * <p>Note that this delimiter works only when the resolve target class type is collection and the number
+     * of values of the query parameter is one.</p>
+     */
+    public AnnotatedServiceBindingBuilder useQueryDelimiter(String delimiter) {
+        this.queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
     }
 
@@ -297,7 +312,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         assert service != null;
 
         final List<AnnotatedServiceElement> elements =
-                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
+                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor, queryDelimiter,
                                              requestConverterFunctions, responseConverterFunctions,
                                              exceptionHandlerFunctions);
         return elements.stream().map(element -> {
