@@ -13,17 +13,16 @@ import com.linecorp.armeria.server.scalapb.HelloServiceImpl.toMessage
 import com.linecorp.armeria.server.scalapb.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import io.grpc.stub.StreamObserver
+import java.time
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
+import java.util.stream
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
-
-import java.time
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
-import java.util.stream
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
