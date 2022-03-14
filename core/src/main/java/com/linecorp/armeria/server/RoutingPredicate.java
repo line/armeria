@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -27,6 +26,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Splitter;
 import com.linecorp.armeria.common.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,8 +69,8 @@ final class RoutingPredicate<T> {
     private static final Pattern CONTAIN_PATTERN = Pattern.compile("^\\s*([!]?)([^\\s=><!]+)\\s*$");
     private static final Pattern COMPARE_PATTERN = Pattern.compile("^\\s*([^\\s!><=]+)\\s*([><!]?=|>|<)(.*)$");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s");
-    private static final Pattern OR_PATTERN = Pattern.compile("[|]{2}");
     private static final Pattern TRAILING_PIPE_PATTERN = Pattern.compile("\\|+$");
+    private static final Splitter OR_SPLITTER = Splitter.on("||").trimResults();
 
     @SuppressWarnings("unchecked")
     static List<RoutingPredicate<HttpHeaders>> copyOfHeaderPredicates(Iterable<String> predicates) {
@@ -131,8 +131,8 @@ final class RoutingPredicate<T> {
         }
         checkArgument(namedPredicate != null,
                       "Invalid predicate: %s (expected: '%s', '%s' or '%s')",
-                      predicateExpr, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern(),
-                      OR_PATTERN.pattern());
+                      predicateExpr, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern(), "A combination of " +
+                              "the previous predicates separated by '||'");
         return new RoutingPredicate<>(namedPredicate.name, namedPredicate.predicate);
     }
 
@@ -143,13 +143,12 @@ final class RoutingPredicate<T> {
                                                                           containsPredicate,
                                                                   BiFunction<U, String, Predicate<T>>
                                                                           equalsPredicate) {
-        final Matcher orMatcher = OR_PATTERN.matcher(predicateExpr);
-        if (orMatcher.find()) {
+        if (predicateExpr.contains("||")) {
             checkArgument(!predicateExpr.endsWith("|"), "Invalid predicate: %s (expected: '%s')",
                           predicateExpr, TRAILING_PIPE_PATTERN.matcher(predicateExpr).replaceAll(""));
-            return Arrays
-                    .stream(OR_PATTERN.split(predicateExpr))
-                    .map(String::trim)
+
+            return Streams
+                    .stream(OR_SPLITTER.split(predicateExpr))
                     .map(expression -> {
                         final NamedPredicate<T> namedPredicate =
                                 buildSingleExprNamedPredicate(expression,
@@ -176,7 +175,7 @@ final class RoutingPredicate<T> {
                                                                           Function<U, Predicate<T>>
                                                                                   containsPredicate,
                                                                           BiFunction<U, String, Predicate<T>>
-                                                                                      equalsPredicate) {
+                                                                                  equalsPredicate) {
         final NamedPredicate<T> namedPredicate;
         final NamedPredicate<T> containNamedPredicate =
                 buildContainNamedPredicate(predicateExpr, nameConverter, containsPredicate);
@@ -217,7 +216,7 @@ final class RoutingPredicate<T> {
     private static <T, U> NamedPredicate<T> buildContainNamedPredicate(String predicateExpr,
                                                                        Function<String, U> nameConverter,
                                                                        Function<U, Predicate<T>>
-                                                                                   containsPredicate) {
+                                                                               containsPredicate) {
         final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
         if (containMatcher.matches()) {
             final U name = nameConverter.apply(containMatcher.group(2));
