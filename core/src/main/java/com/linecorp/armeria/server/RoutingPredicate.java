@@ -71,6 +71,7 @@ final class RoutingPredicate<T> {
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s");
     private static final Pattern TRAILING_PIPE_PATTERN = Pattern.compile("\\|+$");
     private static final Splitter OR_SPLITTER = Splitter.on("||").trimResults();
+    private static final RoutingPredicate<?> EMPTY_INSTANCE = new RoutingPredicate<>("", x -> false);
 
     @SuppressWarnings("unchecked")
     static List<RoutingPredicate<HttpHeaders>> copyOfHeaderPredicates(Iterable<String> predicates) {
@@ -136,6 +137,7 @@ final class RoutingPredicate<T> {
         return new RoutingPredicate<>(routingPredicate.name, routingPredicate.delegate);
     }
 
+    @SuppressWarnings("unchecked")
     @Nullable
     private static <T, U> RoutingPredicate<T> buildOrRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
@@ -167,7 +169,7 @@ final class RoutingPredicate<T> {
                                       COMPARE_PATTERN.pattern());
                         return routingPredicate;
                     })
-                    .reduce(empty(), RoutingPredicate::or);
+                    .reduce((RoutingPredicate<T>) EMPTY_INSTANCE, RoutingPredicate::or);
         }
         return null;
     }
@@ -303,10 +305,6 @@ final class RoutingPredicate<T> {
 
     private static <T> RoutingPredicate<T> from(String name, Predicate<T> predicate) {
         return new RoutingPredicate<>(name, predicate);
-    }
-
-    private static <T> RoutingPredicate<T> empty() {
-        return new RoutingPredicate<>("", x -> false);
     }
 
     private static <T> RoutingPredicate<T> or(RoutingPredicate<T> current, RoutingPredicate<T> other) {
