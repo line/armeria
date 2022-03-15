@@ -375,7 +375,7 @@ public class AbstractClientOptionsBuilder {
 
     /**
      * Adds the specified {@link ClientRequestContext} customizer function so that
-     * it customizes the context in the thread initiated the client call.
+     * it customizes the context in the thread that initiated the client call.
      * The given customizer function is evaluated before the customizer function specified by
      * {@link Clients#withContextCustomizer(Consumer)}.
      *
@@ -386,13 +386,13 @@ public class AbstractClientOptionsBuilder {
      * MyClientStub client =
      *     Clients.builder(...)
      *            .contextCustomizer(ctx -> {
-     *                // This customizer will be invoked from the thread initiated the client call.
+     *                // This customizer will be invoked from the thread that initiates a client call.
      *                ctx.setAttr(USER_ID_ATTR, USER_ID.get());
      *            })
      *            .build(MyClientStub.class);
      *
      * // Good:
-     * // The context data is set by the thread initiated the client call.
+     * // The context data is set by the thread that initiates the client call.
      * USER_ID.set("user1");
      * client.executeSomething1(..);
      * ...
@@ -405,7 +405,7 @@ public class AbstractClientOptionsBuilder {
      * executor.execute(() -> {
      *     // The variable in USER_ID won't be propagated to the context.
      *     // The variable is not valid at the moment client.executeSomething1() is called.
-     *     client.executeSomething1(..);
+     *      client.executeSomething1(..);
      * });
      * }</pre>
      *
