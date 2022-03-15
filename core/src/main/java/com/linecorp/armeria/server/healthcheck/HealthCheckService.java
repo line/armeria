@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpService;
@@ -423,12 +422,7 @@ public final class HealthCheckService implements TransientHttpService {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
 
-        return HttpResponse.from(updateHandler.handle(ctx, req).handle((updateResult, cause) -> {
-            if (cause != null) {
-                cause = Exceptions.peel(cause);
-                return HttpResponse.ofFailure(cause);
-            }
-
+        return HttpResponse.from(updateHandler.handle(ctx, req).thenApply(updateResult -> {
             if (updateResult != null) {
                 switch (updateResult) {
                     case HEALTHY:

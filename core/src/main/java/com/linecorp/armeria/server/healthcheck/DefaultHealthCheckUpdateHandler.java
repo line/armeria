@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -51,7 +51,8 @@ enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler {
             case PATCH:
                 return req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePatch);
             default:
-                return exceptionallyCompletedFuture(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
+                return UnmodifiableFuture.exceptionallyCompletedFuture(
+                        HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
         }
     }
 
