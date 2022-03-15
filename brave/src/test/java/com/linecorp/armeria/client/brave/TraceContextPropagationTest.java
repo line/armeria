@@ -99,8 +99,7 @@ class TraceContextPropagationTest {
                           }, cctx.eventLoop());
                           return delegate.execute(cctx, creq);
                       })
-                      .decorator(BraveClient.newDecorator(tracing))
-                      .responseTimeoutMillis(0);
+                      .decorator(BraveClient.newDecorator(tracing));
                 });
 
                 return client.get("/bar");
@@ -119,8 +118,7 @@ class TraceContextPropagationTest {
                               }, cctx.eventLoop());
                               return delegate.execute(cctx, creq);
                           })
-                          .decorator(BraveClient.newDecorator(tracing))
-                          .responseTimeoutMillis(0);
+                          .decorator(BraveClient.newDecorator(tracing));
                     });
 
                     return client.get("/bar");
@@ -133,7 +131,6 @@ class TraceContextPropagationTest {
             });
             sb.decorator(BraveService.newDecorator(tracing));
             sb.decorator(LoggingService.newDecorator());
-            sb.requestTimeoutMillis(0);
         }
     };
 
@@ -145,7 +142,6 @@ class TraceContextPropagationTest {
                 traceContexts.put("foo-client", currentTraceContext.get());
                 return delegate.execute(ctx, req);
             });
-            cb.responseTimeoutMillis(0);
             cb.decorator(BraveClient.newDecorator(tracing));
         }).blocking();
 
