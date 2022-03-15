@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
