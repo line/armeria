@@ -213,12 +213,13 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param path the path of the file.
      * @param start the start position of the file to read from; must be non-negative.
      *              {@code 0} indicates the start of the file.
-     * @param end the end position of the file to read until, exclusive.
+     * @param end the end position of the file to read until, excluding the byte at the end position.
      *            {@value Long#MAX_VALUE} indicates the end of the file.
      */
+    @UnstableApi
     static StreamMessage<HttpData> of(Path path, long start, long end) {
         requireNonNull(path, "path");
-        return of(path, null, ByteBufAllocator.DEFAULT, start, end, DEFAULT_FILE_BUFFER_SIZE);
+        return of(path, null, ByteBufAllocator.DEFAULT, DEFAULT_FILE_BUFFER_SIZE, start, end);
     }
 
     /**
@@ -267,7 +268,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(path, "path");
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return of(path, executor, alloc, 0, Long.MAX_VALUE, bufferSize);
+        return of(path, executor, alloc, bufferSize, 0, Long.MAX_VALUE);
     }
 
     /**
@@ -279,14 +280,15 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param path the path of the file.
      * @param executor the {@link ExecutorService} which performs blocking IO read.
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer.
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers.
      * @param start the start position of the file to read from; must be non-negative.
      *              {@code 0} indicates the start of the file.
-     * @param end the end position of the file to read until, exclusive.
+     * @param end the end position of the file to read until, excluding the byte at the end position.
      *            {@value Long#MAX_VALUE} indicates the end of the file.
-     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers.
      */
+    @UnstableApi
     static StreamMessage<HttpData> of(Path path, @Nullable ExecutorService executor, ByteBufAllocator alloc,
-                                      long start, long end, int bufferSize) {
+                                      int bufferSize, long start, long end) {
         requireNonNull(path, "path");
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
@@ -295,7 +297,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         if (start == end) {
             return of();
         }
-        return new PathStreamMessage(path, alloc, executor, start, end, bufferSize);
+        return new PathStreamMessage(path, alloc, executor, bufferSize, start, end);
     }
 
     /**

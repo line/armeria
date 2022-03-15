@@ -138,7 +138,7 @@ class PathStreamMessageTest {
         expected = expected.replaceAll("\\\\n", "\n");
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
         final StreamMessage<HttpData> publisher =
-                StreamMessage.of(path, null, ByteBufAllocator.DEFAULT, start, end, bufferSize);
+                StreamMessage.of(path, null, ByteBufAllocator.DEFAULT, bufferSize, start, end);
 
         if (end == -1) {
             end = Long.MAX_VALUE;

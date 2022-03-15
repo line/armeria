@@ -78,13 +78,13 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     private volatile PathSubscription pathSubscription;
 
     PathStreamMessage(Path path, ByteBufAllocator alloc,
-                      @Nullable ExecutorService blockingTaskExecutor, long start, long end, int bufferSize) {
+                      @Nullable ExecutorService blockingTaskExecutor, int bufferSize, long start, long end) {
         this.path = requireNonNull(path, "path");
         this.alloc = requireNonNull(alloc, "alloc");
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.bufferSize = Math.min(Ints.saturatedCast(end - start), bufferSize);
         this.start = start;
         this.end = end;
-        this.bufferSize = Math.min(Ints.saturatedCast(this.end - start), bufferSize);
     }
 
     @Override
