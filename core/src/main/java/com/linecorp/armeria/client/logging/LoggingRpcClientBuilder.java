@@ -23,11 +23,14 @@ import org.slf4j.Logger;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -96,6 +99,16 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
+    public LoggingRpcClientBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
+        return (LoggingRpcClientBuilder) super.responseLogLevel(status, logLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
+        return (LoggingRpcClientBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
+    @Override
     public LoggingRpcClientBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         return (LoggingRpcClientBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
     }
@@ -114,6 +127,11 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     @Override
     public LoggingRpcClientBuilder responseLogLevelMapper(
             Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 

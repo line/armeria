@@ -25,12 +25,15 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -106,6 +109,16 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     @Override
+    public LoggingServiceBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
+        return (LoggingServiceBuilder) super.responseLogLevel(status, logLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
+        return (LoggingServiceBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
+    @Override
     public LoggingServiceBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         return (LoggingServiceBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
     }
@@ -124,6 +137,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     @Override
     public LoggingServiceBuilder responseLogLevelMapper(
             Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 

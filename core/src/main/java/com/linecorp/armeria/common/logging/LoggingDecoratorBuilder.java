@@ -28,6 +28,8 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Functions;
@@ -51,13 +53,11 @@ public abstract class LoggingDecoratorBuilder {
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
     private Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper =
             log -> requestLogLevel();
-    private Function<? super RequestLog, LogLevel> responseLogLevelMapper =
+    private ResponseLogLevelMapper responseLogLevelMapper =
             log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
 
     private boolean isRequestLogLevelSet;
-    private boolean isResponseLogLevelSet;
     private boolean isRequestLogLevelMapperSet;
-    private boolean isResponseLogLevelMapperSet;
 
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -124,16 +124,28 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the {@link LogLevel} to use when logging responses that's status is equal to the specified
+     * {@link HttpStatus}.
+     */
+    public LoggingDecoratorBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
+        return responseLogLevelMapper(ResponseLogLevelMapper.of(status, logLevel));
+    }
+
+    /**
+     * Sets the {@link LogLevel} to use when logging responses that's status is belong to the specified
+     * {@link HttpStatusClass}.
+     */
+    public LoggingDecoratorBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
+        return responseLogLevelMapper(ResponseLogLevelMapper.of(statusClass, logLevel));
+    }
+
+    /**
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      * If unset, will use {@link LogLevel#DEBUG}.
      */
     public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
-        if (isResponseLogLevelMapperSet) {
-            throw new IllegalStateException("responseLogLevelMapper has been set already.");
-        }
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
-        isResponseLogLevelSet = true;
         return this;
     }
 
@@ -150,11 +162,7 @@ public abstract class LoggingDecoratorBuilder {
      * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
      */
     public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        if (isResponseLogLevelMapperSet) {
-            throw new IllegalStateException("responseLogLevelMapper has been set already.");
-        }
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
-        isResponseLogLevelSet = true;
         return this;
     }
 
@@ -191,12 +199,16 @@ public abstract class LoggingDecoratorBuilder {
      */
     public LoggingDecoratorBuilder responseLogLevelMapper(
             Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
-        if (isResponseLogLevelSet) {
-            throw new IllegalStateException(
-                    "successfulResponseLogLevel or failedResponseLogLevel has been set already.");
-        }
-        this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
-        isResponseLogLevelMapperSet = true;
+        requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
+        return responseLogLevelMapper(responseLogLevelMapper::apply);
+    }
+
+    /**
+     * Sets the {@link ResponseLogLevelMapper} to use when mapping the log level of response logs.
+     */
+    public LoggingDecoratorBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
+        requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
+        this.responseLogLevelMapper = responseLogLevelMapper.orElse(this.responseLogLevelMapper);
         return this;
     }
 
@@ -398,8 +410,7 @@ public abstract class LoggingDecoratorBuilder {
     @Override
     public String toString() {
         return toString(this, logger, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
-                        requestLogLevelMapper, responseLogLevelMapper,
-                        isRequestLogLevelMapperSet, isResponseLogLevelMapperSet,
+                        requestLogLevelMapper, responseLogLevelMapper, isRequestLogLevelMapperSet,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
                         responseCauseSanitizer);
@@ -414,7 +425,6 @@ public abstract class LoggingDecoratorBuilder {
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             boolean isRequestLogLevelMapperSet,
-            boolean isResponseLogLevelMapperSet,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, ?,
@@ -439,12 +449,10 @@ public abstract class LoggingDecoratorBuilder {
         } else {
             helper.add("requestLogLevel", requestLogLevel);
         }
-        if (isResponseLogLevelMapperSet) {
-            helper.add("responseLogLevelMapper", responseLogLevelMapper);
-        } else {
-            helper.add("successfulResponseLogLevel", successfulResponseLogLevel);
-            helper.add("failureResponseLogLevel", failureResponseLogLevel);
-        }
+
+        helper.add("responseLogLevelMapper", responseLogLevelMapper);
+        helper.add("successfulResponseLogLevel", successfulResponseLogLevel);
+        helper.add("failureResponseLogLevel", failureResponseLogLevel);
 
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
