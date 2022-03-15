@@ -483,16 +483,33 @@ public final class Clients {
     }
 
     /**
-     * Sets the specified {@link ClientRequestContext} customization function in a thread-local variable so that
-     * the customized context is used when the client invokes a request from the current thread. Use the
-     * {@code try-with-resources} block with the returned {@link SafeCloseable} to unset the thread-local
-     * variable automatically:
+     * Sets the specified {@link ClientRequestContext} customizer function in a thread-local variable so that
+     * the customized context is used when the client invokes a request from the current thread.
+     * The given customizer function is evaluated after the customizer function specified with
+     * {@link ClientBuilder#contextCustomizer(Consumer)}.
+     *
+     * <p>Use the {@code try-with-resources} block with the returned {@link SafeCloseable} to unset the
+     * thread-local variable automatically:
      * <pre>{@code
+     * // Good:
      * try (SafeCloseable ignored = withContextCustomizer(ctx -> {
      *     ctx.setAttr(USER_ID, userId);
      *     ctx.setAttr(USER_SECRET, secret);
      * })) {
      *     client.executeSomething(..);
+     * }
+     *
+     * // Bad:
+     * try (SafeCloseable ignored = withContextCustomizer(ctx -> {
+     *     ctx.setAttr(USER_ID, userId);
+     *     ctx.setAttr(USER_SECRET, secret);
+     * })) {
+     *     executor.execute(() -> {
+     *         // The variables in USER_ID and USER_SECRET will not be propagated to the context.
+     *         // client.executeSomething() must be invoked by the same thread
+     *         // that called withContextCustomizer().
+     *         client.executeSomething(..);
+     *     });
      * }
      * }</pre>
      * You can also nest the request context customization:
@@ -505,7 +522,8 @@ public final class Clients {
      *     }
      * }
      * }</pre>
-     * Note that certain properties of {@link ClientRequestContext}, such as:
+     *
+     * <p>Note that certain properties of {@link ClientRequestContext}, such as:
      * <ul>
      *   <li>{@link ClientRequestContext#endpoint()}</li>
      *   <li>{@link ClientRequestContext#localAddress()}</li>
@@ -515,6 +533,7 @@ public final class Clients {
      * is not determined yet.
      *
      * @see #withHeaders(Consumer)
+     * @see ClientBuilder#contextCustomizer(Consumer)
      */
     @MustBeClosed
     public static SafeCloseable withContextCustomizer(

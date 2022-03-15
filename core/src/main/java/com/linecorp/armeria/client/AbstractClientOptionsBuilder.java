@@ -374,18 +374,42 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Adds the specified {@link ClientRequestContext} customization function so that
-     * the customized context is used when the client invokes a request from the current thread.
+     * Adds the specified {@link ClientRequestContext} customizer function so that
+     * it customizes the context in the thread initiated the client call.
+     * The given customizer function is evaluated before the customizer function specified by
+     * {@link Clients#withContextCustomizer(Consumer)}.
+     *
      * <pre>{@code
-     * Clients.builder(...)
-     *        .contextCustomizer(ctx -> {
-     *            // Get traceId from the current thread local storage.
-     *            String traceId = Trace.current().currentTraceContext()...;
-     *            ctx.setAttr(TRACE_ID, traceId);
-     *        })
-     *        .build();
+     * static final ThreadLocal<String> USER_ID = new ThreadLocal<>();
+     * static final AttributeKey<String> USER_ID_ATTR = AttributeKey.valueOf("USER_ID");
+     * ...
+     * MyClientStub client =
+     *     Clients.builder(...)
+     *            .contextCustomizer(ctx -> {
+     *                // This customizer will be invoked from the thread initiated the client call.
+     *                ctx.setAttr(USER_ID_ATTR, USER_ID.get());
+     *            })
+     *            .build(MyClientStub.class);
+     *
+     * // Good:
+     * // The context data is set by the thread initiated the client call.
+     * USER_ID.set("user1");
+     * client.executeSomething1(..);
+     * ...
+     * client.executeSomethingN(..);
+     * // Should clean up the thread local storage.
+     * USER_ID.remove();
+     *
+     * // Bad:
+     * USER_ID.set("user1");
+     * executor.execute(() -> {
+     *     // The variable in USER_ID won't be propagated to the context.
+     *     // The variable is not valid at the moment client.executeSomething1() is called.
+     *     client.executeSomething1(..);
+     * });
      * }</pre>
-     * Note that certain properties of {@link ClientRequestContext}, such as:
+     *
+     * <p>Note that certain properties of {@link ClientRequestContext}, such as:
      * <ul>
      *   <li>{@link ClientRequestContext#endpoint()}</li>
      *   <li>{@link ClientRequestContext#localAddress()}</li>
@@ -393,6 +417,8 @@ public class AbstractClientOptionsBuilder {
      * </ul>
      * may be {@code null} while the customizer function runs, because the target host of the {@link Request}
      * is not determined yet.
+     *
+     * @see Clients#withContextCustomizer(Consumer)
      */
     @UnstableApi
     public AbstractClientOptionsBuilder contextCustomizer(

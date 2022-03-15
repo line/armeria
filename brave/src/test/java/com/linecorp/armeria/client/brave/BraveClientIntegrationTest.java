@@ -152,7 +152,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     protected void get(WebClient client, String path, BiConsumer<Integer, Throwable> callback) {
         final HttpResponse res = client.get(path);
-        // Use 'handleAsync' to make sure a callback should be invoked without the current trace context
+        // Use 'handleAsync' to make sure a callback is invoked without the current trace context
         res.aggregate().handleAsync((response, cause) -> {
             if (cause == null) {
                 callback.accept(response.status().code(), null);

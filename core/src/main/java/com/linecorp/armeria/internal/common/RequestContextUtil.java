@@ -233,8 +233,7 @@ public final class RequestContextUtil {
                 try {
                     closeable.close();
                 } catch (Throwable t) {
-                    logger.warn("Unexpected exception while closing RequestContext.hook(). " +
-                                "closeable: {}, ctx: {}", closeable, current, t);
+                    logger.warn("{} Unexpected exception while closing RequestContext.hook().", current, t);
                 }
                 requestContextStorage.pop(current, toRestore);
             };
