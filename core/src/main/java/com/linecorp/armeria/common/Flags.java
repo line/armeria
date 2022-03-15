@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -89,6 +88,8 @@ import io.netty.util.ReferenceCountUtil;
 
 /**
  * The system properties that affect Armeria's runtime behavior.
+ * Priority is JVM option, SPI interface provided by {@link ArmeriaOptionsProvider} and default option
+ * respectively. if value is fail to validated. The next candidate will be used.
  */
 public final class Flags {
 
@@ -98,10 +99,14 @@ public final class Flags {
 
     private static final String PREFIX = "com.linecorp.armeria.";
 
+    @Nullable
     private static final ArmeriaOptionsProvider armeriaOptionsProvider;
+
+    //For testing purpose, we need ArmeriaOptionsProvider that is loaded using the same loader as Flags class
     static {
         final List<ArmeriaOptionsProvider> providers =
-                ImmutableList.copyOf(ServiceLoader.load(ArmeriaOptionsProvider.class));
+                ImmutableList.copyOf(
+                        ServiceLoader.load(ArmeriaOptionsProvider.class, Flags.class.getClassLoader()));
         if (!providers.isEmpty()) {
             armeriaOptionsProvider = providers.get(0);
             if (providers.size() > 1) {
@@ -113,26 +118,29 @@ public final class Flags {
                             ArmeriaOptionsProvider.class.getSimpleName());
             }
         } else {
-            armeriaOptionsProvider = DefaultFlags.INSTANCE;
+            armeriaOptionsProvider = null;
         }
     }
 
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
-    static {
-        final String spec = getNormalized("verboseExceptions", armeriaOptionsProvider.verboseExceptionSamplerSpec(), val -> {
-            if ("true".equals(val) || "false".equals(val)) {
-                return true;
-            }
 
-            try {
-                Sampler.of(val);
-                return true;
-            } catch (Exception e) {
-                // Invalid sampler specification
-                return false;
-            }
-        });
+    static {
+        final String spec = getNormalized("verboseExceptions",
+                                          ArmeriaOptionsProvider::verboseExceptionSamplerSpec,
+                                          DefaultFlags.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
+                    if ("true".equals(val) || "false".equals(val)) {
+                        return true;
+                    }
+
+                    try {
+                        Sampler.of(val);
+                        return true;
+                    } catch (Exception e) {
+                        // Invalid sampler specification
+                        return false;
+                    }
+                });
 
         switch (spec) {
             case "true":
@@ -151,110 +159,134 @@ public final class Flags {
         }
     }
 
-    //TODO if user intentionally make preferredIpV4Addresses null via JMV option, it will be ignored.
     @Nullable
-    private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES =
-            Optional.ofNullable(getLowerCased("preferredIpV4Addresses"))
-                    .map(preferredIpV4Addresses -> {
-                        final List<Predicate<InetAddress>> preferredIpV4Addresses2 =
-                                CSV_SPLITTER.splitToList(preferredIpV4Addresses)
-                                            .stream()
-                                            .map(cidr -> {
-                                                try {
-                                                    return InetAddressPredicates.ofCidr(cidr);
-                                                } catch (Exception e) {
-                                                    logger.warn("Failed to parse a preferred IPv4: {}", cidr);
-                                                }
-                                                return null;
-                                            })
-                                            .filter(Objects::nonNull)
-                                            .collect(toImmutableList());
-                        switch (preferredIpV4Addresses2.size()) {
-                            case 0:
-                                return null;
-                            case 1:
-                                return preferredIpV4Addresses2.get(0);
-                            default:
-                                return (Predicate<InetAddress>) inetAddress -> {
-                                    for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses2) {
-                                        if (preferredIpV4Addr.test(inetAddress)) {
-                                            return true;
+    private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES = getNormalizedTo(
+            "preferredIpV4Addresses",
+            ArmeriaOptionsProvider::preferredIpV4Addresses,
+            DefaultFlags.PREFERRED_IP_V4_ADDRESSES,
+            val -> {
+                try {
+                    CSV_SPLITTER.splitToList(val)
+                                .forEach(InetAddressPredicates::ofCidr);
+                } catch (Exception ex) {
+                    return false;
+                }
+                return true;
+            },
+            unused -> true,
+            preferredIpV4Addresses -> {
+                final List<Predicate<InetAddress>> preferredIpV4Addresses2 =
+                        CSV_SPLITTER.splitToList(preferredIpV4Addresses)
+                                    .stream()
+                                    .map(cidr -> {
+                                        try {
+                                            return InetAddressPredicates.ofCidr(cidr);
+                                        } catch (Exception e) {
+                                            logger.warn("Failed to parse a preferred IPv4: {}", cidr);
                                         }
-                                    }
-                                    return false;
-                                };
-                        }
-                    }).orElse(armeriaOptionsProvider.preferredIpV4Addresses());
+                                        return null;
+                                    })
+                                    .filter(Objects::nonNull)
+                                    .collect(toImmutableList());
+                switch (preferredIpV4Addresses2.size()) {
+                    case 0:
+                        return null;
+                    case 1:
+                        return preferredIpV4Addresses2.get(0);
+                    default:
+                        return inetAddress -> {
+                            for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses2) {
+                                if (preferredIpV4Addr.test(inetAddress)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        };
+                }
+            }
+    );
 
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS =
-            getBoolean("verboseSocketExceptions", armeriaOptionsProvider.verboseSocketExceptions());
+            getBoolean("verboseSocketExceptions", ArmeriaOptionsProvider::verboseSocketExceptions,
+                       DefaultFlags.VERBOSE_SOCKET_EXCEPTIONS);
 
     private static final boolean VERBOSE_RESPONSES =
-            getBoolean("verboseResponses", armeriaOptionsProvider.verboseResponses());
+            getBoolean("verboseResponses", ArmeriaOptionsProvider::verboseResponses,
+                       DefaultFlags.VERBOSE_RESPONSES);
 
     @Nullable
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
-            get("requestContextStorageProvider",
-                armeriaOptionsProvider.requestContextStorageProvider(), unused -> true);
+            get("requestContextStorageProvider", ArmeriaOptionsProvider::requestContextStorageProvider,
+                DefaultFlags.REQUEST_CONTEXT_STORAGE_PROVIDER, unused -> true);
 
     private static final boolean WARN_NETTY_VERSIONS =
-            getBoolean("warnNettyVersions", armeriaOptionsProvider.warnNettyVersions());
+            getBoolean("warnNettyVersions", ArmeriaOptionsProvider::warnNettyVersions,
+                       DefaultFlags.WARN_NETTY_VERSIONS);
 
-    private static final boolean USE_EPOLL = getBoolean("useEpoll", TransportType.EPOLL.isAvailable(),
+    private static final boolean USE_EPOLL = getBoolean("useEpoll", unused -> DefaultFlags.USE_EPOLL,
+                                                        DefaultFlags.USE_EPOLL,
                                                         value -> TransportType.EPOLL.isAvailable() || !value);
+
+    private static final Predicate<TransportType> transportTypeValidator = transportType -> {
+        switch (transportType) {
+            case IO_URING:
+                if (TransportType.IO_URING.isAvailable()) {
+                    logger.info("Using io_uring");
+                    return true;
+                } else {
+                    final Throwable cause = TransportType.IO_URING.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("io_uring not available: {}", cause.toString());
+                    } else {
+                        logger.info("io_uring not available: ?");
+                    }
+                    return false;
+                }
+            case EPOLL:
+                if (TransportType.EPOLL.isAvailable()) {
+                    logger.info("Using /dev/epoll");
+                    return true;
+                } else {
+                    final Throwable cause = TransportType.EPOLL.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("/dev/epoll not available: {}", cause.toString());
+                    } else {
+                        logger.info("/dev/epoll not available: ?");
+                    }
+                    return false;
+                }
+            default:
+                return false;
+        }
+    };
+
+    private static final Function<String, @Nullable TransportType> strToTransportType = strType -> {
+        switch (strType) {
+            case "nio":
+                return TransportType.NIO;
+            case "epoll":
+                return TransportType.EPOLL;
+            case "io_uring":
+                return TransportType.IO_URING;
+            default:
+                return null;
+        }
+    };
 
     private static final TransportType TRANSPORT_TYPE =
             getNormalizedTo("transportType",
-                            transportType -> {
-                                TransportType type = null;
-                                switch (transportType) {
-                                    case "io_uring":
-                                        if (TransportType.IO_URING.isAvailable()) {
-                                            logger.info("Using io_uring");
-                                            type = TransportType.IO_URING;
-                                        } else {
-                                            final Throwable cause =
-                                                    TransportType.IO_URING.unavailabilityCause();
-                                            if (cause != null) {
-                                                logger.info("io_uring not available: {}", cause.toString());
-                                            } else {
-                                                logger.info("io_uring not available: ?");
-                                            }
-                                        }
-                                        // fallthrough
-                                    case "epoll":
-                                        if (TransportType.EPOLL.isAvailable() && type == null) {
-                                            logger.info("Using /dev/epoll");
-                                            type = TransportType.EPOLL;
-                                        } else {
-                                            final Throwable cause = TransportType.EPOLL.unavailabilityCause();
-                                            if (cause != null) {
-                                                logger.info("/dev/epoll not available: {}", cause.toString());
-                                            } else {
-                                                logger.info("/dev/epoll not available: ?");
-                                            }
-                                        }
-                                        // fallthrough
-                                    default:
-                                        if (type == null) {
-                                            logger.info("Using nio");
-                                            type = TransportType.NIO;
-                                        }
-                                        break;
+                            ArmeriaOptionsProvider::transportType,
+                            DefaultFlags.TRANSPORT_TYPE,
+                            strType -> {
+                                TransportType type =
+                                        strToTransportType.apply(strType);
+                                if (type == null) {
+                                    return false;
                                 }
-                                return type;
-                            },
-                            armeriaOptionsProvider.transportType(),
-                            val -> {
-                                switch (val) {
-                                    case "nio":
-                                    case "epoll":
-                                    case "io_uring":
-                                        return true;
-                                    default:
-                                        return false;
-                                }
-                            });
+                                return transportTypeValidator.test(type);
+                                },
+                            transportTypeValidator,
+                            strToTransportType);
 
     @Nullable
     private static Boolean useOpenSsl;
@@ -262,175 +294,217 @@ public final class Flags {
     private static Boolean dumpOpenSslInfo;
 
     private static final int MAX_NUM_CONNECTIONS =
-            getInt("maxNumConnections", armeriaOptionsProvider.maxNumConnections(), value -> value > 0);
+            getInt("maxNumConnections", ArmeriaOptionsProvider::maxNumConnections,
+                   DefaultFlags.MAX_NUM_CONNECTIONS, value -> value > 0);
 
     private static final int NUM_COMMON_WORKERS =
-            getInt("numCommonWorkers", armeriaOptionsProvider.numCommonWorkers(), value -> value > 0);
+            getInt("numCommonWorkers", ArmeriaOptionsProvider::numCommonWorkers,
+                   DefaultFlags.NUM_COMMON_WORKERS, value -> value > 0);
 
     private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
             getInt("numCommonBlockingTaskThreads",
-                   armeriaOptionsProvider.numCommonBlockingTaskThreads(),
+                   ArmeriaOptionsProvider::numCommonBlockingTaskThreads,
+                   DefaultFlags.NUM_COMMON_BLOCKING_TASK_THREADS,
                    value -> value > 0);
 
     private static final long DEFAULT_MAX_REQUEST_LENGTH =
             getLong("defaultMaxRequestLength",
-                    armeriaOptionsProvider.defaultMaxRequestLength(),
+                    ArmeriaOptionsProvider::defaultMaxRequestLength,
+                    DefaultFlags.DEFAULT_MAX_REQUEST_LENGTH,
                     value -> value >= 0);
 
     private static final long DEFAULT_MAX_RESPONSE_LENGTH =
             getLong("defaultMaxResponseLength",
-                    armeriaOptionsProvider.defaultMaxResponseLength(),
+                    ArmeriaOptionsProvider::defaultMaxResponseLength,
+                    DefaultFlags.DEFAULT_MAX_RESPONSE_LENGTH,
                     value -> value >= 0);
 
     private static final long DEFAULT_REQUEST_TIMEOUT_MILLIS =
             getLong("defaultRequestTimeoutMillis",
-                    armeriaOptionsProvider.defaultRequestTimeoutMillis(),
+                    ArmeriaOptionsProvider::defaultRequestTimeoutMillis,
+                    DefaultFlags.DEFAULT_REQUEST_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
     private static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS =
             getLong("defaultResponseTimeoutMillis",
-                    armeriaOptionsProvider.defaultResponseTimeoutMillis(),
+                    ArmeriaOptionsProvider::defaultResponseTimeoutMillis,
+                    DefaultFlags.DEFAULT_RESPONSE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
     private static final long DEFAULT_CONNECT_TIMEOUT_MILLIS =
             getLong("defaultConnectTimeoutMillis",
-                    armeriaOptionsProvider.defaultConnectTimeoutMillis(),
+                    ArmeriaOptionsProvider::defaultConnectTimeoutMillis,
+                    DefaultFlags.DEFAULT_CONNECT_TIMEOUT_MILLIS,
                     value -> value > 0);
 
     private static final long DEFAULT_WRITE_TIMEOUT_MILLIS =
             getLong("defaultWriteTimeoutMillis",
-                    armeriaOptionsProvider.defaultWriteTimeoutMillis(),
+                    ArmeriaOptionsProvider::defaultWriteTimeoutMillis,
+                    DefaultFlags.DEFAULT_WRITE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
     private static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS =
             getLong("defaultServerIdleTimeoutMillis",
-                    armeriaOptionsProvider.defaultServerIdleTimeoutMillis(),
+                    ArmeriaOptionsProvider::defaultServerIdleTimeoutMillis,
+                    DefaultFlags.DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
             getLong("defaultClientIdleTimeoutMillis",
-                    armeriaOptionsProvider.defaultClientIdleTimeoutMillis(),
+                    ArmeriaOptionsProvider::defaultClientIdleTimeoutMillis,
+                    DefaultFlags.DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
             getLong("defaultPingIntervalMillis",
-                    armeriaOptionsProvider.defaultPingIntervalMillis(),
+                    ArmeriaOptionsProvider::defaultPingIntervalMillis,
+                    DefaultFlags.DEFAULT_PING_INTERVAL_MILLIS,
                     value -> value >= 0);
 
     private static final int DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION =
             getInt("defaultMaxServerNumRequestsPerConnection",
-                   armeriaOptionsProvider.defaultMaxServerNumRequestsPerConnection(),
+                   ArmeriaOptionsProvider::defaultMaxServerNumRequestsPerConnection,
+                   DefaultFlags.DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
                    value -> value >= 0);
 
     private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
             getInt("defaultMaxClientNumRequestsPerConnection",
-                   armeriaOptionsProvider.defaultMaxClientNumRequestsPerConnection(),
+                   ArmeriaOptionsProvider::defaultMaxClientNumRequestsPerConnection,
+                   DefaultFlags.DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
                    value -> value >= 0);
 
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
             getLong("defaultMaxServerConnectionAgeMillis",
-                    armeriaOptionsProvider.defaultMaxServerConnectionAgeMillis(),
+                    ArmeriaOptionsProvider::defaultMaxServerConnectionAgeMillis,
+                    DefaultFlags.DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
     private static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS =
             getLong("defaultMaxClientConnectionAgeMillis",
-                    armeriaOptionsProvider.defaultMaxClientConnectionAgeMillis(),
+                    ArmeriaOptionsProvider::defaultMaxClientConnectionAgeMillis,
+                    DefaultFlags.DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
     private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
             getLong("defaultServerConnectionDrainDurationMicros",
-                    armeriaOptionsProvider.defaultServerConnectionDrainDurationMicros(),
+                    ArmeriaOptionsProvider::defaultServerConnectionDrainDurationMicros,
+                    DefaultFlags.DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS,
                     value -> value >= 0);
 
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getInt("defaultHttp2InitialConnectionWindowSize",
-                   armeriaOptionsProvider.defaultHttp2InitialConnectionWindowSize(),
+                   ArmeriaOptionsProvider::defaultHttp2InitialConnectionWindowSize,
+                   DefaultFlags.DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE,
                    value -> value > 0);
 
     private static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE =
             getInt("defaultHttp2InitialStreamWindowSize",
-                   armeriaOptionsProvider.defaultHttp2InitialStreamWindowSize(),
+                   ArmeriaOptionsProvider::defaultHttp2InitialStreamWindowSize,
+                   DefaultFlags.DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE,
                    value -> value > 0);
 
     private static final int DEFAULT_HTTP2_MAX_FRAME_SIZE =
             getInt("defaultHttp2MaxFrameSize",
-                   armeriaOptionsProvider.defaultHttp2MaxFrameSize(),
+                   ArmeriaOptionsProvider::defaultHttp2MaxFrameSize,
+                   DefaultFlags.DEFAULT_HTTP2_MAX_FRAME_SIZE,
                    value -> value >= Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND &&
                             value <= Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND);
 
     private static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION =
             getLong("defaultHttp2MaxStreamsPerConnection",
-                    armeriaOptionsProvider.defaultHttp2MaxStreamsPerConnection(),
+                    ArmeriaOptionsProvider::defaultHttp2MaxStreamsPerConnection,
+                    DefaultFlags.DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION,
                     value -> value > 0 && value <= 0xFFFFFFFFL);
 
     private static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE =
             getLong("defaultHttp2MaxHeaderListSize",
-                    armeriaOptionsProvider.defaultHttp2MaxHeaderListSize(),
+                    ArmeriaOptionsProvider::defaultHttp2MaxHeaderListSize,
+                    DefaultFlags.DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE,
                     value -> value > 0 && value <= 0xFFFFFFFFL);
 
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
             getInt("defaultHttp1MaxInitialLineLength",
-                   armeriaOptionsProvider.defaultHttp1MaxInitialLineLength(),
+                   ArmeriaOptionsProvider::defaultHttp1MaxInitialLineLength,
+                   DefaultFlags.DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH,
                    value -> value >= 0);
 
     private static final int DEFAULT_MAX_HTTP1_HEADER_SIZE =
             getInt("defaultHttp1MaxHeaderSize",
-                   armeriaOptionsProvider.defaultHttp1MaxHeaderSize(),
+                   ArmeriaOptionsProvider::defaultHttp1MaxHeaderSize,
+                   DefaultFlags.DEFAULT_MAX_HTTP1_HEADER_SIZE,
                    value -> value >= 0);
 
     private static final int DEFAULT_HTTP1_MAX_CHUNK_SIZE =
             getInt("defaultHttp1MaxChunkSize",
-                   armeriaOptionsProvider.defaultHttp1MaxChunkSize(),
+                   ArmeriaOptionsProvider::defaultHttp1MaxChunkSize,
+                   DefaultFlags.DEFAULT_HTTP1_MAX_CHUNK_SIZE,
                    value -> value >= 0);
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
-            getBoolean("defaultUseHttp2Preface", armeriaOptionsProvider.defaultUseHttp2Preface());
+            getBoolean("defaultUseHttp2Preface",
+                       ArmeriaOptionsProvider::defaultUseHttp2Preface,
+                       DefaultFlags.DEFAULT_USE_HTTP2_PREFACE);
+
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING =
-            getBoolean("defaultUseHttp1Pipelining", armeriaOptionsProvider.defaultUseHttp1Pipelining());
+            getBoolean("defaultUseHttp1Pipelining",
+                       ArmeriaOptionsProvider::defaultUseHttp1Pipelining,
+                       DefaultFlags.DEFAULT_USE_HTTP1_PIPELINING);
 
     private static final String DEFAULT_BACKOFF_SPEC =
-            getNormalized("defaultBackoffSpec", armeriaOptionsProvider.defaultBackoffSpec(), value -> {
-                try {
-                    Backoff.of(value);
-                    return true;
-                } catch (Exception e) {
-                    // Invalid backoff specification
-                    return false;
-                }
-            });
+            getNormalized("defaultBackoffSpec", ArmeriaOptionsProvider::defaultBackoffSpec,
+                          DefaultFlags.DEFAULT_BACKOFF_SPEC, value -> {
+                        try {
+                            Backoff.of(value);
+                            return true;
+                        } catch (Exception e) {
+                            // Invalid backoff specification
+                            return false;
+                        }
+                    });
 
     private static final int DEFAULT_MAX_TOTAL_ATTEMPTS =
             getInt("defaultMaxTotalAttempts",
-                   armeriaOptionsProvider.defaultMaxTotalAttempts(),
+                   ArmeriaOptionsProvider::defaultMaxTotalAttempts,
+                   DefaultFlags.DEFAULT_MAX_TOTAL_ATTEMPTS,
                    value -> value > 0);
 
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
-            nullableCaffeineSpec("routeCache", armeriaOptionsProvider.routeCacheSpec());
+            nullableCaffeineSpec("routeCache", ArmeriaOptionsProvider::routeCacheSpec,
+                                 DefaultFlags.ROUTE_CACHE_SPEC);
 
     @Nullable
     private static final String ROUTE_DECORATOR_CACHE_SPEC =
-            nullableCaffeineSpec("routeDecoratorCache", armeriaOptionsProvider.routeDecoratorCacheSpec());
+            nullableCaffeineSpec("routeDecoratorCache", ArmeriaOptionsProvider::routeDecoratorCacheSpec,
+                                 DefaultFlags.ROUTE_DECORATOR_CACHE_SPEC);
 
     @Nullable
     private static final String PARSED_PATH_CACHE_SPEC =
-            nullableCaffeineSpec("parsedPathCache", armeriaOptionsProvider.parsedPathCacheSpec());
+            nullableCaffeineSpec("parsedPathCache", ArmeriaOptionsProvider::parsedPathCacheSpec,
+                                 DefaultFlags.PARSED_PATH_CACHE_SPEC);
 
     @Nullable
     private static final String HEADER_VALUE_CACHE_SPEC =
-            nullableCaffeineSpec("headerValueCache", armeriaOptionsProvider.headerValueCacheSpec());
+            nullableCaffeineSpec("headerValueCache", ArmeriaOptionsProvider::headerValueCacheSpec,
+                                 DefaultFlags.HEADER_VALUE_CACHE_SPEC);
 
     private static final List<String> CACHED_HEADERS =
-            getNormalizedTo("cachedHeaders", CSV_SPLITTER::splitToList,
-                            armeriaOptionsProvider.cachedHeaders(), CharMatcher.ascii()::matchesAllOf);
+            getNormalizedTo("cachedHeaders",
+                            ArmeriaOptionsProvider::cachedHeaders,
+                            DefaultFlags.CACHED_HEADERS,
+                            CharMatcher.ascii()::matchesAllOf,
+                            list -> list.stream().allMatch(CharMatcher.ascii()::matchesAllOf),
+                            CSV_SPLITTER::splitToList
+            );
 
     @Nullable
     private static final String FILE_SERVICE_CACHE_SPEC =
-            nullableCaffeineSpec("fileServiceCache", armeriaOptionsProvider.fileServiceCacheSpec());
+            nullableCaffeineSpec("fileServiceCache", ArmeriaOptionsProvider::fileServiceCacheSpec,
+                                 DefaultFlags.FILE_SERVICE_CACHE_SPEC);
 
     private static final String DNS_CACHE_SPEC =
-            nonnullCaffeineSpec("dnsCacheSpec", armeriaOptionsProvider.dnsCacheSpec());
-
+            nonnullCaffeineSpec("dnsCacheSpec", ArmeriaOptionsProvider::dnsCacheSpec,
+                                DefaultFlags.DNS_CACHE_SPEC);
 
     private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
@@ -438,43 +512,52 @@ public final class Flags {
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final boolean USE_JDK_DNS_RESOLVER =
-            getBoolean("useJdkDnsResolver", armeriaOptionsProvider.useJdkDnsResolver());
+            getBoolean("useJdkDnsResolver", ArmeriaOptionsProvider::useJdkDnsResolver,
+                       DefaultFlags.USE_JDK_DNS_RESOLVER);
 
     private static final boolean REPORT_BLOCKED_EVENT_LOOP =
-            getBoolean("reportBlockedEventLoop", armeriaOptionsProvider.reportBlockedEventLoop());
+            getBoolean("reportBlockedEventLoop", ArmeriaOptionsProvider::reportBlockedEventLoop,
+                       DefaultFlags.REPORT_BLOCKED_EVENT_LOOP);
 
     private static final boolean VALIDATE_HEADERS =
-            getBoolean("validateHeaders", armeriaOptionsProvider.validateHeaders());
+            getBoolean("validateHeaders", ArmeriaOptionsProvider::validateHeaders,
+                       DefaultFlags.VALIDATE_HEADERS);
 
     private static final boolean DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS =
-            getBoolean("tlsAllowUnsafeCiphers", armeriaOptionsProvider.tlsAllowUnsafeCiphers());
+            getBoolean("tlsAllowUnsafeCiphers", ArmeriaOptionsProvider::tlsAllowUnsafeCiphers,
+                       DefaultFlags.DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS);
 
-    private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
-            getNormalizedTo("transientServiceOptions", transientServiceOptions -> Sets.immutableEnumSet(
-                                    Streams.stream(CSV_SPLITTER.split(transientServiceOptions))
-                                           .map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
-                                           .collect(toImmutableSet())),
-                            armeriaOptionsProvider.transientServiceOptions(),
-                            val -> {
-                                try {
-                                    Streams.stream(CSV_SPLITTER.split(val))
-                                           .forEach(feature -> TransientServiceOption.valueOf(
-                                                   Ascii.toUpperCase(feature)));
-                                    return true;
-                                } catch (Exception e) {
-                                    return false;
-                                }
-                            });
+    private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS = getNormalizedTo(
+            "transientServiceOptions", ArmeriaOptionsProvider::transientServiceOptions,
+            DefaultFlags.TRANSIENT_SERVICE_OPTIONS, val -> {
+                try {
+                    Streams.stream(CSV_SPLITTER.split(val)).forEach(
+                            feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)));
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            }, unused -> true,
+            transientServiceOptions -> Sets.immutableEnumSet(
+                    Streams.stream(CSV_SPLITTER.split(transientServiceOptions))
+                           .map(feature -> TransientServiceOption.valueOf(
+                                   Ascii.toUpperCase(feature)))
+                           .collect(toImmutableSet()))
+    );
 
     private static final boolean DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING =
             getBoolean("useLegacyRouteDecoratorOrdering",
-                       armeriaOptionsProvider.useLegacyRouteDecoratorOrdering());
+                       ArmeriaOptionsProvider::useLegacyRouteDecoratorOrdering,
+                       DefaultFlags.DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING
+            );
 
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
-            getBoolean("useDefaultSocketOptions", armeriaOptionsProvider.useDefaultSocketOptions());
+            getBoolean("useDefaultSocketOptions", ArmeriaOptionsProvider::useDefaultSocketOptions,
+                       DefaultFlags.USE_DEFAULT_SOCKET_OPTIONS);
 
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
-            getBoolean("allowDoubleDotsInQueryString", armeriaOptionsProvider.allowDoubleDotsInQueryString());
+            getBoolean("allowDoubleDotsInQueryString", ArmeriaOptionsProvider::allowDoubleDotsInQueryString,
+                       DefaultFlags.ALLOW_DOUBLE_DOTS_IN_QUERY_STRING);
 
     /**
      * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
@@ -608,7 +691,8 @@ public final class Flags {
     }
 
     private static void setUseOpenSslAndDumpOpenSslInfo() {
-        final boolean useOpenSsl = getBoolean("useOpenSsl", armeriaOptionsProvider.useOpenSsl());
+        final boolean useOpenSsl = getBoolean("useOpenSsl", ArmeriaOptionsProvider::useOpenSsl,
+                                              DefaultFlags.useOpenSsl);
         if (!useOpenSsl) {
             // OpenSSL explicitly disabled
             Flags.useOpenSsl = false;
@@ -625,7 +709,8 @@ public final class Flags {
         Flags.useOpenSsl = true;
         logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
-        dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", armeriaOptionsProvider.dumpOpenSslInfo());
+        dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", ArmeriaOptionsProvider::dumpOpenSslInfo,
+                                     DefaultFlags.dumpOpenSslInfo);
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
@@ -1346,19 +1431,24 @@ public final class Flags {
     }
 
     @Nullable
-    private static String nullableCaffeineSpec(String name, String defaultValue) {
-        return caffeineSpec(name, defaultValue, true);
+    private static String nullableCaffeineSpec(String name,
+                                               Function<ArmeriaOptionsProvider, String> spiAccessedMethod,
+                                               String defaultValue) {
+        return caffeineSpec(name, spiAccessedMethod, defaultValue, true);
     }
 
-    private static String nonnullCaffeineSpec(String name, String defaultValue) {
-        final String spec = caffeineSpec(name, defaultValue, false);
+    private static String nonnullCaffeineSpec(String name,
+                                              Function<ArmeriaOptionsProvider, String> spiAccessedMethod,
+                                              String defaultValue) {
+        final String spec = caffeineSpec(name, spiAccessedMethod, defaultValue, false);
         assert spec != null; // Can never be null if allowOff is false.
         return spec;
     }
 
     @Nullable
-    private static String caffeineSpec(String name, String defaultValue, boolean allowOff) {
-        final String spec = get(name, defaultValue, value -> {
+    private static String caffeineSpec(String name, Function<ArmeriaOptionsProvider, String> spiAccessedMethod,
+                                       String defaultValue, boolean allowOff) {
+        final String spec = get(name, spiAccessedMethod, defaultValue, value -> {
             try {
                 if ("off".equals(value)) {
                     return allowOff;
@@ -1383,110 +1473,114 @@ public final class Flags {
     }
 
     private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {
-        final String mode = getNormalized(name, defaultValue,
+        final String mode = getNormalized(name, unused -> defaultValue, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
         return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
-    private static boolean getBoolean(String name, boolean defaultValue) {
-        return getBoolean(name, defaultValue, value -> true);
+    private static boolean getBoolean(String name, Function<ArmeriaOptionsProvider, Boolean> spiAccessedMethod,
+                                      boolean defaultValue) {
+        return getBoolean(name, spiAccessedMethod, defaultValue, unused -> true);
     }
 
-    private static boolean getBoolean(String name, boolean defaultValue, Predicate<Boolean> validator) {
-        return "true".equals(getNormalized(name, String.valueOf(defaultValue), value -> {
-            if ("true".equals(value)) {
-                return validator.test(true);
-            }
+    private static boolean getBoolean(String name, Function<ArmeriaOptionsProvider, Boolean> spiAccessedMethod,
+                                      boolean defaultValue, Predicate<Boolean> validator) {
+        return "true".equals(getNormalized(name, spiAccessedMethod.andThen(String::valueOf),
+                                           String.valueOf(defaultValue), value -> {
+                    if ("true".equals(value)) {
+                        return validator.test(true);
+                    }
 
-            if ("false".equals(value)) {
-                return validator.test(false);
-            }
+                    if ("false".equals(value)) {
+                        return validator.test(false);
+                    }
 
-            return false;
-        }));
+                    return false;
+                }));
     }
 
-    private static int getInt(String name, int defaultValue, IntPredicate validator) {
-        return Integer.parseInt(getNormalized(name, StringUtil.toString(defaultValue), value -> {
-            try {
-                return validator.test(Integer.parseInt(value));
-            } catch (Exception e) {
-                // null or non-integer
-                return false;
-            }
-        }));
+    private static int getInt(String name, Function<ArmeriaOptionsProvider, Integer> spiAccessedMethod,
+                              int defaultValue, IntPredicate validator) {
+        return Integer.parseInt(getNormalized(name, spiAccessedMethod.andThen(StringUtil::toString),
+                                              StringUtil.toString(defaultValue), value -> {
+                    try {
+                        return validator.test(Integer.parseInt(value));
+                    } catch (Exception e) {
+                        // null or non-integer
+                        return false;
+                    }
+                }));
     }
 
-    private static long getLong(String name, long defaultValue, LongPredicate validator) {
-        return Long.parseLong(getNormalized(name, StringUtil.toString(defaultValue), value -> {
-            try {
-                return validator.test(Long.parseLong(value));
-            } catch (Exception e) {
-                // null or non-integer
-                return false;
-            }
-        }));
+    private static long getLong(String name, Function<ArmeriaOptionsProvider, Long> spiAccessedMethod,
+                                long defaultValue, LongPredicate validator) {
+        return Long.parseLong(getNormalized(name, spiAccessedMethod.andThen(StringUtil::toString),
+                                            StringUtil.toString(defaultValue), value -> {
+                    try {
+                        return validator.test(Long.parseLong(value));
+                    } catch (Exception e) {
+                        // null or non-integer
+                        return false;
+                    }
+                }));
     }
 
-    private static String get(String name, String defaultValue, Predicate<String> validator) {
+    @Nullable
+    private static String get(String name, Function<ArmeriaOptionsProvider, String> spiAccessedMethod,
+                              @Nullable String defaultValue, Predicate<String> validator) {
         final String fullName = PREFIX + name;
         final String value = System.getProperty(fullName);
-        if (value == null) {
-            logger.info("{}: {} (default)", fullName, defaultValue);
-            return defaultValue;
+        if (value != null) {
+            if (validator.test(value)) {
+                logger.info("{}: {} (jvm option)", fullName, value);
+                return value;
+            }
+            logger.warn("{}: {} (jvm option) fail validation", fullName, value);
         }
 
-        if (validator.test(value)) {
-            logger.info("{}: {}", fullName, value);
-            return value;
-        }
-
-        logger.info("{}: {} (default instead of: {})", fullName, defaultValue, value);
-        return defaultValue;
-    }
-
-    private static String getNormalized(String name, String defaultValue, Predicate<String> validator) {
-        final String fullName = PREFIX + name;
-        final String value = getLowerCased(fullName);
-        if (value == null) {
-            logger.info("{}: {} (default)", fullName, defaultValue);
-            return defaultValue;
-        }
-
-        if (validator.test(value)) {
-            logger.info("{}: {}", fullName, value);
-            return value;
+        if (armeriaOptionsProvider != null) {
+            final String spi = spiAccessedMethod.apply(armeriaOptionsProvider);
+            if (validator.test(spi)) {
+                logger.info("{}: {} (spi)", fullName, spi);
+                return spi;
+            }
+            logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
         }
 
         logger.info("{}: {} (default instead of: {})", fullName, defaultValue, value);
         return defaultValue;
     }
 
-    private static <T> T getNormalizedTo(String name, Function<String, T> to, T spiValue, Predicate<String> validator) {
-        final String fullName = PREFIX + name;
-        final String value = getLowerCased(fullName);
-        if (value == null) {
-            logger.info("{}: {} (default)", fullName, spiValue);
-            return spiValue;
-        }
-
-        if (validator.test(value)) {
-            logger.info("{}: {}", fullName, value);
-            return to.apply(value);
-        }
-
-        logger.info("{}: {} (default instead of: {})", fullName, spiValue, value);
-        return spiValue;
+    private static String getNormalized(String name, Function<ArmeriaOptionsProvider, String> spiAccessedMethod,
+                                        String defaultValue, Predicate<String> validator) {
+        return getNormalizedTo(name, spiAccessedMethod, defaultValue, validator, validator, unused -> unused);
     }
 
-    private static <T> T fallOver(String name, T first, String firstDesc, T second, String secondDesc, Predicate<T> validator) {
-        if (validator.test(first)) {
-            logger.info("{}: {} ({})", name, first, firstDesc);
-            return first;
+    private static <T> T getNormalizedTo(String name, Function<ArmeriaOptionsProvider, T> spiAccessedMethod,
+                                         T defaultValue, Predicate<String> jpmOptionValidator,
+                                         Predicate<T> spiValidator, Function<String, T> convertFunction) {
+        final String fullName = PREFIX + name;
+        final String value = getLowerCased(fullName);
+        if (value != null) {
+            if (jpmOptionValidator.test(value)) {
+                logger.info("{}: {} (jvm option)", fullName, value);
+                return convertFunction.apply(value);
+            }
+            logger.warn("{}: {} (jvm option) fail validation", fullName, value);
         }
-        logger.info("{}: {} ({} instead of: {})", name, second, secondDesc, firstDesc);
-        return second;
+
+        if (armeriaOptionsProvider != null) {
+            final T spi = spiAccessedMethod.apply(armeriaOptionsProvider);
+            if (spiValidator.test(spi)) {
+                logger.info("{}: {} (spi)", fullName, spi);
+                return spi;
+            }
+            logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
+        }
+
+        logger.info("{}: {} (default)", fullName, defaultValue);
+        return defaultValue;
     }
 
     @Nullable

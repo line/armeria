@@ -18,23 +18,51 @@ package com.linecorp.armeria.common;
 
 public final class CustomArmeriaOptionsProvider implements ArmeriaOptionsProvider {
 
+    /**
+     * @see ArmeriaOptionsProviderTest#overrideDefaultArmeriaOptionsProvider
+     */
     @Override
     public boolean useOpenSsl() {
         return false;
     }
 
+    /**
+     * @see ArmeriaOptionsProviderTest#overrideDefaultArmeriaOptionsProvider
+     */
     @Override
     public int numCommonBlockingTaskThreads() {
         return 100;
     }
 
+    /**
+     * @see ArmeriaOptionsProviderTest#spiInvalidFallbackToDefault
+     */
     @Override
     public long defaultRequestTimeoutMillis() {
-        return -10L;
+        return -10L; //invalid value
     }
 
+    /**
+     * @see ArmeriaOptionsProviderTest#spiInvalidFallbackToDefault
+     */
     @Override
     public String defaultBackoffSpec() {
         return "invalid backoff spec";
+    }
+
+    /**
+     * @see ArmeriaOptionsProviderTest#jvmOptionInvalidFallbackToSpi
+     */
+    @Override
+    public int defaultMaxTotalAttempts() {
+        return 5;
+    }
+
+    /**
+     * @see ArmeriaOptionsProviderTest#jvmOptionPriorityHigherThanSpi
+     */
+    @Override
+    public long defaultMaxClientConnectionAgeMillis() {
+        return 10;
     }
 }

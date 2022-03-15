@@ -27,14 +27,22 @@ import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Set;
+import java.util.function.Predicate;
 
+import org.assertj.core.api.ObjectAssert;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.ClearSystemProperty;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
@@ -92,28 +100,76 @@ class FlagsTest {
 
     @Test
     @ClearSystemProperty(key = "com.linecorp.armeria.verboseExceptions")
-    void defaultVerboseExceptionSamplerSpec() {
-        assertThat(Flags.verboseExceptionSamplerSpec()).isEqualTo("rate-limit=10");
-    }
-
-    @Test
-    @ClearSystemProperty(key = "com.linecorp.armeria.verboseExceptions")
-    void defaultVerboseExceptionSampler() {
+    void defaultVerboseExceptionSamplerSpec() throws Throwable {
+        assertFlags("verboseExceptionSamplerSpec", String.class).isSameAs("rate-limit=10");
         assertThat(Flags.verboseExceptionSampler())
                 .usingRecursiveComparison()
                 .isEqualTo(new ExceptionSampler(Flags.verboseExceptionSamplerSpec()));
     }
 
     @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "true")
+    void verboseExceptionSampler() {
+        assertFlags("verboseExceptionSamplerSpec", String.class).isSameAs("always");
+    }
+
+    @Test
     @ClearSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses")
     void defaultPreferredIpV4Addresses() {
-        assertThat(Flags.preferredIpV4Addresses()).isNull();
+        assertFlags("preferredIpV4Addresses", Predicate.class).isNull();
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "10.0.0.0/8")
+    void preferredIpV4Addresses() {
+        assertFlags("preferredIpV4Addresses", Predicate.class).isNotNull();
     }
 
     @Test
     @ClearSystemProperty(key = "com.linecorp.armeria.transientServiceOptions")
     void defaultTransientServiceOptions() {
-        assertThat(Flags.transientServiceOptions()).isEmpty();
+        assertFlags("transientServiceOptions", Set.class).isEqualTo(ImmutableSet.of());
+    }
+
+    //Todo test fail since cannot compare class with diferrent class loader
+    @Disabled
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.transientServiceOptions", value = "with_tracing")
+    void transientServiceOptions() throws ClassNotFoundException {
+        assertFlags("transientServiceOptions", Set.class)
+                .isEqualTo(Sets.immutableEnumSet(TransientServiceOption.WITH_TRACING));
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.defaultWriteTimeoutMillis", value = "-5")
+    void defaultWriteTimeoutMillis() {
+        assertFlags("defaultWriteTimeoutMillis", long.class).isEqualTo(DefaultFlags.DEFAULT_WRITE_TIMEOUT_MILLIS);
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.defaultUseHttp2Preface")
+    void defaultValueOfDefaultUseHttp2Preface() {
+        assertFlags("defaultUseHttp2Preface", boolean.class).isEqualTo(true);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.defaultUseHttp2Preface", value = "false")
+    void defaultUseHttp2Preface() {
+        assertFlags("defaultUseHttp2Preface", boolean.class).isEqualTo(false);
+    }
+
+    private static ObjectAssert<Object> assertFlags(String flagsMethod, Class<?> returnClass) {
+        try {
+            final FlagsClassLoader classLoader = new FlagsClassLoader();
+            final Class<?> flags = classLoader.loadClass("com.linecorp.armeria.common.Flags");
+            final Lookup lookup = MethodHandles.publicLookup();
+            final MethodHandle method  =
+                    lookup.findStatic(flags, flagsMethod, MethodType.methodType(returnClass));
+            return assertThat(method.invoke());
+        } catch (Throwable throwable) {
+            // do sneaky throw
+            throw new AssertionError("Sneaky throw!!", throwable);
+        }
     }
 
     private static class FlagsClassLoader extends ClassLoader {
@@ -123,8 +179,8 @@ class FlagsTest {
 
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
-            if (!name.startsWith("com.linecorp.armeria.common")) {
-                return super.loadClass(name);
+            if (!name.startsWith("com.linecorp.armeria")) {
+                    return super.loadClass(name);
             }
 
             // Reload every class in common package.
