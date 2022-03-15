@@ -23,6 +23,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
@@ -34,6 +35,8 @@ import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -499,6 +502,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     responseFuture.completeExceptionally(t);
                 } else {
                     try {
+                        String requestBody = spec.httpRule.getResponseBody();
+                        HttpData httpData = convertToJson(ctx, clientRequest, spec);
+
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                       convertToJson(ctx, clientRequest, spec),
@@ -513,7 +519,38 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             }
             return null;
         });
-        return HttpResponse.from(responseFuture);
+        //return HttpResponse.from(responseFuture);
+        final HttpResponse response = HttpResponse.from(responseFuture);
+        String responseBodyField = spec.httpRule.getResponseBody();
+        if (responseBodyField == null) {
+            return response;
+        }
+        return response.mapData(data -> {
+            // Note that the data is a reference counted object that
+            // should be released/closed after using it.
+            try (HttpData body = data) {
+                ObjectMapper om = new ObjectMapper();
+                byte[] array = body.array();
+                // 1. Parse the array to JsonNode using Jackson
+                // 2. Read the field value of `response_body`
+                // 3. Serialize and convert it into `HttpData`
+                final ObjectReader reader = om.reader();
+
+                final JsonNode newNode = reader.readTree(new ByteArrayInputStream(array));
+                if (newNode.has(responseBodyField)) {
+                    final ObjectWriter writer = om.writer();
+                    JsonNode node = mapper.createObjectNode();
+                    final byte[] bytes = writer.writeValueAsBytes(newNode);
+                    return HttpData.wrap(bytes);
+                } else {
+                    return HttpData.wrap(array);
+                }
+
+            } catch (IOException e) {
+                return data;
+            }
+        });
+
     }
 
     /**

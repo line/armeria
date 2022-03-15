@@ -60,6 +60,7 @@ service HttpJsonTranscodingTestService {
   rpc EchoTimestampAndDuration(EchoTimestampAndDurationRequest) returns (EchoTimestampAndDurationResponse) {
     option (google.api.http) = {
       get: "/v1/echo/{timestamp}/{duration}"
+      response_body: "timestamp"
     };
   }
 
@@ -94,9 +95,10 @@ service HttpJsonTranscodingTestService {
   rpc EchoListValue(EchoListValueRequest) returns (EchoListValueResponse) {
     option (google.api.http) = {
       get: "/v1/echo/list_value"
-
+      response_body: "value"
       additional_bindings {
         post: "/v1/echo/list_value"
+        response_body: "value"
         body: "value"
       }
     };
