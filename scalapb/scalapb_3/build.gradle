@@ -1,0 +1,33 @@
+dependencies {
+    implementation project(':grpc')
+
+    // ScalaPB
+    api "com.thesamet.scalapb:scalapb-json4s_3"
+    implementation "com.thesamet.scalapb:scalapb-runtime_3"
+    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_3"
+
+    testImplementation 'io.monix:monix-reactive_3'
+}
+
+// Use the sources from ':scalapb_2.13'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+def scalapb213ProjectDir = "${rootProject.projectDir}/scalapb/scalapb_2.13"
+
+tasks.compileScala.source "${scalapb213ProjectDir}/src/main/scala"
+tasks.processResources.from "${scalapb213ProjectDir}/src/main/resources"
+// Uncomment the following three lines once we have src/main/proto in :scalapb_2.13.
+//// Use the source code generated from :scalapb_2.13/src/main/proto/*.proto.
+// tasks.compileScala.dependsOn(":scalapb_2.13:generateProto")
+// tasks.compileScala.source "${scalapb213ProjectDir}/gen-src/main/scalapb"
+
+tasks.compileTestScala.source "${scalapb213ProjectDir}/src/test/scala"
+tasks.processTestResources.from "${scalapb213ProjectDir}/src/test/resources"
+// Use the source code generated from :scalapb_2.13/src/test/proto/*.proto.
+tasks.compileTestScala.dependsOn(":scalapb_2.13:generateTestProto")
+tasks.compileTestScala.source "${scalapb213ProjectDir}/gen-src/test/scalapb"
+
+tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/scala"
+tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/resources"
+tasks.scaladoc.source "${scalapb213ProjectDir}/src/main/scala"

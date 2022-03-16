@@ -88,7 +88,7 @@ class SuspendingAnnotatedServiceTest {
     fun test_exceptionHandler() {
         val result = get("/default/throwException")
         assertThat(result.status().code()).isEqualTo(500)
-        assertThat(result.contentUtf8()).isEqualTo("handled error")
+        assertThat(result.contentUtf8()).isEqualTo("RuntimeException")
     }
 
     @Test
@@ -144,6 +144,14 @@ class SuspendingAnnotatedServiceTest {
             assertThat(status()).isEqualTo(HttpStatus.BAD_REQUEST)
             assertThat(headers().get("x-custom-header")).isEqualTo("value")
             assertThat(contentUtf8()).isEqualTo("hello, bar!")
+        }
+    }
+
+    @Test
+    fun test_returnType_nothing() {
+        get("/return-nothing-suspend-fun/throw-error").run {
+            assertThat(status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
+            assertThat(contentUtf8()).isEqualTo("NotImplementedError")
         }
     }
 
@@ -265,6 +273,12 @@ class SuspendingAnnotatedServiceTest {
                             ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"), Bar()
                         )
                     })
+                    .annotatedService("/return-nothing-suspend-fun", object {
+                        @Get("/throw-error")
+                        suspend fun returnNothingSuspendFun(): Nothing {
+                            throw NotImplementedError()
+                        }
+                    })
                     .decorator(LoggingService.newDecorator())
                     .requestTimeoutMillis(500L) // to test cancellation
             }
@@ -278,17 +292,20 @@ class SuspendingAnnotatedServiceTest {
 
         private fun exceptionHandlerFunction() = ExceptionHandlerFunction { _, _, cause ->
             log.info(cause.message, cause)
-            HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8, "handled error")
+            HttpResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
+                cause.javaClass.simpleName
+            )
         }
 
         private fun get(path: String): AggregatedHttpResponse {
-            val webClient = WebClient.of(server.httpUri())
-            return webClient.get(path).aggregate().join()
+            val webClient = WebClient.of(server.httpUri()).blocking()
+            return webClient.get(path)
         }
 
         private fun delete(path: String): AggregatedHttpResponse {
-            val webClient = WebClient.of(server.httpUri())
-            return webClient.delete(path).aggregate().join()
+            val webClient = WebClient.of(server.httpUri()).blocking()
+            return webClient.delete(path)
         }
 
         private fun assertInEventLoop() {

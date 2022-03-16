@@ -149,7 +149,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Override
     protected void get(WebClient client, String pathIncludingQuery) {
-        client.get(pathIncludingQuery).aggregate().join();
+        client.blocking().get(pathIncludingQuery);
     }
 
     @Override
@@ -172,12 +172,12 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Override
     protected void post(WebClient client, String pathIncludingQuery, String body) {
-        client.post(pathIncludingQuery, body).aggregate().join();
+        client.blocking().post(pathIncludingQuery, body);
     }
 
     @Override
     protected void options(WebClient client, String path) {
-        client.options(path).aggregate().join();
+        client.blocking().options(path);
     }
 
     static ServiceRequestContext serverContext() {

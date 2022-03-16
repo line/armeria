@@ -29,6 +29,9 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -39,6 +42,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
 import com.linecorp.armeria.client.grpc.protocol.UnaryGrpcClient;
@@ -61,6 +65,8 @@ import io.grpc.stub.AbstractStub;
  * A {@link DecoratingClientFactory} that creates a gRPC client.
  */
 final class GrpcClientFactory extends DecoratingClientFactory {
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcClientFactory.class);
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
@@ -130,8 +136,16 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         final GrpcJsonMarshaller jsonMarshaller;
         if (GrpcSerializationFormats.isJson(serializationFormat)) {
-            jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY)
-                                    .apply(serviceDescriptor);
+            try {
+                jsonMarshaller = options.get(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY)
+                                        .apply(serviceDescriptor);
+            } catch (Exception e) {
+                logger.warn("Failed to instantiate a JSON marshaller for gRPC-JSON. " +
+                            "Consider using a different serialization format with {}.serializationFormat() " +
+                            "or using {}.ofGson() instead.",
+                            GrpcClientBuilder.class.getName(), GrpcJsonMarshaller.class.getName(), e);
+                throw e;
+            }
         } else {
             jsonMarshaller = null;
         }

@@ -54,4 +54,14 @@ public class PathPatternService {
     public String pathsVar(@Param String name) {
         return "paths: " + name;
     }
+
+    /**
+     * Accesses the parameter with a parameterized rest paths pattern.
+     * NOTE: Configure -parameters javac option to use variable name as the parameter name.
+     *       (i.e. '@Param String name' instead of '@Param("name") String name')
+     */
+    @Get("/foo/{*bar}")
+    public String pathRestPathsPattern(@Param String bar) {
+        return "paths: " + bar;
+    }
 }

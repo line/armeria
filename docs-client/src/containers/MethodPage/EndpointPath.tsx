@@ -44,6 +44,7 @@ const EndpointPath: React.FunctionComponent<Props> = (props) => (
     </Button>
     <Typography variant="body2" paragraph />
     {props.endpointPathOpen && (
+      // eslint-disable-next-line react/jsx-no-useless-fragment
       <>
         {props.isAnnotatedService ? (
           <>

@@ -17,12 +17,10 @@
 package com.linecorp.armeria.server.file;
 
 import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateData;
-import static com.linecorp.armeria.server.file.MimeTypeUtil.guessFromPath;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Objects;
@@ -39,6 +37,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.Splitter;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -52,6 +51,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.compression.Brotli;
 
 /**
  * An {@link HttpService} that serves static files from a file system.
@@ -215,7 +216,7 @@ public final class FileService extends AbstractHttpService {
             }
             if (config().autoDecompress() && encodings.isEmpty()) {
                 needsDecompression = true;
-                Collections.addAll(encodings, ContentEncoding.values());
+                encodings.addAll(ContentEncoding.availableEncodings);
             }
         }
         final boolean decompress = needsDecompression;
@@ -273,7 +274,16 @@ public final class FileService extends AbstractHttpService {
                     return config.vfs().canList(ctx.blockingTaskExecutor(), decodedMappedPath);
                 }).thenApply(canList -> {
                     if (canList) {
-                        throw HttpResponseException.of(HttpResponse.ofRedirect(ctx.path() + '/'));
+                        try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+                            final StringBuilder locationBuilder = ttl.stringBuilder()
+                                    .append(ctx.path())
+                                    .append('/');
+                            if (ctx.query() != null) {
+                                locationBuilder.append('?')
+                                               .append(ctx.query());
+                            }
+                            throw HttpResponseException.of(HttpResponse.ofRedirect(locationBuilder.toString()));
+                        }
                     } else {
                         return HttpFile.nonExistent();
                     }
@@ -324,7 +334,8 @@ public final class FileService extends AbstractHttpService {
         @Nullable
         final String contentEncoding = encoding != null ? encoding.headerValue : null;
         final HttpFile uncachedFile = config.vfs().get(readExecutor, path, config.clock(),
-                                                       contentEncoding, config.headers());
+                                                       contentEncoding, config.headers(),
+                                                       config.mediaTypeResolver());
 
         return uncachedFile.readAttributes(readExecutor).thenApply(uncachedAttrs -> {
             if (cache == null) {
@@ -332,7 +343,8 @@ public final class FileService extends AbstractHttpService {
                     if (decompress && encoding != null) {
                         // The compressed data will be decompressed while being served.
                         return new DecompressingHttpFile(uncachedFile, encoding,
-                                                         guessFromPath(path, encoding.headerValue));
+                                                         config.mediaTypeResolver()
+                                                               .guessFromPath(path, encoding.headerValue));
                     } else {
                         return uncachedFile;
                     }
@@ -509,6 +521,16 @@ public final class FileService extends AbstractHttpService {
         // be ordered by priority.
         BROTLI(".br", "br", StreamDecoderFactory.brotli()),
         GZIP(".gz", "gzip", StreamDecoderFactory.gzip());
+
+        static final Set<ContentEncoding> availableEncodings;
+
+        static {
+            if (Brotli.isAvailable()) {
+                availableEncodings = Sets.immutableEnumSet(BROTLI, GZIP);
+            } else {
+                availableEncodings = Sets.immutableEnumSet(GZIP);
+            }
+        }
 
         private final String extension;
         final String headerValue;

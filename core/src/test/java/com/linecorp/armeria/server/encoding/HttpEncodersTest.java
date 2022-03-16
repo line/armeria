@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 
+import io.netty.handler.codec.compression.Brotli;
+
 public class HttpEncodersTest {
     @Rule public MockitoRule mocks = MockitoJUnit.rule();
 
@@ -59,7 +61,8 @@ public class HttpEncodersTest {
     public void acceptEncodingBrotli() {
         when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
                                                              HttpHeaderNames.ACCEPT_ENCODING, "br"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.BROTLI);
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(
+                Brotli.isAvailable() ? HttpEncodingType.BROTLI : null);
     }
 
     @Test

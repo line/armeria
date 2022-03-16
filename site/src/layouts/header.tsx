@@ -15,7 +15,7 @@ import StickyBox from 'react-sticky-box';
 import Logo from '../components/logo';
 import Mailchimp from '../components/mailchimp';
 
-import styles from './header.module.less';
+import * as styles from './header.module.less';
 
 const { Header } = Layout;
 const { Paragraph } = Typography;
@@ -34,9 +34,9 @@ interface HeaderComponentProps extends RouteComponentProps {
 const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const selectedKeyAndRegex = Object.entries(
-    selectableKeysAndRegexes,
-  ).find(([, regexp]) => props.location?.pathname?.match(regexp));
+  const selectedKeyAndRegex = Object.entries(selectableKeysAndRegexes).find(
+    ([, regexp]) => props.location?.pathname?.match(regexp),
+  );
 
   const selectedKeys = selectedKeyAndRegex ? [selectedKeyAndRegex[0]] : [];
 
@@ -169,11 +169,9 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
                   <Mailchimp />
                 </div>
                 {props.extraSidebarContent ? (
-                  <>
-                    <div className={styles.sidebarExtra}>
-                      {props.extraSidebarContent}
-                    </div>
-                  </>
+                  <div className={styles.sidebarExtra}>
+                    {props.extraSidebarContent}
+                  </div>
                 ) : null}
               </nav>
             </Drawer>

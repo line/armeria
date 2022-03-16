@@ -784,6 +784,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
      * }</pre>
      */
+    @Override
     default HttpResponse mapData(Function<? super HttpData, ? extends HttpData> function) {
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream =
@@ -803,6 +804,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
      * }</pre>
      */
+    @Override
     default HttpResponse mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream = map(obj -> {
@@ -818,7 +820,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Transforms an error emitted by this {@link HttpResponse} by applying the specified {@link Function}.
      *
      * <p>For example:<pre>{@code
-     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong."));
      * HttpResponse transformed = response.mapError(cause -> {
      *     if (cause instanceof IllegalStateException) {
      *         return new MyDomainException(cause);
@@ -840,11 +842,12 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK));
-     * HttpResponse result = response.peekHeaders(headers -> {
+     * HttpResponse peeked = response.peekHeaders(headers -> {
      *      assert headers.status() == HttpStatus.OK;
      * });
      * }</pre>
      */
+    @UnstableApi
     default HttpResponse peekHeaders(Consumer<? super ResponseHeaders> action) {
         requireNonNull(action, "action");
         final StreamMessage<HttpObject> stream = peek(headers -> {
@@ -853,6 +856,67 @@ public interface HttpResponse extends Response, HttpMessage {
             }
         }, ResponseHeaders.class);
         return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@link HttpData}s
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data1,data2");
+     * HttpResponse peeked = response.peekData(data -> {
+     *     assert data.toStringUtf8().equals("data1,data2");
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpResponse peekData(Consumer<? super HttpData> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(action, HttpData.class);
+        return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to the {@linkplain HttpHeaders trailers}
+     * emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+     *                                         HttpData.ofUtf8("..."),
+     *                                         HttpHeaders.of("trailer", "foo"));
+     * HttpResponse peeked = response.peekTrailers(trailers -> {
+     *     assert trailers.get("trailer").equals("foo");
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpResponse peekTrailers(Consumer<? super HttpHeaders> action) {
+        requireNonNull(action, "action");
+        final StreamMessage<HttpObject> stream = peek(obj -> {
+            if (!(obj instanceof ResponseHeaders)) {
+                action.accept(obj);
+            }
+        }, HttpHeaders.class);
+        return of(stream);
+    }
+
+    /**
+     * Applies the specified {@link Consumer} to an error emitted by this {@link HttpResponse}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong."));
+     * HttpResponse peeked = response.peekError(cause -> {
+     *     assert cause instanceof IllegalStateException;
+     * });
+     * }</pre>
+     */
+    @Override
+    @UnstableApi
+    default HttpResponse peekError(Consumer<? super Throwable> action) {
+        requireNonNull(action, "action");
+        return of(HttpMessage.super.peekError(action));
     }
 
     /**
