@@ -898,8 +898,7 @@ public final class GrpcServiceBuilder {
             return grpcService;
         } else {
             final Map<String, HttpService> composedMethodDecorators = applyGrpcServiceToDecorators(
-                    methodDecorators,
-                    grpcService);
+                    methodDecorators, grpcService);
             return new GrpcDecoratingService(grpcService, composedMethodDecorators);
         }
     }
