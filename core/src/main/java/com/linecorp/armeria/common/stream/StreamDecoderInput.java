@@ -33,6 +33,13 @@ public interface StreamDecoderInput extends SafeCloseable {
     int readableBytes();
 
     /**
+     * Returns whether this input contains any readable bytes.
+     */
+    default boolean isReadable() {
+        return readableBytes() > 0;
+    }
+
+    /**
      * Reads a byte from the readable bytes.
      */
     byte readByte();
