@@ -79,7 +79,7 @@ final class StreamMessageInputStream<T> extends InputStream {
         ensureOpen();
         ensureSubscribed();
         subscriber.request();
-        return function.apply(getByteBufsInputStream());
+        return function.apply(byteBufsInputStream());
     }
 
     @Override
@@ -89,13 +89,13 @@ final class StreamMessageInputStream<T> extends InputStream {
         }
         closed = true;
         source.abort();
-        getByteBufsInputStream().close();
+        byteBufsInputStream().close();
     }
 
     @Override
     public int available() throws IOException {
         ensureOpen();
-        return getByteBufsInputStream().available();
+        return byteBufsInputStream().available();
     }
 
     private void ensureOpen() throws IOException {
@@ -111,7 +111,7 @@ final class StreamMessageInputStream<T> extends InputStream {
         subscriber.whenSubscribed.join();
     }
 
-    private ByteBufsInputStream getByteBufsInputStream() {
+    private ByteBufsInputStream byteBufsInputStream() {
         return subscriber.byteBufsInputStream;
     }
 
