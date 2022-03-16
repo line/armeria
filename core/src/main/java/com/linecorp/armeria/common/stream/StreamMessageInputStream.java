@@ -36,21 +36,15 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class StreamMessageInputStream<T> extends InputStream {
 
-    static <T> StreamMessageInputStream<T> of(StreamMessage<T> source,
-                                              Function<? super T, ? extends HttpData> httpDataConverter,
-                                              EventExecutor executor) {
-        return new StreamMessageInputStream<>(source, httpDataConverter, executor);
-    }
-
     private final StreamMessage<T> source;
     private final EventExecutor executor;
     private final StreamMessageInputStreamSubscriber<T> subscriber;
     private final AtomicBoolean subscribed = new AtomicBoolean();
     private volatile boolean closed;
 
-    private StreamMessageInputStream(StreamMessage<T> source,
-                                     Function<? super T, ? extends HttpData> httpDataConverter,
-                                     EventExecutor executor) {
+    StreamMessageInputStream(StreamMessage<T> source,
+                             Function<? super T, ? extends HttpData> httpDataConverter,
+                             EventExecutor executor) {
         requireNonNull(source, "source");
         requireNonNull(httpDataConverter, "httpDataConverter");
         requireNonNull(executor, "executor");
