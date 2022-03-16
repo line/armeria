@@ -102,11 +102,10 @@ public final class Flags {
     @Nullable
     private static final ArmeriaOptionsProvider armeriaOptionsProvider;
 
-    //For testing purpose, we need ArmeriaOptionsProvider that is loaded using the same loader as Flags class
     static {
-        final List<ArmeriaOptionsProvider> providers =
-                ImmutableList.copyOf(
-                        ServiceLoader.load(ArmeriaOptionsProvider.class, Flags.class.getClassLoader()));
+        //For testing, we need ArmeriaOptionsProvider that is loaded using the same loader as Flags class.
+        final List<ArmeriaOptionsProvider> providers = ImmutableList.copyOf(
+                ServiceLoader.load(ArmeriaOptionsProvider.class, Flags.class.getClassLoader()));
         if (!providers.isEmpty()) {
             armeriaOptionsProvider = providers.get(0);
             if (providers.size() > 1) {
@@ -284,7 +283,7 @@ public final class Flags {
                                     return false;
                                 }
                                 return transportTypeValidator.test(type);
-                                },
+                            },
                             transportTypeValidator,
                             strToTransportType);
 

@@ -13,6 +13,7 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import org.assertj.core.api.ObjectAssert;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
@@ -20,46 +21,46 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 class ArmeriaOptionsProviderTest {
 
-    @Test
-    void overrideDefaultArmeriaOptionsProvider() {
-        assertThat(Flags.useOpenSsl()).isEqualTo(false);
-        assertThat(Flags.numCommonBlockingTaskThreads()).isEqualTo(100);
+    private Class<?> flags;
+
+    @BeforeEach
+    private void reloadFlags() throws ClassNotFoundException {
+        final FlagsClassLoader classLoader = new FlagsClassLoader();
+        flags = classLoader.loadClass(Flags.class.getCanonicalName());
     }
 
     @Test
-    void spiInvalidFallbackToDefault() {
-        assertThat(Flags.defaultRequestTimeoutMillis())
+    void overrideDefaultArmeriaOptionsProvider() throws Throwable {
+        assertFlags("useOpenSsl").isEqualTo(false);
+        assertFlags("numCommonBlockingTaskThreads").isEqualTo(100);
+    }
+
+    @Test
+    void spiInvalidFallbackToDefault() throws Throwable {
+        assertFlags("defaultRequestTimeoutMillis")
                 .isEqualTo(DefaultFlags.DEFAULT_REQUEST_TIMEOUT_MILLIS);
-        assertThat(Flags.defaultBackoffSpec())
+        assertFlags("defaultBackoffSpec")
                 .isEqualTo(DefaultFlags.DEFAULT_BACKOFF_SPEC);
     }
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.defaultMaxTotalAttempts", value = "-5")
-    void jvmOptionInvalidFallbackToSpi() {
-        assertThat(Flags.defaultMaxTotalAttempts()).isEqualTo(5);
+    void jvmOptionInvalidFallbackToSpi() throws Throwable {
+        assertFlags("defaultMaxTotalAttempts").isEqualTo(5);
     }
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.defaultMaxClientConnectionAgeMillis", value = "20")
-    void jvmOptionPriorityHigherThanSpi() {
-        assertFlags("defaultMaxClientConnectionAgeMillis", long.class).isEqualTo(20L);
+    void jvmOptionPriorityHigherThanSpi() throws Throwable {
+        assertFlags("defaultMaxClientConnectionAgeMillis").isEqualTo(20L);
     }
 
-    //TODO refactor test
-    private static ObjectAssert<Object> assertFlags(String flagsMethod, Class<?> returnClass) {
-        try {
-            final FlagsClassLoader classLoader = new FlagsClassLoader();
-            final Class<?> flags = classLoader.loadClass("com.linecorp.armeria.common.Flags");
-            classLoader.loadClass("com.linecorp.armeria.common.CustomArmeriaOptionsProvider");
-            final Lookup lookup = MethodHandles.publicLookup();
-            final MethodHandle method  =
-                    lookup.findStatic(flags, flagsMethod, MethodType.methodType(returnClass));
-            return assertThat(method.invoke());
-        } catch (Throwable throwable) {
-            // do sneaky throw
-            throw new AssertionError("Sneaky throw!!", throwable);
-        }
+    private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
+        final Lookup lookup = MethodHandles.publicLookup();
+        final MethodHandle method =
+                lookup.findStatic(flags, flagsMethod, MethodType.methodType(
+                        Flags.class.getMethod(flagsMethod).getReturnType()));
+        return assertThat(method.invoke());
     }
 
     private static class FlagsClassLoader extends ClassLoader {
@@ -69,7 +70,7 @@ class ArmeriaOptionsProviderTest {
 
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
-            if (!name.startsWith("com.linecorp.armeria.common")) {
+            if (!name.startsWith("com.linecorp.armeria")) {
                 return super.loadClass(name);
             }
 
