@@ -45,8 +45,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -166,8 +167,7 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    private final ImmutableMap.Builder<String, List<DecoratorAndOrder>> methodDecoratorBuilder =
-            ImmutableMap.builder();
+    private final HashMap<String, List<DecoratorAndOrder>> methodDecorators = Maps.newHashMap();
 
     GrpcServiceBuilder() {}
 
@@ -778,10 +778,13 @@ public final class GrpcServiceBuilder {
         final String serviceName =
                 path != null ? path : '/' + serverServiceDefinition.getServiceDescriptor().getName();
         // In gRPC, A method name is unique.
-        final Map<String, Method> methods = new HashMap<>();
+        final Map<String, List<Method>> methods = new HashMap<>();
         for (Method method : getAllMethods(clazz, withModifier(Modifier.PUBLIC))) {
-            if (method.getDeclaringClass().equals(clazz)) {
-                methods.put(method.getName(), method);
+            final String methodName = method.getName();
+            if (methods.containsKey(methodName)) {
+                methods.get(methodName).add(method);
+            } else {
+                methods.put(methodName, Lists.newArrayList(method));
             }
         }
         for (final ServerMethodDefinition<?, ?> serverMethodDefinition : serverServiceDefinition.getMethods()) {
@@ -791,20 +794,29 @@ public final class GrpcServiceBuilder {
             }
             final String methodName = targetMethodName.substring(0, 1)
                                                       .toLowerCase() + targetMethodName.substring(1);
-            final Method method = methods.get(methodName);
-            if (method == null) {
+            final List<Method> foundMethods = methods.get(methodName);
+            if (foundMethods == null) {
                 continue;
             }
-            final List<DecoratorAndOrder> decorators = DecoratorUtil.collectDecorators(clazz, method);
-            if (!decorators.isEmpty()) {
-                methodDecoratorBuilder.put(serviceName + '/' + targetMethodName, decorators);
+            for (Method method : foundMethods) {
+                final List<DecoratorAndOrder> decorators = DecoratorUtil.collectDecorators(clazz, method);
+                if (!decorators.isEmpty()) {
+                    final String key = serviceName + '/' + targetMethodName;
+                    if (methodDecorators.containsKey(key)) {
+                        if (decorators.size() > methodDecorators.get(key).size()) {
+                            methodDecorators.put(key, decorators);
+                        }
+                    } else {
+                        methodDecorators.put(key, decorators);
+                    }
+                }
             }
         }
     }
 
     @VisibleForTesting
     Map<String, List<DecoratorAndOrder>> methodDecorators() {
-        return methodDecoratorBuilder.build();
+        return methodDecorators;
     }
 
     /**
@@ -882,7 +894,6 @@ public final class GrpcServiceBuilder {
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson());
         }
-        final Map<String, List<DecoratorAndOrder>> methodDecorators = methodDecoratorBuilder.build();
         if (methodDecorators.isEmpty()) {
             return grpcService;
         } else {

@@ -296,6 +296,23 @@ class GrpcServiceBuilderTest {
     }
 
     @Test
+    void addServiceWithHierarchicalDecorators() {
+        final ThirdTestServiceImpl thirdTestService = new ThirdTestServiceImpl();
+
+        final GrpcServiceBuilder builder = GrpcService.builder()
+                                                      .addService(thirdTestService);
+
+        final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
+        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+                .containsExactly(Decorator1.class, Decorator2.class);
+
+        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/EmptyCall")).isTrue();
+        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/EmptyCall")))
+                .containsExactly(Decorator1.class, Decorator3.class);
+    }
+
+    @Test
     void addServiceWithInterceptorAndDecorators() {
         final FirstTestServiceImpl firstTestService = new FirstTestServiceImpl();
         final GrpcServiceBuilder builder = GrpcService
@@ -380,6 +397,29 @@ class GrpcServiceBuilderTest {
             responseObserver.onNext(SimpleResponse.newBuilder()
                                                   .setUsername("test user")
                                                   .build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Decorator(Decorator1.class)
+    private abstract static class AbstractThirdTestServiceImpl extends TestServiceImplBase {
+
+        @Override
+        @Decorator(Decorator2.class)
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder()
+                                                  .setUsername("test user")
+                                                  .build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    private static class ThirdTestServiceImpl extends AbstractThirdTestServiceImpl {
+
+        @Override
+        @Decorator(Decorator3.class)
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            responseObserver.onNext(Empty.getDefaultInstance());
             responseObserver.onCompleted();
         }
     }
