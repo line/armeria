@@ -39,7 +39,7 @@ public final class CustomArmeriaOptionsProvider implements ArmeriaOptionsProvide
      */
     @Override
     public long defaultRequestTimeoutMillis() {
-        return -10L; //invalid value
+        return -10L;
     }
 
     /**

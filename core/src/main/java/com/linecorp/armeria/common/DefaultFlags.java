@@ -33,12 +33,12 @@ import io.netty.handler.ssl.OpenSsl;
 /**
  * Default value of {@link Flags} and @{@link ArmeriaOptionsProvider}.
  */
-public enum DefaultFlags implements ArmeriaOptionsProvider {
+enum DefaultFlags {
     INSTANCE;
 
     static final String VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limit=10";
-    static final Sampler<Class<? extends Throwable>>
-            VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
+    static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER =
+            new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
 
     static final boolean VERBOSE_SOCKET_EXCEPTIONS = false;
 
