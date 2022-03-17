@@ -140,9 +140,6 @@ class PathStreamMessageTest {
         final StreamMessage<HttpData> publisher =
                 StreamMessage.of(path, null, ByteBufAllocator.DEFAULT, bufferSize, start, end);
 
-        if (end == -1) {
-            end = Long.MAX_VALUE;
-        }
         final int maxChunkSize = Math.min(Ints.saturatedCast(end - start), bufferSize);
         final StringBuilder stringBuilder = new StringBuilder();
         final AtomicBoolean completed = new AtomicBoolean();
