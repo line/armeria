@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -24,6 +25,7 @@ import org.slf4j.helpers.NOPLogger;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -47,19 +49,21 @@ public class RoutersBenchmark {
         final String defaultLogName = null;
         final String defaultServiceName = null;
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
+        final Path multipartUploadLocation = Flags.defaultMultipartUploadsLocation();
         SERVICES = ImmutableList.of(
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true),
+                                  true, multipartUploadLocation),
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true)
+                                  true, multipartUploadLocation)
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
-                                             false, CommonPools.blockingTaskExecutor(), true);
+                                             false, CommonPools.blockingTaskExecutor(), true,
+                                             multipartUploadLocation);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
