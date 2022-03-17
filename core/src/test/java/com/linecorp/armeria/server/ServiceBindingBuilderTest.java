@@ -113,7 +113,7 @@ public class ServiceBindingBuilderTest {
           .maxRequestLength(1024)
           .accessLogWriter(accessLogWriter, false)
           .requestTimeoutMillis(10000) // This is overwritten.
-          .multipartUploadsLocation(overWrittenMultipartUploadsLocation) // This is overwritten
+          .multipartUploadsLocation(overWrittenMultipartUploadsLocation) // This is overwritten.
           .defaultServiceNaming(ctx -> "globalServiceNaming"); // This is overwritten.
 
         sb.route().get("/foo/bar")
@@ -122,11 +122,14 @@ public class ServiceBindingBuilderTest {
           .multipartUploadsLocation(routeMultipartUploadsLocation)
           .build((ctx, req) -> HttpResponse.of(OK));
 
+        sb.route().get("/foo/bar/baz")
+          .build((ctx, req) -> HttpResponse.of(OK));
+
         sb.defaultVirtualHost().maxRequestLength(1024);
         sb.verboseResponses(true);
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
-        assertThat(serviceConfigs.size()).isOne();
+        assertThat(serviceConfigs.size()).isEqualTo(2);
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
         final Route route = serviceConfig.route();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
@@ -141,6 +144,48 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
         assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isFalse();
+    }
+
+    @Test
+    public void usingServerBuilderProperty() {
+        final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        final Path overWrittenMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final Path routeMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
+
+        final ServerBuilder sb = Server.builder();
+        sb.defaultVirtualHost()
+          .maxRequestLength(1024)
+          .accessLogWriter(accessLogWriter, false)
+          .requestTimeoutMillis(10000)
+          .multipartUploadsLocation(overWrittenMultipartUploadsLocation)
+          .defaultServiceNaming(ctx -> "globalServiceNaming");
+
+        // Not affect other route using ServerBuilder's property.
+        sb.route().get("/foo/bar")
+          .requestTimeout(Duration.ofMillis(10))
+          .defaultServiceNaming(ctx -> "serviceNaming")
+          .multipartUploadsLocation(routeMultipartUploadsLocation)
+          .build((ctx, req) -> HttpResponse.of(OK));
+
+        sb.route().get("/foo/bar/baz")
+          .build((ctx, req) -> HttpResponse.of(OK));
+
+        sb.defaultVirtualHost().maxRequestLength(1024);
+        sb.verboseResponses(true);
+
+        final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
+        assertThat(serviceConfigs.size()).isEqualTo(2);
+        final ServiceConfig bazServiceConfig = serviceConfigs.get(1);
+        final Route bazRoute = bazServiceConfig.route();
+        assertThat(bazRoute.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(bazRoute.paths()).containsExactly("/foo/bar/baz", "/foo/bar/baz");
+        final ServiceRequestContext bazSctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .build();
+        assertThat(bazServiceConfig.defaultServiceNaming().serviceName(bazSctx))
+                .isEqualTo("globalServiceNaming");
+        assertThat(bazServiceConfig.requestTimeoutMillis()).isEqualTo(10000);
+        assertThat(bazServiceConfig.multipartUploadsLocation()).isSameAs(overWrittenMultipartUploadsLocation);
     }
 
     @Test
