@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Steps as AntdSteps, StepsProps } from 'antd';
 import { graphql, useStaticQuery } from 'gatsby';
-import styles from './steps.module.less';
 
 const { Step } = AntdSteps;
 
@@ -71,7 +70,6 @@ const TutorialSteps: React.FC<TutorialStepProps> = (props) => {
       size="small"
       progressDot
       initial={1}
-      className={styles.tutorialTheme}
     >
       {tutorialSteps}
     </AntdSteps>

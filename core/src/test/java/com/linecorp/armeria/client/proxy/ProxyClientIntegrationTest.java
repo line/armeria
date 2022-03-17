@@ -595,10 +595,13 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testProxy_connectionTimeoutFailure_throwsException() throws Exception {
+        final int proxyMessageDelayMillis = 5_000;
+        final int connectTimeoutMillis = 1_000;
+
         channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
                 ctx.channel().eventLoop().schedule(
-                        () -> ctx.fireChannelRead(msg), 50, TimeUnit.MILLISECONDS);
+                        () -> ctx.fireChannelRead(msg), proxyMessageDelayMillis, TimeUnit.MILLISECONDS);
             } else {
                 ctx.fireChannelRead(msg);
             }
@@ -629,7 +632,7 @@ class ProxyClientIntegrationTest {
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
                                   .proxyConfig(selector)
-                                  .connectTimeoutMillis(1)
+                                  .connectTimeoutMillis(connectTimeoutMillis)
                                   .useHttp2Preface(true)
                                   .build()) {
 

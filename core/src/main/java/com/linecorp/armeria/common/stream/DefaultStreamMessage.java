@@ -175,7 +175,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @Override
     public final void abort() {
-        abort0(AbortedStreamException.get());
+        abort0(null);
     }
 
     @Override
@@ -184,7 +184,15 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         abort0(cause);
     }
 
-    private void abort0(Throwable cause) {
+    private void abort0(@Nullable Throwable cause) {
+        if (state == State.CLEANUP) {
+            return;
+        }
+
+        if (cause == null) {
+            cause = AbortedStreamException.get();
+        }
+
         SubscriptionImpl subscription = this.subscription;
         if (subscription == null) {
             final SubscriptionImpl newSubscription = new SubscriptionImpl(
@@ -210,7 +218,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             if (abortedSubscription.needsDirectInvocation()) {
                 abort0(cause, abortedSubscription);
             } else {
-                abortedSubscription.executor().execute(() -> abort0(cause, abortedSubscription));
+                final Throwable finalCause = cause;
+                abortedSubscription.executor().execute(() -> abort0(finalCause, abortedSubscription));
             }
         }
     }

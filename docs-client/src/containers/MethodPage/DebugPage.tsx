@@ -106,7 +106,7 @@ const toggle = (prev: boolean, override: unknown) => {
   return !prev;
 };
 
-const escapeSingleQuote = (text: string) => text.replace(/'/g, `'\\''`);
+const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
 const extractUrlPath = (method: Method) => {
   const endpoints = method.endpoints;
@@ -563,16 +563,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
               onSelectedPathChange={onSelectedPathChange}
             />
             {isAnnotatedService && (
-              <>
-                <HttpQueryString
-                  exampleQueries={exampleQueries}
-                  additionalQueriesOpen={additionalQueriesOpen}
-                  additionalQueries={additionalQueries}
-                  onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
-                  onQueriesFormChange={onQueriesFormChange}
-                  onSelectedQueriesChange={onSelectedQueriesChange}
-                />
-              </>
+              <HttpQueryString
+                exampleQueries={exampleQueries}
+                additionalQueriesOpen={additionalQueriesOpen}
+                additionalQueries={additionalQueries}
+                onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
+                onQueriesFormChange={onQueriesFormChange}
+                onSelectedQueriesChange={onSelectedQueriesChange}
+              />
             )}
             <HttpHeaders
               exampleHeaders={exampleHeaders}
@@ -585,24 +583,22 @@ const DebugPage: React.FunctionComponent<Props> = ({
               onStickyHeadersChange={toggleStickyHeaders}
             />
             {useRequestBody && (
-              <>
-                {isGraphqlService ? (
-                  <GraphqlRequestBody
-                    requestBodyOpen={requestBodyOpen}
-                    requestBody={requestBody}
-                    onEditRequestBodyClick={toggleRequestBodyOpen}
-                    onDebugFormChange={onDebugFormChange}
-                    schemaUrlPath={extractUrlPath(method)}
-                  />
-                ) : (
-                  <RequestBody
-                    requestBodyOpen={requestBodyOpen}
-                    requestBody={requestBody}
-                    onEditRequestBodyClick={toggleRequestBodyOpen}
-                    onDebugFormChange={onDebugFormChange}
-                  />
-                )}
-              </>
+              {isGraphqlService ? (
+                <GraphqlRequestBody
+                  requestBodyOpen={requestBodyOpen}
+                  requestBody={requestBody}
+                  onEditRequestBodyClick={toggleRequestBodyOpen}
+                  onDebugFormChange={onDebugFormChange}
+                  schemaUrlPath={extractUrlPath(method)}
+                />
+              ) : (
+                <RequestBody
+                  requestBodyOpen={requestBodyOpen}
+                  requestBody={requestBody}
+                  onEditRequestBodyClick={toggleRequestBodyOpen}
+                  onDebugFormChange={onDebugFormChange}
+                />
+              )}
             )}
             <Typography variant="body2" paragraph />
             <Button variant="contained" color="primary" onClick={onSubmit}>
