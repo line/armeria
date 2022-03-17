@@ -1,6 +1,5 @@
-/* eslint-disable import/no-extraneous-dependencies */
+// eslint-disable-next-line import/no-extraneous-dependencies
 const visit = require('unist-util-visit');
-/* eslint-enable import/no-extraneous-dependencies */
 const apiIndex = require('../../gen-src/api-index.json');
 
 const transformer = (markdownAST) => {

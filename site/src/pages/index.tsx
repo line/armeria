@@ -1,7 +1,7 @@
 import { RouteComponentProps } from '@reach/router';
 import { Button, Carousel, Tooltip, Typography } from 'antd';
 import { graphql, Link, useStaticQuery } from 'gatsby';
-import Img from 'gatsby-image';
+import { GatsbyImage } from 'gatsby-plugin-image';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import React from 'react';
 
@@ -15,11 +15,11 @@ import NoWrap from '../components/nowrap';
 import ProjectBadge from '../components/project-badge';
 import BaseLayout from '../layouts/base';
 
-import styles from './index.module.less';
+import * as styles from './index.module.less';
 
 const { Title, Paragraph } = Typography;
 
-const IndexPage: React.FC<RouteComponentProps> = (props) => {
+const IndexPage = (props: RouteComponentProps): JSX.Element => {
   const data = useStaticQuery(graphql`
     query {
       docServiceImages: allFile(
@@ -28,9 +28,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
       ) {
         nodes {
           childImageSharp {
-            fluid {
-              ...GatsbyImageSharpFluid
-            }
+            gatsbyImageData(layout: FULL_WIDTH)
           }
         }
       }
@@ -199,11 +197,16 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
             autoplay
             autoplaySpeed={5000}
           >
-            {data.docServiceImages.nodes.map((e: any) => (
-              <BrowserMockup key={e.childImageSharp.fluid.src}>
-                <Img fluid={e.childImageSharp.fluid} />
+            {/* eslint-disable react/no-array-index-key */}
+            {data.docServiceImages.nodes.map((e: any, imageIdx: number) => (
+              <BrowserMockup key={imageIdx}>
+                <GatsbyImage
+                  image={e.childImageSharp.gatsbyImageData}
+                  alt="DocService screenshot"
+                />
               </BrowserMockup>
             ))}
+            {/* eslint-enable react/no-array-index-key */}
           </Carousel>
         </MarketingBlock>
       </Marketing>

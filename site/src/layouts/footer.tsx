@@ -7,7 +7,7 @@ import React from 'react';
 
 import Logo from '../components/logo';
 import Mailchimp from '../components/mailchimp';
-import styles from './footer.module.less';
+import * as styles from './footer.module.less';
 
 const { Paragraph } = Typography;
 const { Footer } = Layout;
