@@ -116,8 +116,6 @@ public final class ServerConfig {
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
 
-    private final Path multipartUploadsLocation;
-
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
 
@@ -146,7 +144,7 @@ public final class ServerConfig {
             Supplier<? extends RequestId> requestIdGenerator,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
-            Http1HeaderNaming http1HeaderNaming, Path multipartUploadsLocation) {
+            Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -260,7 +258,6 @@ public final class ServerConfig {
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
-        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -760,13 +757,6 @@ public final class ServerConfig {
         return http1HeaderNaming;
     }
 
-    /**
-     * Returns the {@link Path} that is used to store uploaded file through multipart/form-data.
-     */
-    public Path multipartUploadsLocation() {
-        return multipartUploadsLocation;
-    }
-
     @Override
     public String toString() {
         String strVal = this.strVal;
@@ -783,7 +773,7 @@ public final class ServerConfig {
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled(), multipartUploadsLocation());
+                    isServerHeaderEnabled(), isDateHeaderEnabled());
         }
 
         return strVal;
@@ -805,7 +795,7 @@ public final class ServerConfig {
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
-            boolean serverHeaderEnabled, boolean dateHeaderEnabled, Path multipartUploadsLocation) {
+            boolean serverHeaderEnabled, boolean dateHeaderEnabled) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -900,8 +890,6 @@ public final class ServerConfig {
         buf.append(serverHeaderEnabled ? "enabled" : "disabled");
         buf.append(", dateHeader: ");
         buf.append(dateHeaderEnabled ? "enabled" : "disabled");
-        buf.append(", multipartUploadsLocation: ");
-        buf.append(multipartUploadsLocation);
         buf.append(')');
 
         return buf.toString();

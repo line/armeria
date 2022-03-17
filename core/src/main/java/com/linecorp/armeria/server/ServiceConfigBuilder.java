@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -52,6 +53,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private ScheduledExecutorService blockingTaskExecutor;
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -136,6 +139,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = multipartUploadsLocation;
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -157,7 +166,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         boolean defaultShutdownAccessLogWriterOnStop,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
-                        boolean defaultShutdownBlockingTaskExecutorOnStop) {
+                        boolean defaultShutdownBlockingTaskExecutorOnStop,
+                        Path defaultMultipartUploadsLocation) {
         return new ServiceConfig(
                 route, service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
@@ -168,7 +178,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop,
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
-                                             : defaultShutdownBlockingTaskExecutorOnStop);
+                                             : defaultShutdownBlockingTaskExecutorOnStop,
+                multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation);
     }
 
     @Override
@@ -184,6 +195,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .add("blockingTaskExecutor", blockingTaskExecutor)
                           .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
+                          .add("multipartUploadsLocation", multipartUploadsLocation)
                           .toString();
     }
 }

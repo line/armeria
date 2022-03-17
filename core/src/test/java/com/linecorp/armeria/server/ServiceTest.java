@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -52,10 +53,11 @@ public class ServiceTest {
 
         // Test if FooService.serviceAdded() is invoked.
         final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultLogName */ null,
-                                                    /* defaultServiceName */ null,
+                /* defaultServiceName */ null,
                                                     ServiceNaming.of("FooService"), 1, 1, true,
                                                     AccessLogWriter.disabled(), false,
-                                                    CommonPools.blockingTaskExecutor(), true);
+                                                    CommonPools.blockingTaskExecutor(), true,
+                                                    Files.newTemporaryFolder().toPath());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

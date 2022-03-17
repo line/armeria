@@ -34,6 +34,7 @@ import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -134,6 +135,8 @@ public final class VirtualHostBuilder {
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
     private boolean shutdownBlockingTaskExecutorOnStop;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -685,9 +688,9 @@ public final class VirtualHostBuilder {
         final List<RouteDecoratingService> routeDecoratingServices;
         if (defaultVirtualHostBuilder != null) {
             routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
-                    .addAll(this.routeDecoratingServices)
-                    .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
-                    .build();
+                                                   .addAll(this.routeDecoratingServices)
+                                                   .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
+                                                   .build();
         } else {
             routeDecoratingServices = ImmutableList.copyOf(this.routeDecoratingServices);
         }
@@ -924,6 +927,16 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     *
+     * @param multipartUploadsLocation the path of the directory stores the file.
+     */
+    public VirtualHostBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -1017,11 +1030,16 @@ public final class VirtualHostBuilder {
             shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
         }
 
+        final Path multipartUploadsLocation =
+                this.multipartUploadsLocation != null ?
+                this.multipartUploadsLocation : template.multipartUploadsLocation;
+
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
         assert blockingTaskExecutor != null;
+        assert multipartUploadsLocation != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -1042,14 +1060,15 @@ public final class VirtualHostBuilder {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
-                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                                            multipartUploadsLocation);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
-                               shutdownBlockingTaskExecutorOnStop);
+                               shutdownBlockingTaskExecutorOnStop, multipartUploadsLocation);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;

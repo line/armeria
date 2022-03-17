@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -248,6 +249,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         return (ServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
+    }
+
+    @Override
+    public ServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        return (ServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
     }
 
     @Override

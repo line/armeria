@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -138,4 +139,11 @@ interface ServiceConfigSetters {
      * @param numThreads the number of threads in the executor
      */
     ServiceConfigSetters blockingTaskExecutor(int numThreads);
+
+    /**
+     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     *
+     * @param multipartUploadsLocation the path of the directory stores the file.
+     */
+    ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
 }

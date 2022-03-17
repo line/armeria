@@ -21,6 +21,7 @@ import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -59,6 +60,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private ScheduledExecutorService blockingTaskExecutor;
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -174,6 +177,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return blockingTaskExecutor(executor, true);
     }
 
+    @Override
+    public ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -224,6 +233,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (blockingTaskExecutor != null) {
             serviceConfigBuilder.blockingTaskExecutor(blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+        }
+        if (multipartUploadsLocation != null) {
+            serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
         }
         return serviceConfigBuilder;
     }
