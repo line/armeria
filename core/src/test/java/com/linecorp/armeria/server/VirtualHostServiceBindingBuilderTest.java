@@ -22,8 +22,10 @@ import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
 import java.util.List;
 
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -33,6 +35,7 @@ class VirtualHostServiceBindingBuilderTest {
 
     @Test
     void serviceBindingBuilder() {
+        final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
         final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com")
@@ -43,6 +46,7 @@ class VirtualHostServiceBindingBuilderTest {
           .requestTimeoutMillis(10)
           .maxRequestLength(8192)
           .verboseResponses(true)
+          .multipartUploadsLocation(multipartUploadsLocation)
           .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
@@ -58,10 +62,12 @@ class VirtualHostServiceBindingBuilderTest {
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
+        assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
     }
 
     @Test
     void withRoute() {
+        final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
         final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com").withRoute(builder -> {
@@ -72,6 +78,7 @@ class VirtualHostServiceBindingBuilderTest {
                    .requestTimeoutMillis(10)
                    .maxRequestLength(8192)
                    .verboseResponses(true)
+                   .multipartUploadsLocation(multipartUploadsLocation)
                    .build((ctx, req) -> HttpResponse.of(OK));
         });
 
@@ -88,5 +95,6 @@ class VirtualHostServiceBindingBuilderTest {
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
+        assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
     }
 }

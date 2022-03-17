@@ -18,9 +18,11 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -86,6 +88,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
         final String defaultServiceName = "TestService";
         final String defaultLogName = "TestLog";
+        final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), false)
                 .annotatedService()
@@ -97,6 +100,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .verboseResponses(verboseResponse)
                 .defaultServiceName(defaultServiceName)
                 .defaultLogName(defaultLogName)
+                .multipartUploadsLocation(multipartUploadsLocation)
                 .build(new TestService())
                 .build(template);
 
@@ -108,6 +112,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(pathBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathBar.verboseResponses()).isTrue();
+        assertThat(pathBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
         assertThat(pathBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
@@ -121,6 +126,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathFoo.verboseResponses()).isTrue();
         assertThat(pathFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(pathFoo.defaultLogName()).isEqualTo(defaultLogName);
+        assertThat(pathFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
     }
 
     @Test

@@ -19,9 +19,11 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -113,6 +115,7 @@ class AnnotatedServiceBindingBuilderTest {
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
         final String defaultServiceName = "TestService";
         final String defaultLogName = "TestLog";
+        final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
         final Server server = Server.builder()
                                     .annotatedService()
@@ -124,6 +127,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .verboseResponses(verboseResponse)
                                     .defaultServiceName(defaultServiceName)
                                     .defaultLogName(defaultLogName)
+                                    .multipartUploadsLocation(multipartUploadsLocation)
                                     .build(new TestService())
                                     .build();
 
@@ -134,6 +138,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeFoo.verboseResponses()).isTrue();
+        assertThat(homeFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
         assertThat(homeFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
@@ -144,6 +149,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeBar.verboseResponses()).isTrue();
+        assertThat(homeBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         assertThat(homeBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
     }
