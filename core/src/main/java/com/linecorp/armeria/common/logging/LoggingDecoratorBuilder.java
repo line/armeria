@@ -53,8 +53,8 @@ public abstract class LoggingDecoratorBuilder {
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
     private Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper =
             log -> requestLogLevel();
-    private ResponseLogLevelMapper responseLogLevelMapper =
-            log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
+    @Nullable
+    private ResponseLogLevelMapper responseLogLevelMapper = null;
 
     private boolean isRequestLogLevelSet;
     private boolean isRequestLogLevelMapperSet;
@@ -208,7 +208,11 @@ public abstract class LoggingDecoratorBuilder {
      */
     public LoggingDecoratorBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
-        this.responseLogLevelMapper = responseLogLevelMapper.orElse(this.responseLogLevelMapper);
+        if (this.responseLogLevelMapper == null) {
+            this.responseLogLevelMapper = responseLogLevelMapper;
+        } else {
+            this.responseLogLevelMapper = this.responseLogLevelMapper.orElse(responseLogLevelMapper);
+        }
         return this;
     }
 
@@ -216,7 +220,14 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link LogLevel} to use when logging response logs.
      */
     protected final Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
-        return responseLogLevelMapper;
+        if (responseLogLevelMapper == null) {
+            return defaultResponseLogLevelMapper();
+        }
+        return responseLogLevelMapper.orElse(defaultResponseLogLevelMapper());
+    }
+
+    private ResponseLogLevelMapper defaultResponseLogLevelMapper() {
+        return log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
     }
 
     /**

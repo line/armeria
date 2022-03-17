@@ -20,12 +20,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * A {@link Function} to use when mapping the log level of response logs.
+ * A {@link Function} that determines the {@link LogLevel} of an {@link HttpResponse} from a given
+ * {@link RequestLog}.
  *
  * @see LoggingDecoratorBuilder#responseLogLevelMapper(ResponseLogLevelMapper)
  */

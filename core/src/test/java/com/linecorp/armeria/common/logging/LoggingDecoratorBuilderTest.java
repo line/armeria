@@ -128,16 +128,16 @@ class LoggingDecoratorBuilderTest {
     }
 
     @Test
-    void responseLogLevelOverride() {
-        builder.responseLogLevel(HttpStatusClass.SUCCESS, LogLevel.DEBUG)
-               .responseLogLevel(HttpStatus.OK, LogLevel.INFO)
+    void responseLogLevelInOrder() {
+        builder.responseLogLevel(HttpStatus.OK, LogLevel.INFO)
+               .responseLogLevel(HttpStatusClass.SUCCESS, LogLevel.DEBUG)
                .responseLogLevel(HttpStatus.BAD_REQUEST, LogLevel.WARN)
                .responseLogLevel(HttpStatus.BAD_REQUEST, LogLevel.ERROR);
 
         final Function<? super RequestLog, LogLevel> mapper = builder.responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.INFO);
         assertThat(mapper.apply(newRequestLog(HttpStatus.CREATED))).isEqualTo(LogLevel.DEBUG);
-        assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST))).isEqualTo(LogLevel.ERROR);
+        assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST))).isEqualTo(LogLevel.WARN);
     }
 
     @Test
