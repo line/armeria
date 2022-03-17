@@ -81,6 +81,7 @@ sensible defaults. By applying them, you can:
    ```groovy
    plugins {
        id 'com.google.osdetector' version '1.6.2' apply false
+       id 'io.github.gradle-nexus.publish-plugin' version '1.1.0' apply false
    }
 
    apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
