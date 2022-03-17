@@ -88,7 +88,7 @@ import io.netty.util.ReferenceCountUtil;
 
 /**
  * The system properties that affect Armeria's runtime behavior.
- * Priority is JVM option, SPI interface provided by {@link ArmeriaOptionsProvider} and default option
+ * Priority ordering is JVM option, SPI interface provided by {@link ArmeriaOptionsProvider} and default
  * respectively. if value is fail to validated. The next candidate will be used.
  */
 public final class Flags {
@@ -277,7 +277,7 @@ public final class Flags {
                             ArmeriaOptionsProvider::transportType,
                             DefaultFlags.TRANSPORT_TYPE,
                             strType -> {
-                                TransportType type =
+                                final TransportType type =
                                         strToTransportType.apply(strType);
                                 if (type == null) {
                                     return false;
@@ -861,9 +861,9 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#idleTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@value DefaultFlags#DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} JVM option to override
-     * the default value.
+     * <p>The default value of this flag is {@value DefaultFlags#DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} JVM option
+     * to override the default value.
      */
     public static long defaultServerIdleTimeoutMillis() {
         return DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS;
@@ -874,9 +874,9 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
      *
-     * <p>This default value of this flag is {@value DefaultFlags#DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} JVM option to override
-     * the default value.
+     * <p>This default value of this flag is {@value DefaultFlags#DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} JVM option
+     * to override the default value.
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
@@ -1039,7 +1039,8 @@ public final class Flags {
      * If the value of this flag is greater than {@code 0}, a connection shutdown will have a drain period
      * when client will be notified about the shutdown, but in flight requests will still be accepted.
      *
-     * <p>The default value of this flag is {@value DefaultFlags#DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS}.
+     * <p>The default value of this flag is
+     * {@value DefaultFlags#DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
      * JVM option to override the default value.
      *

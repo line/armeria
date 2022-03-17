@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
 import io.netty.handler.ssl.OpenSsl;
 
 /**
- * Default value of ArmeriaOptionsProvider
+ * Default value of {@link Flags} and @{@link ArmeriaOptionsProvider}.
  */
 public enum DefaultFlags implements ArmeriaOptionsProvider {
     INSTANCE;
@@ -52,7 +52,7 @@ public enum DefaultFlags implements ArmeriaOptionsProvider {
     static final boolean USE_EPOLL = TransportType.EPOLL.isAvailable();
     static final TransportType TRANSPORT_TYPE = USE_EPOLL ? TransportType.EPOLL : TransportType.NIO;
 
-    static final Boolean useOpenSsl = OpenSsl.isAvailable() ? true : false;
+    static final Boolean useOpenSsl = OpenSsl.isAvailable();
     static final Boolean dumpOpenSslInfo = false;
 
     static final int MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
