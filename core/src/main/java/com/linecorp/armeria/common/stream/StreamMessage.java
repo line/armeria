@@ -609,6 +609,7 @@ public interface StreamMessage<T> extends Publisher<T> {
             Function<? super T, ? extends CompletableFuture<? extends U>> function,
             int maxConcurrency) {
         requireNonNull(function, "function");
+        checkArgument(maxConcurrency > 0, "maxConcurrency: %s (expected > 0)", maxConcurrency);
         return new AsyncMapStreamMessage<>(this, function, maxConcurrency);
     }
 
