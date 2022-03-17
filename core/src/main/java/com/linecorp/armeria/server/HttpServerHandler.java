@@ -316,7 +316,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
-        if (!routingStatus.needsServiceConfig()) {
+        if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
             switch (routingStatus) {

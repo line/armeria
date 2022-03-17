@@ -160,7 +160,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
             final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
             final Routed<ServiceConfig> routed;
-            if (routingCtx.status().needsServiceConfig()) {
+            if (routingCtx.status().routeMustExist()) {
                 try {
                     // Find the service that matches the path.
                     routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);

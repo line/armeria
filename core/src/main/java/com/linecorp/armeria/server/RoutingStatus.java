@@ -43,16 +43,16 @@ public enum RoutingStatus {
      */
     INVALID_PATH(false);
 
-    private final boolean needsServiceConfig;
+    private final boolean routeMustExist;
 
-    RoutingStatus(boolean needsServiceConfig) {
-        this.needsServiceConfig = needsServiceConfig;
+    RoutingStatus(boolean routeMustExist) {
+        this.routeMustExist = routeMustExist;
     }
 
     /**
-     * Returns {@code true} if the incoming HTTP request needs a {@link ServiceConfig}.
+     * Returns {@code true} if a {@link Route} must exist for the incoming HTTP request.
      */
-    public boolean needsServiceConfig() {
-        return needsServiceConfig;
+    public boolean routeMustExist() {
+        return routeMustExist;
     }
 }

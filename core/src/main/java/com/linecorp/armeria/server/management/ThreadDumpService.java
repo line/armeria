@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -56,10 +55,6 @@ enum ThreadDumpService implements HttpService {
 
     @Override
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        if (headers.method() == HttpMethod.GET) {
-            return ExchangeType.UNARY;
-        } else {
-            return ExchangeType.REQUEST_STREAMING;
-        }
+        return ExchangeType.UNARY;
     }
 }

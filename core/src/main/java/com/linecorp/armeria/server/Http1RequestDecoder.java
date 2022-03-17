@@ -204,7 +204,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // Close the request early when it is certain there will be neither content nor trailers.
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
                     final Routed<ServiceConfig> routed;
-                    if (routingCtx.status().needsServiceConfig()) {
+                    if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
                             routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
