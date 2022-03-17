@@ -582,23 +582,21 @@ const DebugPage: React.FunctionComponent<Props> = ({
               onHeadersFormChange={onHeadersFormChange}
               onStickyHeadersChange={toggleStickyHeaders}
             />
-            {useRequestBody && (
-              {isGraphqlService ? (
-                <GraphqlRequestBody
-                  requestBodyOpen={requestBodyOpen}
-                  requestBody={requestBody}
-                  onEditRequestBodyClick={toggleRequestBodyOpen}
-                  onDebugFormChange={onDebugFormChange}
-                  schemaUrlPath={extractUrlPath(method)}
-                />
-              ) : (
-                <RequestBody
-                  requestBodyOpen={requestBodyOpen}
-                  requestBody={requestBody}
-                  onEditRequestBodyClick={toggleRequestBodyOpen}
-                  onDebugFormChange={onDebugFormChange}
-                />
-              )}
+            {useRequestBody && isGraphqlService ? (
+              <GraphqlRequestBody
+                requestBodyOpen={requestBodyOpen}
+                requestBody={requestBody}
+                onEditRequestBodyClick={toggleRequestBodyOpen}
+                onDebugFormChange={onDebugFormChange}
+                schemaUrlPath={extractUrlPath(method)}
+              />
+            ) : (
+              <RequestBody
+                requestBodyOpen={requestBodyOpen}
+                requestBody={requestBody}
+                onEditRequestBodyClick={toggleRequestBodyOpen}
+                onDebugFormChange={onDebugFormChange}
+              />
             )}
             <Typography variant="body2" paragraph />
             <Button variant="contained" color="primary" onClick={onSubmit}>

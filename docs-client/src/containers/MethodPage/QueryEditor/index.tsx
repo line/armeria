@@ -75,76 +75,74 @@ const QueryEditor: React.FunctionComponent<Props> = (props) => {
   );
 
   return (
-    <>
-      <CodeMirror
-        autoCursor={false}
-        value={props.value}
-        options={{
-          placeholder: props.placeholder,
-          lineNumbers: false,
-          tabSize: 2,
-          mode: 'graphql',
-          smartIndent: true,
-          autoCloseBrackets: true,
-          showCursorWhenSelecting: true,
-          lint: {
-            // @ts-ignore
-            schema: props.schema,
-          },
-          hintOptions: {
-            schema: props.schema,
-            closeOnUnfocus: true,
-            completeSingle: false,
-            container,
-          },
-          gutters: ['CodeMirror-linenumbers'],
-          extraKeys: {
-            'Cmd-Space': (editor: CodeMirror.Editor) =>
-              editor.showHint({
-                completeSingle: true,
-                closeOnUnfocus: true,
-                container,
-              }),
-            'Ctrl-Space': (editor: CodeMirror.Editor) =>
-              editor.showHint({
-                completeSingle: true,
-                closeOnUnfocus: true,
-                container,
-              }),
-            'Alt-Space': (editor: CodeMirror.Editor) =>
-              editor.showHint({
-                completeSingle: true,
-                closeOnUnfocus: true,
-                container,
-              }),
-            'Shift-Space': (editor: CodeMirror.Editor) =>
-              editor.showHint({
-                completeSingle: true,
-                closeOnUnfocus: true,
-                container,
-              }),
-            'Shift-Alt-Space': (editor: CodeMirror.Editor) =>
-              editor.showHint({
-                completeSingle: true,
-                closeOnUnfocus: true,
-                container,
-              }),
-          },
-        }}
-        editorDidMount={(editor: CodeMirror.Editor) => {
-          editor.setSize('100%', props.height);
-          setContainer(editor.getWrapperElement());
-        }}
-        onChange={(
-          _editor: CodeMirror.Editor,
-          _data: EditorChange,
-          value: string,
-        ) => {
-          return props.onChange(value);
-        }}
-        onKeyUp={onKeyUp}
-      />
-    </>
+    <CodeMirror
+      autoCursor={false}
+      value={props.value}
+      options={{
+        placeholder: props.placeholder,
+        lineNumbers: false,
+        tabSize: 2,
+        mode: 'graphql',
+        smartIndent: true,
+        autoCloseBrackets: true,
+        showCursorWhenSelecting: true,
+        lint: {
+          // @ts-ignore
+          schema: props.schema,
+        },
+        hintOptions: {
+          schema: props.schema,
+          closeOnUnfocus: true,
+          completeSingle: false,
+          container,
+        },
+        gutters: ['CodeMirror-linenumbers'],
+        extraKeys: {
+          'Cmd-Space': (editor: CodeMirror.Editor) =>
+            editor.showHint({
+              completeSingle: true,
+              closeOnUnfocus: true,
+              container,
+            }),
+          'Ctrl-Space': (editor: CodeMirror.Editor) =>
+            editor.showHint({
+              completeSingle: true,
+              closeOnUnfocus: true,
+              container,
+            }),
+          'Alt-Space': (editor: CodeMirror.Editor) =>
+            editor.showHint({
+              completeSingle: true,
+              closeOnUnfocus: true,
+              container,
+            }),
+          'Shift-Space': (editor: CodeMirror.Editor) =>
+            editor.showHint({
+              completeSingle: true,
+              closeOnUnfocus: true,
+              container,
+            }),
+          'Shift-Alt-Space': (editor: CodeMirror.Editor) =>
+            editor.showHint({
+              completeSingle: true,
+              closeOnUnfocus: true,
+              container,
+            }),
+        },
+      }}
+      editorDidMount={(editor: CodeMirror.Editor) => {
+        editor.setSize('100%', props.height);
+        setContainer(editor.getWrapperElement());
+      }}
+      onChange={(
+        _editor: CodeMirror.Editor,
+        _data: EditorChange,
+        value: string,
+      ) => {
+        return props.onChange(value);
+      }}
+      onKeyUp={onKeyUp}
+    />
   );
 };
 
