@@ -25,8 +25,12 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -162,6 +166,21 @@ class FlagsTest {
     @SetSystemProperty(key = "com.linecorp.armeria.defaultUseHttp2Preface", value = "false")
     void jvmOptionDefaultUseHttp2Preface() throws Throwable {
         assertFlags("defaultUseHttp2Preface").isEqualTo(false);
+    }
+
+    @Test
+    void testApiConsistencyBetweenFlagsAndArmeriaOptions() {
+        //Check Flags methods excluding deprecated methods
+        final List<String> flagsApis = Arrays.stream(Flags.class.getMethods())
+                                             .filter(m -> !m.isAnnotationPresent(Deprecated.class))
+                                             .map(Method::getName)
+                                             .filter(name -> Arrays.stream(Object.class.getMethods())
+                                                                   .noneMatch(om -> om.getName().equals(name)))
+                                             .collect(Collectors.toList());
+        final List<String> armeriaOptionsProviderApis = Arrays.stream(ArmeriaOptionsProvider.class.getMethods())
+                                                              .map(Method::getName)
+                                                              .collect(Collectors.toList());
+        assertThat(flagsApis).hasSameElementsAs(armeriaOptionsProviderApis);
     }
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
