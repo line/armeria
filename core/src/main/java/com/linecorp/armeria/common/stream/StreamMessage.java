@@ -592,7 +592,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Transforms values emitted by this {@link StreamMessage} by applying the specified asynchronous
      * {@link Function} and emitting the value the future completes with.
      * The {@link StreamMessage} publishes items eagerly in the order that the futures complete.
-     * The number of pending futures will at most be {@code maximumCurrency}
+     * The number of pending futures will at most be {@code maxConcurrency}
      * It does not necessarily preserve the order of the original stream.
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
@@ -607,9 +607,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     default <U> StreamMessage<U> mapParallel(
             Function<? super T, ? extends CompletableFuture<? extends U>> function,
-            int maximumConcurrency) {
+            int maxConcurrency) {
         requireNonNull(function, "function");
-        return new AsyncMapStreamMessage<>(this, function, maximumConcurrency);
+        return new AsyncMapStreamMessage<>(this, function, maxConcurrency);
     }
 
     /**
