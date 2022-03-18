@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
@@ -96,6 +97,11 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     }
 
     @Override
+    public LoggingClientBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
+        return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
+    @Override
     public LoggingClientBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return (LoggingClientBuilder) super.responseLogLevel(status, logLevel);
     }
@@ -113,12 +119,6 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     @Override
     public LoggingClientBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         return (LoggingClientBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
-    }
-
-    @Override
-    public LoggingClientBuilder requestLogLevelMapper(
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
-        return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
     @Override

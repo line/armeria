@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,22 +90,32 @@ class LoggingDecoratorBuilderTest {
     }
 
     @Test
-    void requestLog() {
+    void requestLogLevel() {
         assertThatThrownBy(() -> builder.requestLogLevel(null))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.requestLogLevel()).isEqualTo(LogLevel.DEBUG);
 
         builder.requestLogLevel(LogLevel.ERROR);
-        assertThat(builder.requestLogLevel()).isEqualTo(LogLevel.ERROR);
+
+        final RequestLogLevelMapper mapper = builder.requestLogLevelMapper();
+        assertThat(mapper.apply(newRequestOnlyLog())).isEqualTo(LogLevel.ERROR);
+    }
+
+    @Test
+    void requestLogShouldBeDebugByDefault() {
+        final RequestLogLevelMapper mapper = builder.requestLogLevelMapper();
+        assertThat(mapper.apply(newRequestOnlyLog())).isEqualTo(LogLevel.DEBUG);
     }
 
     @Test
     void responseLogLevelWithHttpStatus() {
+        assertThatThrownBy(() -> builder.responseLogLevel(HttpStatus.OK, null))
+                .isInstanceOf(NullPointerException.class);
+
         builder.responseLogLevel(HttpStatus.OK, LogLevel.INFO)
                .responseLogLevel(HttpStatus.BAD_REQUEST, LogLevel.WARN)
                .responseLogLevel(HttpStatus.INTERNAL_SERVER_ERROR, LogLevel.ERROR);
 
-        final Function<? super RequestLog, LogLevel> mapper = builder.responseLogLevelMapper();
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.INFO);
         assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST))).isEqualTo(LogLevel.WARN);
         assertThat(mapper.apply(newRequestLog(HttpStatus.INTERNAL_SERVER_ERROR))).isEqualTo(LogLevel.ERROR);
@@ -114,11 +123,14 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void responseLogLevelWithHttpStatusClass() {
+        assertThatThrownBy(() -> builder.responseLogLevel(HttpStatusClass.SUCCESS, null))
+                .isInstanceOf(NullPointerException.class);
+
         builder.responseLogLevel(HttpStatusClass.SUCCESS, LogLevel.INFO)
                .responseLogLevel(HttpStatusClass.CLIENT_ERROR, LogLevel.WARN)
                .responseLogLevel(HttpStatusClass.SERVER_ERROR, LogLevel.ERROR);
 
-        final Function<? super RequestLog, LogLevel> mapper = builder.responseLogLevelMapper();
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.INFO);
         assertThat(mapper.apply(newRequestLog(HttpStatus.CREATED))).isEqualTo(LogLevel.INFO);
         assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST))).isEqualTo(LogLevel.WARN);
@@ -128,37 +140,65 @@ class LoggingDecoratorBuilderTest {
     }
 
     @Test
+    void successfulResponseLogLevel() {
+        assertThatThrownBy(() -> builder.successfulResponseLogLevel(null))
+                .isInstanceOf(NullPointerException.class);
+
+        builder.successfulResponseLogLevel(LogLevel.ERROR);
+
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
+        assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.ERROR);
+    }
+
+    @Test
+    void successfulResponseLogLevelShouldBeDebugByDefault() {
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
+        assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.DEBUG);
+    }
+
+    @Test
+    void failureResponseLogLevel() {
+        assertThatThrownBy(() -> builder.failureResponseLogLevel(null))
+                .isInstanceOf(NullPointerException.class);
+
+        builder.failureResponseLogLevel(LogLevel.ERROR);
+
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
+        assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST, new RuntimeException())))
+                .isEqualTo(LogLevel.ERROR);
+    }
+
+    @Test
+    void failureResponseLogLevelShouldBeWarnByDefault() {
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
+        assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST, new RuntimeException())))
+                .isEqualTo(LogLevel.WARN);
+    }
+
+    @Test
     void responseLogLevelInOrder() {
         builder.responseLogLevel(HttpStatus.OK, LogLevel.INFO)
                .responseLogLevel(HttpStatusClass.SUCCESS, LogLevel.DEBUG)
                .responseLogLevel(HttpStatus.BAD_REQUEST, LogLevel.WARN)
                .responseLogLevel(HttpStatus.BAD_REQUEST, LogLevel.ERROR);
 
-        final Function<? super RequestLog, LogLevel> mapper = builder.responseLogLevelMapper();
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.INFO);
         assertThat(mapper.apply(newRequestLog(HttpStatus.CREATED))).isEqualTo(LogLevel.DEBUG);
         assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST))).isEqualTo(LogLevel.WARN);
     }
 
     @Test
-    void shouldReturnSuccessfulResponseLogLevelIfFallbackWithoutCause() {
-        builder.responseLogLevel(HttpStatus.OK, LogLevel.INFO)
-               .successfulResponseLogLevel(LogLevel.DEBUG);
+    void responseLogLevel() {
+        builder.successfulResponseLogLevel(LogLevel.INFO)
+               .responseLogLevel(HttpStatus.BAD_REQUEST, LogLevel.INFO)
+               .responseLogLevel(HttpStatusClass.SERVER_ERROR, LogLevel.ERROR);
 
-        final Function<? super RequestLog, LogLevel> mapper = builder.responseLogLevelMapper();
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.INFO);
-        assertThat(mapper.apply(newRequestLog(HttpStatus.CREATED))).isEqualTo(LogLevel.DEBUG);
-    }
-
-    @Test
-    void shouldReturnFailureResponseLogLevelIfFallbackWithCause() {
-        builder.responseLogLevel(HttpStatus.BAD_REQUEST, LogLevel.WARN)
-               .failureResponseLogLevel(LogLevel.ERROR);
-
-        final Function<? super RequestLog, LogLevel> mapper = builder.responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST, new RuntimeException())))
-                .isEqualTo(LogLevel.WARN);
-        assertThat(mapper.apply(newRequestLog(HttpStatus.UNAUTHORIZED, new RuntimeException())))
+                .isEqualTo(LogLevel.INFO);
+        assertThat(mapper.apply(newRequestLog(HttpStatus.INTERNAL_SERVER_ERROR, new RuntimeException())))
                 .isEqualTo(LogLevel.ERROR);
     }
 
@@ -255,6 +295,12 @@ class LoggingDecoratorBuilderTest {
     }
 
     private static final class Builder extends LoggingDecoratorBuilder {
+    }
+
+    private static RequestOnlyLog newRequestOnlyLog() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.logBuilder().endRequest();
+        return ctx.logBuilder().whenRequestComplete().join();
     }
 
     private static RequestLog newRequestLog(HttpStatus status) {

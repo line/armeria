@@ -23,7 +23,6 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
@@ -48,14 +47,10 @@ public abstract class LoggingDecoratorBuilder {
 
     @Nullable
     private Logger logger;
-    private LogLevel requestLogLevel = LogLevel.DEBUG;
-    private Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper =
-            log -> requestLogLevel();
+    @Nullable
+    private RequestLogLevelMapper requestLogLevelMapper;
     @Nullable
     private ResponseLogLevelMapper responseLogLevelMapper = null;
-
-    private boolean isRequestLogLevelSet;
-    private boolean isRequestLogLevelMapperSet;
 
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -105,20 +100,28 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#DEBUG}.
      */
     public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
-        if (isRequestLogLevelMapperSet) {
-            throw new IllegalStateException("requestLogLevelMapper has been set already.");
-        }
-        this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        isRequestLogLevelSet = true;
-        return this;
+        requireNonNull(requestLogLevel, "requestLogLevel");
+        return requestLogLevelMapper(RequestLogLevelMapper.of(requestLogLevel));
     }
 
     /**
-     * Returns the {@link LogLevel} to use when logging requests.
+     * Sets the {@link Function} to use when mapping the log level of request logs.
      */
-    @VisibleForTesting
-    final LogLevel requestLogLevel() {
-        return requestLogLevel;
+    public LoggingDecoratorBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
+        requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
+        if (this.requestLogLevelMapper == null) {
+            this.requestLogLevelMapper = requestLogLevelMapper;
+        } else {
+            this.requestLogLevelMapper = this.requestLogLevelMapper.orElse(requestLogLevelMapper);
+        }
+        return this;
+    }
+
+    protected final RequestLogLevelMapper requestLogLevelMapper() {
+        if (requestLogLevelMapper == null) {
+            return RequestLogLevelMapper.of(LogLevel.DEBUG);
+        }
+        return requestLogLevelMapper.orElse(RequestLogLevelMapper.of(LogLevel.DEBUG));
     }
 
     /**
@@ -153,26 +156,6 @@ public abstract class LoggingDecoratorBuilder {
     public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         return responseLogLevelMapper(log -> log.responseCause() != null ? failedResponseLogLevel : null);
-    }
-
-    /**
-     * Sets the {@link Function} to use when mapping the log level of request logs.
-     */
-    public LoggingDecoratorBuilder requestLogLevelMapper(
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
-        if (isRequestLogLevelSet) {
-            throw new IllegalStateException("requestLogLevel has been set already.");
-        }
-        this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
-        isRequestLogLevelMapperSet = true;
-        return this;
-    }
-
-    /**
-     * Returns the {@link LogLevel} to use when logging request logs.
-     */
-    protected final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper() {
-        return requestLogLevelMapper;
     }
 
     /**
@@ -388,8 +371,7 @@ public abstract class LoggingDecoratorBuilder {
 
     @Override
     public String toString() {
-        return toString(this, logger, requestLogLevel,
-                        requestLogLevelMapper, responseLogLevelMapper, isRequestLogLevelMapperSet,
+        return toString(this, logger, requestLogLevelMapper, responseLogLevelMapper,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
                         responseCauseSanitizer);
@@ -398,10 +380,8 @@ public abstract class LoggingDecoratorBuilder {
     private static String toString(
             LoggingDecoratorBuilder self,
             @Nullable Logger logger,
-            LogLevel requestLogLevel,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
-            boolean isRequestLogLevelMapperSet,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, ?,
@@ -421,12 +401,7 @@ public abstract class LoggingDecoratorBuilder {
                                                  .omitNullValues()
                                                  .add("logger", logger);
 
-        if (isRequestLogLevelMapperSet) {
-            helper.add("requestLogLevelMapper", requestLogLevelMapper);
-        } else {
-            helper.add("requestLogLevel", requestLogLevel);
-        }
-
+        helper.add("requestLogLevelMapper", requestLogLevelMapper);
         helper.add("responseLogLevelMapper", responseLogLevelMapper);
 
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {

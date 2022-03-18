@@ -68,7 +68,7 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
      */
     @Nullable
     @Override
-    LogLevel apply(RequestLog requestLog);
+    LogLevel apply(RequestLog log);
 
     /**
      * Returns a composed {@link ResponseLogLevelMapper} which represents a logical OR of this
@@ -81,12 +81,12 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
         if (this == other) {
             return this;
         }
-        return requestLog -> {
-            final LogLevel logLevel = ResponseLogLevelMapper.this.apply(requestLog);
+        return log -> {
+            final LogLevel logLevel = ResponseLogLevelMapper.this.apply(log);
             if (logLevel != null) {
                 return logLevel;
             }
-            return other.apply(requestLog);
+            return other.apply(log);
         };
     }
 }
