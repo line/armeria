@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.IOException;
@@ -121,14 +122,14 @@ class StreamMessageInputStreamTest {
 
     @Test
     void readWithOffset() throws Exception {
-        final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] {1, 2, 3, 4, 5});
+        final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] { 1, 2, 3, 4, 5 });
         final InputStream inputStream = streamMessage.toInputStream(HttpData::wrap);
 
         final byte[] result = new byte[5];
         final int len = inputStream.read(result, 1, 3);
 
         assertThat(len).isEqualTo(3);
-        assertThat(result).isEqualTo(new byte[] { 0, 1, 2, 3, 0});
+        assertThat(result).isEqualTo(new byte[] { 0, 1, 2, 3, 0 });
         assertThat(inputStream.available()).isEqualTo(2);
     }
 
@@ -161,6 +162,7 @@ class StreamMessageInputStreamTest {
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertDoesNotThrow(inputStream::close);
+        await().untilAsserted(() -> assertThat(streamMessage.whenComplete()).isDone());
         assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
                                              .hasMessage("Stream closed");
         assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
@@ -174,6 +176,7 @@ class StreamMessageInputStreamTest {
         assertThat(inputStream.available()).isZero();
 
         assertDoesNotThrow(inputStream::close);
+        await().untilAsserted(() -> assertThat(streamMessage.whenComplete()).isDone());
         assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
                                              .hasMessage("Stream closed");
         assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
@@ -189,6 +192,7 @@ class StreamMessageInputStreamTest {
 
         for (int i = 0; i < 10; i++) {
             assertDoesNotThrow(inputStream::close);
+            await().untilAsserted(() -> assertThat(streamMessage.whenComplete()).isDone());
             assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
                                                  .hasMessage("Stream closed");
             assertThatThrownBy(inputStream::available).isInstanceOf(IOException.class)
@@ -198,7 +202,7 @@ class StreamMessageInputStreamTest {
 
     @Test
     void available() throws Exception {
-        final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] {1, 2, 3, 4, 5});
+        final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] { 1, 2, 3, 4, 5 });
         final InputStream inputStream = streamMessage.toInputStream(HttpData::wrap);
         final byte[] expected = {1, 2, 3, 4};
         assertThat(inputStream.available()).isZero();
