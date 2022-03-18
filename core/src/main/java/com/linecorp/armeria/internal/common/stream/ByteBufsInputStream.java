@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static java.util.Objects.requireNonNull;

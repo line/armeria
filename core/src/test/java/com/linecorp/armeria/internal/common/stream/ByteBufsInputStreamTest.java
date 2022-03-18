@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

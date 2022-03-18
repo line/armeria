@@ -30,6 +30,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.stream.ByteBufsInputStream;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
