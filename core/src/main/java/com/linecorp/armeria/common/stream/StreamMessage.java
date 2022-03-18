@@ -746,6 +746,6 @@ public interface StreamMessage<T> extends Publisher<T> {
                                       EventExecutor executor) {
         requireNonNull(httpDataConverter, "httpDataConverter");
         requireNonNull(executor, "executor");
-        return new StreamMessageInputStream<>(this, httpDataConverter, defaultSubscriberExecutor());
+        return new StreamMessageInputStream<>(this, httpDataConverter, executor);
     }
 }
