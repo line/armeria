@@ -3,7 +3,7 @@ import React from 'react';
 
 import BaseLayout from '../layouts/base';
 
-import styles from './404.module.less';
+import * as styles from './404.module.less';
 import Logo from '../components/logo';
 
 const NotFound: React.FC<RouteComponentProps> = (props) => (

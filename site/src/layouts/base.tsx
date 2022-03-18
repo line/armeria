@@ -10,7 +10,7 @@ import configReveal from 'react-reveal/globals';
 import Header from './header';
 import Footer from './footer';
 
-import styles from './base.module.less';
+import * as styles from './base.module.less';
 import flashAtHash from './flash-at-hash';
 import jumpToHash from './jump-to-hash';
 

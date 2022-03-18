@@ -108,6 +108,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final MethodDescriptor<I, O> method;
     private final String simpleMethodName;
 
+    private final HttpRequest req;
     private final StreamMessage<DeframedMessage> deframedRequest;
     private final ArmeriaMessageFramer responseFramer;
 
@@ -184,6 +185,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
                                        maxRequestMessageLength)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
+        this.req = req;
         deframedRequest = req.decode(requestDeframer, alloc, byteBufConverter(alloc, grpcWebText));
         requestDeframer.setDeframedStreamMessage(deframedRequest);
         responseFramer = new ArmeriaMessageFramer(alloc, maxResponseMessageLength, grpcWebText);
@@ -365,6 +367,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doClose(Status status, Metadata metadata) {
+        maybeLogRequestContent(null);
+
         if (cancelled) {
             // No need to write anything to client if cancelled already.
             closeListener(status, false, true);
@@ -491,7 +495,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // Special case for unary calls.
                 if (messageReceived && method.getType() == MethodType.UNARY) {
                     closeListener(Status.INTERNAL.withDescription(
-                            "More than one request messages for unary call or server streaming call"), false,
+                                          "More than one request messages for unary call or server streaming " +
+                                          "call"), false,
                                   true);
                     return;
                 }
@@ -508,13 +513,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
 
             final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-
             request = marshaller.deserializeRequest(message, grpcWebText);
-
-            if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, request),
-                                                null);
-            }
+            maybeLogRequestContent(request);
 
             if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
                 GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
@@ -525,9 +525,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             } else {
                 invokeOnMessage(request);
             }
-        } catch (Throwable e) {
-            upstream.cancel();
-            close(e, new Metadata());
+        } catch (Throwable cause) {
+            close(cause, new Metadata());
         }
     }
 
@@ -535,9 +534,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onMessage(request);
-        } catch (Throwable t) {
-            upstream.cancel();
-            close(t, new Metadata());
+        } catch (Throwable cause) {
+            close(cause, new Metadata());
         }
     }
 
@@ -545,9 +543,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     public void onComplete() {
         clientStreamClosed = true;
         if (!closeCalled) {
-            if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
-            }
+            maybeLogRequestContent(null);
 
             if (blockingExecutor != null) {
                 blockingExecutor.execute(this::invokeHalfClose);
@@ -601,7 +597,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
-                deframedRequest.abort();
+                if (newStatus.isOk()) {
+                    req.abort();
+                } else {
+                    req.abort(newStatus.asException());
+                }
             }
 
             if (completed) {
@@ -701,5 +701,17 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             return ForwardingDecompressor.forGrpc(decompressor);
         }
         return ForwardingDecompressor.forGrpc(Identity.NONE);
+    }
+
+    private void maybeLogRequestContent(@Nullable Object message) {
+        if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+            if (message == null) {
+                ctx.logBuilder()
+                   .requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
+            } else {
+                ctx.logBuilder()
+                   .requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, message), null);
+            }
+        }
     }
 }

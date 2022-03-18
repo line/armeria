@@ -112,8 +112,8 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
                     }
                     final String operationName = (String) requestMap.get("operationName");
-                    final Map<String, Object> variables = toMap(requestMap.get("variables"));
-                    final Map<String, Object> extensions = toMap(requestMap.get("extensions"));
+                    final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"));
+                    final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"));
 
                     try {
                         return executeGraphql(ctx,
@@ -164,21 +164,22 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         return parseJsonString(value);
     }
 
-    private static Map<String, Object> toMap(@Nullable Object maybeMap) {
+    /**
+     * This only works reliably if maybeMap is from Json, as maps(objects) in Json
+     * can only have string keys.
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
         if (maybeMap == null) {
             return ImmutableMap.of();
         }
 
         if (maybeMap instanceof Map) {
-            final Map<?, ?> variablesMap = (Map<?, ?>) maybeMap;
-            if (variablesMap.isEmpty()) {
+            final Map<?, ?> map = (Map<?, ?>) maybeMap;
+            if (map.isEmpty()) {
                 return ImmutableMap.of();
             }
-
-            final ImmutableMap.Builder<String, Object> builder =
-                    ImmutableMap.builderWithExpectedSize(variablesMap.size());
-            variablesMap.forEach((k, v) -> builder.put(String.valueOf(k), v));
-            return builder.build();
+            return (Map<String, Object>) map;
         } else {
             throw new IllegalArgumentException("Unknown parameter type variables");
         }

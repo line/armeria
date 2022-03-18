@@ -280,7 +280,7 @@ public final class Flags {
     private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
             getInt("defaultMaxClientNumRequestsPerConnection",
                    DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
-                    value -> value >= 0);
+                   value -> value >= 0);
 
     private static final long DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
@@ -444,6 +444,9 @@ public final class Flags {
     private static final boolean DEFAULT_USE_DEFAULT_SOCKET_OPTIONS = true;
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
             getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
+
+    private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
+            getBoolean("allowDoubleDotsInQueryString", false);
 
     static {
         TransportType type = null;
@@ -1337,6 +1340,20 @@ public final class Flags {
      */
     public static boolean useLegacyRouteDecoratorOrdering() {
         return DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+    }
+
+    /**
+     * Returns whether to allow double dots ({@code ..}) in a request path query string.
+     *
+     * <p>Note that double dots in a query string can lead to a vulnerability if a query param value contains
+     * an improper path such as {@code /download?path=../../secrets.txt}. Therefore, extra caution should be
+     * taken when enabling this option, and you may need additional validations at the application level.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true} JVM option to enable it.
+     */
+    public static boolean allowDoubleDotsInQueryString() {
+        return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
     }
 
     @Nullable
