@@ -119,10 +119,10 @@ final class StreamMessageInputStream<T> extends InputStream {
     private static final class StreamMessageInputStreamSubscriber<T> implements Subscriber<T> {
 
         private final Function<? super T, ? extends HttpData> httpDataConverter;
-        @Nullable
-        private volatile Subscription upstream;
         private final CompletableFuture<Void> whenSubscribed = new CompletableFuture<>();
         private final ByteBufsInputStream byteBufsInputStream = new ByteBufsInputStream();
+        @Nullable
+        private volatile Subscription upstream;
 
         StreamMessageInputStreamSubscriber(Function<? super T, ? extends HttpData> httpDataConverter) {
             requireNonNull(httpDataConverter, "httpDataConverter");
