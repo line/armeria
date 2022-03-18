@@ -713,10 +713,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <p>For example:<pre>{@code
      * StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
      * InputStream inputStream = streamMessage.toInputStream(x -> HttpData.wrap(x.getBytes()));
-     * byte[] expected = ImmutableList.of("foo", "bar", "baz")
-     *                                .stream()
-     *                                .map(String::getBytes)
-     *                                .reduce(Bytes::concat).get();
+     * byte[] expected = "foobarbaz".getBytes();
      *
      * ByteBuf result = Unpooled.buffer();
      * int read;
