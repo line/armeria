@@ -141,26 +141,6 @@ class LoggingDecoratorBuilderTest {
     }
 
     @Test
-    void successfulResponseLogLevel() {
-        assertThatThrownBy(() -> builder.successfulResponseLogLevel(null))
-                .isInstanceOf(NullPointerException.class);
-        assertThat(builder.successfulResponseLogLevel()).isEqualTo(LogLevel.DEBUG);
-
-        builder.successfulResponseLogLevel(LogLevel.ERROR);
-        assertThat(builder.successfulResponseLogLevel()).isEqualTo(LogLevel.ERROR);
-    }
-
-    @Test
-    void failureResponseLogLevel() {
-        assertThatThrownBy(() -> builder.failureResponseLogLevel(null))
-                .isInstanceOf(NullPointerException.class);
-        assertThat(builder.failedResponseLogLevel()).isEqualTo(LogLevel.WARN);
-
-        builder.failureResponseLogLevel(LogLevel.ERROR);
-        assertThat(builder.failedResponseLogLevel()).isEqualTo(LogLevel.ERROR);
-    }
-
-    @Test
     void shouldReturnSuccessfulResponseLogLevelIfFallbackWithoutCause() {
         builder.responseLogLevel(HttpStatus.OK, LogLevel.INFO)
                .successfulResponseLogLevel(LogLevel.DEBUG);

@@ -35,11 +35,21 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
 
     /**
+     * Creates a new {@link ResponseLogLevelMapper} which returns {@link LogLevel#DEBUG} when logging
+     * successful responses (e.g., no unhandled exception) and {@link LogLevel#WARN} if failure.
+     */
+    static ResponseLogLevelMapper of() {
+        return log -> log.responseCause() == null ? LogLevel.DEBUG : LogLevel.WARN;
+    }
+
+    /**
      * Creates a new {@link ResponseLogLevelMapper} which returns the specified {@link LogLevel} if the given
      * {@link RequestLog}'s status is equal to the specified {@link HttpStatus}.
      */
     static ResponseLogLevelMapper of(HttpStatus status, LogLevel logLevel) {
-        return new HttpStatusResponseLogLevelMapper(status, logLevel);
+        requireNonNull(status, "status");
+        requireNonNull(logLevel, "logLevel");
+        return log -> log.responseStatus() == status ? logLevel : null;
     }
 
     /**
@@ -47,11 +57,14 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
      * {@link RequestLog}'s status belongs to the specified {@link HttpStatusClass}.
      */
     static ResponseLogLevelMapper of(HttpStatusClass statusClass, LogLevel logLevel) {
-        return new HttpStatusClassResponseLogLevelMapper(statusClass, logLevel);
+        requireNonNull(statusClass, "statusClass");
+        requireNonNull(logLevel, "logLevel");
+        return log -> log.responseStatus().codeClass() == statusClass ? logLevel : null;
     }
 
     /**
-     * Returns a {@link LogLevel} for the given {@link RequestLog}.
+     * Returns a {@link LogLevel} for the given {@link RequestLog}. The {@code null} lets the next handler
+     * specified with {@link #orElse(ResponseLogLevelMapper)} map the {@link RequestLog}.
      */
     @Nullable
     @Override
@@ -65,6 +78,9 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
      */
     default ResponseLogLevelMapper orElse(ResponseLogLevelMapper other) {
         requireNonNull(other, "other");
+        if (this == other) {
+            return this;
+        }
         return requestLog -> {
             final LogLevel logLevel = ResponseLogLevelMapper.this.apply(requestLog);
             if (logLevel != null) {

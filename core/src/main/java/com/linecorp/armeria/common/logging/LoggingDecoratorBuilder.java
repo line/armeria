@@ -49,8 +49,6 @@ public abstract class LoggingDecoratorBuilder {
     @Nullable
     private Logger logger;
     private LogLevel requestLogLevel = LogLevel.DEBUG;
-    private LogLevel successfulResponseLogLevel = LogLevel.DEBUG;
-    private LogLevel failedResponseLogLevel = LogLevel.WARN;
     private Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper =
             log -> requestLogLevel();
     @Nullable
@@ -144,17 +142,8 @@ public abstract class LoggingDecoratorBuilder {
      * If unset, will use {@link LogLevel#DEBUG}.
      */
     public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
-        this.successfulResponseLogLevel =
-                requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
-        return this;
-    }
-
-    /**
-     * Returns the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
-     */
-    @VisibleForTesting
-    final LogLevel successfulResponseLogLevel() {
-        return successfulResponseLogLevel;
+        requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
+        return responseLogLevelMapper(log -> log.responseCause() == null ? successfulResponseLogLevel : null);
     }
 
     /**
@@ -162,16 +151,8 @@ public abstract class LoggingDecoratorBuilder {
      * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
      */
     public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
-        return this;
-    }
-
-    /**
-     * Returns the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
-     */
-    @VisibleForTesting
-    final LogLevel failedResponseLogLevel() {
-        return failedResponseLogLevel;
+        requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
+        return responseLogLevelMapper(log -> log.responseCause() != null ? failedResponseLogLevel : null);
     }
 
     /**
@@ -195,15 +176,6 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Function} to use when mapping the log level of response logs.
-     */
-    public LoggingDecoratorBuilder responseLogLevelMapper(
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
-        requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
-        return responseLogLevelMapper(responseLogLevelMapper::apply);
-    }
-
-    /**
      * Sets the {@link ResponseLogLevelMapper} to use when mapping the log level of response logs.
      */
     public LoggingDecoratorBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
@@ -219,15 +191,11 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Returns the {@link LogLevel} to use when logging response logs.
      */
-    protected final Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
+    protected final ResponseLogLevelMapper responseLogLevelMapper() {
         if (responseLogLevelMapper == null) {
-            return defaultResponseLogLevelMapper();
+            return ResponseLogLevelMapper.of();
         }
-        return responseLogLevelMapper.orElse(defaultResponseLogLevelMapper());
-    }
-
-    private ResponseLogLevelMapper defaultResponseLogLevelMapper() {
-        return log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
+        return responseLogLevelMapper.orElse(ResponseLogLevelMapper.of());
     }
 
     /**
@@ -420,7 +388,7 @@ public abstract class LoggingDecoratorBuilder {
 
     @Override
     public String toString() {
-        return toString(this, logger, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
+        return toString(this, logger, requestLogLevel,
                         requestLogLevelMapper, responseLogLevelMapper, isRequestLogLevelMapperSet,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
@@ -431,8 +399,6 @@ public abstract class LoggingDecoratorBuilder {
             LoggingDecoratorBuilder self,
             @Nullable Logger logger,
             LogLevel requestLogLevel,
-            LogLevel successfulResponseLogLevel,
-            LogLevel failureResponseLogLevel,
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             boolean isRequestLogLevelMapperSet,
@@ -462,8 +428,6 @@ public abstract class LoggingDecoratorBuilder {
         }
 
         helper.add("responseLogLevelMapper", responseLogLevelMapper);
-        helper.add("successfulResponseLogLevel", successfulResponseLogLevel);
-        helper.add("failureResponseLogLevel", failureResponseLogLevel);
 
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);

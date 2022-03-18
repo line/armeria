@@ -135,12 +135,6 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     @Override
-    public LoggingServiceBuilder responseLogLevelMapper(
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
-        return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
-    }
-
-    @Override
     public LoggingServiceBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }

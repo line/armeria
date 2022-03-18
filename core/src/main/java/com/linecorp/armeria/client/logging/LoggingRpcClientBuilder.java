@@ -125,12 +125,6 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    public LoggingRpcClientBuilder responseLogLevelMapper(
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
-        return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
-    }
-
-    @Override
     public LoggingRpcClientBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }

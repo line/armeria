@@ -123,9 +123,11 @@ public interface RequestLog extends RequestOnlyLog {
     }
 
     /**
-     * Returns the HTTP response status of the specified {@link ResponseHeaders}.
+     * Returns the HTTP response status of the {@link #responseHeaders()}.
      */
-    HttpStatus responseStatus();
+    default HttpStatus responseStatus() {
+        return responseHeaders().status();
+    }
 
     /**
      * Returns the length of the response content.
