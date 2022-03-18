@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
@@ -40,8 +39,8 @@ final class StreamMessageInputStream<T> extends InputStream {
     private final StreamMessage<T> source;
     private final EventExecutor executor;
     private final StreamMessageInputStreamSubscriber<T> subscriber;
-    private final AtomicBoolean subscribed = new AtomicBoolean();
-    private volatile boolean closed;
+    private boolean subscribed;
+    private boolean closed;
 
     StreamMessageInputStream(StreamMessage<T> source,
                              Function<? super T, ? extends HttpData> httpDataConverter,
@@ -106,10 +105,11 @@ final class StreamMessageInputStream<T> extends InputStream {
     }
 
     private void ensureSubscribed() {
-        if (subscribed.compareAndSet(false, true)) {
+        if (!subscribed) {
+            subscribed = true;
             source.subscribe(subscriber, executor);
+            subscriber.whenSubscribed.join();
         }
-        subscriber.whenSubscribed.join();
     }
 
     private ByteBufsInputStream byteBufsInputStream() {
