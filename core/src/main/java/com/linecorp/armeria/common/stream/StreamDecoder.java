@@ -38,6 +38,11 @@ import io.netty.buffer.ByteBuf;
  *       >     }
  *       >
  *       >     @Override
+ *       >     public ByteBuf decodeInput(HttpData in) {
+ *       >         return in.byteBuf();
+ *       >     }
+ *       >
+ *       >     @Override
  *       >     public void process(StreamDecoderInput in, StreamDecoderOutput<String> out) {
  *       >         int remaining = in.readableBytes();
  *       >         if (remaining < length) {
@@ -63,7 +68,7 @@ import io.netty.buffer.ByteBuf;
  *       <pre>{@code
  *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);
  *       StreamMessage<HttpData> stream = ...;
- *       StreamMessage<String> decoded = stream.decode(decoder, HttpData::byteBuf);
+ *       StreamMessage<String> decoded = stream.decode(decoder);
  *       }</pre>
  *   </li>
  *   <li>Subscribe to the {@link Publisher} of the decoded data and connect to your business logic.
