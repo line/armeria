@@ -50,7 +50,7 @@ public abstract class LoggingDecoratorBuilder {
     @Nullable
     private RequestLogLevelMapper requestLogLevelMapper;
     @Nullable
-    private ResponseLogLevelMapper responseLogLevelMapper = null;
+    private ResponseLogLevelMapper responseLogLevelMapper;
 
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -106,6 +106,18 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link Function} to use when mapping the log level of request logs.
+     *
+     * @deprecated Use {@link #requestLogLevelMapper(RequestLogLevelMapper)} instead.
+     */
+    @Deprecated
+    public LoggingDecoratorBuilder requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
+        requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
+        return requestLogLevelMapper(requestLogLevelMapper::apply);
+    }
+
+    /**
+     * Sets the {@link RequestLogLevelMapper} to use when mapping the log level of request logs.
      */
     public LoggingDecoratorBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
@@ -117,6 +129,9 @@ public abstract class LoggingDecoratorBuilder {
         return this;
     }
 
+    /**
+     * Returns the {@link RequestLogLevelMapper} to use when logging request logs.
+     */
     protected final RequestLogLevelMapper requestLogLevelMapper() {
         if (requestLogLevelMapper == null) {
             return RequestLogLevelMapper.of(LogLevel.DEBUG);
@@ -159,6 +174,18 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the {@link Function} to use when mapping the log level of response logs.
+     *
+     * @deprecated Use {@link #responseLogLevelMapper(ResponseLogLevelMapper)} instead.
+     */
+    @Deprecated
+    public LoggingDecoratorBuilder responseLogLevelMapper(
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
+        return responseLogLevelMapper(responseLogLevelMapper::apply);
+    }
+
+    /**
      * Sets the {@link ResponseLogLevelMapper} to use when mapping the log level of response logs.
      */
     public LoggingDecoratorBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
@@ -172,7 +199,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Returns the {@link LogLevel} to use when logging response logs.
+     * Returns the {@link ResponseLogLevelMapper} to use when logging response logs.
      */
     protected final ResponseLogLevelMapper responseLogLevelMapper() {
         if (responseLogLevelMapper == null) {

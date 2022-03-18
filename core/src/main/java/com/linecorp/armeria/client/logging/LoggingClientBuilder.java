@@ -96,6 +96,13 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
+    @Override
+    public LoggingClientBuilder requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
+        return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
     @Override
     public LoggingClientBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
@@ -119,6 +126,13 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     @Override
     public LoggingClientBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         return (LoggingClientBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
+    }
+
+    @Deprecated
+    @Override
+    public LoggingClientBuilder responseLogLevelMapper(
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
     @Override

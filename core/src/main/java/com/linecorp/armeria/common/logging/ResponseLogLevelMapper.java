@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
 
     /**
-     * Creates a new {@link ResponseLogLevelMapper} which returns {@link LogLevel#DEBUG} when logging
+     * Returns the default {@link ResponseLogLevelMapper} which returns {@link LogLevel#DEBUG} when logging
      * successful responses (e.g., no unhandled exception) and {@link LogLevel#WARN} if failure.
      */
     static ResponseLogLevelMapper of() {
@@ -44,7 +44,7 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
 
     /**
      * Creates a new {@link ResponseLogLevelMapper} which returns the specified {@link LogLevel} if the given
-     * {@link RequestLog}'s status is equal to the specified {@link HttpStatus}.
+     * {@link RequestLog#responseStatus()} is equal to the specified {@link HttpStatus}.
      */
     static ResponseLogLevelMapper of(HttpStatus status, LogLevel logLevel) {
         requireNonNull(status, "status");
@@ -54,7 +54,7 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
 
     /**
      * Creates a new {@link ResponseLogLevelMapper} which returns the specified {@link LogLevel} if the given
-     * {@link RequestLog}'s status belongs to the specified {@link HttpStatusClass}.
+     * {@link RequestLog#responseStatus()} belongs to the specified {@link HttpStatusClass}.
      */
     static ResponseLogLevelMapper of(HttpStatusClass statusClass, LogLevel logLevel) {
         requireNonNull(statusClass, "statusClass");
@@ -82,7 +82,7 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
             return this;
         }
         return log -> {
-            final LogLevel logLevel = ResponseLogLevelMapper.this.apply(log);
+            final LogLevel logLevel = apply(log);
             if (logLevel != null) {
                 return logLevel;
             }

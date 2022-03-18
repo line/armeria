@@ -28,7 +28,9 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 
@@ -97,6 +99,13 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
+    @Override
+    public LoggingRpcClientBuilder requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
+        return (LoggingRpcClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
     @Override
     public LoggingRpcClientBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         return (LoggingRpcClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
@@ -120,6 +129,13 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     @Override
     public LoggingRpcClientBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         return (LoggingRpcClientBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
+    }
+
+    @Deprecated
+    @Override
+    public LoggingRpcClientBuilder responseLogLevelMapper(
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
     @Override

@@ -109,6 +109,13 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
+    @Override
+    public LoggingServiceBuilder requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
+        return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
     @Override
     public LoggingServiceBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
@@ -132,6 +139,13 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     @Override
     public LoggingServiceBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         return (LoggingServiceBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
+    }
+
+    @Deprecated
+    @Override
+    public LoggingServiceBuilder responseLogLevelMapper(
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
     @Override

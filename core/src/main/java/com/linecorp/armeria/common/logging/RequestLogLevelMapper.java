@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel> {
 
     /**
-     * Creates a new {@link RequestLogLevelMapper} which returns the specified {@link LogLevel}.
+     * Creates a new {@link RequestLogLevelMapper} which always returns the specified {@link LogLevel}.
      */
     static RequestLogLevelMapper of(LogLevel logLevel) {
         requireNonNull(logLevel, "logLevel");
@@ -60,7 +60,7 @@ public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel
             return this;
         }
         return log -> {
-            final LogLevel logLevel = RequestLogLevelMapper.this.apply(log);
+            final LogLevel logLevel = apply(log);
             if (logLevel != null) {
                 return logLevel;
             }
