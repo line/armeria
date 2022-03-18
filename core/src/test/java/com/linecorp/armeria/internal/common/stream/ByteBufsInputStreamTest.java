@@ -42,7 +42,7 @@ import com.google.common.collect.ImmutableList;
 
 import io.netty.buffer.Unpooled;
 
-public class ByteBufsInputStreamTest {
+class ByteBufsInputStreamTest {
 
     @Test
     void testScanner() {
