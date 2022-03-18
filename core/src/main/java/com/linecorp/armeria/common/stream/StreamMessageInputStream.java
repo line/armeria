@@ -28,7 +28,6 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.ByteBufsInputStream;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
@@ -55,31 +54,18 @@ final class StreamMessageInputStream<T> extends InputStream {
 
     @Override
     public int read() throws IOException {
-        return read(in -> {
-            try {
-                return in.read();
-            } catch (IOException e) {
-                return Exceptions.throwUnsafely(e);
-            }
-        });
+        ensureOpen();
+        ensureSubscribed();
+        subscriber.request();
+        return byteBufsInputStream().read();
     }
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        return read(in -> {
-            try {
-                return in.read(b, off, len);
-            } catch (IOException e) {
-                return Exceptions.throwUnsafely(e);
-            }
-        });
-    }
-
-    private int read(Function<InputStream, Integer> function) throws IOException {
         ensureOpen();
         ensureSubscribed();
         subscriber.request();
-        return function.apply(byteBufsInputStream());
+        return byteBufsInputStream().read(b, off, len);
     }
 
     @Override
