@@ -59,6 +59,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
     }
@@ -84,6 +85,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
     }
@@ -112,6 +114,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
     }
@@ -155,6 +158,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertDoesNotThrow(inputStream::close);
         assertThatThrownBy(inputStream::read).isInstanceOf(IOException.class)
@@ -209,6 +213,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isEqualTo(1);
 
@@ -245,6 +250,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
         assertThat(inputStream.read()).isEqualTo(-1);
@@ -277,6 +283,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
         assertThat(inputStream.read()).isEqualTo(-1);
@@ -303,6 +310,7 @@ class StreamMessageInputStreamTest {
         for (int i = 0; i < readableBytes; i++) {
             actual[i] = result.readByte();
         }
+        result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
     }
