@@ -16,27 +16,21 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static java.util.Objects.requireNonNull;
-
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMessage;
-import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 
 /**
- * Decodes a stream of {@link HttpObject}s to N objects.
+ * Decodes a stream of data to N objects.
  *
- * <p>Follow the below steps to decode HTTP payload using {@link HttpDecoder}.
+ * <p>Follow the below steps to decode data using {@link StreamDecoder}.
  * <ol>
- *   <li>Implement your decoding logic in {@link HttpDecoder}.
+ *   <li>Implement your decoding logic in {@link StreamDecoder}.
  *       <pre>{@code
- *       > class FixedLengthDecoder implements HttpDecoder<String> {
+ *       > class FixedLengthDecoder implements StreamDecoder<String> {
  *       >     private final int length;
  *       >
  *       >     FixedLengthDecoder(int length) {
@@ -44,7 +38,7 @@ import io.netty.buffer.ByteBuf;
  *       >     }
  *       >
  *       >     @Override
- *       >     public void process(HttpDecoderInput in, HttpDecoderOutput<String> out) {
+ *       >     public void process(StreamDecoderInput in, StreamDecoderOutput<String> out) {
  *       >         int remaining = in.readableBytes();
  *       >         if (remaining < length) {
  *       >             // The input is not enough to process. Waiting for more data.
@@ -52,8 +46,8 @@ import io.netty.buffer.ByteBuf;
  *       >         }
  *       >
  *       >         do {
- *       >             // Read data from 'HttpDecoderInput' and
- *       >             // write the processed result to 'HttpDecoderOutput'.
+ *       >             // Read data from 'StreamDecoderInput' and
+ *       >             // write the processed result to 'StreamDecoderOutput'.
  *       >             ByteBuf buf = in.readBytes(length);
  *       >             out.add(buf.toString(StandardCharsets.UTF_8));
  *       >             // Should release the returned 'ByteBuf'
@@ -64,12 +58,12 @@ import io.netty.buffer.ByteBuf;
  *       > }
  *       }</pre>
  *   </li>
- *   <li>Create a decoded {@link StreamMessage} using {@link HttpMessage#decode(HttpDecoder)}
- *       with the {@link HttpDecoder} instance.
+ *   <li>Create a decoded {@link StreamMessage} using {@link StreamMessage#decode(StreamDecoder)}
+ *       with the {@link StreamDecoder} instance.
  *       <pre>{@code
  *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);
- *       HttpRequest req = ...;
- *       StreamMessage<String> decoded = req.decode(decoder);
+ *       StreamMessage<HttpData> stream = ...;
+ *       StreamMessage<String> decoded = stream.decode(decoder, HttpData::byteBuf);
  *       }</pre>
  *   </li>
  *   <li>Subscribe to the {@link Publisher} of the decoded data and connect to your business logic.
@@ -80,30 +74,31 @@ import io.netty.buffer.ByteBuf;
  *   </li>
  * </ol>
  *
- * @param <T> the result type of being decoded
+ * @param <I> the input type to decode
+ * @param <O> the output type of being decoded
  */
 @UnstableApi
-public interface HttpDecoder<T> extends StreamDecoder<HttpData, T> {
-
-    @Override
-    default ByteBuf decodeInput(HttpData in) {
-        requireNonNull(in, "in");
-        // HttpHeaders is handled as is by processXXXHeaders(), processTrailers().
-        return in.byteBuf();
-    }
+public interface StreamDecoder<I, O> {
 
     /**
-     * Decodes an informational {@link ResponseHeaders} to N objects.
+     * Converts the specified {@link I} type object into a {@link ByteBuf} that is added to
+     * {@link StreamDecoderInput}.
      */
-    default void processInformationalHeaders(ResponseHeaders in, StreamDecoderOutput<T> out) throws Exception {}
+    ByteBuf decodeInput(I in);
 
     /**
-     * Decodes a non-informational {@link HttpHeaders} to N objects.
+     * Decodes a stream of data to N objects.
+     * This method will be called whenever an object is signaled from {@link Publisher}.
      */
-    default void processHeaders(HttpHeaders in, StreamDecoderOutput<T> out) throws Exception {}
+    void process(StreamDecoderInput in, StreamDecoderOutput<O> out) throws Exception;
 
     /**
-     * Decodes a {@link HttpHeaders trailers} to N objects.
+     * Invoked when {@link HttpData}s are fully consumed.
      */
-    default void processTrailers(HttpHeaders in, StreamDecoderOutput<T> out) throws Exception {}
+    default void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<O> out) throws Exception {}
+
+    /**
+     * Invoked when a {@link Throwable} is raised while deframing.
+     */
+    default void processOnError(Throwable cause) {}
 }

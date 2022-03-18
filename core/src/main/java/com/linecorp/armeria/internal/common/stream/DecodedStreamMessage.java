@@ -18,13 +18,11 @@ package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Function;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -35,7 +33,8 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDecoder;
-import com.linecorp.armeria.common.stream.HttpDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamDecoder;
+import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -48,14 +47,27 @@ import io.netty.util.concurrent.EventExecutor;
  * A {@link StreamMessage} which publishes a stream of objects decoded by {@link HttpDecoder}.
  */
 @UnstableApi
-public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> implements HttpDecoderOutput<T> {
+public final class DecodedStreamMessage<I, O>
+        extends DefaultStreamMessage<O> implements StreamDecoderOutput<O> {
 
-    private final HttpMessageSubscriber subscriber = new HttpMessageSubscriber();
+    /**
+     * Returns a {@link StreamMessage} that is decoded from the {@link HttpMessage} using the specified
+     * {@link HttpDecoder}.
+     */
+    public static <O> StreamMessage<O> of(HttpMessage httpMessage,
+                                          HttpDecoder<O> decoder, ByteBufAllocator alloc) {
+        // HttpDecoder only decodes HttpData in HttpMessage.
+        @SuppressWarnings("unchecked")
+        final StreamDecoder<HttpObject, O> cast = (StreamDecoder<HttpObject, O>) (StreamDecoder<?, ?>) decoder;
+        return new DecodedStreamMessage<>(httpMessage, cast, alloc);
+    }
 
-    private final HttpDecoder<T> decoder;
+    private final MessageSubscriber subscriber = new MessageSubscriber();
+
+    private final StreamDecoder<I, O> decoder;
+    private final boolean isHttpDecoder;
     private final ByteBufDecoderInput input;
-    private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
-    private final StreamMessage<? extends HttpObject> publisher;
+    private final StreamMessage<? extends I> publisher;
 
     @Nullable
     private RequestHeaders requestHeaders;
@@ -69,25 +81,15 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     private boolean cancelled;
 
     /**
-     * Returns a new {@link DecodedHttpStreamMessage} with the specified {@link HttpDecoder} and
-     * {@link ByteBufAllocator}.
-     */
-    public DecodedHttpStreamMessage(StreamMessage<? extends HttpObject> streamMessage,
-                                    HttpDecoder<T> decoder, ByteBufAllocator alloc) {
-        this(streamMessage, decoder, alloc, HttpData::byteBuf);
-    }
-
-    /**
-     * Returns a new {@link DecodedHttpStreamMessage} with the specified {@link HttpDecoder},
+     * Returns a new {@link DecodedStreamMessage} with the specified {@link HttpDecoder},
      * {@link ByteBufAllocator} and {@code byteBufConverter}.
      */
-    public DecodedHttpStreamMessage(StreamMessage<? extends HttpObject> streamMessage,
-                                    HttpDecoder<T> decoder, ByteBufAllocator alloc,
-                                    Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+    public DecodedStreamMessage(StreamMessage<? extends I> streamMessage,
+                                StreamDecoder<I, O> decoder, ByteBufAllocator alloc) {
         publisher = requireNonNull(streamMessage, "streamMessage");
         this.decoder = requireNonNull(decoder, "decoder");
+        isHttpDecoder = decoder instanceof HttpDecoder;
         input = new ByteBufDecoderInput(requireNonNull(alloc, "alloc"));
-        this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
         if (publisher instanceof HttpRequest) {
             requestHeaders = ((HttpRequest) publisher).headers();
         }
@@ -105,8 +107,8 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     }
 
     @Override
-    public void add(T e) {
-        if (tryWrite(e)) {
+    public void add(O out) {
+        if (tryWrite(out)) {
             handlerProduced = true;
         } else {
             cancelAndCleanup();
@@ -133,7 +135,8 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
         if (demand > 0 && requestHeaders != null) {
             final HttpHeaders requestHeaders = this.requestHeaders;
             this.requestHeaders = null;
-            subscriber.onNext(requestHeaders);
+            //noinspection unchecked
+            subscriber.onNext((I) requestHeaders);
             demand--;
         }
 
@@ -150,7 +153,8 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 // A readily available HTTP headers is not delivered yet.
                 final HttpHeaders requestHeaders = this.requestHeaders;
                 this.requestHeaders = null;
-                subscriber.onNext(requestHeaders);
+                //noinspection unchecked
+                subscriber.onNext((I) requestHeaders);
             } else {
                 whenConsumed().thenRun(() -> {
                     if (demand() > 0) {
@@ -185,7 +189,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
         input.close();
     }
 
-    private final class HttpMessageSubscriber implements Subscriber<HttpObject> {
+    private final class MessageSubscriber implements Subscriber<I> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
@@ -199,31 +203,32 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
         }
 
         @Override
-        public void onNext(HttpObject obj) {
+        public void onNext(I obj) {
             requireNonNull(obj, "obj");
 
             askedUpstreamForElement = false;
             handlerProduced = false;
             try {
                 // Call the handler so that it publishes something.
-                if (obj instanceof HttpHeaders) {
+                if (isHttpDecoder && obj instanceof HttpHeaders) {
+                    // HttpDecoder has dedicated APIs for headers and trailers.
+                    final HttpDecoder<O> httpDecoder = (HttpDecoder<O>) decoder;
                     final HttpHeaders headers = (HttpHeaders) obj;
                     if (headers instanceof ResponseHeaders &&
                         ((ResponseHeaders) headers).status().isInformational()) {
-                        decoder.processInformationalHeaders((ResponseHeaders) headers,
-                                                            DecodedHttpStreamMessage.this);
+                        httpDecoder.processInformationalHeaders((ResponseHeaders) headers,
+                                                                DecodedStreamMessage.this);
                     } else if (!sawLeadingHeaders) {
                         sawLeadingHeaders = true;
-                        decoder.processHeaders((HttpHeaders) obj, DecodedHttpStreamMessage.this);
+                        httpDecoder.processHeaders((HttpHeaders) obj, DecodedStreamMessage.this);
                     } else {
-                        decoder.processTrailers((HttpHeaders) obj, DecodedHttpStreamMessage.this);
+                        httpDecoder.processTrailers((HttpHeaders) obj, DecodedStreamMessage.this);
                     }
-                } else if (obj instanceof HttpData) {
-                    final HttpData data = (HttpData) obj;
-                    final ByteBuf byteBuf = byteBufConverter.apply(data);
-                    requireNonNull(byteBuf, "byteBufConverter.apply() returned null");
+                } else {
+                    final ByteBuf byteBuf = decoder.decodeInput(obj);
+                    requireNonNull(byteBuf, "decoder.decodeInput() returned null");
                     if (input.add(byteBuf)) {
-                        decoder.process(input, DecodedHttpStreamMessage.this);
+                        decoder.process(input, DecodedStreamMessage.this);
                     }
                 }
 
@@ -279,7 +284,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 return;
             }
             try {
-                decoder.processOnComplete(DecodedHttpStreamMessage.this);
+                decoder.processOnComplete(input, DecodedStreamMessage.this);
                 close();
             } catch (Exception e) {
                 abort(e);

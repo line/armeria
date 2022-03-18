@@ -43,7 +43,9 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -463,6 +465,25 @@ public interface StreamMessage<T> extends Publisher<T> {
      * on a closed or aborted stream has no effect.
      */
     void abort(Throwable cause);
+
+    /**
+     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@code T} type objects using
+     * the specified {@link StreamDecoder}.
+     */
+    @UnstableApi
+    default <U> StreamMessage<U> decode(StreamDecoder<T, U> decoder) {
+        requireNonNull(decoder, "decoder");
+        return decode(decoder, ByteBufAllocator.DEFAULT);
+    }
+
+    /**
+     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@code T} type objects using
+     * the specified {@link StreamDecoder} and {@link ByteBufAllocator}.
+     */
+    @UnstableApi
+    default <U> StreamMessage<U> decode(StreamDecoder<T, U> decoder, ByteBufAllocator alloc) {
+        return new DecodedStreamMessage<>(this, decoder, alloc);
+    }
 
     /**
      * Collects the elements published by this {@link StreamMessage}.
