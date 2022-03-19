@@ -41,6 +41,7 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 
@@ -582,6 +583,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *     streamMessage.mapParallel(x -> CompletableFuture.completedFuture(x + 1));
      * }</pre>
      */
+    @UnstableApi
     default <U> StreamMessage<U> mapParallel(
             Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(function, "function");
@@ -605,6 +607,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *     streamMessage.mapParallel(x -> CompletableFuture.completedFuture(x + 1), 20);
      * }</pre>
      */
+    @UnstableApi
     default <U> StreamMessage<U> mapParallel(
             Function<? super T, ? extends CompletableFuture<? extends U>> function,
             int maxConcurrency) {
