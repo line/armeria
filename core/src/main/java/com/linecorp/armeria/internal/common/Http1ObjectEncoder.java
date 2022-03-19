@@ -20,12 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
@@ -120,7 +117,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             f = write(id, converted, false);
             if (endStream) {
                 final ChannelPromise promise = channel().newPromise();
-                allOf(promise, ImmutableList.of(f, write(id, LastHttpContent.EMPTY_LAST_CONTENT, true)));
+                combine(promise, f, write(id, LastHttpContent.EMPTY_LAST_CONTENT, true));
                 f = promise;
             }
         }
@@ -128,37 +125,34 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         return f;
     }
 
-    private static void allOf(ChannelPromise resultPromise, List<ChannelFuture> futures) {
+    private static void combine(ChannelPromise resultPromise, ChannelFuture first, ChannelFuture second) {
         final GenericFutureListener<Future<? super Void>> listener =
                 new GenericFutureListener<Future<? super Void>>() {
-                    private final AtomicInteger counter = new AtomicInteger(futures.size());
+                    private final AtomicInteger counter = new AtomicInteger(2);
 
                     @Override
                     public void operationComplete(Future<? super Void> ignore) throws Exception {
                         if (counter.decrementAndGet() == 0) {
-                            Throwable lastThrowable = null;
-                            for (int i = futures.size() - 1; i >= 0; i--) {
-                                final ChannelFuture future = futures.get(i);
-                                if (!future.isSuccess()) {
-                                    final Throwable cause = future.cause();
-                                    if (lastThrowable != null
-                                        && Flags.verboseExceptionSampler().isSampled(cause.getClass())) {
-                                        cause.addSuppressed(lastThrowable);
-                                    }
-                                    lastThrowable = cause;
+                            final Throwable firstCause = first.cause();
+                            final Throwable secondCause = second.cause();
+                            if (firstCause != null) {
+                                if (Flags.verboseExceptionSampler().isSampled(firstCause.getClass()) &&
+                                    secondCause != null) {
+                                    firstCause.addSuppressed(secondCause);
                                 }
+                                resultPromise.setFailure(firstCause);
+                                return;
                             }
-                            if (lastThrowable != null) {
-                                resultPromise.setFailure(lastThrowable);
-                            } else {
-                                resultPromise.setSuccess();
+                            if (secondCause != null) {
+                                resultPromise.setFailure(secondCause);
+                                return;
                             }
+                            resultPromise.setSuccess();
                         }
                     }
                 };
-        for (ChannelFuture future : futures) {
-            future.addListener(listener);
-        }
+        first.addListener(listener);
+        second.addListener(listener);
     }
 
     @Override
