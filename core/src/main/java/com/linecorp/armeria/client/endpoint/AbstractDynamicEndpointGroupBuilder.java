@@ -17,13 +17,18 @@
 package com.linecorp.armeria.client.endpoint;
 
 /**
- * A skeletal builder implementation for creating other Builders that use EndpointGroup
+ * A skeletal builder implementation for an {@link EndpointGroup} builder.
  */
 public abstract class AbstractDynamicEndpointGroupBuilder {
-    private boolean allowEmptyEndpoints = true;
+    private boolean allowEmptyEndpoints;
 
     protected AbstractDynamicEndpointGroupBuilder() { }
 
+    /**
+     * Creates a new {@link AbstractDynamicEndpointGroupBuilder}.
+     *
+     * @param allowEmptyEndpoints whether the empty endpoints are allowed.
+     */
     protected AbstractDynamicEndpointGroupBuilder(boolean allowEmptyEndpoints) {
         this.allowEmptyEndpoints = allowEmptyEndpoints;
     }
@@ -32,12 +37,15 @@ public abstract class AbstractDynamicEndpointGroupBuilder {
      * Sets to allow empty endpoints
      * @see AbstractDynamicEndpointGroupBuilder#allowEmptyEndpoints(boolean)
      */
-    public AbstractDynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+    protected AbstractDynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         this.allowEmptyEndpoints = allowEmptyEndpoints;
         return this;
     }
 
-    public boolean isAllowEmptyEndpoints() {
+    /**
+     * Returns whether the empty endpoints are allowed.
+     */
+    protected final boolean isAllowEmptyEndpoints() {
         return allowEmptyEndpoints;
     }
 

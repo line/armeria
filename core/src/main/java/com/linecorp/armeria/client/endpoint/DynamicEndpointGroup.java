@@ -55,7 +55,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
-    private boolean allowEmptyEndpoints = true;
+    private boolean allowEmptyEndpoints;
 
     /**
      * Creates a new empty {@link DynamicEndpointGroup} that uses
