@@ -72,7 +72,7 @@ public abstract class AbstractMetricCollectingBuilder {
      * }</pre>
      *
      * @deprecated Use {@link ClientBuilder#successFunction(SuccessFunction)} or
-     *                 {@link ServerBuilder#successFunction(SuccessFunction)} instead.
+     *                 {@link ServerBuilder#successFunction(SuccessFunction)}.
      */
     @Deprecated
     public AbstractMetricCollectingBuilder successFunction(

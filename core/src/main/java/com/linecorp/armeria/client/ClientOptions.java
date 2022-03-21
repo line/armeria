@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -292,7 +291,7 @@ public final class ClientOptions
     }
 
     /**
-     * Returns the {@link BiPredicate} that determine if the request is success.
+     * Returns the {@link SuccessFunction} that determine if the request is success or not.
      */
     public SuccessFunction successFunction() {
         return get(SUCCESS_FUNCTION);

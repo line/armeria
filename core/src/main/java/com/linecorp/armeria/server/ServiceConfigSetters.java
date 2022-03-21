@@ -26,7 +26,9 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.logging.LoggingServiceBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingServiceBuilder;
 
 interface ServiceConfigSetters {
 
@@ -143,8 +145,8 @@ interface ServiceConfigSetters {
     ServiceConfigSetters blockingTaskExecutor(int numThreads);
 
     /**
-     * Defines a custom {@link SuccessFunction} to allow custom definition of successful requests and responses.
-     * {@link MetricCollectingService} and {@link LoggingService} use this custom definition if set.
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
      */
     ServiceConfigSetters successFunction(SuccessFunction successFunction);
 }

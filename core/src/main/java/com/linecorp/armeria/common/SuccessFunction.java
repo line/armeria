@@ -16,30 +16,40 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
- * A function that accepts {@link RequestContext} and {@link RequestLog} for checking if the response is
- * success. Like {@link ServerBuilder} and {@link WebClientBuilder} are using this interface to decide
- * the response is success or not for Metric and Logging decorator.
- *
+ * A function that determines whether a {@link Client} and {@link Service} handled a request successfully
+ * or not.
+ * This function can be used by the decorators like the following to determine
+ * whether the request was handled successfully or not:
+ * <ul>
+ *   <li>{@link MetricCollectingClient}</li>
+ *   <li>{@link MetricCollectingService}</li>
+ *   <li>{@link LoggingClient}</li>
+ *   <li>{@link LoggingService}</li>
+ * </ul>
  * <p>Example:
  * <pre>{@code
- * ServerBuilder sb = ServerBuilder
- *         .successFunction((ctx, req) -> req.responseHeaders().status().code() == 200
- *                                        || req.responseHeaders().status().code() == 404)
+ * ServerBuilder sb = Server
+ *         .builder()
+ *         .successFunction((ctx, req) -> req.responseHeaders().status().code() == 200 ||
+ *                                        req.responseHeaders().status().code() == 404)
  *         .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("myServer")))
  *         .decorator(LoggingService.newDecorator()));
  *
  * WebClient client = WebClient
  *         .builder(uri)
- *         .successFunction((ctx, req) -> req.responseHeaders().status().code() == 200
- *                                        || req.responseHeaders().status().code() == 404)
+ *         .successFunction((ctx, req) -> req.responseHeaders().status().code() == 200 ||
+ *                                        req.responseHeaders().status().code() == 404)
  *         .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient")))
  *         .decorator(LoggingClient.newDecorator()))
  *         .build();
@@ -50,7 +60,21 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 @FunctionalInterface
 public interface SuccessFunction {
     /**
-     * Default success response classification function which checks
+     * Returns a {@link SuccessFunction} that will always return {@code false}.
+     */
+    static SuccessFunction never() {
+        return (ctx, log) -> false;
+    }
+
+    /**
+     * Returns a {@link SuccessFunction} that will always return {@code true}.
+     */
+    static SuccessFunction always() {
+        return (ctx, log) -> true;
+    }
+
+    /**
+     * Returns the default success classification function which checks
      * {@link RequestLog#responseCause()} is null, 100 &lt;= {@link HttpStatus} &lt; 400
      * and {@link RpcResponse#isCompletedExceptionally()} == {@code false}.
      */
@@ -77,8 +101,8 @@ public interface SuccessFunction {
     /**
      * Return true if the response is success.
      *
-     * @see LoggingService#serve(ServiceRequestContext, HttpRequest)
-     * @see MetricCollectingService#serve(ServiceRequestContext, HttpRequest)
+     * @see ServerBuilder#successFunction(SuccessFunction)
+     * @see ClientBuilder#successFunction(SuccessFunction)
      */
     boolean isSuccess(RequestContext ctx, RequestLog log);
 }

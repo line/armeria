@@ -183,10 +183,8 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the {@link SuccessFunction} to allow custom definition of successful responses.
-     * {@link MetricCollectingClient}, {@link LoggingClient} and {@link LoggingRpcClient} will use this custom
-     * definition if set.
-     * If not set, default one in {@link ClientOptions} is used.
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
      */
     public AbstractClientOptionsBuilder successFunction(SuccessFunction successFunction) {
         return option(ClientOptions.SUCCESS_FUNCTION, successFunction);
