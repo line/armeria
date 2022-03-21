@@ -27,9 +27,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.logging.LoggingRpcClient;
-import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;

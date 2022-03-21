@@ -25,10 +25,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.logging.LoggingServiceBuilder;
-import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.MetricCollectingServiceBuilder;
 
 interface ServiceConfigSetters {
 

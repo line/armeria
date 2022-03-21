@@ -37,6 +37,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  *   <li>{@link LoggingClient}</li>
  *   <li>{@link LoggingService}</li>
  * </ul>
+ *
  * <p>Example:
  * <pre>{@code
  * ServerBuilder sb = Server
