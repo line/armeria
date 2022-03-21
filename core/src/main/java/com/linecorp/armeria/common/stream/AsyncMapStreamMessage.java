@@ -24,6 +24,7 @@ import java.util.function.Function;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.math.IntMath;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -34,15 +35,18 @@ import io.netty.util.concurrent.EventExecutor;
 final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
     private final StreamMessage<T> source;
     private final Function<T, CompletableFuture<U>> function;
+    private final int maxConcurrency;
 
     @SuppressWarnings("unchecked")
     AsyncMapStreamMessage(StreamMessage<? extends T> source,
-                          Function<? super T, ? extends CompletableFuture<? extends U>> function) {
+                          Function<? super T, ? extends CompletableFuture<? extends U>> function,
+                          int maxConcurrency) {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
         this.source = (StreamMessage<T>) source;
         this.function = (Function<T, CompletableFuture<U>>) function;
+        this.maxConcurrency = maxConcurrency;
     }
 
     @Override
@@ -72,7 +76,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        source.subscribe(new AsyncMapSubscriber<>(subscriber, function, executor), executor, options);
+        source.subscribe(new AsyncMapSubscriber<>(subscriber, function, executor, maxConcurrency), executor,
+                         options);
     }
 
     @Override
@@ -90,24 +95,21 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         private final Subscriber<? super U> downstream;
         private final Function<T, CompletableFuture<U>> function;
         private final EventExecutor executor;
+        private final int maxConcurrency;
 
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
 
         private long requestedByDownstream;
-        private State state;
-
-        enum State {
-            WAITING,
-            REQUESTED,
-            PROCESSING,
-            COMPLETING
-        }
+        private int requestedFromUpstream;
+        private int pendingFutures;
+        private boolean completed;
 
         AsyncMapSubscriber(Subscriber<? super U> downstream,
                            Function<T, CompletableFuture<U>> function,
-                           EventExecutor executor) {
+                           EventExecutor executor,
+                           int maxConcurrency) {
             requireNonNull(downstream, "downstream");
             requireNonNull(function, "function");
             requireNonNull(executor, "executor");
@@ -115,7 +117,7 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             this.downstream = downstream;
             this.function = function;
             this.executor = executor;
-            state = State.WAITING;
+            this.maxConcurrency = maxConcurrency;
         }
 
         @Override
@@ -134,11 +136,16 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
+            if (requestedFromUpstream != Integer.MAX_VALUE) {
+                requestedFromUpstream--;
+            }
+
             try {
                 final CompletableFuture<U> future = function.apply(item);
                 requireNonNull(future, "function.apply() returned null");
 
-                state = State.PROCESSING;
+                pendingFutures++;
+
                 future.handle((res, cause) -> {
                     if (executor.inEventLoop()) {
                         publishDownstream(res, cause);
@@ -171,7 +178,9 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                     requireNonNull(item, "function.apply()'s future completed with null");
                     downstream.onNext(item);
 
-                    if (state == State.COMPLETING) {
+                    pendingFutures--;
+
+                    if (completed && pendingFutures == 0) {
                         downstream.onComplete();
                         return;
                     }
@@ -180,10 +189,9 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                         if (requestedByDownstream != Long.MAX_VALUE) {
                             requestedByDownstream--;
                         }
-                        state = State.REQUESTED;
+
+                        requestedFromUpstream++;
                         upstream.request(1);
-                    } else {
-                        state = State.WAITING;
                     }
                 }
             } catch (Throwable ex) {
@@ -210,8 +218,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (state == State.PROCESSING) {
-                state = State.COMPLETING;
+            if (pendingFutures > 0) {
+                completed = true;
             } else {
                 downstream.onComplete();
             }
@@ -240,13 +248,15 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
         private void handleRequest(long n) {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
 
-            if (state == State.WAITING) {
+            if (maxConcurrency > IntMath.saturatedAdd(requestedFromUpstream, pendingFutures)) {
+                final int available = maxConcurrency - pendingFutures - requestedFromUpstream;
+                final long toRequest = Math.min(n, available);
                 if (requestedByDownstream != Long.MAX_VALUE) {
-                    requestedByDownstream--;
+                    requestedByDownstream -= toRequest;
                 }
 
-                state = State.REQUESTED;
-                upstream.request(1);
+                requestedFromUpstream = IntMath.saturatedAdd(requestedFromUpstream, (int) toRequest);
+                upstream.request(toRequest);
             }
         }
 
