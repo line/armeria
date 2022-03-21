@@ -1,6 +1,6 @@
-// This module builds and publishes 'armeria-thrift0.15', which is compiled with
-// the source code of ':thrift0.13' and ':thrift0.14.0'.
-final def THRIFT_VERSION = '0.15.0'
+// This module builds and publishes 'armeria-thrift0.16', which is compiled with
+// the source code of ':thrift0.13', ':thrift0.14.0', and ':thrift0.15.0'.
+final def THRIFT_VERSION = '0.16.0'
 
 dependencies {
     api("org.apache.thrift:libthrift") {
@@ -22,7 +22,7 @@ dependencies {
     testImplementation 'io.prometheus:simpleclient_common'
 }
 
-// Use the sources from ':thrift0.13' and ':thrift0.14'.
+// Use the sources from ':thrift0.13' and ':thrift0.14'. ':thrift0.15' is empty so no need to copy anything.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.

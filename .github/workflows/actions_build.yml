@@ -120,7 +120,7 @@ jobs:
 
     - name: Collect the test reports
       if: failure()
-      run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+      run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
       shell: bash
 
     - name: Upload the artifacts

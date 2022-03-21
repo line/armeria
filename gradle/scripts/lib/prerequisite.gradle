@@ -1,10 +1,12 @@
 try {
     rootProject.apply plugin: 'com.google.osdetector'
+    rootProject.apply plugin: 'io.github.gradle-nexus.publish-plugin'
 } catch (UnknownPluginException e) {
     throw new IllegalStateException('''Add the following to the top-level build.gradle file:
 
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0' apply false
 }
 ''')
 }
