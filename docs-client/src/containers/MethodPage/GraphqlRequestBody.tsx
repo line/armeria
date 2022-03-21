@@ -52,10 +52,10 @@ const toggle = (prev: boolean, override: unknown) => {
   return !prev;
 };
 
-const parseJson = (requestBody: string) => {
+const parseJson = (s: string) => {
   let parsedJson;
   try {
-    parsedJson = JSON.parse(requestBody);
+    parsedJson = JSON.parse(s);
   } catch (e) {
     // ignored
   }
@@ -74,6 +74,7 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
 
   const [query, setQuery] = useState('');
   const [variables, setVariables] = useState('');
+  const [variablesText, setVariablesText] = useState('');
   const [schema, setSchema] = useState<GraphQLSchema | undefined>();
 
   useEffect(() => {
@@ -106,6 +107,10 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   }, [schemaUrlPath]);
 
   useEffect(() => {
+    if (query !== '' || variablesText !== '') {
+      return;
+    }
+
     const parsedJson = parseJson(requestBody);
     if (parsedJson === undefined) {
       return;
@@ -113,18 +118,13 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
 
     setQuery(parsedJson.query);
     if (typeof parsedJson.variables === 'object') {
-      setVariables(jsonPrettify(JSON.stringify(parsedJson.variables)));
+      setVariablesText(JSON.stringify(parsedJson.variables));
     } else {
-      setVariables(parsedJson.variables);
+      setVariablesText(parsedJson.variables);
     }
   }, [requestBody]);
 
   useEffect(() => {
-    const parsedVariables = parseJson(variables);
-    if (parsedVariables === undefined) {
-      return;
-    }
-
     onDebugFormChange(
       JSON.stringify({
         query,
@@ -133,12 +133,20 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
     );
   }, [onDebugFormChange, query, variables]);
 
+  useEffect(() => {
+    const parsed = parseJson(variablesText);
+    if (parsed === undefined) {
+      return;
+    }
+    setVariables(parsed);
+  }, [variablesText]);
+
   const onQueryFromChange = useCallback((value) => {
     setQuery(value);
   }, []);
 
-  const onVariablesFromChange = useCallback((value) => {
-    setVariables(value);
+  const onVariablesTextFromChange = useCallback((value) => {
+    setVariablesText(value);
   }, []);
 
   return (
@@ -171,10 +179,10 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
               multiline
               fullWidth
               rows={5}
-              value={variables}
+              value={variablesText}
               placeholder={jsonPlaceHolder}
               onChange={(e) => {
-                return onVariablesFromChange(e.target.value);
+                return onVariablesTextFromChange(e.target.value);
               }}
               inputProps={{
                 className: 'code',

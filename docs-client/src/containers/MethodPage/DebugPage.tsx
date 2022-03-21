@@ -160,11 +160,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     let urlRequestBody;
     if (useRequestBody) {
       if (urlParams.has('request_body')) {
-        if (!isGraphqlService) {
-          urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-        } else {
-          urlRequestBody = urlParams.get('request_body');
-        }
+        urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
         scrollToDebugForm();
       }
     }
