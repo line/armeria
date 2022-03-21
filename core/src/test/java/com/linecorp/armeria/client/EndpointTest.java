@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.net.InetAddress;
 import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

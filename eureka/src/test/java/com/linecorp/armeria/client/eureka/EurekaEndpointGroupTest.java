@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.eureka;
 
-import static com.linecorp.armeria.client.eureka.EurekaEndpointGroup.INSTANCE_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
@@ -30,7 +29,6 @@ import com.netflix.appinfo.InstanceInfo.InstanceStatus;
 import com.netflix.discovery.converters.wrappers.CodecWrappers;
 import com.netflix.discovery.converters.wrappers.CodecWrappers.JacksonJson;
 import com.netflix.discovery.converters.wrappers.EncoderWrapper;
-import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
 import com.netflix.discovery.util.InstanceInfoGenerator;
 
@@ -38,17 +36,12 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-import io.netty.util.AttributeKey;
 
 class EurekaEndpointGroupTest {
 
     private static final EncoderWrapper encoder = CodecWrappers.getEncoder(JacksonJson.class);
-    private static final String APP_WITH_METADATA = "with-metadata";
 
     @RegisterExtension
     static final ServerExtension eurekaServer = new ServerExtension() {
@@ -68,15 +61,6 @@ class EurekaEndpointGroupTest {
                 encoder.encode(apps, bos);
                 return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bos.toByteArray());
             });
-            sb.service("/apps/" + APP_WITH_METADATA, (ctx, req) -> {
-
-                final Application app = InstanceInfoGenerator.newBuilder(1, APP_WITH_METADATA)
-                                                             .withMetaData(true).build().toApplications()
-                                                             .getRegisteredApplications(APP_WITH_METADATA);
-                final ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                encoder.encode(app, bos);
-                return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bos.toByteArray());
-            });
         }
     };
 
@@ -90,38 +74,5 @@ class EurekaEndpointGroupTest {
 
         // Created 6 instances but 1 is down, so 5 instances.
         assertThat(endpointsCaptor.join()).hasSize(5);
-    }
-
-    @Test
-    void instanceWithMetadata() {
-        final EurekaEndpointGroup eurekaEndpointGroup = EurekaEndpointGroup.builder(eurekaServer.httpUri())
-                                                                           .appName(APP_WITH_METADATA)
-                                                                           .build();
-        final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
-        eurekaEndpointGroup.addListener(endpointsCaptor::complete);
-
-        final List<Endpoint> endpoints = endpointsCaptor.join();
-        final AttributeKey<String> key = AttributeKey.valueOf("appKey0");
-        assertThat(endpoints.get(0).attr(key))
-                .isEqualTo("0");
-
-        assertThat(endpoints.get(0).attr(INSTANCE_INFO)).isNotNull();
-    }
-
-    @Test
-    void notStoreMetadata() {
-        final EurekaEndpointGroup eurekaEndpointGroup = EurekaEndpointGroup.builder(eurekaServer.httpUri())
-                                                                           .appName(APP_WITH_METADATA)
-                                                                           .instanceMetadataAsAttrs(false)
-                                                                           .build();
-        final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
-        eurekaEndpointGroup.addListener(endpointsCaptor::complete);
-
-        final List<Endpoint> endpoints = endpointsCaptor.join();
-        final AttributeKey<String> key = AttributeKey.valueOf("appKey0");
-        assertThat(endpoints.get(0).attr(key)).isNull();
-
-        final @Nullable InstanceInfo instanceInfo = endpoints.get(0).attr(INSTANCE_INFO);
-        assertThat(instanceInfo).isNull();
     }
 }
