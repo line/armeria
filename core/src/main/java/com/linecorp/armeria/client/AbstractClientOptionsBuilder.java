@@ -394,11 +394,14 @@ public class AbstractClientOptionsBuilder {
      * // Good:
      * // The context data is set by the thread that initiates the client call.
      * USER_ID.set("user1");
-     * client.executeSomething1(..);
-     * ...
-     * client.executeSomethingN(..);
-     * // Should clean up the thread local storage.
-     * USER_ID.remove();
+     * try {
+     *     client.executeSomething1(..);
+     *     ...
+     *     client.executeSomethingN(..);
+     * } finally {
+     *     // Should clean up the thread local storage.
+     *     USER_ID.remove();
+     * }
      *
      * // Bad:
      * USER_ID.set("user1");
