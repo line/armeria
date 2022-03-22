@@ -22,6 +22,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link Function} that determines the {@link LogLevel} of an {@link HttpRequest} from a given
@@ -29,6 +30,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *
  * @see LoggingDecoratorBuilder#requestLogLevelMapper(RequestLogLevelMapper)
  */
+@UnstableApi
 @FunctionalInterface
 public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel> {
 

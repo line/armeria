@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link Function} that determines the {@link LogLevel} of an {@link HttpResponse} from a given
@@ -32,6 +33,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * @see LoggingDecoratorBuilder#responseLogLevelMapper(ResponseLogLevelMapper)
  */
 // TODO(trustin): Remove 'extends Function' in the next major release.
+@UnstableApi
 @FunctionalInterface
 public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
 

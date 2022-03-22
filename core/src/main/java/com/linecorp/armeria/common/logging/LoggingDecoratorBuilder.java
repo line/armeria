@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Functions;
 
 /**
@@ -143,6 +144,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging responses whose status is equal to the specified
      * {@link HttpStatus}.
      */
+    @UnstableApi
     public LoggingDecoratorBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return responseLogLevelMapper(ResponseLogLevelMapper.of(status, logLevel));
     }
@@ -151,6 +153,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging responses whose status belongs to the specified
      * {@link HttpStatusClass}.
      */
+    @UnstableApi
     public LoggingDecoratorBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return responseLogLevelMapper(ResponseLogLevelMapper.of(statusClass, logLevel));
     }
@@ -188,6 +191,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link ResponseLogLevelMapper} to use when mapping the log level of response logs.
      */
+    @UnstableApi
     public LoggingDecoratorBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         if (this.responseLogLevelMapper == null) {
