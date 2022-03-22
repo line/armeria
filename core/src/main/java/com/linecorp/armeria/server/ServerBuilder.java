@@ -815,10 +815,8 @@ public final class ServerBuilder {
     }
 
     /**
-     * Defines a custom {@link SuccessFunction} to allow custom definition of successful responses.
-     * {@link MetricCollectingService} and {@link LoggingService} will use this custom
-     * definition if set.
-     * If not set, {@link SuccessFunction#isSuccess(RequestContext, RequestLog)} is used.
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
      */
     public ServerBuilder successFunction(SuccessFunction successFunction) {
         virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
