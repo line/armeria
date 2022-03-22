@@ -41,8 +41,8 @@ public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel
     }
 
     /**
-     * Returns a {@link LogLevel} for the given {@link RequestOnlyLog}. Returning {@code null} lets the next handler
-     * specified with {@link #orElse(RequestLogLevelMapper)} map the {@link RequestOnlyLog}.
+     * Returns a {@link LogLevel} for the given {@link RequestOnlyLog}. Returning {@code null} lets the next
+     * handler specified with {@link #orElse(RequestLogLevelMapper)} map the {@link RequestOnlyLog}.
      */
     @Nullable
     @Override
