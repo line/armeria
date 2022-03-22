@@ -69,7 +69,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -81,8 +80,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -818,6 +815,7 @@ public final class ServerBuilder {
      * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
      * If unspecified, {@link SuccessFunction#ofDefault()} is used.
      */
+    @UnstableApi
     public ServerBuilder successFunction(SuccessFunction successFunction) {
         virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
         return this;
