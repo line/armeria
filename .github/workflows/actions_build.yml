@@ -75,7 +75,7 @@ jobs:
     # on other Gradle tasks such as tests.
     - name: Build with Gradle (Shading only)
       run: |
-        ./gradlew --no-daemon --stacktrace shadedJar shadedTestJar \
+        ./gradlew --no-daemon --stacktrace shadedJar shadedTestJar trimShadedJar \
         ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         -PnoLint \
