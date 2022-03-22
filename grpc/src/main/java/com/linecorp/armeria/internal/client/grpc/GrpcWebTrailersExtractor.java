@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
-
 import java.io.IOException;
 
 import org.reactivestreams.Subscriber;
@@ -44,7 +42,6 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
-import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.grpc.ClientInterceptor;
 import io.grpc.Decompressor;
@@ -74,10 +71,10 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
         final HttpResponse response = delegate.execute(ctx, req);
         final ByteBufAllocator alloc = ctx.alloc();
 
-        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(maxMessageSizeBytes);
+        final ArmeriaMessageDeframer deframer =
+                new ArmeriaMessageDeframer(maxMessageSizeBytes, alloc, grpcWebText);
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
-        final StreamMessage<DeframedMessage> deframed = new DecodedHttpStreamMessage<>(
-                publisher, deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        final StreamMessage<DeframedMessage> deframed = publisher.decode(deframer, alloc);
         deframed.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
 
         final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {

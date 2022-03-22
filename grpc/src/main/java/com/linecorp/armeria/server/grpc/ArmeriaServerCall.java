@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
 import static java.util.Objects.requireNonNull;
 
@@ -183,10 +182,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
                 new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
-                                       maxRequestMessageLength)
+                                       maxRequestMessageLength, grpcWebText)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         this.req = req;
-        deframedRequest = req.decode(requestDeframer, alloc, byteBufConverter(alloc, grpcWebText));
+        deframedRequest = req.decode(requestDeframer, alloc);
         requestDeframer.setDeframedStreamMessage(deframedRequest);
         responseFramer = new ArmeriaMessageFramer(alloc, maxResponseMessageLength, grpcWebText);
 
@@ -587,6 +586,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (!listenerClosed) {
             listenerClosed = true;
 
+            if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+                // Failed to deserialize a message into a request
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
+            }
             if (setResponseContent) {
                 ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             }

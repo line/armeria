@@ -99,7 +99,7 @@ class ThriftServiceLogNameTest {
                        .build(HelloService.Iface.class);
         client.hello("hello");
 
-        final RequestLog log = capturedCtx.log().partial();
+        final RequestLog log = capturedCtx.log().whenComplete().join();
         assertThat(log.name()).isEqualTo("hello");
         assertThat(log.serviceName()).isEqualTo(HelloService.AsyncIface.class.getName());
         assertThat(log.fullName()).isEqualTo(HelloService.AsyncIface.class.getName() + "/hello");
@@ -112,7 +112,7 @@ class ThriftServiceLogNameTest {
                        .build(HelloService.Iface.class);
         client.hello("hello");
 
-        final RequestLog log = capturedCtx.log().partial();
+        final RequestLog log = capturedCtx.log().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("HelloService");
         assertThat(log.name()).isEqualTo("defaultName");
         assertThat(log.fullName()).isEqualTo("HelloService/defaultName");

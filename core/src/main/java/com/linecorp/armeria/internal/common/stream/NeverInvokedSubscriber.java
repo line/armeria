@@ -14,17 +14,17 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-final class NeverInvokedSubscriber<T> implements Subscriber<T> {
+public final class NeverInvokedSubscriber<T> implements Subscriber<T> {
 
     private static final NeverInvokedSubscriber<Object> INSTANCE = new NeverInvokedSubscriber<>();
 
     @SuppressWarnings("unchecked")
-    static <T> NeverInvokedSubscriber<T> get() {
+    public static <T> NeverInvokedSubscriber<T> get() {
         return (NeverInvokedSubscriber<T>) INSTANCE;
     }
 

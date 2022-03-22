@@ -22,12 +22,11 @@ import java.util.List;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -86,6 +85,12 @@ public interface RoutingContext {
     RequestHeaders headers();
 
     /**
+     * Returns the {@link RoutingStatus} of the request.
+     */
+    @UnstableApi
+    RoutingStatus status();
+
+    /**
      * Defers throwing an {@link HttpStatusException} until reaching the end of the service list.
      */
     void deferStatusException(HttpStatusException cause);
@@ -114,8 +119,9 @@ public interface RoutingContext {
     /**
      * Returns {@code true} if this context is for a CORS preflight request.
      *
-     * @see ArmeriaHttpUtil#isCorsPreflightRequest(HttpRequest)
+     * @deprecated Use {@link #status()} and {@link RoutingStatus#CORS_PREFLIGHT}.
      */
+    @Deprecated
     boolean isCorsPreflight();
 
     /**

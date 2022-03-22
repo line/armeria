@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -54,7 +53,6 @@ import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
-import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
@@ -66,12 +64,9 @@ class ArmeriaMessageDeframerTest {
     private static final int MAX_MESSAGE_SIZE = 1024;
 
     private DeframedMessage deframedMessage;
-    private ArmeriaMessageDeframer deframer;
 
     @BeforeEach
     void setUp() {
-        deframer = new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE)
-                .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
         deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }
 
@@ -237,10 +232,13 @@ class ArmeriaMessageDeframerTest {
                     .verifyComplete();
     }
 
-    private StreamMessage<DeframedMessage> newDeframedStreamMessage(
-            StreamMessage<HttpData> source, boolean base64) {
+    private static StreamMessage<DeframedMessage> newDeframedStreamMessage(StreamMessage<HttpData> source,
+                                                                           boolean base64) {
         final UnpooledByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
-        return new DecodedHttpStreamMessage<>(source, deframer, alloc, byteBufConverter(alloc, base64));
+        final ArmeriaMessageDeframer deframer =
+                new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE, alloc, base64)
+                        .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
+        return source.decode(deframer, alloc);
     }
 
     @ArgumentsSource(DeframerProvider.class)
@@ -270,53 +268,53 @@ class ArmeriaMessageDeframerTest {
                     .verifyComplete();
     }
 
-     @Test
-     void deframe_tooLargeUncompressed() {
-         final SimpleRequest request = SimpleRequest.newBuilder()
-                                                    .setPayload(Payload.newBuilder()
-                                                                       .setBody(ByteString.copyFromUtf8(
-                                                                               Strings.repeat("a", 1024))))
-                                                    .build();
-         final byte[] frame = GrpcTestUtil.uncompressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
-         assertThat(frame.length).isGreaterThan(1024);
+    @Test
+    void deframe_tooLargeUncompressed() {
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setPayload(Payload.newBuilder()
+                                                                      .setBody(ByteString.copyFromUtf8(
+                                                                              Strings.repeat("a", 1024))))
+                                                   .build();
+        final byte[] frame = GrpcTestUtil.uncompressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
+        assertThat(frame.length).isGreaterThan(1024);
 
-         final StreamMessage<HttpData> source = newStreamMessage(frame);
-         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
+        final StreamMessage<HttpData> source = newStreamMessage(frame);
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
 
-         StepVerifier.create(deframed)
-                     .thenRequest(1)
-                     .expectError(ArmeriaStatusException.class)
-                     .verify();
-     }
+        StepVerifier.create(deframed)
+                    .thenRequest(1)
+                    .expectError(ArmeriaStatusException.class)
+                    .verify();
+    }
 
-     @Test
-     void deframe_tooLargeCompressed() {
-         // Simple repeated character compresses below the frame threshold but uncompresses above it.
-         final SimpleRequest request =
-                 SimpleRequest.newBuilder()
-                              .setPayload(Payload.newBuilder()
-                                                 .setBody(ByteString.copyFromUtf8(
-                                                         Strings.repeat("a", 1024))))
-                              .build();
-         final byte[] frame = GrpcTestUtil.compressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
-         assertThat(frame.length).isLessThan(1024);
+    @Test
+    void deframe_tooLargeCompressed() {
+        // Simple repeated character compresses below the frame threshold but uncompresses above it.
+        final SimpleRequest request =
+                SimpleRequest.newBuilder()
+                             .setPayload(Payload.newBuilder()
+                                                .setBody(ByteString.copyFromUtf8(
+                                                        Strings.repeat("a", 1024))))
+                             .build();
+        final byte[] frame = GrpcTestUtil.compressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
+        assertThat(frame.length).isLessThan(1024);
 
-         final StreamMessage<HttpData> source = newStreamMessage(frame);
-         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
+        final StreamMessage<HttpData> source = newStreamMessage(frame);
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
 
-         StepVerifier.create(deframed)
-                     .thenRequest(1)
-                     .expectNextMatches(message -> {
-                         try (InputStream stream = message.stream()) {
-                             assertThatThrownBy(() -> ByteStreams.toByteArray(stream))
-                                     .isInstanceOf(ArmeriaStatusException.class);
-                         } catch (IOException e) {
-                             Exceptions.throwUnsafely(e);
-                         }
-                         return true;
-                     })
-                     .verifyComplete();
-     }
+        StepVerifier.create(deframed)
+                    .thenRequest(1)
+                    .expectNextMatches(message -> {
+                        try (InputStream stream = message.stream()) {
+                            assertThatThrownBy(() -> ByteStreams.toByteArray(stream))
+                                    .isInstanceOf(ArmeriaStatusException.class);
+                        } catch (IOException e) {
+                            Exceptions.throwUnsafely(e);
+                        }
+                        return true;
+                    })
+                    .verifyComplete();
+    }
 
     private static ArrayList<byte[]> base64EncodedFragments(byte[] frameBytes) {
         final ArrayList<byte[]> fragments = new ArrayList<>();

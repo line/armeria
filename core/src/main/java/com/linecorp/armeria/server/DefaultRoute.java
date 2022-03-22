@@ -223,7 +223,7 @@ final class DefaultRoute implements Route {
 
     private static RoutingResult emptyOrCorsPreflightResult(RoutingContext routingCtx,
                                                             RoutingResultBuilder builder) {
-        if (routingCtx.isCorsPreflight()) {
+        if (routingCtx.status() == RoutingStatus.CORS_PREFLIGHT) {
             return builder.type(RoutingResultType.CORS_PREFLIGHT).build();
         }
 

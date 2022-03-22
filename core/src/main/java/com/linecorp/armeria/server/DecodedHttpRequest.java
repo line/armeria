@@ -18,10 +18,35 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 
 interface DecodedHttpRequest extends HttpRequest {
+
+    static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
+                                 RequestHeaders headers, boolean keepAlive,
+                                 InboundTrafficController inboundTrafficController,
+                                 RoutingContext routingCtx, @Nullable Routed<ServiceConfig> routed) {
+        if (endOfStream || routed == null) {
+            return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
+                                                      routingCtx, routed);
+        } else {
+            final ServiceConfig config = routed.value();
+            final HttpService service = config.service();
+            if (service.exchangeType(headers, routed.route()).isRequestStreaming()) {
+                return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
+                                                       inboundTrafficController,
+                                                       config.maxRequestLength(), routingCtx, routed);
+            } else {
+                return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
+                                                         config.maxRequestLength(), routingCtx, routed);
+            }
+        }
+    }
 
     int id();
 
@@ -33,6 +58,15 @@ interface DecodedHttpRequest extends HttpRequest {
     boolean isKeepAlive();
 
     void init(ServiceRequestContext ctx);
+
+    RoutingContext routingContext();
+
+    /**
+     * Returns the {@link ServiceConfig} mapped by {@link Routed}. {@code null} if a request path is invalid
+     * or an {@code OPTION * HTTP/1.1} request.
+     */
+    @Nullable
+    Routed<ServiceConfig> route();
 
     void close();
 
@@ -51,4 +85,9 @@ interface DecodedHttpRequest extends HttpRequest {
      * @see Http2RequestDecoder#onRstStreamRead(ChannelHandlerContext, int, long)
      */
     void abortResponse(Throwable cause, boolean cancel);
+
+    /**
+     * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
+     */
+    boolean isAggregated();
 }

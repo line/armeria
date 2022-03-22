@@ -11,10 +11,10 @@
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
- * under the License
+ * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -23,7 +23,8 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -31,16 +32,27 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
-class RegularFixedStreamMessageTest {
+class AbstractFixedStreamMessageTest {
 
-    @Test
-    void demandTest() {
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void demandTest(boolean useArray) {
         final int size = 6;
         final String[] strings = new String[size];
         Arrays.fill(strings, "foo");
 
         final AtomicInteger counter = new AtomicInteger();
-        final RegularFixedStreamMessage<String> streamMessage = new RegularFixedStreamMessage<>(strings);
+        final AbstractFixedStreamMessage<String> streamMessage;
+        if (useArray) {
+            streamMessage = new RegularFixedStreamMessage<>(strings);
+        } else {
+            final AggregatingStreamMessage<String> stream = new AggregatingStreamMessage<>(size);
+            for (String string : strings) {
+                stream.write(string);
+            }
+            stream.close();
+            streamMessage = stream;
+        }
         assertThat(streamMessage.demand()).isZero();
         final AtomicBoolean completed = new AtomicBoolean();
         streamMessage.subscribe(new Subscriber<String>() {
