@@ -77,23 +77,23 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     }
 
     @Override
-    public LoggingClientBuilder successSamplingRate(float samplingRate) {
-        return (LoggingClientBuilder) super.successSamplingRate(samplingRate);
-    }
-
-    @Override
     public LoggingClientBuilder successSampler(Sampler<? super ClientRequestContext> sampler) {
         return (LoggingClientBuilder) super.successSampler(sampler);
     }
 
     @Override
-    public LoggingClientBuilder failureSamplingRate(float samplingRate) {
-        return (LoggingClientBuilder) super.failureSamplingRate(samplingRate);
+    public LoggingClientBuilder successSamplingRate(float samplingRate) {
+        return (LoggingClientBuilder) super.successSamplingRate(samplingRate);
     }
 
     @Override
     public LoggingClientBuilder failureSampler(Sampler<? super ClientRequestContext> sampler) {
         return (LoggingClientBuilder) super.failureSampler(sampler);
+    }
+
+    @Override
+    public LoggingClientBuilder failureSamplingRate(float samplingRate) {
+        return (LoggingClientBuilder) super.failureSamplingRate(samplingRate);
     }
 
     // Override the return type of the chaining methods in the super-superclass.

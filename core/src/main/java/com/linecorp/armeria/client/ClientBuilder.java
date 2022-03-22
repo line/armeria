@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -183,6 +184,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    @UnstableApi
     public ClientBuilder successFunction(SuccessFunction successFunction) {
         return (ClientBuilder) super.successFunction(successFunction);
     }

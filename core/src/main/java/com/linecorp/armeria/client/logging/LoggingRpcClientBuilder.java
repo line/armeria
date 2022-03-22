@@ -70,18 +70,13 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     // Override the return type of the chaining methods in the superclass.
 
     @Override
-    public LoggingRpcClientBuilder samplingRate(float samplingRate) {
-        return (LoggingRpcClientBuilder) super.samplingRate(samplingRate);
-    }
-
-    @Override
     public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
         return (LoggingRpcClientBuilder) super.sampler(sampler);
     }
 
     @Override
-    public LoggingRpcClientBuilder successSamplingRate(float samplingRate) {
-        return (LoggingRpcClientBuilder) super.successSamplingRate(samplingRate);
+    public LoggingRpcClientBuilder samplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.samplingRate(samplingRate);
     }
 
     @Override
@@ -90,13 +85,18 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    public LoggingRpcClientBuilder failureSamplingRate(float samplingRate) {
-        return (LoggingRpcClientBuilder) super.failureSamplingRate(samplingRate);
+    public LoggingRpcClientBuilder successSamplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.successSamplingRate(samplingRate);
     }
 
     @Override
     public LoggingRpcClientBuilder failureSampler(Sampler<? super ClientRequestContext> sampler) {
         return (LoggingRpcClientBuilder) super.failureSampler(sampler);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder failureSamplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.failureSamplingRate(samplingRate);
     }
 
     // Override the return type of the chaining methods in the super-superclass.

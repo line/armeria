@@ -65,6 +65,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
@@ -933,6 +934,7 @@ public final class VirtualHostBuilder {
      * Sets the {@link SuccessFunction} to define successful responses.
      * {@link MetricCollectingService} and {@link LoggingService} use this function.
      */
+    @UnstableApi
     public VirtualHostBuilder successFunction(SuccessFunction successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         return this;

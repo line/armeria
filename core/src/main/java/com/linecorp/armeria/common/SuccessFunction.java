@@ -20,6 +20,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -59,6 +60,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  *
  */
 @FunctionalInterface
+@UnstableApi
 public interface SuccessFunction {
     /**
      * Returns a {@link SuccessFunction} that will always return {@code false}.

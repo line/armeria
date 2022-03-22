@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.common.util.Sampler;
 
@@ -31,6 +32,16 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
     private Sampler<? super ClientRequestContext> successSampler = Sampler.always();
 
     private Sampler<? super ClientRequestContext> failureSampler = Sampler.always();
+
+    /**
+     * Sets the {@link Sampler} that determines which request needs logging.
+     */
+    public AbstractLoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
+        requireNonNull(sampler, "sampler");
+        this.successSampler = sampler;
+        this.failureSampler = sampler;
+        return this;
+    }
 
     /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
@@ -46,40 +57,9 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the rate at which to sample failure requests to log. Any number between {@code 0.0} and
-     * {@code 1.0} will cause a random sample of the failure requests to be logged.
-     */
-    public AbstractLoggingClientBuilder failureSamplingRate(float failureSamplingRate) {
-        checkArgument(0.0 <= failureSamplingRate && failureSamplingRate <= 1.0,
-                      "failureSamplingRate: %s (expected: 0.0 <= failureSamplingRate <= 1.0)",
-                      failureSamplingRate);
-        return failureSampler(Sampler.random(failureSamplingRate));
-    }
-
-    /**
-     * Sets the rate at which to sample success requests to log. Any number between {@code 0.0} and
-     * {@code 1.0} will cause a random sample of the success requests to be logged.
-     */
-    public AbstractLoggingClientBuilder successSamplingRate(float successSamplingRate) {
-        checkArgument(0.0 <= successSamplingRate && successSamplingRate <= 1.0,
-                      "successSamplingRate: %s (expected: 0.0 <= successSamplingRate <= 1.0)",
-                      successSamplingRate);
-        return successSampler(Sampler.random(successSamplingRate));
-    }
-
-    /**
-     * Sets the {@link Sampler} that determines which request needs logging.
-     */
-    public AbstractLoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
-        requireNonNull(sampler, "sampler");
-        this.successSampler = sampler;
-        this.failureSampler = sampler;
-        return this;
-    }
-
-    /**
      * Sets the {@link Sampler} that determines which failure request needs logging.
      */
+    @UnstableApi
     public AbstractLoggingClientBuilder failureSampler(
             Sampler<? super ClientRequestContext> failureSampler) {
         this.failureSampler = requireNonNull(failureSampler, "failureSampler");
@@ -91,8 +71,21 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the rate at which to sample failure requests to log. Any number between {@code 0.0} and
+     * {@code 1.0} will cause a random sample of the failure requests to be logged.
+     */
+    @UnstableApi
+    public AbstractLoggingClientBuilder failureSamplingRate(float failureSamplingRate) {
+        checkArgument(0.0 <= failureSamplingRate && failureSamplingRate <= 1.0,
+                      "failureSamplingRate: %s (expected: 0.0 <= failureSamplingRate <= 1.0)",
+                      failureSamplingRate);
+        return failureSampler(Sampler.random(failureSamplingRate));
+    }
+
+    /**
      * Sets the {@link Sampler} that determines which success request needs logging.
      */
+    @UnstableApi
     public AbstractLoggingClientBuilder successSampler(
             Sampler<? super ClientRequestContext> successSampler) {
         this.successSampler = requireNonNull(successSampler, "successSampler");
@@ -101,5 +94,17 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
 
     final Sampler<? super ClientRequestContext> successSampler() {
         return successSampler;
+    }
+
+    /**
+     * Sets the rate at which to sample success requests to log. Any number between {@code 0.0} and
+     * {@code 1.0} will cause a random sample of the success requests to be logged.
+     */
+    @UnstableApi
+    public AbstractLoggingClientBuilder successSamplingRate(float successSamplingRate) {
+        checkArgument(0.0 <= successSamplingRate && successSamplingRate <= 1.0,
+                      "successSamplingRate: %s (expected: 0.0 <= successSamplingRate <= 1.0)",
+                      successSamplingRate);
+        return successSampler(Sampler.random(successSamplingRate));
     }
 }

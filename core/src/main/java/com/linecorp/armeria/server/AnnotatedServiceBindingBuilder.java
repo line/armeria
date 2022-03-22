@@ -251,8 +251,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder successFunction(
-            SuccessFunction successFunction) {
+    public AnnotatedServiceBindingBuilder successFunction(SuccessFunction successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
         return this;
     }

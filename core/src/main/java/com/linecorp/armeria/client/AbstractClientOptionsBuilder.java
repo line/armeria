@@ -183,6 +183,7 @@ public class AbstractClientOptionsBuilder {
      * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
      * If unspecified, {@link SuccessFunction#ofDefault()} is used.
      */
+    @UnstableApi
     public AbstractClientOptionsBuilder successFunction(SuccessFunction successFunction) {
         return option(ClientOptions.SUCCESS_FUNCTION, successFunction);
     }
