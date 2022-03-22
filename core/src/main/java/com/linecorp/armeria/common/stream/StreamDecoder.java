@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Publisher;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
@@ -98,7 +97,7 @@ public interface StreamDecoder<I, O> {
     void process(StreamDecoderInput in, StreamDecoderOutput<O> out) throws Exception;
 
     /**
-     * Invoked when {@link HttpData}s are fully consumed.
+     * Invoked when the input is fully consumed.
      */
     default void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<O> out) throws Exception {}
 
