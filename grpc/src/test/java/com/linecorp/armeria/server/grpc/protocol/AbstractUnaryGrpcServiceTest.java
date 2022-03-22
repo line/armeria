@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.UncheckedIOException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Stream;
 
@@ -45,6 +44,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.grpc.testing.Messages;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -102,7 +102,7 @@ class AbstractUnaryGrpcServiceTest {
             } else {
                 // For normalUpstream() and normalDownstream()
                 assertThat(request).isEqualTo(REQUEST_MESSAGE);
-                return CompletableFuture.completedFuture(RESPONSE_MESSAGE.toByteArray());
+                return UnmodifiableFuture.completedFuture(RESPONSE_MESSAGE.toByteArray());
             }
         }
     }

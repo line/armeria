@@ -54,6 +54,7 @@ public final class DnsCacheBuilder {
 
     /**
      * Sets the {@link MeterRegistry} that collects cache stats.
+     * If unspecified, {@link Metrics#globalRegistry} is used.
      */
     public DnsCacheBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");

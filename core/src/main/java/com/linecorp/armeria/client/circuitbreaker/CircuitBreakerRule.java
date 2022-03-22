@@ -232,15 +232,15 @@ public interface CircuitBreakerRule {
      * > CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
      * >                                                               @Nullable Throwable cause) {
      * >     if (cause != null) {
-     * >         return CompletableFuture.completedFuture(CircuitBreakerDecision.failure());
+     * >         return UnmodifiableFuture.completedFuture(CircuitBreakerDecision.failure());
      * >     }
      *
      * >     ResponseHeaders responseHeaders = ctx.log().responseHeaders();
      * >     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
-     * >         return CompletableFuture.completedFuture(CircuitBreakerDecision.failure());
+     * >         return UnmodifiableFuture.completedFuture(CircuitBreakerDecision.failure());
      * >     }
      * >     ...
-     * >     return CompletableFuture.completedFuture(CircuitBreakerDecision.success())
+     * >     return UnmodifiableFuture.completedFuture(CircuitBreakerDecision.success())
      * > }
      * }</pre>
      *

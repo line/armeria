@@ -22,6 +22,8 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.netty.util.concurrent.Future;
+
 /**
  * A {@link CompletableFuture} which prevents the caller from completing it. An attempt to call any of
  * the following methods will trigger an {@link UnsupportedOperationException}:
@@ -102,6 +104,30 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
             return null;
         });
         return unmodifiable;
+    }
+
+    /**
+     * Returns an {@link UnmodifiableFuture} which will be completed when the specified
+     * Netty's {@link Future} is completed.
+     */
+    public static <U> UnmodifiableFuture<U> fromNetty(Future<U> future) {
+        requireNonNull(future, "future");
+
+        final UnmodifiableFuture<U> cf = new UnmodifiableFuture<>();
+        if (future.isDone()) {
+            toCompletableFuture(future, cf);
+        } else {
+            future.addListener((Future<U> future0) -> toCompletableFuture(future0, cf));
+        }
+        return cf;
+    }
+
+    private static <U> void toCompletableFuture(Future<U> future, UnmodifiableFuture<U> cf) {
+        if (future.isSuccess()) {
+            cf.complete(future.getNow());
+        } else {
+            cf.completeExceptionally(future.cause());
+        }
     }
 
     /**

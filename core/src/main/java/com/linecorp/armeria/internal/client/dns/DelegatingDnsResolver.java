@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.client.dns;
 
-import static com.linecorp.armeria.internal.common.NettyFutureUtil.toCompletableFuture;
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -29,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.DnsTimeoutException;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -53,12 +52,13 @@ final class DelegatingDnsResolver implements DnsResolver {
         requireNonNull(ctx, "ctx");
         requireNonNull(question, "question");
         if (ctx.isCancelled()) {
-            return exceptionallyCompletedFuture(new DnsTimeoutException(
+            return UnmodifiableFuture.exceptionallyCompletedFuture(new DnsTimeoutException(
                     question + " is timed out after " + ctx.queryTimeoutMillis() + " milliseconds."));
         }
 
         logger.debug("[{}] Sending a DNS query: {}", question.name(), question);
-        return toCompletableFuture(delegate.resolveAll(question, EMPTY_ADDITIONALS, executor.newPromise()));
+        return UnmodifiableFuture.fromNetty(
+                delegate.resolveAll(question, EMPTY_ADDITIONALS, executor.newPromise()));
     }
 
     @Override

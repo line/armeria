@@ -24,17 +24,18 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class CircuitBreakerRuleUtil {
 
     static final CompletableFuture<CircuitBreakerDecision> SUCCESS_DECISION =
-            CompletableFuture.completedFuture(CircuitBreakerDecision.success());
+            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.success());
     static final CompletableFuture<CircuitBreakerDecision> FAILURE_DECISION =
-            CompletableFuture.completedFuture(CircuitBreakerDecision.failure());
+            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.failure());
     static final CompletableFuture<CircuitBreakerDecision> IGNORE_DECISION =
-            CompletableFuture.completedFuture(CircuitBreakerDecision.ignore());
+            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.ignore());
     static final CompletableFuture<CircuitBreakerDecision> NEXT_DECISION =
-            CompletableFuture.completedFuture(CircuitBreakerDecision.next());
+            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.next());
 
     static <T extends Response> CircuitBreakerRuleWithContent<T> fromCircuitBreakerRule(
             CircuitBreakerRule circuitBreakerRule) {

@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.server.auth;
 
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.exceptionallyCompletedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

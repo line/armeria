@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +53,7 @@ import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
@@ -64,7 +64,7 @@ class RetryingRpcClientTest {
 
     private static final RetryRuleWithContent<RpcResponse> retryAlways =
             (ctx, response, cause) ->
-                    CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
+                    UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
 
     private static final RetryRuleWithContent<RpcResponse> retryOnException =
             RetryRuleWithContent.onException(Backoff.withoutDelay());
@@ -167,7 +167,7 @@ class RetryingRpcClientTest {
     void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
         final BlockingQueue<RequestLog> logQueue = new LinkedTransferQueue<>();
         final RetryRuleWithContent<RpcResponse> rule =
-                (ctx, response, cause) -> CompletableFuture.completedFuture(
+                (ctx, response, cause) -> UnmodifiableFuture.completedFuture(
                         RetryDecision.retry(Backoff.fixed(10000000)));
         final HelloService.Iface client = helloClient(rule, 100, logQueue);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
@@ -246,7 +246,7 @@ class RetryingRpcClientTest {
         final RetryRuleWithContent<RpcResponse> ruleWithContent =
                 (ctx, response, cause) -> {
                     // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
-                    return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(8000)));
+                    return UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(8000)));
                 };
 
         final HelloService.Iface client =

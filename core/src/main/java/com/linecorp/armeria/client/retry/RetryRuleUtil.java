@@ -24,13 +24,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class RetryRuleUtil {
 
     static final CompletableFuture<RetryDecision> NEXT_DECISION =
-            CompletableFuture.completedFuture(RetryDecision.next());
+            UnmodifiableFuture.completedFuture(RetryDecision.next());
     static final CompletableFuture<RetryDecision> DEFAULT_DECISION =
-            CompletableFuture.completedFuture(RetryDecision.retry(Backoff.ofDefault()));
+            UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.ofDefault()));
 
     static <T extends Response> RetryRule fromRetryRuleWithContent(RetryRuleWithContent<T> retryRule) {
         return new RetryRule() {

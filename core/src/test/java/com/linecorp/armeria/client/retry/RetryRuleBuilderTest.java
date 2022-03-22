@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 class RetryRuleBuilderTest {
 
@@ -169,11 +169,11 @@ class RetryRuleBuilderTest {
                                      RequestLogProperty.RESPONSE_HEADERS)) {
                                  final HttpStatus status = ctx.log().partial().responseHeaders().status();
                                  if (status.isClientError()) {
-                                     return CompletableFuture.completedFuture(
+                                     return UnmodifiableFuture.completedFuture(
                                              RetryDecision.retry(clientErrorBackOff));
                                  }
                              }
-                             return CompletableFuture.completedFuture(RetryDecision.next());
+                             return UnmodifiableFuture.completedFuture(RetryDecision.next());
                          })
                          .orElse(RetryRule.builder().onServerErrorStatus().thenBackoff(statusErrorBackOff))
                          .orElse(RetryRule.builder().onStatus(HttpStatus.TOO_MANY_REQUESTS)
@@ -206,14 +206,14 @@ class RetryRuleBuilderTest {
         final RetryRule retryRule = RetryRule.of((ctx, cause) -> {
             if (cause instanceof UnprocessedRequestException) {
                 // retry with backoff
-                return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
+                return UnmodifiableFuture.completedFuture(RetryDecision.retry(backoff));
             }
             if (ctx.log().partial().responseHeaders().status().isClientError()) {
                 // stop retrying
-                return CompletableFuture.completedFuture(RetryDecision.noRetry());
+                return UnmodifiableFuture.completedFuture(RetryDecision.noRetry());
             }
             // will lookup next strategies
-            return CompletableFuture.completedFuture(RetryDecision.next());
+            return UnmodifiableFuture.completedFuture(RetryDecision.next());
         }, RetryRule.builder()
                     .onStatus(HttpStatus.SERVICE_UNAVAILABLE)
                     .thenBackoff(backoff));

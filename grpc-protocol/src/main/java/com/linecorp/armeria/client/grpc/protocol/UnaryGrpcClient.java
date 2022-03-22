@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
@@ -206,7 +207,7 @@ public final class UnaryGrpcClient {
                                    GrpcWebTrailers.set(ctx, msg.trailers());
                                }
                                // Nothing to deframe.
-                               return CompletableFuture.completedFuture(msg.toHttpResponse());
+                               return UnmodifiableFuture.completedFuture(msg.toHttpResponse());
                            }
 
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();

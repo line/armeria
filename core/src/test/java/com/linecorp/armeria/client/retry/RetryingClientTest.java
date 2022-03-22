@@ -75,6 +75,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -86,7 +87,7 @@ import io.netty.channel.EventLoop;
 class RetryingClientTest {
 
     private static final RetryRule retryAlways =
-            (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
+            (ctx, cause) -> UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.fixed(500)));
 
     private static ClientFactory clientFactory;
 
@@ -428,9 +429,9 @@ class RetryingClientTest {
         final RetryRule strategy =
                 (ctx, cause) -> {
                     if (cause instanceof ResponseTimeoutException) {
-                        return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
+                        return UnmodifiableFuture.completedFuture(RetryDecision.retry(backoff));
                     }
-                    return CompletableFuture.completedFuture(RetryDecision.noRetry());
+                    return UnmodifiableFuture.completedFuture(RetryDecision.noRetry());
                 };
 
         final WebClient client = client(strategy, 0, 500, 100);
@@ -725,7 +726,7 @@ class RetryingClientTest {
         final AtomicInteger retryCounter = new AtomicInteger();
         final RetryRule strategy = (ctx, cause) -> {
             retryCounter.incrementAndGet();
-            return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
+            return UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
         };
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator((delegate, ctx, req) -> {

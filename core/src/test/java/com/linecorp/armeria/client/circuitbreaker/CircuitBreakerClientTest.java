@@ -26,7 +26,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -422,7 +422,7 @@ class CircuitBreakerClientTest {
      * A rule with content that returns failure when am exception is thrown, and success otherwise.
      */
     private static CircuitBreakerRuleWithContent<HttpResponse> ruleWithResponse() {
-        return (ctx, response, cause) -> CompletableFuture.completedFuture(
+        return (ctx, response, cause) -> UnmodifiableFuture.completedFuture(
                 cause == null ? CircuitBreakerDecision.failure() : CircuitBreakerDecision.success());
     }
 }

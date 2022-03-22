@@ -15,9 +15,9 @@
  */
 package com.linecorp.armeria.server.throttling;
 
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.always;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.never;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Rule;

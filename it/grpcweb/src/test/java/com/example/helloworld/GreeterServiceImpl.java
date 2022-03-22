@@ -15,8 +15,9 @@
  */
 package com.example.helloworld;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import akka.NotUsed;
 import akka.actor.typed.ActorSystem;
@@ -51,7 +52,7 @@ public final class GreeterServiceImpl implements GreeterService {
 
     @Override
     public CompletionStage<HelloReply> sayHello(HelloRequest request) {
-        return CompletableFuture.completedFuture(
+        return UnmodifiableFuture.completedFuture(
                 HelloReply.newBuilder()
                           .setMessage("Hello, " + request.getName())
                           .build()

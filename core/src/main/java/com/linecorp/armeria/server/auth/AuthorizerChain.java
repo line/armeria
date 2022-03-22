@@ -21,12 +21,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -113,7 +113,7 @@ final class AuthorizerChain<T> extends AbstractAuthorizerWithHandlers<T> {
                 if (result.isAuthorized()) {
                     // always return associated successHandler on success!
                     // this could be NULL
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             AuthorizationStatus.ofSuccess(result.successHandler()));
                 }
                 // handle failure result
@@ -151,7 +151,7 @@ final class AuthorizerChain<T> extends AbstractAuthorizerWithHandlers<T> {
                 }
                 if (!iterator.hasNext()) {
                     // this is the last item in the chain
-                    return CompletableFuture.completedFuture(
+                    return UnmodifiableFuture.completedFuture(
                             AuthorizationStatus.ofFailure(
                                     (selectionStrategy == AuthorizerSelectionStrategy.LAST) ? nextFailureHandler
                                                                                             : failureHandler));

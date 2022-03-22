@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -40,24 +41,40 @@ public final class DnsUtil {
     private static final List<String> DEFAULT_SEARCH_DOMAINS;
     private static final int DEFAULT_NDOTS;
 
+    private static final Logger logger = LoggerFactory.getLogger(DnsUtil.class);
+
     static {
+
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final DnsNameResolver defaultResolver =
+                new DnsNameResolverBuilder(eventLoop)
+                        .channelType(TransportType.datagramChannelType(eventLoop.parent()))
+                        .build();
+        List<String> defaultSearchDomain;
         try {
             // TODO(ikhoon): Fork Netty code to avoid reflections for the default options.
-            final EventLoop eventLoop = CommonPools.workerGroup().next();
-            final DnsNameResolver defaultResolver =
-                    new DnsNameResolverBuilder(eventLoop)
-                            .channelType(TransportType.datagramChannelType(eventLoop.parent()))
-                            .build();
             final Method searchDomainsMethod = DnsNameResolver.class.getDeclaredMethod("searchDomains");
             searchDomainsMethod.setAccessible(true);
             final String[] searchDomains = (String[]) searchDomainsMethod.invoke(defaultResolver);
-            DEFAULT_SEARCH_DOMAINS = ImmutableList.copyOf(searchDomains);
-            final Method ndotsMethod = DnsNameResolver.class.getDeclaredMethod("ndots");
-            ndotsMethod.setAccessible(true);
-            DEFAULT_NDOTS = (int) ndotsMethod.invoke(defaultResolver);
+            defaultSearchDomain = ImmutableList.copyOf(searchDomains);
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            throw new Error(e);
+            logger.warn("Failed to get the default searchDomain value through reflection; " +
+                        "search domain resolution is disabled.", e);
+            defaultSearchDomain = ImmutableList.of();
         }
+        DEFAULT_SEARCH_DOMAINS = defaultSearchDomain;
+
+        int ndots;
+        try {
+            final Method ndotsMethod;
+            ndotsMethod = DnsNameResolver.class.getDeclaredMethod("ndots");
+            ndotsMethod.setAccessible(true);
+            ndots = (int) ndotsMethod.invoke(defaultResolver);
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            logger.warn("Failed to get the default ndots value through reflection; using 0 instead.", e);
+            ndots = 0;
+        }
+        DEFAULT_NDOTS = ndots;
     }
 
     @Nullable

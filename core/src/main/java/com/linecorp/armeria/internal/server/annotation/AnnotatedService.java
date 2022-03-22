@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
@@ -328,7 +329,7 @@ public final class AnnotatedService implements HttpService {
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
             f = req.aggregate();
         } else {
-            f = CompletableFuture.completedFuture(null);
+            f = UnmodifiableFuture.completedFuture(null);
         }
 
         ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
@@ -470,7 +471,7 @@ public final class AnnotatedService implements HttpService {
         if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
             return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
-        return CompletableFuture.completedFuture(obj);
+        return UnmodifiableFuture.completedFuture(obj);
     }
 
     /**

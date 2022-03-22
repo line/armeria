@@ -15,14 +15,13 @@
  */
 package com.linecorp.armeria.server.throttling;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -35,7 +34,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
             new ThrottlingStrategy<Request>("throttling-strategy-never") {
                 @Override
                 public CompletionStage<Boolean> accept(ServiceRequestContext ctx, Request request) {
-                    return completedFuture(false);
+                    return UnmodifiableFuture.completedFuture(false);
                 }
             };
 
@@ -43,7 +42,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
             new ThrottlingStrategy<Request>("throttling-strategy-always") {
                 @Override
                 public CompletionStage<Boolean> accept(ServiceRequestContext ctx, Request request) {
-                    return completedFuture(true);
+                    return UnmodifiableFuture.completedFuture(true);
                 }
             };
 

@@ -33,7 +33,6 @@ package com.linecorp.armeria.internal.client.dns;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -41,7 +40,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
+import com.linecorp.armeria.common.util.OsType;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -50,14 +51,11 @@ import io.netty.resolver.DefaultHostsFileEntriesResolver;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.PlatformDependent;
 
 class HostsFileDnsResolver extends AbstractUnwrappable<DnsResolver> implements DnsResolver {
 
     // Forked from https://github.com/netty/netty/blob/9cd94547d0211c04b610878e5e267c8de2342b97/resolver-dns/src/main/java/io/netty/resolver/dns/DnsNameResolver.java
     private static final String LOCALHOST = "localhost";
-    @Nullable
-    private static final String WINDOWS_HOST_NAME;
     private static final InetAddress LOCALHOST_ADDRESS;
 
     static {
@@ -70,14 +68,6 @@ class HostsFileDnsResolver extends AbstractUnwrappable<DnsResolver> implements D
                 LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             }
         }
-
-        String hostName;
-        try {
-            hostName = PlatformDependent.isWindows() ? InetAddress.getLocalHost().getHostName() : null;
-        } catch (Exception ignore) {
-            hostName = null;
-        }
-        WINDOWS_HOST_NAME = hostName;
     }
 
     /**
@@ -89,8 +79,8 @@ class HostsFileDnsResolver extends AbstractUnwrappable<DnsResolver> implements D
      * See https://github.com/netty/netty/issues/11142
      */
     private static boolean isLocalWindowsHost(String hostname) {
-        return PlatformDependent.isWindows() &&
-               (LOCALHOST.equalsIgnoreCase(hostname) || hostname.equalsIgnoreCase(WINDOWS_HOST_NAME));
+        return SystemInfo.osType() == OsType.WINDOWS &&
+               (hostname.equalsIgnoreCase(LOCALHOST) || hostname.equalsIgnoreCase(SystemInfo.hostname()));
     }
 
     private final HostsFileEntriesResolver hostsFileEntriesResolver;
@@ -132,7 +122,7 @@ class HostsFileDnsResolver extends AbstractUnwrappable<DnsResolver> implements D
                 }
                 final ImmutableList<DnsRecord> records = builder.build();
                 if (!records.isEmpty()) {
-                    return CompletableFuture.completedFuture(records);
+                    return UnmodifiableFuture.completedFuture(records);
                 }
             }
         }
@@ -148,7 +138,7 @@ class HostsFileDnsResolver extends AbstractUnwrappable<DnsResolver> implements D
                     .addresses(hostname, resolvedAddressTypes);
         } else {
             final InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-            addresses = address != null ? Collections.singletonList(address) : null;
+            addresses = address != null ? ImmutableList.of(address) : null;
         }
         return addresses == null && isLocalWindowsHost(hostname) ?
                ImmutableList.of(LOCALHOST_ADDRESS) : addresses;

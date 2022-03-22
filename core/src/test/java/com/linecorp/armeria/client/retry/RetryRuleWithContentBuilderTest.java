@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.RetryRuleBuilderTest.assertBackoff;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 class RetryRuleWithContentBuilderTest {
 
@@ -65,7 +65,7 @@ class RetryRuleWithContentBuilderTest {
                 .hasMessageContaining("Should set at least one retry rule");
 
         RetryRuleWithContent.builder(HttpMethod.HEAD)
-                            .onResponse((unused, response) -> CompletableFuture.completedFuture(true))
+                            .onResponse((unused, response) -> UnmodifiableFuture.completedFuture(true))
                             .thenBackoff();
     }
 

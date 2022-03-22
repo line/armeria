@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -81,7 +82,7 @@ class GracefulShutdownIntegrationTest {
                 @Override
                 public CompletableFuture<Void> shutdown() {
                     accessLogWriterCounter1.getAndIncrement();
-                    return CompletableFuture.completedFuture(null);
+                    return UnmodifiableFuture.completedFuture(null);
                 }
             };
             final AccessLogWriter writer2 = new AccessLogWriter() {
@@ -91,7 +92,7 @@ class GracefulShutdownIntegrationTest {
                 @Override
                 public CompletableFuture<Void> shutdown() {
                     accessLogWriterCounter2.getAndIncrement();
-                    return CompletableFuture.completedFuture(null);
+                    return UnmodifiableFuture.completedFuture(null);
                 }
             };
             sb.route()

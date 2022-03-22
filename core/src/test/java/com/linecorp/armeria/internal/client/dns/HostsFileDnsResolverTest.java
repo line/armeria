@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.client.dns;
 
 import static com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroupTest.newSrvRecord;
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.InetAddress;
@@ -28,6 +27,8 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -60,10 +61,10 @@ class HostsFileDnsResolverTest {
                 } else if ("qux.com".equals(question.name())) {
                     record = quxRecord;
                 } else {
-                    return exceptionallyCompletedFuture(
+                    return UnmodifiableFuture.exceptionallyCompletedFuture(
                             new UnknownHostException("Failed to resolve " + question.name()));
                 }
-                return CompletableFuture.completedFuture(ImmutableList.of(record));
+                return UnmodifiableFuture.completedFuture(ImmutableList.of(record));
             }
 
             @Override

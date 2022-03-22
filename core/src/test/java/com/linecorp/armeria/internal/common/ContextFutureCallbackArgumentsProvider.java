@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 public class ContextFutureCallbackArgumentsProvider implements ArgumentsProvider {
     static final class CallbackResult {
@@ -75,7 +76,7 @@ public class ContextFutureCallbackArgumentsProvider implements ArgumentsProvider
                     future.thenRunAsync(() -> fn.apply(result), MoreExecutors.directExecutor())
                           .exceptionally(cause -> fn.apply(result));
                 });
-        final CompletableFuture<Void> completedFuture = CompletableFuture.completedFuture(null);
+        final CompletableFuture<Void> completedFuture = UnmodifiableFuture.completedFuture(null);
         final Arguments thenCombine = Arguments.of(
                 (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
                     future.thenCombine(completedFuture, (a, b) -> fn.apply(result))

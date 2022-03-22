@@ -39,7 +39,6 @@ import java.security.cert.Certificate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -100,6 +99,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -169,8 +169,7 @@ public class SamlServiceProviderTest {
             final SamlIdentityProviderConfigSelector configSelector =
                     (configurator, ctx, req) -> {
                         final String idpEntityId = "http://idp.example.com/" + ctx.pathParam("bindingProtocol");
-                        return CompletableFuture.completedFuture(
-                                configurator.idpConfigs().get(idpEntityId));
+                        return UnmodifiableFuture.completedFuture(configurator.idpConfigs().get(idpEntityId));
                     };
             final SamlServiceProvider sp =
                     SamlServiceProvider.builder()
@@ -226,14 +225,14 @@ public class SamlServiceProviderTest {
         public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest req) {
             final String value = req.headers().get(HttpHeaderNames.COOKIE);
             if (value == null) {
-                return CompletableFuture.completedFuture(false);
+                return UnmodifiableFuture.completedFuture(false);
             }
 
             // Authentication will be succeeded only if both the specified cookie name and value are matched.
             final Set<Cookie> cookies = Cookie.fromCookieHeader(value);
             final boolean result = cookies.stream().anyMatch(
                     cookie -> cookieName.equals(cookie.name()) && cookieValue.equals(cookie.value()));
-            return CompletableFuture.completedFuture(result);
+            return UnmodifiableFuture.completedFuture(result);
         }
     }
 
@@ -257,7 +256,7 @@ public class SamlServiceProviderTest {
                                                          SamlIdentityProviderConfig idpConfig) {
             message.getSubcontext(SAMLBindingContext.class, true)
                    .setRelayState(req.path());
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         }
 
         @Override

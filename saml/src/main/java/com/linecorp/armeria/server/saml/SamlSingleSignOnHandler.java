@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.saml;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import org.opensaml.messaging.context.MessageContext;
@@ -29,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -49,7 +49,7 @@ public interface SamlSingleSignOnHandler {
     default CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
                                                       MessageContext<AuthnRequest> message,
                                                       SamlIdentityProviderConfig idpConfig) {
-        return CompletableFuture.completedFuture(null);
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     /**

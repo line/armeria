@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
 
 /**
@@ -63,7 +64,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     private final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
 
     private volatile CompletableFuture<GrantedOAuth2AccessToken> tokenFuture =
-            CompletableFuture.completedFuture(null);
+            UnmodifiableFuture.completedFuture(null);
 
     AbstractOAuth2AuthorizationGrant(
             RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,

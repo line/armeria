@@ -33,12 +33,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * Concurrency settings that limits the concurrent number of active requests.
@@ -95,17 +95,17 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             // this doesn't strictly guarantee FIFO.
             // However, the reversal happens within a reasonable window so it should be fine.
             if (acquiredPermits.incrementAndGet() <= maxConcurrency()) {
-                return CompletableFuture.completedFuture(new Permit());
+                return UnmodifiableFuture.completedFuture(new Permit());
             }
             acquiredPermits.decrementAndGet();
         }
 
         if (maxPendingAcquisitions == 0) {
-            return CompletableFutures.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
+            return UnmodifiableFuture.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
         }
         if (numPendingAcquisitions.incrementAndGet() > maxPendingAcquisitions) {
             numPendingAcquisitions.decrementAndGet();
-            return CompletableFutures.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
+            return UnmodifiableFuture.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
         }
 
         final CompletableFuture<SafeCloseable> future = new CompletableFuture<>();

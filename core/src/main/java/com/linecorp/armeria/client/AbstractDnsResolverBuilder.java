@@ -59,6 +59,8 @@ import io.netty.util.concurrent.EventExecutor;
 @UnstableApi
 public abstract class AbstractDnsResolverBuilder {
 
+    private static final long DEFAULT_QUERY_TIMEOUT_MILLIS = 5000; // 5 seconds.
+
     private DnsCache dnsCache = DnsCache.of();
     private String cacheSpec = Flags.dnsCacheSpec();
     private int minTtl = 1;
@@ -67,7 +69,7 @@ public abstract class AbstractDnsResolverBuilder {
     private boolean needsToCreateDnsCache;
 
     private boolean traceEnabled = true;
-    private long queryTimeoutMillis = 5000; // 5 seconds.
+    private long queryTimeoutMillis = DEFAULT_QUERY_TIMEOUT_MILLIS;
     private long queryTimeoutMillisForEachAttempt = -1;
 
     private boolean recursionDesired = true;
@@ -88,6 +90,9 @@ public abstract class AbstractDnsResolverBuilder {
     @Nullable
     private MeterRegistry meterRegistry;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractDnsResolverBuilder() {}
 
     /**
@@ -100,7 +105,9 @@ public abstract class AbstractDnsResolverBuilder {
     }
 
     /**
-     * Sets the timeout of the DNS query performed by this resolver. {@code 0} disables the timeout.
+     * Sets the timeout of the DNS query performed by this resolver.
+     * {@code 0} disables the timeout.
+     * If unspecified, {@value #DEFAULT_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
     public AbstractDnsResolverBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
@@ -118,6 +125,7 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the timeout of the DNS query performed by this resolver in milliseconds.
      * {@code 0} disables the timeout.
+     * If unspecified, {@value #DEFAULT_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
     public AbstractDnsResolverBuilder queryTimeoutMillis(long queryTimeoutMillis) {
         checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
@@ -338,6 +346,9 @@ public abstract class AbstractDnsResolverBuilder {
         return this;
     }
 
+    /**
+     * Returns {@link MeterRegistry} that collects the DNS query metrics.
+     */
     @Nullable
     protected final MeterRegistry meterRegistry() {
         return meterRegistry;
@@ -499,6 +510,7 @@ public abstract class AbstractDnsResolverBuilder {
         return (builder, executor) -> {
             builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
                    .socketChannelType(TransportType.socketChannelType(eventLoopGroup))
+                   // Disable all caches provided by Netty and use DnsCache instead.
                    .resolveCache(NoopDnsCache.INSTANCE)
                    .authoritativeDnsServerCache(NoopAuthoritativeDnsServerCache.INSTANCE)
                    .cnameCache(NoopDnsCnameCache.INSTANCE)

@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -210,7 +211,7 @@ class GrpcWebTextTest {
             final SimpleResponse response = SimpleResponse.newBuilder()
                                                           .setPayload(request.getPayload())
                                                           .build();
-            return CompletableFuture.completedFuture(
+            return UnmodifiableFuture.completedFuture(
                     Unpooled.wrappedBuffer(response.toByteArray()));
         }
     }

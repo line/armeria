@@ -31,6 +31,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -72,7 +73,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             DeferredStreamMessage.class, CompletableFuture.class, "collectingFuture");
 
     private static final CompletableFuture<List<?>> NO_COLLECTING_FUTURE =
-            CompletableFuture.completedFuture(null);
+            UnmodifiableFuture.completedFuture(null);
     private static final SubscriptionImpl NOOP_SUBSCRIPTION = noopSubscription();
 
     @Nullable

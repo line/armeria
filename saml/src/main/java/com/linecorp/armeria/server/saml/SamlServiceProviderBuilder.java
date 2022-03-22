@@ -31,7 +31,6 @@ import java.security.Signature;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
@@ -59,6 +58,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -111,7 +111,7 @@ public final class SamlServiceProviderBuilder {
                 assert sub != null : "SAMLBindingContext";
                 sub.setRelayState(requestedPath);
             }
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         }
 
         @Override
@@ -133,14 +133,14 @@ public final class SamlServiceProviderBuilder {
         @Override
         public CompletionStage<Void> logoutSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                                      MessageContext<LogoutRequest> message) {
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         }
 
         @Override
         public CompletionStage<Void> logoutFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                                   Throwable cause) {
             logger.warn("{} SAML SLO failed", ctx, cause);
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         }
     };
 
@@ -419,7 +419,7 @@ public final class SamlServiceProviderBuilder {
             // Configure a default identity provider selector which always returns a default identity provider.
             final SamlIdentityProviderConfig defaultConfig = defaultIdpConfig;
             idpConfigSelector =
-                    (unused1, unused2, unused3) -> CompletableFuture.completedFuture(defaultConfig);
+                    (unused1, unused2, unused3) -> UnmodifiableFuture.completedFuture(defaultConfig);
         }
 
         // entityID would be used as a secret by default.

@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -167,7 +168,7 @@ class AnnotatedServiceTest {
         @Get
         @Path("/int-async/:var")
         public CompletableFuture<Integer> returnIntAsync(@Param int var) {
-            return CompletableFuture.completedFuture(var).thenApply(n -> n + 1);
+            return UnmodifiableFuture.completedFuture(var).thenApply(n -> n + 1);
         }
 
         @Get
@@ -176,7 +177,7 @@ class AnnotatedServiceTest {
                                                                    ServiceRequestContext ctx,
                                                                    Request req) {
             validateContextAndRequest(ctx, req);
-            return CompletableFuture.completedFuture(ctx.path());
+            return UnmodifiableFuture.completedFuture(ctx.path());
         }
 
         @Get
@@ -185,7 +186,7 @@ class AnnotatedServiceTest {
                                                                    HttpRequest req,
                                                                    ServiceRequestContext ctx) {
             validateContextAndRequest(ctx, req);
-            return CompletableFuture.completedFuture(req.path());
+            return UnmodifiableFuture.completedFuture(req.path());
         }
 
         @Get
@@ -289,7 +290,7 @@ class AnnotatedServiceTest {
 
         @Get("/null2")
         public CompletionStage<Object> returnNull2() {
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         }
     }
 

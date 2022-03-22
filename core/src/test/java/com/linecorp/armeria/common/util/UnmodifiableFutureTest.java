@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,7 +30,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.util.concurrent.Promise;
 
-class NettyFutureUtilTest {
+class UnmodifiableFutureTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
@@ -38,7 +38,7 @@ class NettyFutureUtilTest {
     @Test
     void shouldPropagateSuccess() {
         final Promise<String> promise = eventLoop.get().newPromise();
-        final CompletableFuture<String> future = NettyFutureUtil.toCompletableFuture(promise);
+        final CompletableFuture<String> future = UnmodifiableFuture.fromNetty(promise);
         assertThat(future.isDone()).isFalse();
         promise.setSuccess("foo");
         assertThat(future.join()).isEqualTo("foo");
@@ -47,7 +47,7 @@ class NettyFutureUtilTest {
     @Test
     void shouldPropagateFailure() {
         final Promise<String> promise = eventLoop.get().newPromise();
-        final CompletableFuture<String> future = NettyFutureUtil.toCompletableFuture(promise);
+        final CompletableFuture<String> future = UnmodifiableFuture.fromNetty(promise);
         assertThat(future.isDone()).isFalse();
         final AnticipatedException cause = new AnticipatedException();
         promise.setFailure(cause);

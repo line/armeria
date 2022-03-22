@@ -112,7 +112,7 @@ date: 2019-04-23
             }
 
             MyGrpcResponse res = MyGrpcResponse.newBuilder()...build();
-            return CompletableFuture.completedFuture(res.toByteArray());
+            return UnmodifiableFuture.completedFuture(res.toByteArray());
         }
     }
     ```

@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.CompositeBean;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -403,7 +404,7 @@ class AnnotatedDocServiceTest {
         @Trace
         @Path("/allMethods")
         public CompletableFuture<?> allMethods() {
-            return CompletableFuture.completedFuture(HttpResponse.of("allMethods"));
+            return UnmodifiableFuture.completedFuture(HttpResponse.of("allMethods"));
         }
 
         @Get("/ints")

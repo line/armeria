@@ -16,17 +16,15 @@
 
 package com.linecorp.armeria.internal.client.dns;
 
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -56,19 +54,20 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                                                         SearchDomainQuestionContext searchDomainCtx,
                                                         DnsQuestion question) {
         if (closed) {
-            return exceptionallyCompletedFuture(new IllegalStateException("resolver is closed already"));
+            return UnmodifiableFuture.exceptionallyCompletedFuture(
+                    new IllegalStateException("resolver is closed already"));
         }
 
         return unwrap().resolve(ctx, question).handle((records, cause) -> {
             if (records != null) {
-                return CompletableFuture.completedFuture(records);
+                return UnmodifiableFuture.completedFuture(records);
             } else {
                 final DnsQuestion nextQuestion = searchDomainCtx.nextQuestion();
                 if (nextQuestion != null) {
                     // Attempt to query the next search domain
                     return resolve0(ctx, searchDomainCtx, nextQuestion);
                 } else {
-                    return CompletableFutures.<List<DnsRecord>>exceptionallyCompletedFuture(cause);
+                    return UnmodifiableFuture.<List<DnsRecord>>exceptionallyCompletedFuture(cause);
                 }
             }
         }).thenCompose(Function.identity());

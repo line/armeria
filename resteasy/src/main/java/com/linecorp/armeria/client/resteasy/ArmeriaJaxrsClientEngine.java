@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.resteasy.ByteBufferBackedOutputStream;
 import com.linecorp.armeria.internal.common.resteasy.HttpMessageStream;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -179,10 +180,13 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
     public <T> CompletableFuture<T> submit(ClientInvocation request, boolean buffered,
                                            ResultExtractor<T> extractor,
                                            @Nullable ExecutorService executorService) {
-        final CompletableFuture<HttpResponse> asyncResponseFuture =
-                executorService == null ? CompletableFuture.completedFuture(makeAsyncRequest(request, buffered))
-                                        : CompletableFuture.supplyAsync(
-                                                () -> makeAsyncRequest(request, buffered), executorService);
+        final CompletableFuture<HttpResponse> asyncResponseFuture;
+        if (executorService == null) {
+            asyncResponseFuture = UnmodifiableFuture.completedFuture(makeAsyncRequest(request, buffered));
+        } else {
+            asyncResponseFuture = CompletableFuture.supplyAsync(() -> makeAsyncRequest(request, buffered),
+                                                                executorService);
+        }
         return asyncResponseFuture.thenCompose(asyncResponse ->
                                                        handleAsyncResponse(request.getClientConfiguration(),
                                                                            asyncResponse, buffered, extractor));
@@ -228,10 +232,10 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
             final HttpResponse asyncResponse = client.execute(requestWriter);
             final ByteBufferBackedOutputStream requestContentStream
                     = new ByteBufferBackedOutputStream(bufferSize, buff -> {
-                        if (buff.isReadable()) {
-                            requestWriter.write(HttpData.wrap(buff));
-                        }
-                    });
+                if (buff.isReadable()) {
+                    requestWriter.write(HttpData.wrap(buff));
+                }
+            });
             request.getDelegatingOutputStream().setDelegate(requestContentStream);
             try {
                 request.writeRequestBody(request.getEntityStream());

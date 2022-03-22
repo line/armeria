@@ -17,8 +17,6 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
@@ -28,6 +26,7 @@ import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 
@@ -39,7 +38,7 @@ class GrpcClientUnwrapTest {
                 GrpcClients.builder("http://127.0.0.1:1/")
                            .decorator(LoggingClient.newDecorator())
                            .decorator(RetryingClient.newDecorator(
-                                   (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.noRetry())))
+                                   (ctx, cause) -> UnmodifiableFuture.completedFuture(RetryDecision.noRetry())))
                            .build(TestServiceBlockingStub.class);
 
         assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).isSameAs(client);

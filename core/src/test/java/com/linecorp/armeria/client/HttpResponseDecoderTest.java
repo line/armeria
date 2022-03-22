@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.channels.Channel;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,6 +43,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -68,7 +68,7 @@ class HttpResponseDecoderTest {
             throws InterruptedException {
         final AtomicBoolean failed = new AtomicBoolean();
         final RetryRule strategy = (ctx, cause) ->
-                CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
+                UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
 
         final WebClientBuilder builder = WebClient.builder(server.uri(protocol));
         // In order to use a different thread to subscribe to the response.

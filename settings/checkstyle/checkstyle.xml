@@ -108,6 +108,17 @@
     <property name="format" value="javax.annotation.Nullable"/>
     <property name="message" value="Use com.linecorp.armeria.common.annotation.Nullable instead."/>
   </module>
+  <!-- Prefer UnmodifiableFuture -->
+  <module name="RegexpSingleline">
+    <property name="id" value="Avoid CompletableFutures.exceptionallyCompletedFuture()"/>
+    <property name="format" value="CompletableFutures.exceptionallyCompletedFuture"/>
+    <property name="message" value="Use UnmodifiableFuture.exceptionallyCompletedFuture() instead."/>
+  </module>
+  <module name="RegexpSingleline">
+    <property name="id" value="Avoid CompletableFuture.completedFuture()"/>
+    <property name="format" value="CompletableFuture.completedFuture"/>
+    <property name="message" value="Use UnmodifiableFuture.completedFuture() instead."/>
+  </module>
 
   <module name="JavadocPackage"/>
 

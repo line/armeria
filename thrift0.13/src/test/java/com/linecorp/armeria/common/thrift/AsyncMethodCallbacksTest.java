@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.common.thrift;
 
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.exceptionallyCompletedFuture;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isA;

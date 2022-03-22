@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -84,7 +85,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
         if (decision == RetryDecision.DEFAULT) {
             decisionFuture = DEFAULT_DECISION;
         } else {
-            decisionFuture = CompletableFuture.completedFuture(decision);
+            decisionFuture = UnmodifiableFuture.completedFuture(decision);
         }
 
         return new RetryRule() {

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -102,6 +103,6 @@ public interface AccessLogWriter {
      *         when this {@link AccessLogWriter} has been shut down.
      */
     default CompletableFuture<Void> shutdown() {
-        return CompletableFuture.completedFuture(null);
+        return UnmodifiableFuture.completedFuture(null);
     }
 }

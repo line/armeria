@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.client.dns;
 
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.UnknownHostException;
@@ -30,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -51,10 +51,10 @@ class CachingDnsResolverTest {
                 if ("foo.com".equals(question.name())) {
                     record = fooRecord;
                 } else {
-                    return exceptionallyCompletedFuture(
+                    return UnmodifiableFuture.exceptionallyCompletedFuture(
                             new UnknownHostException("Failed to resolve " + question.name()));
                 }
-                return CompletableFuture.completedFuture(ImmutableList.of(record));
+                return UnmodifiableFuture.completedFuture(ImmutableList.of(record));
             }
 
             @Override

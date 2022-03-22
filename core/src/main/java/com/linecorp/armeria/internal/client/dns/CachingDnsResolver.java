@@ -27,12 +27,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.spotify.futures.CompletableFutures;
-
 import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -53,18 +52,16 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
 
     @Override
     public CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question) {
-        final CompletableFuture<List<DnsRecord>> future = new CompletableFuture<>();
         try {
             final List<DnsRecord> dnsRecords = cachedValue(ctx, question);
             if (dnsRecords != null) {
-                future.complete(dnsRecords);
+                return UnmodifiableFuture.completedFuture(dnsRecords);
             } else {
                 return resolve0(ctx, question);
             }
         } catch (UnknownHostException e) {
-            future.completeExceptionally(e);
+            return UnmodifiableFuture.exceptionallyCompletedFuture(e);
         }
-        return future;
     }
 
     private CompletableFuture<List<DnsRecord>> resolve0(DnsQuestionContext ctx, DnsQuestion question) {
@@ -75,10 +72,10 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
                         // Because a request could be computed right after the in-flight request is removed.
                         final List<DnsRecord> dnsRecords = cachedValue(ctx, key);
                         if (dnsRecords != null) {
-                            return CompletableFuture.completedFuture(dnsRecords);
+                            return UnmodifiableFuture.completedFuture(dnsRecords);
                         }
                     } catch (UnknownHostException e) {
-                        return CompletableFutures.exceptionallyCompletedFuture(e);
+                        return UnmodifiableFuture.exceptionallyCompletedFuture(e);
                     }
 
                     return unwrap().resolve(ctx, key).handle((records, cause) -> {

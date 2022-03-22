@@ -24,8 +24,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -35,6 +33,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingRpcService;
@@ -78,7 +77,7 @@ class THttpServiceBuilderTest {
                         @Override
                         public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
                             return RpcResponse.from(
-                                    ctx.makeContextAware(CompletableFuture.completedFuture(new Object()))
+                                    ctx.makeContextAware(UnmodifiableFuture.completedFuture(new Object()))
                                        .thenCompose(userInfo -> {
                                            try {
                                                return unwrap().serve(ctx, req);

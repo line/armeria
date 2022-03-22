@@ -29,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpObject;
 import com.linecorp.armeria.common.ContentDisposition;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 public class MultipartTest {
     @TempDir
@@ -88,7 +89,7 @@ public class MultipartTest {
                             "hello4")
         ).collect(bodyPart -> {
             if (bodyPart.name() == null) {
-                return CompletableFuture.completedFuture(null);
+                return UnmodifiableFuture.completedFuture(null);
             }
             if (bodyPart.filename() != null) {
                 final Path path = tempDir.resolve(bodyPart.name());
