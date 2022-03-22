@@ -21,6 +21,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.Future;
 
@@ -110,6 +111,7 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
      * Returns an {@link UnmodifiableFuture} which will be completed when the specified
      * Netty's {@link Future} is completed.
      */
+    @UnstableApi
     public static <U> UnmodifiableFuture<U> fromNetty(Future<U> future) {
         requireNonNull(future, "future");
 

@@ -454,8 +454,8 @@ public abstract class AbstractDnsResolverBuilder {
 
     /**
      * Returns a newly-created {@link DnsCache} if {@link #cacheSpec(String)}, {@link #ttl(int, int)} or
-     * {@link #negativeTtl(int)} is set
-     * . Returns the {@link DnsCache} specified by {@link #dnsCache(DnsCache)} if it is set.
+     * {@link #negativeTtl(int)} is set.
+     * Returns the {@link DnsCache} specified by {@link #dnsCache(DnsCache)} if it is set.
      * Otherwise, returns the default {@link DnsCache}.
      */
     @UnstableApi
