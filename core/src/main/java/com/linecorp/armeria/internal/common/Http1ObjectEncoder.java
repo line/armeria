@@ -47,7 +47,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 
 public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
@@ -116,22 +116,21 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         } else {
             f = write(id, converted, false);
             if (endStream) {
-                final ChannelPromise promise = channel().newPromise();
-                combine(promise, f, write(id, LastHttpContent.EMPTY_LAST_CONTENT, true));
-                f = promise;
+                f = combine(f, write(id, LastHttpContent.EMPTY_LAST_CONTENT, true));
             }
         }
         ch.flush();
         return f;
     }
 
-    private static void combine(ChannelPromise resultPromise, ChannelFuture first, ChannelFuture second) {
-        final GenericFutureListener<Future<? super Void>> listener =
-                new GenericFutureListener<Future<? super Void>>() {
+    private ChannelPromise combine(ChannelFuture first, ChannelFuture second) {
+        final ChannelPromise promise = channel().newPromise();
+        final FutureListener<Void> listener =
+                new FutureListener<Void>() {
                     private final AtomicInteger counter = new AtomicInteger(2);
 
                     @Override
-                    public void operationComplete(Future<? super Void> ignore) throws Exception {
+                    public void operationComplete(Future<Void> ignore) throws Exception {
                         if (counter.decrementAndGet() == 0) {
                             final Throwable firstCause = first.cause();
                             final Throwable secondCause = second.cause();
@@ -140,19 +139,20 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                                     secondCause != null) {
                                     firstCause.addSuppressed(secondCause);
                                 }
-                                resultPromise.setFailure(firstCause);
+                                promise.setFailure(firstCause);
                                 return;
                             }
                             if (secondCause != null) {
-                                resultPromise.setFailure(secondCause);
+                                promise.setFailure(secondCause);
                                 return;
                             }
-                            resultPromise.setSuccess();
+                            promise.setSuccess();
                         }
                     }
                 };
         first.addListener(listener);
         second.addListener(listener);
+        return promise;
     }
 
     @Override
