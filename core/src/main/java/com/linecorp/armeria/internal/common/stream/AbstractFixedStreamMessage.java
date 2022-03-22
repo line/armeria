@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,18 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
-
-import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
-import static java.util.Objects.requireNonNull;
+package com.linecorp.armeria.internal.common.stream;
 
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -34,10 +27,7 @@ import io.netty.util.concurrent.EventExecutor;
  * {@link EmptyFixedStreamMessage}, {@link OneElementFixedStreamMessage}, or
  * {@link TwoElementFixedStreamMessage} when publishing less than three objects.
  */
-@UnstableApi
-public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
-
-    private final T[] objs;
+abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     private int fulfilled;
     private boolean inOnNext;
@@ -45,49 +35,35 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     private volatile int demand;
 
-    /**
-     * Creates a new instance with the specified elements.
-     */
-    protected RegularFixedStreamMessage(T[] objs) {
-        requireNonNull(objs, "objs");
-        for (int i = 0; i < objs.length; i++) {
-            if (objs[i] == null) {
-                throw new NullPointerException("objs[" + i + "] is null");
-            }
-        }
-
-        this.objs = objs.clone();
-    }
-
     @Override
-    public long demand() {
+    public final long demand() {
         return demand;
     }
 
+    abstract T get(int index);
+
+    abstract int size();
+
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
-        while (fulfilled < objs.length) {
-            final T obj = objs[fulfilled];
-            objs[fulfilled++] = null;
+        final int size = size();
+        while (fulfilled < size) {
+            final T obj = get(fulfilled++);
             StreamMessageUtil.closeOrAbort(obj, cause);
         }
     }
 
     @Override
     final List<T> drainAll(boolean withPooledObjects) {
-        assert objs[0] != null;
-        final int length = objs.length;
-        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(length);
-        for (int i = 0; i < length; i++) {
-            final T obj = objs[i];
-            objs[i] = null;
-            builder.add(touchOrCopyAndClose(obj, withPooledObjects));
-        }
-        return builder.build();
+        final List<T> all = drainAll0(withPooledObjects);
+        fulfilled = size();
+        return all;
     }
 
+    abstract List<T> drainAll0(boolean withPooledObjects);
+
     @Override
-    public void request(long n) {
+    public final void request(long n) {
         final EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             request0(n);
@@ -97,7 +73,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     private void request0(long n) {
-        if (cancelled) {
+        if (isDone()) {
             // The subscription has been closed. An additional request should be ignored.
             // https://github.com/reactive-streams/reactive-streams-jvm#3.6
             return;
@@ -109,18 +85,19 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
             return;
         }
 
-        if (fulfilled == objs.length) {
+        final int size = size();
+        if (fulfilled == size) {
             return;
         }
 
         final int oldDemand = demand;
-        if (oldDemand >= objs.length) {
+        if (oldDemand >= size) {
             // Already enough demand to finish the stream so don't need to do anything.
             return;
         }
 
-        // As objs.length is fixed, we can safely cap the demand to it here.
-        final int remaining = objs.length - fulfilled;
+        // As size is fixed, we can safely cap the demand to it here.
+        final int remaining = size - fulfilled;
         if (n >= remaining) {
             demand = remaining;
         } else {
@@ -138,13 +115,12 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 return;
             }
 
-            while (demand > 0 && fulfilled < objs.length) {
+            while (demand > 0 && fulfilled < size) {
                 if (cancelled) {
                     return;
                 }
 
-                final T o = objs[fulfilled];
-                objs[fulfilled++] = null;
+                final T o = get(fulfilled++);
                 inOnNext = true;
                 demand--;
                 try {
@@ -154,7 +130,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 }
             }
 
-            if (fulfilled == objs.length) {
+            if (fulfilled == size) {
                 onComplete();
                 return;
             }
@@ -166,8 +142,8 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public void cancel() {
-        if (cancelled) {
+    public final void cancel() {
+        if (isDone()) {
             return;
         }
         cancelled = true;
@@ -175,8 +151,8 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public void abort() {
-        if (cancelled) {
+    public final void abort() {
+        if (isDone()) {
             return;
         }
         cancelled = true;
@@ -184,11 +160,15 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public void abort(Throwable cause) {
-        if (cancelled) {
+    public final void abort(Throwable cause) {
+        if (isDone()) {
             return;
         }
         cancelled = true;
         super.abort(cause);
+    }
+
+    private boolean isDone() {
+        return cancelled || isComplete();
     }
 }

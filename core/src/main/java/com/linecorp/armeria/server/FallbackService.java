@@ -42,7 +42,7 @@ final class FallbackService implements HttpService {
     }
 
     private static HttpStatusException getStatusException(RoutingContext routingCtx) {
-        if (routingCtx.isCorsPreflight()) {
+        if (routingCtx.status() == RoutingStatus.CORS_PREFLIGHT) {
             // '403 Forbidden' is better for a CORS preflight request than other statuses.
             return HttpStatusException.of(HttpStatus.FORBIDDEN);
         }

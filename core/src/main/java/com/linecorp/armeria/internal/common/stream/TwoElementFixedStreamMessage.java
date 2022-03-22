@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 
@@ -24,38 +24,37 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A {@link FixedStreamMessage} that publishes three objects.
+ * A {@link FixedStreamMessage} that publishes two objects.
  */
 @UnstableApi
-public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
+public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Nullable
     private T obj1;
     @Nullable
     private T obj2;
-    @Nullable
-    private T obj3;
 
     private boolean inOnNext;
-    private volatile int demand;
+    private boolean requested;
 
     /**
-     * Constructs a new {@link ThreeElementFixedStreamMessage} for the given objects.
+     * Constructs a new {@link TwoElementFixedStreamMessage} for the given objects.
      */
-    protected ThreeElementFixedStreamMessage(T obj1, T obj2, T obj3) {
+    public TwoElementFixedStreamMessage(T obj1, T obj2) {
         this.obj1 = obj1;
         this.obj2 = obj2;
-        this.obj3 = obj3;
     }
 
     @Override
     public long demand() {
-        return demand;
+        // Since the objects is drained as soon as it is requested, The demand will be zero in most cases.
+        // But the demand could be one if a subscriber calls `subscription.request(n)` while receiving a object
+        // via 'onNext(t)'
+        return requested ? 1 : 0;
     }
 
     @Override
@@ -68,19 +67,14 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             StreamMessageUtil.closeOrAbort(obj2, cause);
             obj2 = null;
         }
-        if (obj3 != null) {
-            StreamMessageUtil.closeOrAbort(obj3, cause);
-            obj3 = null;
-        }
     }
 
     @Override
     final List<T> drainAll(boolean withPooledObjects) {
         assert obj1 != null;
         final List<T> objs = ImmutableList.of(touchOrCopyAndClose(obj1, withPooledObjects),
-                                              touchOrCopyAndClose(obj2, withPooledObjects),
-                                              touchOrCopyAndClose(obj3, withPooledObjects));
-        obj1 = obj2 = obj3 = null;
+                                              touchOrCopyAndClose(obj2, withPooledObjects));
+        obj1 = obj2 = null;
         return objs;
     }
 
@@ -95,7 +89,7 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     private void request0(long n) {
-        if (obj3 == null) {
+        if (obj2 == null) {
             return;
         }
 
@@ -106,16 +100,25 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
         }
 
         if (inOnNext) {
-            // re-entrance
-            if (n == 1) {
-                demand++;
-            } else {
-                demand += 2;
-            }
+            // Do not let Subscriber.onNext() reenter, because it can lead to weird-looking event ordering
+            // for a Subscriber implemented like the following:
+            //
+            //   public void onNext(Object e) {
+            //       subscription.request(1);
+            //       ... Handle 'e' ...
+            //   }
+            //
+            // Note that we do not call this method again, because we are already in the notification loop
+            // and it will consume the element we've just added in addObjectOrEvent() from the queue as
+            // expected.
+            //
+            // We do not need to worry about synchronizing the access to 'inOnNext' because the subscriber
+            // methods must be on the same thread, or synchronized, according to Reactive Streams spec.
+            requested = true;
             return;
         }
 
-        if (n >= 3) {
+        if (n >= 2) {
             // All elements will be consumed. No need to restore inOnNext
             inOnNext = true;
             if (obj1 != null) {
@@ -123,40 +126,26 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 obj1 = null;
                 onNext(item);
             }
+
             if (obj2 != null) {
                 final T item = obj2;
                 obj2 = null;
                 onNext(item);
-            }
-            if (obj3 != null) {
-                final T item = obj3;
-                obj3 = null;
-                onNext(item);
                 onComplete();
             }
         } else {
-            demand += n;
             if (obj1 != null) {
                 final T item = obj1;
                 obj1 = null;
                 inOnNext = true;
                 onNext(item);
                 inOnNext = false;
-                demand--;
+                n--;
             }
 
-            if (obj2 != null && demand > 0) {
+            if ((n > 0 || requested) && obj2 != null) {
                 final T item = obj2;
                 obj2 = null;
-                inOnNext = true;
-                onNext(item);
-                inOnNext = false;
-                demand--;
-            }
-
-            if (obj3 != null && demand > 0) {
-                final T item = obj3;
-                obj3 = null;
                 onNext(item);
                 onComplete();
             }
@@ -165,7 +154,7 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public void cancel() {
-        if (obj3 == null) {
+        if (obj2 == null) {
             return;
         }
         super.cancel();
@@ -173,7 +162,7 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public void abort() {
-        if (obj3 == null) {
+        if (obj2 == null) {
             return;
         }
         super.abort();
@@ -181,7 +170,7 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public void abort(Throwable cause) {
-        if (obj3 == null) {
+        if (obj2 == null) {
             return;
         }
         super.abort(cause);

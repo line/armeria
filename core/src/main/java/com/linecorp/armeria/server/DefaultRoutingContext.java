@@ -21,35 +21,40 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Objects;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
  */
 final class DefaultRoutingContext implements RoutingContext {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultRoutingContext.class);
-
-    private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
-
     /**
      * Returns a new {@link RoutingContext} instance.
      */
     static RoutingContext of(VirtualHost virtualHost, String hostname,
                              String path, @Nullable String query,
-                             RequestHeaders headers, boolean isCorsPreflight) {
-        return new DefaultRoutingContext(virtualHost, hostname, headers, path, query, isCorsPreflight);
+                             RequestHeaders headers, RoutingStatus routingStatus) {
+        return new DefaultRoutingContext(virtualHost, hostname, headers, path, query, null,
+                                         routingStatus);
+    }
+
+    /**
+     * Returns a new {@link RoutingContext} instance.
+     */
+    static RoutingContext of(VirtualHost virtualHost, String hostname,
+                             PathAndQuery pathAndQuery,
+                             RequestHeaders headers, RoutingStatus routingStatus) {
+        requireNonNull(pathAndQuery, "pathAndQuery");
+        return new DefaultRoutingContext(virtualHost, hostname, headers, pathAndQuery.path(),
+                                         pathAndQuery.query(), pathAndQuery, routingStatus);
     }
 
     private final VirtualHost virtualHost;
@@ -60,24 +65,28 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     private final String query;
     @Nullable
+    private final PathAndQuery pathAndQuery;
+    @Nullable
     private final MediaType contentType;
     private final List<MediaType> acceptTypes;
+    private final RoutingStatus routingStatus;
     @Nullable
     private volatile QueryParams queryParams;
-    private final boolean isCorsPreflight;
     @Nullable
     private HttpStatusException deferredCause;
 
     private final int hashCode;
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
-                          String path, @Nullable String query, boolean isCorsPreflight) {
+                          String path, @Nullable String query, @Nullable PathAndQuery pathAndQuery,
+                          RoutingStatus routingStatus) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.headers = requireNonNull(headers, "headers");
         this.path = requireNonNull(path, "path");
         this.query = query;
-        this.isCorsPreflight = isCorsPreflight;
+        this.pathAndQuery = pathAndQuery;
+        this.routingStatus = routingStatus;
         method = headers.method();
         contentType = headers.contentType();
         acceptTypes = headers.accept();
@@ -110,6 +119,11 @@ final class DefaultRoutingContext implements RoutingContext {
         return query;
     }
 
+    @Nullable
+    PathAndQuery pathAndQuery() {
+        return pathAndQuery;
+    }
+
     @Override
     public QueryParams params() {
         QueryParams queryParams = this.queryParams;
@@ -137,12 +151,17 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public boolean isCorsPreflight() {
-        return isCorsPreflight;
+        return status() == RoutingStatus.CORS_PREFLIGHT;
     }
 
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public RoutingStatus status() {
+        return routingStatus;
     }
 
     @Override
@@ -221,7 +240,8 @@ final class DefaultRoutingContext implements RoutingContext {
                                                  .add("method", routingCtx.method())
                                                  .add("path", routingCtx.path())
                                                  .add("query", routingCtx.query())
-                                                 .add("contentType", routingCtx.contentType());
+                                                 .add("contentType", routingCtx.contentType())
+                                                 .add("status", routingCtx.status());
         if (!routingCtx.acceptTypes().isEmpty()) {
             helper.add("acceptTypes", routingCtx.acceptTypes());
         }
