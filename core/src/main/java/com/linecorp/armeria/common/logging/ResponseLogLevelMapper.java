@@ -63,7 +63,7 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
     }
 
     /**
-     * Returns a {@link LogLevel} for the given {@link RequestLog}. The {@code null} lets the next handler
+     * Returns a {@link LogLevel} for the given {@link RequestLog}. Returning {@code null} lets the next handler
      * specified with {@link #orElse(ResponseLogLevelMapper)} map the {@link RequestLog}.
      */
     @Nullable

@@ -140,7 +140,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link LogLevel} to use when logging responses that's status is equal to the specified
+     * Sets the {@link LogLevel} to use when logging responses whose status is equal to the specified
      * {@link HttpStatus}.
      */
     public LoggingDecoratorBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
@@ -148,7 +148,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link LogLevel} to use when logging responses that's status is belong to the specified
+     * Sets the {@link LogLevel} to use when logging responses whose status belongs to the specified
      * {@link HttpStatusClass}.
      */
     public LoggingDecoratorBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
@@ -157,7 +157,7 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
-     * If unset, will use {@link LogLevel#DEBUG}.
+     * {@link LogLevel#DEBUG} will be used by default.
      */
     public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
@@ -166,7 +166,7 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
-     * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
+     * {@link LogLevel#WARN} will be used by default.
      */
     public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
@@ -398,7 +398,7 @@ public abstract class LoggingDecoratorBuilder {
 
     @Override
     public String toString() {
-        return toString(this, logger, requestLogLevelMapper, responseLogLevelMapper,
+        return toString(this, logger, requestLogLevelMapper(), responseLogLevelMapper(),
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
                         responseCauseSanitizer);
