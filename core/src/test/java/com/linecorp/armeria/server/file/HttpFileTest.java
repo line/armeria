@@ -17,18 +17,23 @@ package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ServerCacheControl;
 
-public class HttpFileTest {
+class HttpFileTest {
 
     @Test
-    public void additionalHeaders() throws Exception {
+    void additionalHeaders() {
         final HttpFile f = HttpFile.builder(ClassLoader.getSystemClassLoader(),
                                             "java/lang/Object.class")
                                    .addHeader("foo", "1")
@@ -53,10 +58,19 @@ public class HttpFileTest {
     }
 
     @Test
-    public void leadingSlashInResourcePath() throws Exception {
+    void leadingSlashInResourcePath() {
         final HttpFile f = HttpFile.of(ClassLoader.getSystemClassLoader(), "/java/lang/Object.class");
         final HttpFileAttributes attrs = f.readAttributes(CommonPools.blockingTaskExecutor()).join();
         assertThat(attrs).isNotNull();
         assertThat(attrs.length()).isPositive();
+    }
+
+    @Test
+    void redirect() throws Exception {
+        final HttpFile file = HttpFile.ofRedirect("/foo/bar?a=b");
+        final HttpResponse response = file.asService().serve(null, HttpRequest.of(HttpMethod.GET, "/foo"));
+        final AggregatedHttpResponse agg = response.aggregate().join();
+        assertThat(agg.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+        assertThat(agg.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo/bar?a=b");
     }
 }
