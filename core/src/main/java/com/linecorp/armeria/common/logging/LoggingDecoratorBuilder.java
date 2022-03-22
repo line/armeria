@@ -203,9 +203,9 @@ public abstract class LoggingDecoratorBuilder {
      */
     protected final ResponseLogLevelMapper responseLogLevelMapper() {
         if (responseLogLevelMapper == null) {
-            return ResponseLogLevelMapper.of();
+            return ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
         }
-        return responseLogLevelMapper.orElse(ResponseLogLevelMapper.of());
+        return responseLogLevelMapper.orElse(ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN));
     }
 
     /**

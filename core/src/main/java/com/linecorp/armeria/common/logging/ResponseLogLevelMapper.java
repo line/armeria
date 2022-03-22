@@ -31,15 +31,17 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *
  * @see LoggingDecoratorBuilder#responseLogLevelMapper(ResponseLogLevelMapper)
  */
+// TODO(trustin): Remove 'extends Function' in the next major release.
 @FunctionalInterface
 public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
 
     /**
-     * Returns the default {@link ResponseLogLevelMapper} which returns {@link LogLevel#DEBUG} when logging
-     * successful responses (e.g., no unhandled exception) and {@link LogLevel#WARN} if failure.
+     * Returns the default {@link ResponseLogLevelMapper} which returns the specified
+     * {@code successfulResponseLogLevel} when logging successful responses (e.g., no unhandled exception) and
+     * {@code failureResponseLogLevel} if failure.
      */
-    static ResponseLogLevelMapper of() {
-        return log -> log.responseCause() == null ? LogLevel.DEBUG : LogLevel.WARN;
+    static ResponseLogLevelMapper of(LogLevel successfulResponseLogLevel, LogLevel failureResponseLogLevel) {
+        return log -> log.responseCause() == null ? successfulResponseLogLevel : failureResponseLogLevel;
     }
 
     /**
@@ -88,5 +90,23 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
             }
             return other.apply(log);
         };
+    }
+
+    /**
+     * @deprecated Do not use this method.
+     */
+    @Deprecated
+    @Override
+    default <V> Function<V, LogLevel> compose(Function<? super V, ? extends RequestLog> before) {
+        return Function.super.compose(before);
+    }
+
+    /**
+     * @deprecated Do not use this method.
+     */
+    @Deprecated
+    @Override
+    default <V> Function<RequestLog, V> andThen(Function<? super LogLevel, ? extends V> after) {
+        return Function.super.andThen(after);
     }
 }
