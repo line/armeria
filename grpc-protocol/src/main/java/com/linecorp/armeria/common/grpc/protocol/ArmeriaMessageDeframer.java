@@ -126,7 +126,7 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
     }
 
     @Override
-    public ByteBuf decodeInput(HttpData in) {
+    public ByteBuf toByteBuf(HttpData in) {
         if (base64Decoder != null) {
             return base64Decoder.decode(in.byteBuf());
         } else {

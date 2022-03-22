@@ -72,7 +72,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, StreamDecoder<H
     }
 
     @Override
-    public ByteBuf decodeInput(HttpData in) {
+    public ByteBuf toByteBuf(HttpData in) {
         return in.byteBuf();
     }
 

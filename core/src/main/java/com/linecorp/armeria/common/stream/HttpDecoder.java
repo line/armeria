@@ -86,7 +86,7 @@ import io.netty.buffer.ByteBuf;
 public interface HttpDecoder<T> extends StreamDecoder<HttpData, T> {
 
     @Override
-    default ByteBuf decodeInput(HttpData in) {
+    default ByteBuf toByteBuf(HttpData in) {
         requireNonNull(in, "in");
         // HttpHeaders is handled as is by processXXXHeaders(), processTrailers().
         return in.byteBuf();

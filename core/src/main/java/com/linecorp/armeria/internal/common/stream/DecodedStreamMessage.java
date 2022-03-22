@@ -62,7 +62,7 @@ public final class DecodedStreamMessage<I, O>
         return new DecodedStreamMessage<>(httpMessage, cast, alloc);
     }
 
-    private final MessageSubscriber subscriber = new MessageSubscriber();
+    private final DecodingSubscriber subscriber = new DecodingSubscriber();
 
     private final StreamDecoder<I, O> decoder;
     private final boolean isHttpDecoder;
@@ -189,7 +189,7 @@ public final class DecodedStreamMessage<I, O>
         input.close();
     }
 
-    private final class MessageSubscriber implements Subscriber<I> {
+    private final class DecodingSubscriber implements Subscriber<I> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
@@ -225,8 +225,8 @@ public final class DecodedStreamMessage<I, O>
                         httpDecoder.processTrailers((HttpHeaders) obj, DecodedStreamMessage.this);
                     }
                 } else {
-                    final ByteBuf byteBuf = decoder.decodeInput(obj);
-                    requireNonNull(byteBuf, "decoder.decodeInput() returned null");
+                    final ByteBuf byteBuf = decoder.toByteBuf(obj);
+                    requireNonNull(byteBuf, "decoder.toByteBuf() returned null");
                     if (input.add(byteBuf)) {
                         decoder.process(input, DecodedStreamMessage.this);
                     }

@@ -38,7 +38,7 @@ import io.netty.buffer.ByteBuf;
  *       >     }
  *       >
  *       >     @Override
- *       >     public ByteBuf decodeInput(HttpData in) {
+ *       >     public ByteBuf toByteBuf(HttpData in) {
  *       >         return in.byteBuf();
  *       >     }
  *       >
@@ -89,7 +89,7 @@ public interface StreamDecoder<I, O> {
      * Converts the specified {@link I} type object into a {@link ByteBuf} that is added to
      * {@link StreamDecoderInput}.
      */
-    ByteBuf decodeInput(I in);
+    ByteBuf toByteBuf(I in);
 
     /**
      * Decodes a stream of data to N objects.

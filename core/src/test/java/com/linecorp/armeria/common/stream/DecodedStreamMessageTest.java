@@ -297,7 +297,7 @@ class DecodedStreamMessageTest {
         }
 
         @Override
-        public ByteBuf decodeInput(HttpData in) {
+        public ByteBuf toByteBuf(HttpData in) {
             return in.byteBuf();
         }
 
