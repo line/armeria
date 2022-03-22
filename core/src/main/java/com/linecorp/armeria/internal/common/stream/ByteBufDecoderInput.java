@@ -22,12 +22,12 @@ import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Queue;
 
-import com.linecorp.armeria.common.stream.HttpDecoderInput;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-public final class ByteBufDecoderInput implements HttpDecoderInput {
+public final class ByteBufDecoderInput implements StreamDecoderInput {
 
     private final ByteBufAllocator alloc;
     private final Queue<ByteBuf> queue;
