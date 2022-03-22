@@ -81,7 +81,7 @@ public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel
     @Deprecated
     @Override
     default <V> Function<V, LogLevel> compose(Function<? super V, ? extends RequestOnlyLog> before) {
-        return Function.super.compose(before);
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -94,6 +94,6 @@ public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel
     @Deprecated
     @Override
     default <V> Function<RequestOnlyLog, V> andThen(Function<? super LogLevel, ? extends V> after) {
-        return Function.super.andThen(after);
+        throw new UnsupportedOperationException();
     }
 }
