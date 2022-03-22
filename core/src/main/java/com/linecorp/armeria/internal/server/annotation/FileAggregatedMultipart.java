@@ -26,8 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
@@ -37,11 +35,6 @@ import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class FileAggregatedMultipart {
-    private static final Cache<String, Path> directoryCreationCache =
-            Caffeine.newBuilder()
-                    .maximumSize(8192) // May not have that many separated paths for uploading.
-                    .build();
-
     private ListMultimap<String, String> params;
     private ListMultimap<String, Path> files;
 
@@ -101,8 +94,10 @@ final class FileAggregatedMultipart {
     private static CompletableFuture<Path> moveFile(Path file, Path targetDirectory,
                                                     ExecutorService blockingExecutorService) {
         return CompletableFuture.supplyAsync(() -> {
-            createDirectories(targetDirectory);
             try {
+                if (!Files.exists(targetDirectory)) {
+                    Files.createDirectories(targetDirectory);
+                }
                 // Avoid name duplication, create new file at target place and replace it.
                 return Files.move(file, Files.createTempFile(targetDirectory, null, ".multipart"),
                                   StandardCopyOption.REPLACE_EXISTING);
@@ -115,26 +110,14 @@ final class FileAggregatedMultipart {
     private static CompletableFuture<Path> resolveTmpFile(Path directory,
                                                           ExecutorService blockingExecutorService) {
         return CompletableFuture.supplyAsync(() -> {
-            createDirectories(directory);
             try {
+                if (!Files.exists(directory)) {
+                    Files.createDirectories(directory);
+                }
                 return Files.createTempFile(directory, null, ".multipart");
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         }, blockingExecutorService);
-    }
-
-    private static void createDirectories(Path directory) {
-        directoryCreationCache.get(directory.toString(),
-                                   ignore -> {
-                                       try {
-                                           if (!Files.exists(directory)) {
-                                               Files.createDirectories(directory);
-                                           }
-                                           return directory;
-                                       } catch (IOException e) {
-                                           throw new UncheckedIOException(e);
-                                       }
-                                   });
     }
 }

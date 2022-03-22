@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -145,5 +146,6 @@ interface ServiceConfigSetters {
      *
      * @param multipartUploadsLocation the path of the directory stores the file.
      */
+    @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
 }

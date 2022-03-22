@@ -790,6 +790,7 @@ public final class ServerBuilder {
      *
      * @param path the path of the directory stores the file.
      */
+    @UnstableApi
     public ServerBuilder multipartUploadsLocation(Path path) {
         requireNonNull(path, "path");
         virtualHostTemplate.multipartUploadsLocation(path);
