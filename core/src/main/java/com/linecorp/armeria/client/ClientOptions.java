@@ -105,7 +105,7 @@ public final class ClientOptions
             "REQUEST_ID_GENERATOR", RequestId::random);
 
     /**
-     * The {@link SuccessFunction} that defines successful responses.
+     * The {@link SuccessFunction} that determines if the request is successful or not.
      */
     public static final ClientOption<SuccessFunction> SUCCESS_FUNCTION =
             ClientOption.define("SUCCESS_FUNCTION", SuccessFunction.ofDefault());
