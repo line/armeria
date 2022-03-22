@@ -1,5 +1,5 @@
 dependencies {
-    testImplementation project(':thrift0.15')
+    testImplementation project(':thrift0.16')
     testImplementation project(':grpc')
     testImplementation 'io.dropwizard.metrics:metrics-core'
     testImplementation 'io.prometheus:simpleclient_common'
@@ -20,7 +20,7 @@ tasks.compileTestJava.source "${rootProject.projectDir}/core/src/test/java/com/l
         "${rootProject.projectDir}/grpc/src/test/java/com/linecorp/armeria/it/grpc/GrpcMetricsIntegrationTest.java"
 
 task copyThriftFiles(type: Copy) {
-    dependsOn project(':thrift0.15').tasks.compileTestThrift
+    dependsOn project(':thrift0.16').tasks.compileTestThrift
 
     from "${rootProject.projectDir}/thrift/gen-src/test/java"
     into "${project.ext.genSrcDir}/test/java"

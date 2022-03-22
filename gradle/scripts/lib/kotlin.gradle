@@ -44,7 +44,8 @@ configure(projectsWithFlags('kotlin')) {
     configurations.all {
         resolutionStrategy.eachDependency { DependencyResolveDetails details ->
             def requested = details.requested
-            if (requested.group == 'org.jetbrains.kotlin' && requested.name == 'kotlin-reflect') {
+            if (requested.group == 'org.jetbrains.kotlin' && requested.name == 'kotlin-reflect' &&
+                    managedVersions.containsKey('org.jetbrains.kotlin:kotlin-reflect')) {
                 details.useVersion managedVersions['org.jetbrains.kotlin:kotlin-reflect']
             }
         }

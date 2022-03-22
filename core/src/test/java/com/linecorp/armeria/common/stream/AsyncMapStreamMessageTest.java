@@ -136,11 +136,11 @@ class AsyncMapStreamMessageTest {
         final StreamMessage<Integer> shouldPreserveOrder = streamMessage.mapAsync(futures::get);
 
         StepVerifier.create(shouldPreserveOrder)
-                .thenRequest(3)
-                .then(() -> finishSecond.complete(3))
-                .then(() -> finishLast.complete(1))
-                .expectNext(1, 2, 3)
-                .verifyComplete();
+                    .thenRequest(3)
+                    .then(() -> finishSecond.complete(3))
+                    .then(() -> finishLast.complete(1))
+                    .expectNext(1, 2, 3)
+                    .verifyComplete();
     }
 
     @Test
@@ -159,5 +159,43 @@ class AsyncMapStreamMessageTest {
 
         mapped.abort(new RuntimeException());
         StepVerifier.create(streamMessage).verifyError(RuntimeException.class);
+    }
+
+    @Test
+    void mapParallelPublishesEagerly() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(0, 1, 2);
+        final CompletableFuture<Integer> finishFirst = CompletableFuture.completedFuture(2);
+        final CompletableFuture<Integer> finishLast = new CompletableFuture<>();
+        final CompletableFuture<Integer> finishSecond = new CompletableFuture<>();
+
+        final List<CompletableFuture<Integer>> futures = ImmutableList.of(finishLast, finishSecond,
+                                                                          finishFirst);
+        final StreamMessage<Integer> shouldNotPreserveOrder = streamMessage.mapParallel(futures::get);
+
+        StepVerifier.create(shouldNotPreserveOrder)
+                    .expectNext(2)
+                    .then(() -> finishSecond.complete(3))
+                    .then(() -> finishLast.complete(1))
+                    .expectNext(3, 1)
+                    .verifyComplete();
+    }
+
+    @Test
+    void mapParallelDoesntPublishPastLimit() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(0, 1, 2);
+        final CompletableFuture<Integer> finishFirst = CompletableFuture.completedFuture(2);
+        final CompletableFuture<Integer> finishLast = new CompletableFuture<>();
+        final CompletableFuture<Integer> finishSecond = new CompletableFuture<>();
+
+        final List<CompletableFuture<Integer>> futures = ImmutableList.of(finishLast, finishSecond,
+                                                                          finishFirst);
+        final StreamMessage<Integer> shouldNotPreserveOrder = streamMessage.mapParallel(futures::get, 2);
+
+        StepVerifier.create(shouldNotPreserveOrder)
+                    .then(() -> finishSecond.complete(3))
+                    .expectNext(3)
+                    .then(() -> finishLast.complete(1))
+                    .expectNext(2, 1)
+                    .verifyComplete();
     }
 }

@@ -609,13 +609,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
-        if (cause instanceof HttpStatusException) {
-            httpRes.complete(HttpResponse.of(((HttpStatusException) cause).httpStatus()));
-            return;
-        }
-
-        if (cause instanceof HttpResponseException) {
-            httpRes.complete(((HttpResponseException) cause).httpResponse());
+        if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+            httpRes.complete(HttpResponse.ofFailure(cause));
             return;
         }
 

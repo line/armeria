@@ -255,6 +255,35 @@ class GrpcServiceBuilderTest {
                         "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
     }
 
+    @Test
+    void setGrpcHealthCheckService() {
+        final GrpcService grpcService =
+                GrpcService.builder()
+                           .addService(GrpcHealthCheckService.builder().build())
+                           .build();
+        assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
+                .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
+    }
+
+    @Test
+    void enableDefaultGrpcHealthCheckService() {
+        final GrpcService grpcService =
+                GrpcService.builder()
+                           .enableHealthCheckService(true)
+                           .build();
+        assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
+                .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
+    }
+
+    @Test
+    void illegalStateOfGrpcHealthCheckService() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .addService(GrpcHealthCheckService.builder().build())
+                                            .enableHealthCheckService(true)
+                                            .build())
+                .isInstanceOf(IllegalStateException.class);
+    }
+
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
 
     private static class ReconnectServiceImpl extends ReconnectServiceImplBase {}
