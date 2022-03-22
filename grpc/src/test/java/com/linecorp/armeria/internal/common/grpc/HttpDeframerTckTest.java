@@ -33,12 +33,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
 
 @Test
@@ -73,9 +71,8 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
 
         final HttpStreamDeframer deframer =
                 new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, noopListener,
-                                       null, -1);
-        final StreamMessage<DeframedMessage> deframed =
-                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
+                                       null, -1, false);
+        final StreamMessage<DeframedMessage> deframed = source.decode(deframer);
 
         return Flux.from(deframed).doOnNext(message -> byteBufs.add(message.buf()));
     }
@@ -86,8 +83,8 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
                 new PublisherBasedStreamMessage<>(Flux.error(new RuntimeException()));
         final HttpStreamDeframer deframer =
                 new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, noopListener,
-                                       null, -1);
-        return new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
+                                       null, -1, false);
+        return source.decode(deframer);
     }
 
     @Ignore

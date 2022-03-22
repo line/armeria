@@ -41,16 +41,14 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-class DecodedHttpStreamMessageTest {
+class DecodedStreamMessageTest {
 
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
@@ -60,9 +58,8 @@ class DecodedHttpStreamMessageTest {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
         final StreamMessage<HttpData> stream =
                 StreamMessage.of(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("67"));
-        final StreamMessage<String> deframed =
-                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
-        StepVerifier.create(deframed)
+        final StreamMessage<String> decoded = stream.decode(decoder);
+        StepVerifier.create(decoded)
                     .expectComplete()
                     .verify();
         assertThat(decoder.isReleased()).isTrue();
@@ -73,9 +70,8 @@ class DecodedHttpStreamMessageTest {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
         final StreamMessage<HttpData> stream =
                 StreamMessage.of(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("6789B1234"));
-        final StreamMessage<String> deframed =
-                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
-        StepVerifier.create(deframed)
+        final StreamMessage<String> decoded = stream.decode(decoder);
+        StepVerifier.create(decoded)
                     .expectNext("A0123456789")
                     .expectComplete()
                     .verify();
@@ -92,9 +88,8 @@ class DecodedHttpStreamMessageTest {
                           "D0123456789",
                           "E0123456789")
                     .map(HttpData::ofUtf8));
-        final StreamMessage<String> deframed =
-                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
-        StepVerifier.create(deframed)
+        final StreamMessage<String> decoded = stream.decode(decoder);
+        StepVerifier.create(decoded)
                     .expectNext("A0123456789")
                     .expectNext("B0123456789")
                     .expectNext("C0123456789")
@@ -120,9 +115,8 @@ class DecodedHttpStreamMessageTest {
                           "0123456789E0123456789")
                     .map(HttpData::ofUtf8));
 
-        final StreamMessage<String> deframed =
-                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
-        StepVerifier.create(deframed)
+        final StreamMessage<String> decoded = stream.decode(decoder);
+        StepVerifier.create(decoded)
                     .expectNext("A0123456789")
                     .expectNext("B0123456789")
                     .expectNext("C0123456789")
@@ -139,9 +133,8 @@ class DecodedHttpStreamMessageTest {
         final StreamMessage<HttpData> stream = new PublisherBasedStreamMessage<>(
                 Flux.just(HttpData.empty(), HttpData.ofUtf8("A0123456"),
                           HttpData.empty(), HttpData.ofUtf8("789B")));
-        final StreamMessage<String> deframed =
-                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
-        StepVerifier.create(deframed)
+        final StreamMessage<String> decoded = stream.decode(decoder);
+        StepVerifier.create(decoded)
                     .expectNext("A0123456789")
                     .expectComplete()
                     .verify();
@@ -163,13 +156,11 @@ class DecodedHttpStreamMessageTest {
                           "0123456789E0123456789")
                     .map(HttpData::ofUtf8));
 
-        final StreamMessage<String> deframed =
-                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
-
+        final StreamMessage<String> decoded = stream.decode(decoder);
         final List<String> consumed = new ArrayList<>();
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
-        deframed.subscribe(new Subscriber<String>() {
+        decoded.subscribe(new Subscriber<String>() {
             @Override
             public void onSubscribe(Subscription s) {
                 subscriptionRef.set(s);
@@ -274,9 +265,8 @@ class DecodedHttpStreamMessageTest {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
         final RuntimeException cause = new RuntimeException("Error before subscribing");
         final StreamMessage<HttpData> source = new PublisherBasedStreamMessage<>(Flux.error(cause));
-        final StreamMessage<String> deframed =
-                new DecodedHttpStreamMessage<>(source, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
-        final EventLoop eventLoop = DecodedHttpStreamMessageTest.eventLoop.get();
+        final StreamMessage<String> deframed = source.decode(decoder);
+        final EventLoop eventLoop = DecodedStreamMessageTest.eventLoop.get();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         deframed.subscribe(new Subscriber<String>() {
             @Override
@@ -297,7 +287,7 @@ class DecodedHttpStreamMessageTest {
         await().untilAtomic(causeRef, Matchers.is(cause));
     }
 
-    private static final class FixedLengthDecoder implements HttpDecoder<String> {
+    private static final class FixedLengthDecoder implements StreamDecoder<HttpData, String> {
 
         private final int length;
         private final List<ByteBuf> byteBufs = new ArrayList<>();
@@ -307,7 +297,12 @@ class DecodedHttpStreamMessageTest {
         }
 
         @Override
-        public void process(HttpDecoderInput in, HttpDecoderOutput<String> out) {
+        public ByteBuf toByteBuf(HttpData in) {
+            return in.byteBuf();
+        }
+
+        @Override
+        public void process(StreamDecoderInput in, StreamDecoderOutput<String> out) {
             int remaining = in.readableBytes();
             if (remaining < length) {
                 return;
@@ -333,13 +328,13 @@ class DecodedHttpStreamMessageTest {
         private final List<ByteBuf> byteBufs = new ArrayList<>();
 
         @Override
-        public void processHeaders(HttpHeaders in, HttpDecoderOutput<String> out) {
+        public void processHeaders(HttpHeaders in, StreamDecoderOutput<String> out) {
             length = in.getInt("length", -1);
             assertThat(length).isGreaterThan(0);
         }
 
         @Override
-        public void process(HttpDecoderInput in, HttpDecoderOutput<String> out) {
+        public void process(StreamDecoderInput in, StreamDecoderOutput<String> out) {
             int remaining = in.readableBytes();
             if (remaining < length) {
                 return;
