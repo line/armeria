@@ -96,7 +96,8 @@ final class ArmeriaWebServer implements WebServer {
                 isRunning = true;
             }
         } catch (Exception cause) {
-            throw new WebServerException("Failed to start " + ArmeriaWebServer.class.getSimpleName(),
+            throw new WebServerException("Failed to start " + ArmeriaWebServer.class.getSimpleName() +
+                                         ". server: " + server + ", primary port: " + port,
                                          Exceptions.peel(cause));
         }
     }

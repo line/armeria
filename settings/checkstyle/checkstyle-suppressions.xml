@@ -9,12 +9,6 @@
   <suppress checks="JavadocPackage" files="[\\/](examples|it|jmh|ghz|test)[\\/]" />
   <!-- Suppress JavadocPackage for tomcat8.0. -->
   <suppress checks="MissingJavadocPackage" files="tomcat[0-9]" />
-  <!-- Suppress all checks in generated sources. -->
-  <suppress checks=".*" files="[\\/]gen-src[\\/]" />
-  <!-- Suppress checks in large forks to make diffing against upstream easier. -->
-  <suppress checks=".*" files="[\\/]common[\\/]MediaType.java$" />
-  <suppress checks=".*" files="[\\/]internal[\\/]DefaultAttributeMap.java" />
-  <suppress checks=".*" files="[\\/]reactive[\\/]DefaultSslInfo.java" />
   <!-- Enable 'NonNullByDefaultAnnotation' for package-info.java only. -->
   <suppress id="NonNullByDefaultAnnotation" files="(?&lt;![\\/]package-info\.java)$" />
   <!-- Suppress checks related with main method in integration tests and examples. -->

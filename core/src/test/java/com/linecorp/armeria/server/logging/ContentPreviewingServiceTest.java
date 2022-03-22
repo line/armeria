@@ -23,11 +23,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.zip.GZIPInputStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,6 +74,7 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.compression.Brotli;
 
 class ContentPreviewingServiceTest {
 
@@ -147,13 +150,19 @@ class ContentPreviewingServiceTest {
 
         private Function<? super HttpService, ContentPreviewingService> decodingContentPreviewDecorator() {
             final BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate =
-                    (requestContext, headers) -> "br".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
+                    (requestContext, headers) -> {
+                        final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
+                        return "br".equals(contentEncoding) || "gzip".equals(contentEncoding);
+                    };
 
             final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {
+                final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
                 final byte[] bytes = new byte[data.readableBytes()];
                 data.getBytes(0, bytes);
                 final byte[] decoded;
-                try (BrotliInputStream unzipper = new BrotliInputStream(new ByteArrayInputStream(bytes))) {
+                final InputStream in = new ByteArrayInputStream(bytes);
+                try (InputStream unzipper = "br".equals(contentEncoding) ? new BrotliInputStream(in)
+                                                                         : new GZIPInputStream(in)) {
                     decoded = ByteStreams.toByteArray(unzipper);
                 } catch (Exception e) {
                     throw new IllegalArgumentException(e);
@@ -202,7 +211,8 @@ class ContentPreviewingServiceTest {
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
         final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
+                Brotli.isAvailable() ? "br" : "gzip");
 
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");

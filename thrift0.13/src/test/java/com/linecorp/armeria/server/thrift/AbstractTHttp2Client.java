@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.thrift;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
@@ -211,7 +213,7 @@ abstract class AbstractTHttp2Client extends TTransport {
             final THttp2ClientHandler handler = initHandler.clientHandler;
 
             // Wait until HTTP/2 upgrade is finished.
-            assertTrue(handler.settingsPromise.await(5, TimeUnit.SECONDS));
+            await().untilAsserted(() -> assertThat(handler.settingsPromise.isDone()).isTrue());
             handler.settingsPromise.get();
 
             // Send a Thrift request.
