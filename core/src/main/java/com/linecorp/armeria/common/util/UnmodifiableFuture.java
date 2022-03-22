@@ -126,9 +126,9 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
 
     private static <U> void toCompletableFuture(Future<U> future, UnmodifiableFuture<U> cf) {
         if (future.isSuccess()) {
-            cf.complete(future.getNow());
+            cf.doComplete(future.getNow());
         } else {
-            cf.completeExceptionally(future.cause());
+            cf.doCompleteExceptionally(future.cause());
         }
     }
 
