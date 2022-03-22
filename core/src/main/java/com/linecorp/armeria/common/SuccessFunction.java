@@ -100,7 +100,7 @@ public interface SuccessFunction {
     }
 
     /**
-     * Return true if the response is success.
+     * Returns {@code true} if the request was handled successfully.
      *
      * @see ServerBuilder#successFunction(SuccessFunction)
      * @see ClientBuilder#successFunction(SuccessFunction)
