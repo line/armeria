@@ -291,7 +291,7 @@ public final class ClientOptions
     }
 
     /**
-     * Returns the {@link SuccessFunction} that determine if the request is success or not.
+     * Returns the {@link SuccessFunction} that determines if the request is successful or not.
      */
     public SuccessFunction successFunction() {
         return get(SUCCESS_FUNCTION);
