@@ -67,7 +67,8 @@ public @interface LoggingDecorator {
      * The rate at which to sample success requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged. The random sampling is appropriate for low-traffic
      * (ex servers that each receive &lt;100K requests). If unset, all requests will be logged.
-     * Set this attribute with negative value will fall back to {@link #samplingRate()}.
+     * If the value of this attribute is negative, the value from {@link #samplingRate()}
+     * will be used as a fallback.
      */
     float successSamplingRate() default -1.0f;
 
@@ -75,7 +76,8 @@ public @interface LoggingDecorator {
      * The rate at which to sample failed requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged. The random sampling is appropriate for low-traffic
      * (ex servers that each receive &lt;100K requests). If unset, all requests will be logged.
-     * Set this attribute with negative value will fall back to {@link #samplingRate()}.
+     * If the value of this attribute is negative, the value from {@link #samplingRate()}
+     * will be used as a fallback.
      */
     float failureSamplingRate() default -1.0f;
 
