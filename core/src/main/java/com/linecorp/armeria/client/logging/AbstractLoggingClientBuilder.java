@@ -35,9 +35,9 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
     /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged.
-     * This method sets both success and failure, if you want to specify different values for the success
-     * and failure samplers, use {@link #successSamplingRate(float)} and
-     * {@link #failureSamplingRate(float)} instead.
+     * This method sets both success and failure sampling rate.
+     * Use {@link #successSamplingRate(float)} and {@link #failureSamplingRate(float)}
+     * if you want to specify a different sampling rate for each case.
      */
     public AbstractLoggingClientBuilder samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
