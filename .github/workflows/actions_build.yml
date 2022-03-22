@@ -71,6 +71,19 @@ jobs:
           build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
           build-${{ matrix.java }}-${{ runner.os }}-
 
+    # Build the shaded JARs first so that shading process doesn't incur memory pressure
+    # on other Gradle tasks such as tests.
+    - name: Build with Gradle (Shading only)
+      run: |
+        ./gradlew --no-daemon --stacktrace shadedJar shadedTestJar \
+        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+        ${{ matrix.coverage && '-Pcoverage' || '' }} \
+        -PnoLint \
+        -PbuildJdkVersion=17 \
+        -PtestJavaVersion=${{ matrix.java }} \
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+      shell: bash
+
     - name: Build with Gradle
       run: |
         ./gradlew --no-daemon --stacktrace build \
