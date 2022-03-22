@@ -120,6 +120,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link RequestLogLevelMapper} to use when mapping the log level of request logs.
      */
+    @UnstableApi
     public LoggingDecoratorBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         if (this.requestLogLevelMapper == null) {
