@@ -28,10 +28,14 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
@@ -40,23 +44,41 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 /**
  * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters.
  */
-public class ThriftHttpErrorResponseTest {
+class ThriftHttpErrorResponseTest {
+
+    private static final AnticipatedException RESPONSE_CAUSE = new AnticipatedException("expected");
 
     private enum TestParam {
         ASYNC_STATUS((HelloService.AsyncIface) (name, resultHandler) -> {
             resultHandler.onError(HttpStatusException.of(HttpStatus.CONFLICT));
         }),
+        ASYNC_STATUS_CAUSE((HelloService.AsyncIface) (name, resultHandler) -> {
+            resultHandler.onError(HttpStatusException.of(HttpStatus.CONFLICT, RESPONSE_CAUSE));
+        }),
         ASYNC_RESPONSE((HelloService.AsyncIface) (name, resultHandler) -> {
-            resultHandler.onError(HttpResponseException.of(HttpStatus.CONFLICT));
+            resultHandler.onError(HttpResponseException.of(HttpResponse.of(HttpStatus.CONFLICT)));
+        }),
+        ASYNC_RESPONSE_CAUSE((HelloService.AsyncIface) (name, resultHandler) -> {
+            resultHandler.onError(
+                    HttpResponseException.of(HttpResponse.of(HttpStatus.CONFLICT), RESPONSE_CAUSE));
         }),
         ASYNC_THROW((HelloService.AsyncIface) (name, resultHandler) -> {
             throw HttpStatusException.of(HttpStatus.CONFLICT);
         }),
+        ASYNC_THROW_CAUSE((HelloService.AsyncIface) (name, resultHandler) -> {
+            throw HttpStatusException.of(HttpStatus.CONFLICT, RESPONSE_CAUSE);
+        }),
         SYNC_STATUS((Iface) name -> {
             throw HttpStatusException.of(HttpStatus.CONFLICT);
         }),
+        SYNC_STATUS_CAUSE((Iface) name -> {
+            throw HttpStatusException.of(HttpStatus.CONFLICT, RESPONSE_CAUSE);
+        }),
         SYNC_RESPONSE((Iface) name -> {
-            throw HttpResponseException.of(HttpStatus.CONFLICT);
+            throw HttpResponseException.of(HttpResponse.of(HttpStatus.CONFLICT));
+        }),
+        SYNC_RESPONSE_CAUSE((Iface) name -> {
+            throw HttpResponseException.of(HttpResponse.of(HttpStatus.CONFLICT), RESPONSE_CAUSE);
         });
 
         final String path;
@@ -88,5 +110,13 @@ public class ThriftHttpErrorResponseTest {
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.CONFLICT);
                 });
+
+        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        final RequestLog log = ctx.log().whenComplete().join();
+        if (param.name().endsWith("_CAUSE")) {
+            assertThat(log.responseCause()).isSameAs(RESPONSE_CAUSE);
+        } else {
+            assertThat(log.responseCause()).isNull();
+        }
     }
 }
