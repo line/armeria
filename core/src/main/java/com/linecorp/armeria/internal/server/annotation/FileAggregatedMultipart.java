@@ -35,11 +35,11 @@ import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class FileAggregatedMultipart {
-    private ListMultimap<String, String> params;
-    private ListMultimap<String, Path> files;
+    private final ListMultimap<String, String> params;
+    private final ListMultimap<String, Path> files;
 
-    FileAggregatedMultipart(ListMultimap<String, String> params,
-                            ListMultimap<String, Path> files) {
+    private FileAggregatedMultipart(ListMultimap<String, String> params,
+                                    ListMultimap<String, Path> files) {
         this.params = params;
         this.files = files;
     }
