@@ -110,12 +110,12 @@
   </module>
   <!-- Prefer UnmodifiableFuture -->
   <module name="RegexpSingleline">
-    <property name="id" value="Avoid CompletableFutures.exceptionallyCompletedFuture()"/>
+    <property name="id" value="PreferUnmodifiableFuture"/>
     <property name="format" value="CompletableFutures.exceptionallyCompletedFuture"/>
     <property name="message" value="Use UnmodifiableFuture.exceptionallyCompletedFuture() instead."/>
   </module>
   <module name="RegexpSingleline">
-    <property name="id" value="Avoid CompletableFuture.completedFuture()"/>
+    <property name="id" value="PreferUnmodifiableFuture"/>
     <property name="format" value="CompletableFuture.completedFuture"/>
     <property name="message" value="Use UnmodifiableFuture.completedFuture() instead."/>
   </module>
