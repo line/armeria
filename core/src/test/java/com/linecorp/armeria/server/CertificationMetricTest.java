@@ -108,11 +108,11 @@ class CertificationMetricTest {
         assertThat(daysValidityGauges.size()).isEqualTo(2);
 
         assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
-                                .tag("common_name", hostnamePattern)
+                                .tag("common.name", hostnamePattern)
                                 .tag("hostname", defaultHostName)
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
-                                .tag("common_name", hostnamePattern)
+                                .tag("common.name", hostnamePattern)
                                 .tag("hostname", defaultHostName)
                                 .gauge().value()).isPositive();
     }
@@ -176,7 +176,7 @@ class CertificationMetricTest {
 
     private static AbstractDoubleAssert<?> assertThatGauge(MeterRegistry meterRegistry, String gaugeName,
                                                            String cn) {
-        final Gauge gauge = meterRegistry.find(gaugeName).tag("common_name", cn).gauge();
+        final Gauge gauge = meterRegistry.find(gaugeName).tag("common.name", cn).gauge();
         assertThat(gauge).isNotNull();
         return assertThat(gauge.value());
     }

@@ -434,7 +434,7 @@ public final class Server implements ListenableAsyncCloseable {
                      })
                      .description("1 if certificate is in validity period, 0 if certificate is not in " +
                                   "validity period")
-                     .tags("common_name", commonName, "hostname", hostname)
+                     .tags("common.name", commonName, "hostname", hostname)
                      .register(meterRegistry);
 
                 Gauge.builder("armeria.server.certificate.validity.days", x509Certificate, x509Cert -> {
@@ -444,7 +444,7 @@ public final class Server implements ListenableAsyncCloseable {
                      })
                      .description("Duration in day before certificate expires which becomes -1 " +
                                   "if certificate is expired")
-                     .tags("common_name", commonName, "hostname", hostname)
+                     .tags("common.name", commonName, "hostname", hostname)
                      .register(meterRegistry);
             } catch (Exception ex) {
                 logger.warn("Failed to setup certificate expiration. hostname: {}", hostname, ex);
