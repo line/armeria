@@ -452,6 +452,12 @@ public final class Server implements ListenableAsyncCloseable {
         }
     }
 
+    private static String getCommonName(X509Certificate certificate) throws CertificateEncodingException {
+        final X500Name x500Name = new JcaX509CertificateHolder(certificate).getSubject();
+        final RDN cn = x500Name.getRDNs(BCStyle.CN)[0];
+        return IETFUtils.valueToString(cn.getFirst().getValue());
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
@@ -904,11 +910,5 @@ public final class Server implements ListenableAsyncCloseable {
     private static boolean isLocalPort(ServerPort serverPort) {
         final InetAddress address = serverPort.localAddress().getAddress();
         return address.isAnyLocalAddress() || address.isLoopbackAddress();
-    }
-
-    private static String getCommonName(X509Certificate certificate) throws CertificateEncodingException {
-        final X500Name x500Name = new JcaX509CertificateHolder(certificate).getSubject();
-        final RDN cn = x500Name.getRDNs(BCStyle.CN)[0];
-        return IETFUtils.valueToString(cn.getFirst().getValue());
     }
 }
