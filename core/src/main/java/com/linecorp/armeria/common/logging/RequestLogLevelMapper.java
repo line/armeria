@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * @see LoggingDecoratorBuilder#requestLogLevelMapper(RequestLogLevelMapper)
  */
+// TODO(trustin): Remove 'extends Function' in the next major release.
 @UnstableApi
 @FunctionalInterface
 public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel> {
@@ -68,5 +69,31 @@ public interface RequestLogLevelMapper extends Function<RequestOnlyLog, LogLevel
             }
             return other.apply(log);
         };
+    }
+
+    /**
+     * Returns a composed function that first applies the before function to its input, and then applies this
+     * function to the result. If evaluation of either function throws an exception, it is relayed to the
+     * caller of the composed function.
+     *
+     * @deprecated Do not use this method.
+     */
+    @Deprecated
+    @Override
+    default <V> Function<V, LogLevel> compose(Function<? super V, ? extends RequestOnlyLog> before) {
+        return Function.super.compose(before);
+    }
+
+    /**
+     * Returns a composed function that first applies this function to its input, and then applies the after
+     * function to the result. If evaluation of either function throws an exception, it is relayed to the
+     * caller of the composed function.
+     *
+     * @deprecated Do not use this method.
+     */
+    @Deprecated
+    @Override
+    default <V> Function<RequestOnlyLog, V> andThen(Function<? super LogLevel, ? extends V> after) {
+        return Function.super.andThen(after);
     }
 }
