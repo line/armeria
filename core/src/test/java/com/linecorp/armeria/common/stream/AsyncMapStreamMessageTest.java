@@ -164,7 +164,7 @@ class AsyncMapStreamMessageTest {
     @Test
     void mapParallelPublishesEagerly() {
         final StreamMessage<Integer> streamMessage = StreamMessage.of(0, 1, 2);
-        final CompletableFuture<Integer> finishFirst = CompletableFuture.completedFuture(2);
+        final CompletableFuture<Integer> finishFirst = UnmodifiableFuture.completedFuture(2);
         final CompletableFuture<Integer> finishLast = new CompletableFuture<>();
         final CompletableFuture<Integer> finishSecond = new CompletableFuture<>();
 
@@ -183,7 +183,7 @@ class AsyncMapStreamMessageTest {
     @Test
     void mapParallelDoesntPublishPastLimit() {
         final StreamMessage<Integer> streamMessage = StreamMessage.of(0, 1, 2);
-        final CompletableFuture<Integer> finishFirst = CompletableFuture.completedFuture(2);
+        final CompletableFuture<Integer> finishFirst = UnmodifiableFuture.completedFuture(2);
         final CompletableFuture<Integer> finishLast = new CompletableFuture<>();
         final CompletableFuture<Integer> finishSecond = new CompletableFuture<>();
 
