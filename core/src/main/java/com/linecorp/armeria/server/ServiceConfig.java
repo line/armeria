@@ -327,7 +327,8 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link SuccessFunction} for checking if the response is success.
+     * Returns the {@link SuccessFunction} that determines whether a request was
+     * handled successfully or not.
      */
     public SuccessFunction successFunction() {
         return successFunction;
