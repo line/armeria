@@ -64,7 +64,7 @@ public class RoutersBenchmark {
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              false, CommonPools.blockingTaskExecutor(), true,
-                                             SuccessFunction.always(), multipartUploadLocations);
+                                             SuccessFunction.always(), multipartUploadLocation);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
