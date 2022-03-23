@@ -76,7 +76,7 @@ public interface Route {
      *                         {@code false} if this method is called for services.
      *                         If {@code true}, an {@link HttpStatusException} will not be
      *                         {@linkplain RoutingContext#deferStatusException(HttpStatusException) deferred}
-     *                         and {@linkplain RoutingContext#isCorsPreflight() preflight request} will not
+     *                         and {@linkplain RoutingStatus#CORS_PREFLIGHT preflight request} will not
      *                         be handled by this {@link Route}.
      *
      * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},

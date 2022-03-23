@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
@@ -35,11 +36,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -108,6 +111,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     private final HandlerRegistry registry;
     private final Set<Route> routes;
+    private final Map<String, ExchangeType> exchangeTypes;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -144,6 +148,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       @Nullable GrpcHealthCheckService grpcHealthCheckService) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
+        exchangeTypes = registry.methods().entrySet().stream()
+                                .collect(toImmutableMap(e -> '/' + e.getKey(),
+                                                        e -> toExchangeType(e.getValue())));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -174,6 +181,26 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 })
                 .collect(toImmutableMap(Entry::getKey, Entry::getValue));
         this.grpcHealthCheckService = grpcHealthCheckService;
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        // An invalid path will be handled later by 'doPost()'.
+        return firstNonNull(exchangeTypes.get(headers.path()), ExchangeType.BIDI_STREAMING);
+    }
+
+    private static ExchangeType toExchangeType(ServerMethodDefinition<?, ?> methodDefinition) {
+        switch (methodDefinition.getMethodDescriptor().getType()) {
+            case UNARY:
+                return ExchangeType.UNARY;
+            case CLIENT_STREAMING:
+                return ExchangeType.REQUEST_STREAMING;
+            case SERVER_STREAMING:
+                return ExchangeType.RESPONSE_STREAMING;
+            case BIDI_STREAMING:
+            default:
+                return ExchangeType.BIDI_STREAMING;
+        }
     }
 
     @Override

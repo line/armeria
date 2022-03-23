@@ -211,4 +211,9 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     public DnsTextEndpointGroupBuilder dnsCache(DnsCache dnsCache) {
         return (DnsTextEndpointGroupBuilder) super.dnsCache(dnsCache);
     }
+
+    @Override
+    public DnsTextEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsTextEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
 }

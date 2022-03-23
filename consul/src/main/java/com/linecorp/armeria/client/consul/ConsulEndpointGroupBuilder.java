@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -40,7 +41,9 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
  * }</pre>
  */
 @UnstableApi
-public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
+public final class ConsulEndpointGroupBuilder
+        extends AbstractDynamicEndpointGroupBuilder implements ConsulConfigSetters {
+
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
 
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
@@ -137,5 +140,10 @@ public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
     public ConsulEndpointGroup build() {
         return new ConsulEndpointGroup(selectionStrategy, consulClientBuilder.build(), serviceName,
                                        registryFetchIntervalMillis, useHealthyEndpoints, datacenter, filter);
+    }
+
+    @Override
+    public ConsulEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (ConsulEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 }

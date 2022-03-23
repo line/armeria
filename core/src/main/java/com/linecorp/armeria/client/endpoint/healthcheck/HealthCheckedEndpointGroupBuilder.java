@@ -122,6 +122,11 @@ public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheck
         return (HealthCheckedEndpointGroupBuilder) super.auth(token);
     }
 
+    @Override
+    public HealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (HealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
+
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {
 
         private final String path;

@@ -204,4 +204,9 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
     public DnsServiceEndpointGroupBuilder dnsCache(DnsCache dnsCache) {
         return (DnsServiceEndpointGroupBuilder) super.dnsCache(dnsCache);
     }
+
+    @Override
+    public DnsServiceEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsServiceEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
 }

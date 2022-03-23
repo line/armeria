@@ -25,6 +25,7 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.AbstractDnsResolverBuilder;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
@@ -95,6 +96,11 @@ abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
 
     final EndpointSelectionStrategy selectionStrategy() {
         return selectionStrategy;
+    }
+
+    @Override
+    public DnsEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 
     DefaultDnsResolver buildResolver() {

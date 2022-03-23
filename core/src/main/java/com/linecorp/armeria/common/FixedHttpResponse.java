@@ -18,10 +18,10 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
-import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
-import com.linecorp.armeria.common.stream.ThreeElementFixedStreamMessage;
-import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 
 /**
  * An {@link HttpResponse} optimized for when all the {@link HttpObject}s that will be published are known at

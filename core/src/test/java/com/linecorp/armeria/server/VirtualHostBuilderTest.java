@@ -319,7 +319,8 @@ class VirtualHostBuilderTest {
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),
-                                                                        "/", null, false);
+                                                                        "/", null, null,
+                                                                        RoutingStatus.OK);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
         final Route route = serviceConfig.route();
         assertThat(route).isSameAs(routeA);

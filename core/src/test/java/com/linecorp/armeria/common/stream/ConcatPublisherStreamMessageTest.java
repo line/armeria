@@ -32,6 +32,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

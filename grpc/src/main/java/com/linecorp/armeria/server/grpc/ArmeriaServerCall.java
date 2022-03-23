@@ -586,6 +586,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (!listenerClosed) {
             listenerClosed = true;
 
+            if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+                // Failed to deserialize a message into a request
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
+            }
             if (setResponseContent) {
                 ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
             }

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -149,6 +150,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
             final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(objs.size());
             Throwable cause0 = null;
+            final boolean withPooledObjects = containsWithPooledObjects(options);
             for (Object obj : objs) {
                 if (cause0 != null) {
                     // An error was raised. The remaing objects should be released.
@@ -157,8 +159,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 }
 
                 try {
-                    final U result = function.apply(obj);
+                    U result = function.apply(obj);
                     if (result != null) {
+                        result = StreamMessageUtil.touchOrCopyAndClose(result, withPooledObjects);
                         builder.add(result);
                     } else {
                         StreamMessageUtil.closeOrAbort(obj);
@@ -202,7 +205,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        source.subscribe(new FuseableSubscriber<>(subscriber, function, errorFunction), executor, options);
+        source.subscribe(new FuseableSubscriber<>(subscriber, function, errorFunction,
+                                                  containsWithPooledObjects(options)), executor, options);
     }
 
     @Override
@@ -223,17 +227,19 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         private final MapperFunction<Object, U> function;
         @Nullable
         private final Function<Throwable, Throwable> errorFunction;
+        private final boolean withPooledObjects;
 
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
 
         FuseableSubscriber(Subscriber<? super U> downstream, @Nullable MapperFunction<Object, U> function,
-                           @Nullable Function<Throwable, Throwable> errorFunction) {
+                           @Nullable Function<Throwable, Throwable> errorFunction, boolean withPooledObjects) {
             requireNonNull(downstream, "downstream");
             this.downstream = downstream;
             this.function = function;
             this.errorFunction = errorFunction;
+            this.withPooledObjects = withPooledObjects;
         }
 
         @Override
@@ -261,6 +267,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                     result = (U) item;
                 }
                 if (result != null) {
+                    result = StreamMessageUtil.touchOrCopyAndClose(result, withPooledObjects);
                     downstream.onNext(result);
                 } else {
                     StreamMessageUtil.closeOrAbort(item);
