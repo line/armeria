@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.client.DnsTimeoutUtil.assertDnsTimeoutException;
 import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 import static io.netty.handler.codec.dns.DnsRecordType.A;
@@ -30,6 +31,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -274,7 +276,11 @@ class RefreshingAddressResolverTest {
 
                 // Because it's timed out, the result is not cached.
                 final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
-                assertThat(cache.estimatedSize()).isZero();
+                assertThat(cache.estimatedSize())
+                        .as("cache should be empty. entries: %s",
+                            cache.asMap().entrySet().stream()
+                                 .collect(toImmutableMap(Entry::getKey, e -> e.getValue().join())))
+                        .isZero();
 
                 final Future<InetSocketAddress> future2 = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
