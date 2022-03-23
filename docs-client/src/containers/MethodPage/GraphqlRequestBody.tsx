@@ -119,9 +119,9 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
     setQuery(parsedJson.query);
     if (typeof parsedJson.variables === 'object') {
       setVariablesText(JSON.stringify(parsedJson.variables));
-      toggleVariablesOpen(true)
+      toggleVariablesOpen(true);
     }
-  }, [requestBody, query, variables]);
+  }, [requestBody, query, variablesText]);
 
   useEffect(() => {
     onDebugFormChange(
