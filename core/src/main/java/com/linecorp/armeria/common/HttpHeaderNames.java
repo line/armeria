@@ -180,6 +180,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString ACCEPT_LANGUAGE = create("Accept-Language");
     /**
+     * The HTTP <a href="https://wicg.github.io/private-network-access/#headers">{@code
+     * Access-Control-Allow-Private-Network}</a> header field name.
+     */
+    public static final AsciiString ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK = create("Access-Control-Allow-Private-Network");
+    /**
      * The HTTP {@code "Access-Control-Request-Headers"} header field name.
      */
     public static final AsciiString ACCESS_CONTROL_REQUEST_HEADERS = create("Access-Control-Request-Headers");
@@ -760,6 +765,11 @@ public final class HttpHeaderNames {
      * Sec-CH-UA-Full-Version}</a> header field name.
      */
     public static final AsciiString SEC_CH_UA_FULL_VERSION = create("Sec-CH-UA-Full-Version");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-full-version-list">{@code
+     * Sec-CH-UA-Full-Version}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_FULL_VERSION_LIST = create("Sec-CH-UA-Full-Version-List");
     /**
      * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-mobile">{@code
      * Sec-CH-UA-Mobile}</a> header field name.
