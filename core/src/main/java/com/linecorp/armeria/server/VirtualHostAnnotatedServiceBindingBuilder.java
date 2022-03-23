@@ -28,6 +28,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -252,6 +253,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        defaultServiceConfigSetters.successFunction(successFunction);
         return this;
     }
 

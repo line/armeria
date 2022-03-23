@@ -48,6 +48,7 @@ import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -427,6 +428,11 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     @Override
     public EurekaUpdatingListenerBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (EurekaUpdatingListenerBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder successFunction(SuccessFunction successFunction) {
+        return (EurekaUpdatingListenerBuilder) super.successFunction(successFunction);
     }
 
     @Override

@@ -61,7 +61,9 @@ import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
@@ -70,6 +72,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
@@ -129,6 +133,9 @@ public final class VirtualHostBuilder {
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
     private boolean shutdownBlockingTaskExecutorOnStop;
+
+    @Nullable
+    private SuccessFunction successFunction;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -680,9 +687,9 @@ public final class VirtualHostBuilder {
         final List<RouteDecoratingService> routeDecoratingServices;
         if (defaultVirtualHostBuilder != null) {
             routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
-                    .addAll(this.routeDecoratingServices)
-                    .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
-                    .build();
+                                                   .addAll(this.routeDecoratingServices)
+                                                   .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
+                                                   .build();
         } else {
             routeDecoratingServices = ImmutableList.copyOf(this.routeDecoratingServices);
         }
@@ -919,6 +926,16 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link SuccessFunction} to define successful responses.
+     * {@link MetricCollectingService} and {@link LoggingService} use this function.
+     */
+    @UnstableApi
+    public VirtualHostBuilder successFunction(SuccessFunction successFunction) {
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -1012,11 +1029,19 @@ public final class VirtualHostBuilder {
             shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
         }
 
+        final SuccessFunction successFunction;
+        if (this.successFunction != null) {
+            successFunction = this.successFunction;
+        } else {
+            successFunction = template.successFunction;
+        }
+
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
         assert blockingTaskExecutor != null;
+        assert successFunction != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -1037,14 +1062,15 @@ public final class VirtualHostBuilder {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
-                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                                            successFunction);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
-                               shutdownBlockingTaskExecutorOnStop);
+                               shutdownBlockingTaskExecutorOnStop, successFunction);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;

@@ -20,6 +20,8 @@ import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -138,4 +140,11 @@ interface ServiceConfigSetters {
      * @param numThreads the number of threads in the executor
      */
     ServiceConfigSetters blockingTaskExecutor(int numThreads);
+
+    /**
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
+     */
+    @UnstableApi
+    ServiceConfigSetters successFunction(SuccessFunction successFunction);
 }

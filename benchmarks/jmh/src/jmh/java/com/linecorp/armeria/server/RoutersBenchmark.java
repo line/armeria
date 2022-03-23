@@ -51,15 +51,16 @@ public class RoutersBenchmark {
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true),
+                                  true, (requestContext, requestLog) -> true),
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true)
+                                  true, (requestContext, requestLog) -> true)
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
-                                             false, CommonPools.blockingTaskExecutor(), true);
+                                             false, CommonPools.blockingTaskExecutor(), true,
+                                             (requestContext, requestLog) -> true);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,

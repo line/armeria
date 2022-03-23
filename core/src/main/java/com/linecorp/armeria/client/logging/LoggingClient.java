@@ -80,11 +80,12 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ClientRequestContext> sampler) {
+            Sampler<? super ClientRequestContext> successSampler,
+            Sampler<? super ClientRequestContext> failureSampler) {
 
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
               requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
               responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-              responseCauseSanitizer, sampler);
+              responseCauseSanitizer, successSampler, failureSampler);
     }
 }

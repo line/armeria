@@ -26,6 +26,7 @@ import java.util.function.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -60,6 +61,7 @@ public final class ServiceConfig {
     private final boolean shutdownAccessLogWriterOnStop;
     private final Set<TransientServiceOption> transientServiceOptions;
     private final boolean handlesCorsPreflight;
+    private final SuccessFunction successFunction;
 
     private final ScheduledExecutorService blockingTaskExecutor;
     private final boolean shutdownBlockingTaskExecutorOnStop;
@@ -73,11 +75,12 @@ public final class ServiceConfig {
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   boolean shutdownAccessLogWriterOnStop,
                   ScheduledExecutorService blockingTaskExecutor,
-                  boolean shutdownBlockingTaskExecutorOnStop) {
+                  boolean shutdownBlockingTaskExecutorOnStop,
+                  SuccessFunction successFunction) {
         this(null, route, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service),
-             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction);
     }
 
     /**
@@ -90,7 +93,8 @@ public final class ServiceConfig {
                           boolean shutdownAccessLogWriterOnStop,
                           Set<TransientServiceOption> transientServiceOptions,
                           ScheduledExecutorService blockingTaskExecutor,
-                          boolean shutdownBlockingTaskExecutorOnStop) {
+                          boolean shutdownBlockingTaskExecutorOnStop,
+                          SuccessFunction successFunction) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -105,6 +109,7 @@ public final class ServiceConfig {
         this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
+        this.successFunction = requireNonNull(successFunction, "successFunction");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -141,7 +146,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -150,7 +155,7 @@ public final class ServiceConfig {
                                  defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -158,7 +163,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction);
     }
 
     /**
@@ -321,6 +326,14 @@ public final class ServiceConfig {
         return shutdownBlockingTaskExecutorOnStop;
     }
 
+    /**
+     * Returns the {@link SuccessFunction} that determines whether a request was
+     * handled successfully or not.
+     */
+    public SuccessFunction successFunction() {
+        return successFunction;
+    }
+
     @Override
     public String toString() {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
@@ -338,6 +351,7 @@ public final class ServiceConfig {
                              .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                              .add("blockingTaskExecutor", blockingTaskExecutor)
                              .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
+                             .add("successFunction", successFunction)
                              .toString();
     }
 }

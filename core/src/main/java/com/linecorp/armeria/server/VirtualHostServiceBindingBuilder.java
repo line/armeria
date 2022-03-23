@@ -26,6 +26,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -272,6 +273,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        return (VirtualHostServiceBindingBuilder) super.successFunction(successFunction);
     }
 
     /**

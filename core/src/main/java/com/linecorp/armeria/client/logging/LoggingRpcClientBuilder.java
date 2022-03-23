@@ -60,7 +60,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
                                     responseContentSanitizer(),
                                     responseTrailersSanitizer(),
                                     responseCauseSanitizer(),
-                                    sampler());
+                                    successSampler(),
+                                    failureSampler());
     }
 
     /**
@@ -73,13 +74,33 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     // Override the return type of the chaining methods in the superclass.
 
     @Override
+    public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingRpcClientBuilder) super.sampler(sampler);
+    }
+
+    @Override
     public LoggingRpcClientBuilder samplingRate(float samplingRate) {
         return (LoggingRpcClientBuilder) super.samplingRate(samplingRate);
     }
 
     @Override
-    public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
-        return (LoggingRpcClientBuilder) super.sampler(sampler);
+    public LoggingRpcClientBuilder successSampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingRpcClientBuilder) super.successSampler(sampler);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder successSamplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.successSamplingRate(samplingRate);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder failureSampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingRpcClientBuilder) super.failureSampler(sampler);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder failureSamplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.failureSamplingRate(samplingRate);
     }
 
     // Override the return type of the chaining methods in the super-superclass.
@@ -127,8 +148,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    public LoggingRpcClientBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        return (LoggingRpcClientBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
+    public LoggingRpcClientBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
+        return (LoggingRpcClientBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
     }
 
     @Deprecated

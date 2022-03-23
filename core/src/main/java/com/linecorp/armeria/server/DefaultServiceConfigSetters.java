@@ -27,6 +27,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
@@ -59,6 +60,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private ScheduledExecutorService blockingTaskExecutor;
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private SuccessFunction successFunction;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -174,6 +177,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return blockingTaskExecutor(executor, true);
     }
 
+    @Override
+    public ServiceConfigSetters successFunction(SuccessFunction successFunction) {
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -224,6 +233,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (blockingTaskExecutor != null) {
             serviceConfigBuilder.blockingTaskExecutor(blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+        }
+        if (successFunction != null) {
+            serviceConfigBuilder.successFunction(successFunction);
         }
         return serviceConfigBuilder;
     }

@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -112,6 +113,12 @@ public final class ClientOptions
      */
     public static final ClientOption<Supplier<RequestId>> REQUEST_ID_GENERATOR = ClientOption.define(
             "REQUEST_ID_GENERATOR", RequestId::random);
+
+    /**
+     * The {@link SuccessFunction} that determines if the request is successful or not.
+     */
+    public static final ClientOption<SuccessFunction> SUCCESS_FUNCTION =
+            ClientOption.define("SUCCESS_FUNCTION", SuccessFunction.ofDefault());
 
     /**
      * A {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
@@ -291,6 +298,13 @@ public final class ClientOptions
      */
     public Supplier<RequestId> requestIdGenerator() {
         return get(REQUEST_ID_GENERATOR);
+    }
+
+    /**
+     * Returns the {@link SuccessFunction} that determines if the request is successful or not.
+     */
+    public SuccessFunction successFunction() {
+        return get(SUCCESS_FUNCTION);
     }
 
     /**

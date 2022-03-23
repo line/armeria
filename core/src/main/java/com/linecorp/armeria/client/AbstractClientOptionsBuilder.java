@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -181,6 +182,15 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return option(ClientOptions.REQUEST_ID_GENERATOR, requestIdGenerator);
+    }
+
+    /**
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder successFunction(SuccessFunction successFunction) {
+        return option(ClientOptions.SUCCESS_FUNCTION, successFunction);
     }
 
     /**
