@@ -93,7 +93,7 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     }
 
     @Override
-    public DnsServiceEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (DnsServiceEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    public DnsTextEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsTextEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 }
