@@ -420,6 +420,10 @@ public final class Server implements ListenableAsyncCloseable {
 
         final SSLSession sslSession = validateSslContext(sslContext);
         for (Certificate certificate : sslSession.getLocalCertificates()) {
+            if (!(certificate instanceof X509Certificate)) {
+                continue;
+            }
+
             try {
                 final X509Certificate x509Certificate = (X509Certificate) certificate;
                 final String commonName = getCommonName(x509Certificate);
