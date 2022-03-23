@@ -491,10 +491,10 @@ public final class AnnotatedService implements HttpService {
     @Override
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
         // TODO(ikhoon): Support a non-streaming response type.
-        if (AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) == AggregationType.NONE) {
-            return ExchangeType.BIDI_STREAMING;
-        } else {
+        if (AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) == AggregationType.ALL) {
             return ExchangeType.RESPONSE_STREAMING;
+        } else {
+            return ExchangeType.BIDI_STREAMING;
         }
     }
 
