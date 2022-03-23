@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
 import io.netty.handler.ssl.OpenSsl;
 
 /**
- * Default value of {@link Flags} and @{@link ArmeriaOptionsProvider}.
+ * Default value of {@link Flags} and @{@link FlagsProvider}.
  */
 enum DefaultFlags {
     INSTANCE;

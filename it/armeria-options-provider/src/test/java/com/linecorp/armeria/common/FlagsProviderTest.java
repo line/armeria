@@ -35,7 +35,7 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
-class ArmeriaOptionsProviderTest {
+class FlagsProviderTest {
 
     private Class<?> flags;
 

@@ -177,7 +177,7 @@ class FlagsTest {
                                              .filter(name -> Arrays.stream(Object.class.getMethods())
                                                                    .noneMatch(om -> om.getName().equals(name)))
                                              .collect(Collectors.toList());
-        final List<String> armeriaOptionsProviderApis = Arrays.stream(ArmeriaOptionsProvider.class.getMethods())
+        final List<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
                                                               .map(Method::getName)
                                                               .collect(Collectors.toList());
         assertThat(flagsApis).hasSameElementsAs(armeriaOptionsProviderApis);

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-public final class CustomArmeriaOptionsProvider implements ArmeriaOptionsProvider {
+public final class CustomFlagsProvider implements FlagsProvider {
 
     @Override
     public Boolean useOpenSsl() {

@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
  * Value provides from Java SPI will be ignored if there corresponding valid JVM option.
  */
 @UnstableApi
-public interface ArmeriaOptionsProvider {
+public interface FlagsProvider {
 
     /**
      * Return verboseExceptionSampler. See {@link Flags#verboseExceptionSampler()}.
