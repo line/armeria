@@ -22,7 +22,6 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayDeque;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
