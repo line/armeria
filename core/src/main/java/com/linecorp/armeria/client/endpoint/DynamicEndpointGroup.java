@@ -180,12 +180,12 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * Removes the specified {@link Endpoint} from current {@link Endpoint} list.
      */
     protected final void removeEndpoint(Endpoint e) {
-        if (!allowEmptyEndpoints && Iterables.size(endpoints) == 1) {
-            return;
-        }
         final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
+            if (!allowEmptyEndpoints && endpoints.size() == 1) {
+                return;
+            }
             endpoints = newEndpoints = endpoints.stream()
                                                 .filter(endpoint -> !endpoint.equals(e))
                                                 .collect(toImmutableList());
