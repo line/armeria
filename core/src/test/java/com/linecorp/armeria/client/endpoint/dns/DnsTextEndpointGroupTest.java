@@ -97,7 +97,7 @@ class DnsTextEndpointGroupTest {
     }
 
     private static DnsRecord newTooLongTxtRecord(String hostname) {
-        return new DefaultDnsRawRecord(hostname, TXT, 60, Unpooled.wrappedBuffer(new byte[]{
+        return new DefaultDnsRawRecord(hostname, TXT, 60, Unpooled.wrappedBuffer(new byte[] {
                 1, 0, 0 // Contains one more byte than expected
         }));
     }

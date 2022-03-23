@@ -41,7 +41,7 @@ class ByteBufDecoderInputTest {
     @BeforeEach
     void setUp() {
         input = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT);
-        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[]{ 1, 2, 3, 4 });
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         input.add(byteBuf1);
         byteBufs.add(byteBuf1);
         final ByteBuf byteBuf2 = Unpooled.buffer(4);
@@ -50,18 +50,18 @@ class ByteBufDecoderInputTest {
         byteBuf2.writeByte(7);
         input.add(byteBuf2);
         byteBufs.add(byteBuf2);
-        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{ 8 });
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[] { 8 });
         input.add(byteBuf3);
         byteBufs.add(byteBuf3);
         final ByteBuf byteBuf4 = Unpooled.EMPTY_BUFFER;
         input.add(byteBuf4);
         byteBufs.add(byteBuf4);
-        final ByteBuf byteBuf5 = Unpooled.wrappedBuffer(new byte[]{ -1, 9 });
+        final ByteBuf byteBuf5 = Unpooled.wrappedBuffer(new byte[] { -1, 9 });
         byteBuf5.readByte();
         input.add(byteBuf5);
         byteBufs.add(byteBuf5);
 
-        final ByteBuf byteBuf6 = Unpooled.wrappedBuffer(new byte[]{ -1 });
+        final ByteBuf byteBuf6 = Unpooled.wrappedBuffer(new byte[] { -1 });
         byteBuf6.readByte();
         input.add(byteBuf6);
         byteBufs.add(byteBuf6);
@@ -144,8 +144,8 @@ class ByteBufDecoderInputTest {
     @Test
     void readUnsignedBytes() {
         try (ByteBufDecoderInput input = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT)) {
-            input.add(Unpooled.wrappedBuffer(new byte[]{ 1 }));
-            input.add(Unpooled.wrappedBuffer(new byte[]{ -1 }));
+            input.add(Unpooled.wrappedBuffer(new byte[] { 1 }));
+            input.add(Unpooled.wrappedBuffer(new byte[] { -1 }));
             assertThat(input.readUnsignedByte()).isEqualTo((byte) 1);
             assertThat((byte) input.readUnsignedByte()).isEqualTo((byte) 0xFF);
         }
@@ -154,12 +154,12 @@ class ByteBufDecoderInputTest {
     @Test
     void readBytes() {
         final ByteBufDecoderInput input = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT);
-        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[]{ 1, 2, 3, 4 });
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         final ByteBuf byteBuf2 = Unpooled.buffer(4);
         byteBuf2.writeByte(5);
         byteBuf2.writeByte(6);
-        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{ 7, 8 });
-        final ByteBuf byteBuf4 = Unpooled.wrappedBuffer(new byte[]{ -1, 9 });
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[] { 7, 8 });
+        final ByteBuf byteBuf4 = Unpooled.wrappedBuffer(new byte[] { -1, 9 });
         byteBuf4.readByte();
 
         input.add(byteBuf1);
@@ -176,20 +176,20 @@ class ByteBufDecoderInputTest {
 
         // Should return retained slice ByteBuf from byteBuf2
         buf = input.readBytes(1);
-        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{ 5 });
+        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[] { 5 });
         assertThat(buf.unwrap()).isSameAs(byteBuf2);
         assertThat(buf.refCnt()).isEqualTo(2);
         buf.release();
 
         // Create new ByteBuf and copy data from byteBuf2 and byteBuf3
         buf = input.readBytes(3);
-        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{ 6, 7, 8 });
+        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[] { 6, 7, 8 });
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.release();
 
         // Should return byteBuf4 without additional copies
         buf = input.readBytes(1);
-        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{ 9 });
+        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[] { 9 });
         assertThat(buf).isSameAs(byteBuf4);
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.release();
@@ -229,7 +229,7 @@ class ByteBufDecoderInputTest {
         assertThat(input.readableBytes()).isEqualTo(9);
         input.close();
         assertThat(input.readableBytes()).isEqualTo(0);
-        final ByteBuf byteBuf = Unpooled.wrappedBuffer(new byte[]{ 1, 2, 3, 4 });
+        final ByteBuf byteBuf = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         // As 'ByteBufDeframerInput' is closed, the 'byteBuf' should be released by 'ByteBufDeframerInput'.
         input.add(byteBuf);
         assertThat(byteBuf.refCnt()).isZero();

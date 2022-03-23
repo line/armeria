@@ -50,8 +50,8 @@ class DefaultDnsCacheTest {
 
     @BeforeAll
     static void beforeAll() throws UnknownHostException {
-        final ByteBuf address0 = Unpooled.wrappedBuffer(new byte[]{ 1, 1, 1, 0 });
-        final ByteBuf address1 = Unpooled.wrappedBuffer(new byte[]{ 1, 1, 1, 1 });
+        final ByteBuf address0 = Unpooled.wrappedBuffer(new byte[] { 1, 1, 1, 0 });
+        final ByteBuf address1 = Unpooled.wrappedBuffer(new byte[] { 1, 1, 1, 1 });
         final DnsRawRecord record0 = new DefaultDnsRawRecord("foo.com.", DnsRecordType.A, 2, address0);
         final DnsRawRecord record1 = new DefaultDnsRawRecord("foo.com.", DnsRecordType.A, 3, address1);
         records = ImmutableList.of(ByteArrayDnsRecord.copyOf(record0), ByteArrayDnsRecord.copyOf(record1));

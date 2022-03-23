@@ -117,8 +117,8 @@ class RefreshingAddressResolverTest {
                              .map(future -> future.join().address())
                              .collect(toImmutableList());
                 assertThat(addresses).containsExactlyInAnyOrder(
-                        InetAddress.getByAddress("foo.com", new byte[]{ 1, 1, 1, 1 }),
-                        InetAddress.getByAddress("bar.com", new byte[]{ 1, 2, 3, 4 }));
+                        InetAddress.getByAddress("foo.com", new byte[] { 1, 1, 1, 1 }),
+                        InetAddress.getByAddress("bar.com", new byte[] { 1, 2, 3, 4 }));
             }
         }
     }
@@ -167,7 +167,7 @@ class RefreshingAddressResolverTest {
                 final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
                 assertThat(cache.estimatedSize()).isOne();
                 assertThat(cache.get("baz.com", this::noopCacheLoader).join().address()).isEqualTo(
-                        InetAddress.getByAddress("baz.com", new byte[]{ 1, 1, 1, 1 }));
+                        InetAddress.getByAddress("baz.com", new byte[] { 1, 1, 1, 1 }));
 
                 // Resolve one more to increase cache hits.
                 resolver.resolve(InetSocketAddress.createUnresolved("baz.com", 36462));
@@ -180,7 +180,7 @@ class RefreshingAddressResolverTest {
                     final CompletableFuture<CacheEntry> future = cache.get("baz.com",
                                                                            this::noopCacheLoader);
                     return future != null && future.join().address().equals(
-                            InetAddress.getByAddress("baz.com", new byte[]{ 2, 2, 2, 2 }));
+                            InetAddress.getByAddress("baz.com", new byte[] { 2, 2, 2, 2 }));
                 });
 
                 assertThat(System.nanoTime() - start).isGreaterThanOrEqualTo(

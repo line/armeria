@@ -41,13 +41,13 @@ class HostsFileDnsResolverTest {
     @Test
     void respectHostsFile() throws UnknownHostException {
         final DnsRecord fooRecord = new ByteArrayDnsRecord("foo.com", DnsRecordType.A,
-                                                           1, new byte[]{ 10, 0, 1, 1 });
+                                                           1, new byte[] { 10, 0, 1, 1 });
         final DnsRecord barRecord = new ByteArrayDnsRecord("bar.com", DnsRecordType.AAAA,
-                                                           2, new byte[]{ 10, 0, 1, 2 });
+                                                           2, new byte[] { 10, 0, 1, 2 });
         final DnsRecord quxRecord = ByteArrayDnsRecord.copyOf(newSrvRecord("qux.com", 1, 8080, "a.qux.com"));
 
-        final InetAddress fooHostsFileAddress = InetAddress.getByAddress(new byte[]{ 127, 0, 0, 100 });
-        final InetAddress quxHostsFileAddress = InetAddress.getByAddress(new byte[]{ 127, 0, 0, 101 });
+        final InetAddress fooHostsFileAddress = InetAddress.getByAddress(new byte[] { 127, 0, 0, 100 });
+        final InetAddress quxHostsFileAddress = InetAddress.getByAddress(new byte[] { 127, 0, 0, 101 });
 
         final DnsResolver delegate = new DnsResolver() {
 

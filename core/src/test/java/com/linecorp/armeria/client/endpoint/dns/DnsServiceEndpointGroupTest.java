@@ -129,7 +129,7 @@ public class DnsServiceEndpointGroupTest {
     }
 
     private static DnsRecord newBadNameSrvRecord(String hostname) {
-        return new DefaultDnsRawRecord(hostname, SRV, 60, Unpooled.wrappedBuffer(new byte[]{
+        return new DefaultDnsRawRecord(hostname, SRV, 60, Unpooled.wrappedBuffer(new byte[] {
                 0, 0, 0, 0, 0, 0, 127, 127, 127
         }));
     }

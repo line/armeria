@@ -40,7 +40,7 @@ class CachingDnsResolverTest {
     @Test
     void refreshingRequest() throws Exception {
         final DnsRecord fooRecord = new ByteArrayDnsRecord("foo.com", DnsRecordType.A,
-                                                           10, new byte[]{ 10, 0, 1, 1 });
+                                                           10, new byte[] { 10, 0, 1, 1 });
 
         final AtomicBoolean cacheMiss = new AtomicBoolean();
         final DnsResolver delegate = new DnsResolver() {
