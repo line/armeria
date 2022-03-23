@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSortedSet;
 
+import com.linecorp.armeria.client.DnsCacheListener;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -47,7 +49,7 @@ import io.netty.util.concurrent.ScheduledFuture;
  * {@link DynamicEndpointGroup} which resolves targets using DNS queries. This is useful for environments
  * where service discovery is handled using DNS, e.g. Kubernetes uses SkyDNS for service discovery.
  */
-abstract class DnsEndpointGroup extends DynamicEndpointGroup {
+abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCacheListener {
 
     private final EventLoop eventLoop;
     private final Backoff backoff;
@@ -74,6 +76,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         this.backoff = backoff;
         this.questions = questions;
         this.resolver = resolver;
+        resolver.dnsCache().addListener(this);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         assert !this.questions.isEmpty();
@@ -101,14 +104,25 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         eventLoop.execute(() -> sendQueries(questions));
     }
 
+    @Override
+    public final void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                @Nullable UnknownHostException cause) {
+        if (cause != null) {
+            // A failed query will be retried with the backoff.
+            return;
+        }
+
+        // TTL has expired. Update the old Endpoints.
+        sendQueries(questions);
+    }
+
     private void sendQueries(List<DnsQuestion> questions) {
         if (isClosing()) {
             return;
         }
 
-        final CompletableFuture<List<DnsRecord>> future = resolver.resolve(questions, logPrefix);
+        resolver.resolve(questions, logPrefix).handle(this::onDnsRecords);
         attemptsSoFar++;
-        future.handle(this::onDnsRecords);
     }
 
     private Void onDnsRecords(@Nullable List<DnsRecord> records, @Nullable Throwable cause) {
@@ -136,8 +150,6 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
             setEndpoints(onDnsRecords(records, effectiveTtl));
         } catch (Throwable t) {
             logger.warn("{} Failed to process the DNS query result: {}", logPrefix, records, t);
-        } finally {
-            scheduledFuture = eventLoop.schedule(() -> sendQueries(questions), effectiveTtl, TimeUnit.SECONDS);
         }
         return null;
     }

@@ -64,17 +64,19 @@ public final class DefaultDnsResolver implements SafeCloseable {
         final ResolvedAddressTypes resolvedAddressTypes = delegate.resolvedAddressTypes();
         resolver = new HostsFileDnsResolver(resolver, hostsFileEntriesResolver, resolvedAddressTypes);
 
-        return new DefaultDnsResolver(resolver, eventLoop, resolvedAddressTypes, queryTimeoutMillis);
+        return new DefaultDnsResolver(resolver, dnsCache, eventLoop, resolvedAddressTypes, queryTimeoutMillis);
     }
 
     private final DnsResolver delegate;
+    private final DnsCache dnsCache;
     private final EventExecutor executor;
     private final Comparator<DnsRecordType> preferredOrder;
     private final long queryTimeoutMillis;
 
-    public DefaultDnsResolver(DnsResolver delegate, EventExecutor executor,
+    public DefaultDnsResolver(DnsResolver delegate, DnsCache dnsCache, EventExecutor executor,
                               ResolvedAddressTypes resolvedAddressTypes, long queryTimeoutMillis) {
         this.delegate = delegate;
+        this.dnsCache = dnsCache;
         this.executor = executor;
         if (resolvedAddressTypes == ResolvedAddressTypes.IPV6_PREFERRED) {
             preferredOrder = Ordering.explicit(DnsRecordType.AAAA, DnsRecordType.A);
@@ -167,6 +169,10 @@ public final class DefaultDnsResolver implements SafeCloseable {
         });
 
         return future;
+    }
+
+    public DnsCache dnsCache() {
+        return dnsCache;
     }
 
     @Override

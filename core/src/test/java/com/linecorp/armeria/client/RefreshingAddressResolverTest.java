@@ -32,8 +32,6 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -70,10 +68,6 @@ class RefreshingAddressResolverTest {
     @RegisterExtension
     static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
 
-    private CompletableFuture<CacheEntry> noopCacheLoader(String key) {
-        return null;
-    }
-
     @Test
     void resolve() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
@@ -92,7 +86,7 @@ class RefreshingAddressResolverTest {
                 assertThat(addr.getAddress().getHostAddress()).isEqualTo("1.1.1.1");
                 assertThat(addr.getPort()).isEqualTo(36462);
 
-                final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
+                final Cache<String, CacheEntry> cache = group.cache();
                 assertThat(cache.estimatedSize()).isOne();
 
                 final Future<InetSocketAddress> bar = resolver.resolve(
@@ -114,7 +108,7 @@ class RefreshingAddressResolverTest {
                         cache.asMap()
                              .values()
                              .stream()
-                             .map(future -> future.join().address())
+                             .map(CacheEntry::address)
                              .collect(toImmutableList());
                 assertThat(addresses).containsExactlyInAnyOrder(
                         InetAddress.getByAddress("foo.com", new byte[] { 1, 1, 1, 1 }),
@@ -141,7 +135,7 @@ class RefreshingAddressResolverTest {
 
                 Thread.sleep(1100); // wait until refresh cache entry (ttl + a)
 
-                final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
+                final Cache<String, CacheEntry> cache = group.cache();
                 assertThat(cache.estimatedSize()).isOne();
             }
         }
@@ -164,9 +158,9 @@ class RefreshingAddressResolverTest {
                 await().untilAsserted(() -> assertThat(foo.isSuccess()).isTrue());
                 assertThat(foo.getNow().getAddress().getHostAddress()).isEqualTo("1.1.1.1");
 
-                final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
+                final Cache<String, CacheEntry> cache = group.cache();
                 assertThat(cache.estimatedSize()).isOne();
-                assertThat(cache.get("baz.com", this::noopCacheLoader).join().address()).isEqualTo(
+                assertThat(cache.getIfPresent("baz.com").address()).isEqualTo(
                         InetAddress.getByAddress("baz.com", new byte[] { 1, 1, 1, 1 }));
 
                 // Resolve one more to increase cache hits.
@@ -177,9 +171,8 @@ class RefreshingAddressResolverTest {
                         new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "2.2.2.2"))));
 
                 await().until(() -> {
-                    final CompletableFuture<CacheEntry> future = cache.get("baz.com",
-                                                                           this::noopCacheLoader);
-                    return future != null && future.join().address().equals(
+                    final CacheEntry entry = cache.getIfPresent("baz.com");
+                    return entry != null && entry.address().equals(
                             InetAddress.getByAddress("baz.com", new byte[] { 2, 2, 2, 2 }));
                 });
 
@@ -217,7 +210,7 @@ class RefreshingAddressResolverTest {
                             500 * i, TimeUnit.MILLISECONDS);
                 }
 
-                final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
+                final Cache<String, CacheEntry> cache = group.cache();
                 await().until(() -> cache.estimatedSize() == 0);
 
                 assertThat(System.nanoTime() - start).isGreaterThanOrEqualTo(
@@ -243,15 +236,12 @@ class RefreshingAddressResolverTest {
             final Future<InetSocketAddress> foo = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
             await().untilAsserted(() -> assertThat(foo.isSuccess()).isTrue());
-            assertThat(foo.getNow().getAddress().getHostAddress()).isEqualTo("1.1.1.1");
-            final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
-            assertThat(cache.estimatedSize()).isEqualTo(1);
-            final CacheEntry cacheEntry = cache.get("foo.com", this::noopCacheLoader).join();
+
+            final Cache<String, CacheEntry> cache = group.cache();
+            assertThat(cache.estimatedSize()).isOne();
+            final CacheEntry cacheEntry = cache.getIfPresent("foo.com");
+            assertThat(cacheEntry).isNotNull();
             group.close();
-            await().until(() -> {
-                final ScheduledFuture<?> future = cacheEntry.refreshFuture;
-                return future != null && future.isCancelled();
-            });
             assertThat(cache.estimatedSize()).isZero();
         }
     }
@@ -275,11 +265,11 @@ class RefreshingAddressResolverTest {
                 assertDnsTimeoutException(cause);
 
                 // Because it's timed out, the result is not cached.
-                final Cache<String, CompletableFuture<CacheEntry>> cache = group.cache();
+                final Cache<String, CacheEntry> cache = group.cache();
                 assertThat(cache.estimatedSize())
                         .as("cache should be empty. entries: %s",
                             cache.asMap().entrySet().stream()
-                                 .collect(toImmutableMap(Entry::getKey, e -> e.getValue().join())))
+                                 .collect(toImmutableMap(Entry::getKey, Entry::getValue)))
                         .isZero();
 
                 final Future<InetSocketAddress> future2 = resolver.resolve(
@@ -404,6 +394,56 @@ class RefreshingAddressResolverTest {
         }
     }
 
+    @Test
+    void shouldRefreshWhenDnsCacheIsExpired() {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))
+        ) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder().build();
+            final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+                    hostname -> DnsServerAddresses.sequential(
+                            Stream.of(server).map(TestDnsServer::addr).collect(toImmutableList())).stream();
+            final RefreshingAddressResolverGroup group = new DnsResolverGroupBuilder()
+                    .serverAddressStreamProvider(dnsServerAddressStreamProvider)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .dnsCache(dnsCache)
+                    .build(eventLoop);
+            final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+            final Cache<String, CacheEntry> cache = group.cache();
+
+            final Future<InetSocketAddress> foo0 = resolver.resolve(
+                    InetSocketAddress.createUnresolved("foo.com", 36462));
+            await().untilAsserted(() -> assertThat(foo0.isSuccess()).isTrue());
+            final InetSocketAddress fooAddress0 = foo0.getNow();
+            final CacheEntry fooCache0 = cache.getIfPresent("foo.com");
+
+            final Future<InetSocketAddress> foo1 = resolver.resolve(
+                    InetSocketAddress.createUnresolved("foo.com", 36462));
+            final InetSocketAddress fooAddress1 = foo1.getNow();
+            assertThat(fooAddress1).isEqualTo(fooAddress0);
+            final CacheEntry fooCache1 = cache.getIfPresent("foo.com");
+            assertThat(fooCache1.address()).isSameAs(fooCache0.address());
+
+            assertThat(cache.estimatedSize()).isOne();
+            final CacheEntry cacheEntry = cache.getIfPresent("foo.com");
+            assertThat(cacheEntry).isNotNull();
+            cache.invalidateAll();
+
+            final Future<InetSocketAddress> foo2 = resolver.resolve(
+                    InetSocketAddress.createUnresolved("foo.com", 36462));
+            await().untilAsserted(() -> assertThat(foo2.isSuccess()).isTrue());
+            final InetSocketAddress fooAddress2 = foo2.getNow();
+            final CacheEntry fooCache2 = cache.getIfPresent("foo.com");
+            // The address has been refreshed.
+            assertThat(fooCache2.address()).isNotSameAs(fooCache1.address());
+            assertThat(fooAddress2).isEqualTo(fooAddress1);
+            group.close();
+        }
+    }
+
     private static DnsResolverGroupBuilder builder(TestDnsServer... servers) {
         return builder(true, servers);
     }
@@ -418,7 +458,7 @@ class RefreshingAddressResolverTest {
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .traceEnabled(false);
         if (withCacheOption) {
-            builder.dnsCache(NoopDnsCache.INSTANCE);
+            builder.dnsCache(DnsCache.builder().build());
         }
         return builder;
     }

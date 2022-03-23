@@ -34,12 +34,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NoopDnsCache;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -380,8 +379,6 @@ class DnsAddressEndpointGroupTest {
           .hasMessageContaining("(expected: queryTimeoutMillis >= queryTimeoutMillisForEachAttempt)");
     }
 
-    private static final Logger logger = LoggerFactory.getLogger(DnsAddressEndpointGroupTest.class);
-
     @CsvSource({ "1", "2", "3" })
     @ParameterizedTest
     void queryTimeoutMillisForEachAttempt_searchDomain(int ndots) throws Exception {
@@ -438,6 +435,57 @@ class DnsAddressEndpointGroupTest {
                                                                     .allowEmptyEndpoints(true)
                                                                     .build()) {
             assertThat(group.allowsEmptyEndpoints()).isTrue();
+        }
+    }
+
+    @Test
+    void shouldRefreshEndpointsWhenDnsCacheIsRemoved() throws Exception {
+        final DnsCache dnsCache = DnsCache.builder().build();
+        try (TestDnsServer server = new TestDnsServer(
+                ImmutableMap.of(new DefaultDnsQuestion("foo.com", A),
+                                new DefaultDnsResponse(0)
+                                        .addRecord(ANSWER, newAddressRecord("foo.com", "1.1.1.1"))));
+             DnsAddressEndpointGroup group =
+                     DnsAddressEndpointGroup.builder("foo.com")
+                                            .port(8080)
+                                            .serverAddresses(server.addr())
+                                            .queryTimeoutMillisForEachAttempt(1000)
+                                            .queryTimeoutMillis(7000)
+                                            .searchDomains(ImmutableList.of())
+                                            .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                                            .dnsCache(dnsCache)
+                                            .build()) {
+
+            assertThat(group.whenReady().get())
+                    .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
+
+            server.setResponses(
+                    ImmutableMap.of(new DefaultDnsQuestion("foo.com", A),
+                                    new DefaultDnsResponse(0)
+                                            .addRecord(ANSWER, newAddressRecord("foo.com", "2.2.2.2"))));
+            assertThat(group.endpoints())
+                    .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
+            dnsCache.removeAll();
+            await().untilAsserted(() -> {
+                // The endpoints should be updated with the new IP address.
+                assertThat(group.endpoints())
+                        .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("2.2.2.2"));
+            });
+
+            server.setResponses(
+                    ImmutableMap.of(new DefaultDnsQuestion("foo.com", A),
+                                    new DefaultDnsResponse(0)
+                                            .addRecord(ANSWER, newAddressRecord("foo.com", "3.3.3.3"))));
+
+            assertThat(group.endpoints())
+                    .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("2.2.2.2"));
+
+            dnsCache.removeAll();
+            await().untilAsserted(() -> {
+                // The endpoints should be updated with the new IP address.
+                assertThat(group.endpoints())
+                        .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("3.3.3.3"));
+            });
         }
     }
 

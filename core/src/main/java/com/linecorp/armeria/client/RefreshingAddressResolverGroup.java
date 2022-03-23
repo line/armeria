@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -99,7 +98,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final int ndots;
     private final long queryTimeoutMillis;
     private final HostsFileEntriesResolver hostsFileEntriesResolver;
-    private final Cache<String, CompletableFuture<CacheEntry>> cache;
+    private final Cache<String, CacheEntry> addressResolverCache;
     private final BiConsumer<DnsNameResolverBuilder, EventExecutor> resolverConfigurator;
 
     @Nullable
@@ -125,14 +124,14 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         this.ndots = ndots;
         this.queryTimeoutMillis = queryTimeoutMillis;
         this.hostsFileEntriesResolver = hostsFileEntriesResolver;
-        cache = buildCache(cacheSpec);
+        addressResolverCache = buildCache(cacheSpec);
         this.resolverConfigurator = resolverConfigurator;
         this.resolvedAddressTypes = resolvedAddressTypes;
     }
 
     @VisibleForTesting
-    Cache<String, CompletableFuture<CacheEntry>> cache() {
-        return cache;
+    Cache<String, CacheEntry> cache() {
+        return addressResolverCache;
     }
 
     @Override
@@ -147,24 +146,21 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         final DefaultDnsResolver resolver = DefaultDnsResolver.of(builder.build(), dnsResolverCache, executor,
                                                                   searchDomains, ndots, queryTimeoutMillis,
                                                                   hostsFileEntriesResolver);
-        return new RefreshingAddressResolver(eventLoop, resolver, dnsRecordTypes, cache,
-                                             minTtl, maxTtl, negativeTtl, refreshBackoff);
+        return new RefreshingAddressResolver(eventLoop, resolver, dnsRecordTypes, addressResolverCache,
+                                             dnsResolverCache, negativeTtl, refreshBackoff);
     }
 
     @Override
     public void close() {
         super.close();
-        cache.invalidateAll();
+        addressResolverCache.invalidateAll();
     }
 
-    private static Cache<String, CompletableFuture<CacheEntry>> buildCache(String cacheSpec) {
+    private static Cache<String, CacheEntry> buildCache(String cacheSpec) {
         final Caffeine<Object, Object> b = Caffeine.from(cacheSpec);
-        b.removalListener((RemovalListener<String, CompletableFuture<CacheEntry>>) (key, value, cause) -> {
+        b.removalListener((RemovalListener<String, CacheEntry>) (key, value, cause) -> {
             if (value != null) {
-                value.handle((cacheEntry, throwable) -> {
-                    cacheEntry.clear();
-                    return null;
-                });
+                value.clear();
             }
         });
         return b.build();
