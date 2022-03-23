@@ -117,7 +117,9 @@ dependencies {
     implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-bom']}:osx-aarch_64"
     implementation "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-bom']}:linux-x86_64"
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-bom']}:linux-x86_64"
-    implementation 'io.netty:netty-tcnative-boringssl-static'
+    [ 'linux-x86_64', 'linux-aarch_64', 'osx-x86_64', 'osx-aarch_64', 'windows-x86_64' ].each {
+        implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', classifier: it)
+    }
     implementation 'io.netty:netty-handler-proxy'
     optionalImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:${managedVersions['io.netty.incubator:netty-incubator-transport-native-io_uring']}:linux-x86_64"
 

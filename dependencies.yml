@@ -10,7 +10,8 @@ boms:
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
   - io.grpc:grpc-bom:1.45.0
   - io.micrometer:micrometer-bom:1.8.4
-  - io.netty:netty-bom:4.1.74.Final
+  # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
+  - io.netty:netty-bom:4.1.75.Final
   - io.zipkin.brave:brave-bom:5.13.7
   - org.eclipse.jetty:jetty-bom:9.4.45.v20220203
   - org.junit:junit-bom:5.8.2
@@ -279,6 +280,9 @@ io.netty:
   netty-common:
     javadocs:
     - https://netty.io/4.1/api/
+  # Note that tcnative now needs explicit classifiers
+  # Related: https://github.com/netty/netty-tcnative/pull/709
+  netty-tcnative-boringssl-static: { version: '2.0.51.Final' }
 
 io.netty.incubator:
   netty-incubator-transport-native-io_uring: { version: '0.0.13.Final' }

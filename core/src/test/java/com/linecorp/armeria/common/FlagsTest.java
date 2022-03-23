@@ -62,7 +62,7 @@ class FlagsTest {
     @Test
     void openSslAvailable() {
         assumeThat(osName.startsWith("linux") || osName.startsWith("windows") ||
-                   osName.startsWith("macosx") || osName.startsWith("osx")).isTrue();
+                   osName.startsWith("mac") || osName.startsWith("osx")).isTrue();
         assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isNull();
 
         assertThat(Flags.useOpenSsl()).isTrue();
