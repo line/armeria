@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageU
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -43,8 +44,15 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
+import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -465,6 +473,25 @@ public interface StreamMessage<T> extends Publisher<T> {
     void abort(Throwable cause);
 
     /**
+     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@code T} type objects using
+     * the specified {@link StreamDecoder}.
+     */
+    @UnstableApi
+    default <U> StreamMessage<U> decode(StreamDecoder<T, U> decoder) {
+        requireNonNull(decoder, "decoder");
+        return decode(decoder, ByteBufAllocator.DEFAULT);
+    }
+
+    /**
+     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@code T} type objects using
+     * the specified {@link StreamDecoder} and {@link ByteBufAllocator}.
+     */
+    @UnstableApi
+    default <U> StreamMessage<U> decode(StreamDecoder<T, U> decoder, ByteBufAllocator alloc) {
+        return new DecodedStreamMessage<>(this, decoder, alloc);
+    }
+
+    /**
      * Collects the elements published by this {@link StreamMessage}.
      * The returned {@link CompletableFuture} will be notified when the elements are fully consumed.
      *
@@ -565,7 +592,56 @@ public interface StreamMessage<T> extends Publisher<T> {
     default <U> StreamMessage<U> mapAsync(
             Function<? super T, ? extends CompletableFuture<? extends U>> function) {
         requireNonNull(function, "function");
-        return new AsyncMapStreamMessage<>(this, function);
+        return mapParallel(function, 1);
+    }
+
+    /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified asynchronous
+     * {@link Function} and emitting the value the future completes with.
+     * The {@link StreamMessage} publishes items eagerly in the order that the futures complete.
+     * It does not necessarily preserve the order of the original stream.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value nor a future which completes with a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.mapParallel(x -> CompletableFuture.completedFuture(x + 1));
+     * }</pre>
+     */
+    @UnstableApi
+    default <U> StreamMessage<U> mapParallel(
+            Function<? super T, ? extends CompletableFuture<? extends U>> function) {
+        requireNonNull(function, "function");
+        return mapParallel(function, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified asynchronous
+     * {@link Function} and emitting the value the future completes with.
+     * The {@link StreamMessage} publishes items eagerly in the order that the futures complete.
+     * The number of pending futures will at most be {@code maxConcurrency}
+     * It does not necessarily preserve the order of the original stream.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value nor a future which completes with a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.mapParallel(x -> CompletableFuture.completedFuture(x + 1), 20);
+     * }</pre>
+     */
+    @UnstableApi
+    default <U> StreamMessage<U> mapParallel(
+            Function<? super T, ? extends CompletableFuture<? extends U>> function,
+            int maxConcurrency) {
+        requireNonNull(function, "function");
+        checkArgument(maxConcurrency > 0, "maxConcurrency: %s (expected > 0)", maxConcurrency);
+        return new AsyncMapStreamMessage<>(this, function, maxConcurrency);
     }
 
     /**
@@ -704,5 +780,44 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(destination, "destination");
         requireNonNull(options, "options");
         return StreamMessages.writeTo(map(mapper), destination, options);
+    }
+
+    /**
+     * Adapts this {@link StreamMessage} to {@link InputStream}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
+     * InputStream inputStream = streamMessage.toInputStream(x -> HttpData.wrap(x.getBytes()));
+     * byte[] expected = "foobarbaz".getBytes();
+     *
+     * ByteBuf result = Unpooled.buffer();
+     * int read;
+     * while ((read = inputStream.read()) != -1) {
+     *     result.writeByte(read);
+     * }
+     *
+     * int readableBytes = result.readableBytes();
+     * byte[] actual = new byte[readableBytes];
+     * for (int i = 0; i < readableBytes; i++) {
+     *     actual[i] = result.readByte();
+     * }
+     * assert Arrays.equals(actual, expected);
+     * assert inputStream.available() == 0;
+     * }</pre>
+     */
+    default InputStream toInputStream(Function<? super T, ? extends HttpData> httpDataConverter) {
+        return toInputStream(httpDataConverter, defaultSubscriberExecutor());
+    }
+
+    /**
+     * Adapts this {@link StreamMessage} to {@link InputStream}.
+     *
+     * @param executor the executor to subscribe
+     */
+    default InputStream toInputStream(Function<? super T, ? extends HttpData> httpDataConverter,
+                                      EventExecutor executor) {
+        requireNonNull(httpDataConverter, "httpDataConverter");
+        requireNonNull(executor, "executor");
+        return new StreamMessageInputStream<>(this, httpDataConverter, executor);
     }
 }

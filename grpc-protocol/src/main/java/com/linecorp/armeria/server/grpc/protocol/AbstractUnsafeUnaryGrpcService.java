@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc.protocol;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +26,7 @@ import java.util.concurrent.CompletionStage;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -104,9 +106,13 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
     }
 
     @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        return ExchangeType.UNARY;
+    }
+
+    @Override
     protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
         final SerializationFormat serializationFormat = resolveSerializationFormat(req);
         if (serializationFormat == null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -114,7 +120,9 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                                    "Missing or invalid Content-Type header.");
         }
         final boolean isGrpcWebText = UnaryGrpcSerializationFormats.isGrpcWebText(serializationFormat);
-        req.decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
+        final ArmeriaMessageDeframer deframer =
+                new ArmeriaMessageDeframer(Integer.MAX_VALUE, ctx.alloc(), isGrpcWebText);
+        req.decode(deframer, ctx.alloc())
            .subscribe(singleSubscriber(deframed), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
 
         final CompletableFuture<HttpResponse> responseFuture =

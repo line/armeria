@@ -38,6 +38,9 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private final int id;
     private final int streamId;
     private final boolean keepAlive;
+    private final RoutingContext routingContext;
+    @Nullable
+    private final Routed<ServiceConfig> routed;
     @Nullable
     private ServiceRequestContext ctx;
 
@@ -46,17 +49,30 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private boolean isResponseAborted;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
-                                   boolean keepAlive) {
+                                   boolean keepAlive, RoutingContext routingContext,
+                                   @Nullable Routed<ServiceConfig> routed) {
         delegate = HttpRequest.of(headers);
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
         this.keepAlive = keepAlive;
+        this.routingContext = routingContext;
+        this.routed = routed;
     }
 
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Override
+    public RoutingContext routingContext() {
+        return routingContext;
+    }
+
+    @Override
+    public Routed<ServiceConfig> route() {
+        return routed;
     }
 
     @Override
@@ -161,5 +177,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
+    }
+
+    @Override
+    public boolean isAggregated() {
+        return false;
     }
 }

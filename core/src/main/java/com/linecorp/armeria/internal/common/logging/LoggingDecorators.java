@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.common.logging;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 
@@ -28,7 +27,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientServiceOption;
@@ -77,7 +78,7 @@ public final class LoggingDecorators {
      */
     public static void logRequest(
             Logger logger, RequestOnlyLog log,
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
+            RequestLogLevelMapper requestLogLevelMapper,
             BiFunction<? super RequestContext, ? super RequestHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, Object,
@@ -86,6 +87,7 @@ public final class LoggingDecorators {
                     ? extends @Nullable Object> requestTrailersSanitizer) {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
+        assert requestLogLevel != null;
         if (requestLogLevel.isEnabled(logger)) {
             final RequestContext ctx = log.context();
             if (log.requestCause() == null && isTransientService(ctx)) {
@@ -107,8 +109,8 @@ public final class LoggingDecorators {
      */
     public static void logResponse(
             Logger logger, RequestLog log,
-            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            RequestLogLevelMapper requestLogLevelMapper,
+            ResponseLogLevelMapper responseLogLevelMapper,
             BiFunction<? super RequestContext, ? super RequestHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, Object,
@@ -125,6 +127,7 @@ public final class LoggingDecorators {
                     ? extends @Nullable Object> responseCauseSanitizer) {
 
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
+        assert responseLogLevel != null;
         final Throwable responseCause = log.responseCause();
 
         if (responseLogLevel.isEnabled(logger)) {
@@ -145,6 +148,7 @@ public final class LoggingDecorators {
                 }
 
                 final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
+                assert requestLogLevel != null;
                 if (!requestLogLevel.isEnabled(logger)) {
                     // Request wasn't logged, but this is an unsuccessful response,
                     // so we log the request too to help debugging.

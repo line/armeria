@@ -37,7 +37,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -70,8 +72,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     private final ResponseLogger responseLogger = new ResponseLogger();
 
     private final Logger logger;
-    private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
-    private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
+    private final RequestLogLevelMapper requestLogLevelMapper;
+    private final ResponseLogLevelMapper responseLogLevelMapper;
 
     private final BiFunction<? super RequestContext, ? super RequestHeaders,
             ? extends @Nullable Object> requestHeadersSanitizer;
@@ -98,8 +100,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     LoggingService(
             HttpService delegate,
             @Nullable Logger logger,
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            RequestLogLevelMapper requestLogLevelMapper,
+            ResponseLogLevelMapper responseLogLevelMapper,
             BiFunction<? super RequestContext, ? super RequestHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, Object,

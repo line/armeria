@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -50,6 +51,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -325,7 +327,7 @@ public final class AnnotatedService implements HttpService {
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<AggregatedHttpRequest> f;
-        if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
+        if (AggregationStrategy.aggregationRequired(aggregationStrategy, req.headers())) {
             f = req.aggregate();
         } else {
             f = CompletableFuture.completedFuture(null);
@@ -471,6 +473,16 @@ public final class AnnotatedService implements HttpService {
             return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        // TODO(ikhoon): Support a non-streaming response type.
+        if (AggregationStrategy.aggregationRequired(aggregationStrategy, headers)) {
+            return ExchangeType.RESPONSE_STREAMING;
+        } else {
+            return ExchangeType.BIDI_STREAMING;
+        }
     }
 
     /**
