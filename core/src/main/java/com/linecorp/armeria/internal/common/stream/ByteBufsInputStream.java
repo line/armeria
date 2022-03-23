@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.resteasy;
+package com.linecorp.armeria.internal.common.stream;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static java.util.Objects.requireNonNull;
@@ -44,7 +44,7 @@ import io.netty.buffer.ByteBuf;
  * new {@link ByteBuf} data chunks will be permitted.
  */
 @UnstableApi
-public final class ByteBuffersBackedInputStream extends InputStream {
+public final class ByteBufsInputStream extends InputStream {
 
     private final BlockingQueue<ByteBuf> buffers = new LinkedBlockingQueue<>();
     private final AtomicBoolean eos = new AtomicBoolean(false);
@@ -56,15 +56,18 @@ public final class ByteBuffersBackedInputStream extends InputStream {
     private Throwable interruption;
 
     /**
-     * Constructs {@link ByteBuffersBackedInputStream} with a timeout.
+     * Constructs {@link ByteBufsInputStream} with a timeout.
      * @param timeout {@link Duration} during which the IO will be blocked expecting new data chunks
      *                or EOS flag to be set.
      */
-    public ByteBuffersBackedInputStream(Duration timeout) {
+    public ByteBufsInputStream(Duration timeout) {
         this.timeout = requireNonNull(timeout, "timeout");
     }
 
-    public ByteBuffersBackedInputStream() {
+    /**
+     * Constructs {@link ByteBufsInputStream}.
+     */
+    public ByteBufsInputStream() {
         timeout = null;
     }
 
@@ -154,6 +157,9 @@ public final class ByteBuffersBackedInputStream extends InputStream {
         }
     }
 
+    /**
+     * Interrupts this {@link InputStream}.
+     */
     public void interrupt(Throwable interruption) {
         this.interruption = requireNonNull(interruption, "interruption");
         buffers.add(EMPTY_BUFFER); // to wake the BlockingQueue
