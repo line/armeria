@@ -20,7 +20,7 @@ cglib:
 
 # Akka is used only for testing in it:grpcweb module.
 ch.megard:
-  akka-http-cors_2.13: { version: '1.1.3' }
+  akka-http-cors_2.13: { version: '1.0.0' }
 
 ch.qos.logback:
   logback-classic:
@@ -144,7 +144,7 @@ com.guardsquare:
 
 # Akka is used only for testing in it:grpcweb module.
 com.lightbend.akka.grpc:
-  akka-grpc-runtime_2.13: { version: '2.1.3' }
+  akka-grpc-runtime_2.13: { version: '1.0.3' }
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
@@ -198,7 +198,7 @@ com.thesamet.scalapb:
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
-  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.19' }
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.17' }
   akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
   akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
