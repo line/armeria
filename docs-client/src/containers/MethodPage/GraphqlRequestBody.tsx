@@ -73,7 +73,7 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   const [variablesOpen, toggleVariablesOpen] = useReducer(toggle, false);
 
   const [query, setQuery] = useState('');
-  const [variables, setVariables] = useState('');
+  const [variables, setVariables] = useState({});
   const [variablesText, setVariablesText] = useState('');
   const [schema, setSchema] = useState<GraphQLSchema | undefined>();
 
@@ -119,10 +119,9 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
     setQuery(parsedJson.query);
     if (typeof parsedJson.variables === 'object') {
       setVariablesText(JSON.stringify(parsedJson.variables));
-    } else {
-      setVariablesText(parsedJson.variables);
+      toggleVariablesOpen(true)
     }
-  }, [requestBody]);
+  }, [requestBody, query, variables]);
 
   useEffect(() => {
     onDebugFormChange(
