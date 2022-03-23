@@ -10,7 +10,7 @@ boms:
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
   - io.grpc:grpc-bom:1.45.0
   - io.micrometer:micrometer-bom:1.8.4
-  - io.netty:netty-bom:4.1.75.Final
+  - io.netty:netty-bom:4.1.74.Final
   - io.zipkin.brave:brave-bom:5.13.7
   - org.eclipse.jetty:jetty-bom:9.4.45.v20220203
   - org.junit:junit-bom:5.8.2
