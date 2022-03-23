@@ -50,7 +50,7 @@ final class DefaultDnsCache implements DnsCache {
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
             ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
 
-    private final List<DnsCacheRemovalListener> listeners = new CopyOnWriteArrayList<>();
+    private final List<DnsCacheListener> listeners = new CopyOnWriteArrayList<>();
     private final int minTtl;
     private final int maxTtl;
     private final Cache<DnsQuestion, CacheEntry> cache;
@@ -75,11 +75,11 @@ final class DefaultDnsCache implements DnsCache {
             final UnknownHostException reason = value.cause();
             final List<DnsRecord> records = value.records();
             if (reason != null) {
-                for (DnsCacheRemovalListener listener : listeners) {
+                for (DnsCacheListener listener : listeners) {
                     listener.onRemoval(key, null, reason);
                 }
             } else if (records != null) {
-                for (DnsCacheRemovalListener listener : listeners) {
+                for (DnsCacheListener listener : listeners) {
                     listener.onRemoval(key, records, null);
                 }
             } else {
@@ -144,7 +144,7 @@ final class DefaultDnsCache implements DnsCache {
     }
 
     @Override
-    public void removalListener(DnsCacheRemovalListener listener) {
+    public void addListener(DnsCacheListener listener) {
         requireNonNull(listener, "listener");
         listeners.add(listener);
     }

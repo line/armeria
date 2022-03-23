@@ -49,5 +49,5 @@ public enum NoopDnsCache implements DnsCache {
     public void removeAll() {}
 
     @Override
-    public void removalListener(DnsCacheRemovalListener listener) {}
+    public void addListener(DnsCacheListener listener) {}
 }

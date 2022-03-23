@@ -38,7 +38,7 @@ public interface DnsCache {
     /**
      * Returns the default DNS cache.
      */
-    static DnsCache of() {
+    static DnsCache ofDefault() {
         return DnsCacheBuilder.DEFAULT_CACHE;
     }
 
@@ -105,7 +105,8 @@ public interface DnsCache {
     void removeAll();
 
     /**
-     * Adds a listener that caches should notify each time an entry is removed for any reason.
+     * Adds a listener to this {@link DnsCache}. The {@link DnsCacheListener} is notified whenever an event
+     * occurs.
      */
-    void removalListener(DnsCacheRemovalListener listener);
+    void addListener(DnsCacheListener listener);
 }

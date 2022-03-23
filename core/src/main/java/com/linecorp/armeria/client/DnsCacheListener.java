@@ -26,11 +26,11 @@ import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 
 /**
- * A DNS cache listener that receives a notification when an entry is removed from a {@link DnsCache}.
+ * Listens to the {@link DnsCache} events.
  */
+@SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi
-@FunctionalInterface
-public interface DnsCacheRemovalListener {
+public interface DnsCacheListener {
     /**
      * Invoked when a removal occurred.
      *

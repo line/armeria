@@ -61,7 +61,7 @@ public abstract class AbstractDnsResolverBuilder {
 
     private static final long DEFAULT_QUERY_TIMEOUT_MILLIS = 5000; // 5 seconds.
 
-    private DnsCache dnsCache = DnsCache.of();
+    private DnsCache dnsCache = DnsCache.ofDefault();
     private String cacheSpec = Flags.dnsCacheSpec();
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
@@ -460,7 +460,7 @@ public abstract class AbstractDnsResolverBuilder {
      */
     @UnstableApi
     protected final DnsCache maybeCreateDnsCache() {
-        if (needsToCreateDnsCache && dnsCache != DnsCache.of()) {
+        if (needsToCreateDnsCache && dnsCache != DnsCache.ofDefault()) {
             throw new IllegalStateException(
                     "Cannot set dnsCache() with cacheSpec(), ttl(), or negativeTtl().");
         }

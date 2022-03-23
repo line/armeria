@@ -77,7 +77,7 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         final AtomicReference<List<DnsRecord>> removed = new AtomicReference<>();
-        dnsCache.removalListener((key, result, cause) -> {
+        dnsCache.addListener((key, result, cause) -> {
             assertThat(key).isEqualTo(query);
             assertThat(cause).isNull();
             removed.set(result);
@@ -92,7 +92,7 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         removed.set(null);
-        dnsCache.removalListener((key, result, cause) -> {
+        dnsCache.addListener((key, result, cause) -> {
             assertThat(key.name()).isEqualTo("foo.com.");
             assertThat(cause).isNull();
             removed.set(result);
@@ -113,7 +113,7 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         final AtomicReference<List<DnsRecord>> removed = new AtomicReference<>();
-        dnsCache.removalListener((key, result, cause) -> {
+        dnsCache.addListener((key, result, cause) -> {
             assertThat(key).isEqualTo(query);
             assertThat(cause).isNull();
             removed.set(result);
@@ -133,7 +133,7 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, unknownHostException);
         assertThatThrownBy(() -> dnsCache.get(query)).isSameAs(unknownHostException);
         final AtomicReference<UnknownHostException> removed = new AtomicReference<>();
-        dnsCache.removalListener((key, result, cause) -> {
+        dnsCache.addListener((key, result, cause) -> {
             assertThat(key.name()).isEqualTo("foo.com.");
             assertThat(result).isNull();
             removed.set(cause);
@@ -152,7 +152,7 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         final AtomicReference<List<DnsRecord>> removed = new AtomicReference<>();
-        dnsCache.removalListener((key, result, cause) -> {
+        dnsCache.addListener((key, result, cause) -> {
             assertThat(key).isEqualTo(query);
             assertThat(cause).isNull();
             removed.set(result);
