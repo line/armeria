@@ -93,6 +93,7 @@ import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
+import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -125,7 +126,7 @@ import io.grpc.reflection.v1alpha.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -392,6 +393,8 @@ class GrpcServiceServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(1);
             sb.maxRequestLength(0);
+            sb.idleTimeoutMillis(0);
+            sb.requestTimeoutMillis(0);
 
             sb.decorator(LoggingService.newDecorator());
             sb.service(
@@ -1022,11 +1025,12 @@ class GrpcServiceServerTest {
                 Base64.getEncoder().encode(body));
         final AggregatedHttpResponse response = httpResponse.mapData(data -> {
             final ByteBuf buf = data.byteBuf();
-            final ByteBuf decoded = Unpooled.wrappedBuffer(
-                    Base64.getDecoder().decode(buf.nioBuffer()));
-            buf.release();
-            return HttpData.wrap(decoded);
+            final Base64Decoder decoder = new Base64Decoder(UnpooledByteBufAllocator.DEFAULT);
+            return HttpData.wrap(decoder.decode(buf));
         }).aggregate().join();
+        // Make sure that a pooled HttpData was created while mapping is released.
+        assertThat(response.content().isPooled()).isFalse();
+
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
                 new byte[]{ TRAILERS_FRAME_HEADER },
@@ -1227,9 +1231,8 @@ class GrpcServiceServerTest {
     private static class BlockingClientProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(
-                                 UnitTestServiceGrpc.newBlockingStub(channel),
-                                 UnitTestServiceGrpc.newBlockingStub(blockingChannel))
+            return Stream.of(UnitTestServiceGrpc.newBlockingStub(channel),
+                             UnitTestServiceGrpc.newBlockingStub(blockingChannel))
                          .map(Arguments::of);
         }
     }
@@ -1237,9 +1240,8 @@ class GrpcServiceServerTest {
     private static class StreamingClientProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(
-                                 UnitTestServiceGrpc.newStub(channel),
-                                 UnitTestServiceGrpc.newStub(blockingChannel))
+            return Stream.of(UnitTestServiceGrpc.newStub(channel),
+                             UnitTestServiceGrpc.newStub(blockingChannel))
                          .map(Arguments::of);
         }
     }

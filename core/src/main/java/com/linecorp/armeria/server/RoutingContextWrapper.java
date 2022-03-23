@@ -80,6 +80,11 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
+    public RoutingStatus status() {
+        return delegate.status();
+    }
+
+    @Override
     public void deferStatusException(HttpStatusException cause) {
         delegate.deferStatusException(cause);
     }

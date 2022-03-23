@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 
@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -37,7 +36,7 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Nullable
     private T obj;
 
-    protected OneElementFixedStreamMessage(T obj) {
+    public OneElementFixedStreamMessage(T obj) {
         this.obj = obj;
     }
 

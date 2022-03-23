@@ -53,7 +53,6 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -282,7 +281,7 @@ public final class FileService extends AbstractHttpService {
                                 locationBuilder.append('?')
                                                .append(ctx.query());
                             }
-                            throw HttpResponseException.of(HttpResponse.ofRedirect(locationBuilder.toString()));
+                            return HttpFile.ofRedirect(locationBuilder.toString());
                         }
                     } else {
                         return HttpFile.nonExistent();

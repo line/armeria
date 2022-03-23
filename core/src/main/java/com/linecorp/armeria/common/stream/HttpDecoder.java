@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.HttpData;
@@ -24,6 +26,8 @@ import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * Decodes a stream of {@link HttpObject}s to N objects.
@@ -79,36 +83,27 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * @param <T> the result type of being decoded
  */
 @UnstableApi
-public interface HttpDecoder<T> {
+public interface HttpDecoder<T> extends StreamDecoder<HttpData, T> {
 
-    /**
-     * Decodes a stream of {@link HttpData}s to N objects.
-     * This method will be called whenever an {@link HttpData} is signaled from {@link Publisher}.
-     */
-    void process(HttpDecoderInput in, HttpDecoderOutput<T> out) throws Exception;
+    @Override
+    default ByteBuf toByteBuf(HttpData in) {
+        requireNonNull(in, "in");
+        // HttpHeaders is handled as is by processXXXHeaders(), processTrailers().
+        return in.byteBuf();
+    }
 
     /**
      * Decodes an informational {@link ResponseHeaders} to N objects.
      */
-    default void processInformationalHeaders(ResponseHeaders in, HttpDecoderOutput<T> out) throws Exception {}
+    default void processInformationalHeaders(ResponseHeaders in, StreamDecoderOutput<T> out) throws Exception {}
 
     /**
      * Decodes a non-informational {@link HttpHeaders} to N objects.
      */
-    default void processHeaders(HttpHeaders in, HttpDecoderOutput<T> out) throws Exception {}
+    default void processHeaders(HttpHeaders in, StreamDecoderOutput<T> out) throws Exception {}
 
     /**
      * Decodes a {@link HttpHeaders trailers} to N objects.
      */
-    default void processTrailers(HttpHeaders in, HttpDecoderOutput<T> out) throws Exception {}
-
-    /**
-     * Invoked when {@link HttpData}s are fully consumed.
-     */
-    default void processOnComplete(HttpDecoderOutput<T> out) throws Exception {}
-
-    /**
-     * Invoked when a {@link Throwable} is raised while deframing.
-     */
-    default void processOnError(Throwable cause) {}
+    default void processTrailers(HttpHeaders in, StreamDecoderOutput<T> out) throws Exception {}
 }

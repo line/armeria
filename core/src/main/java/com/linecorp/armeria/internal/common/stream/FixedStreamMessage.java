@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
@@ -32,9 +32,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -42,7 +45,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 /**
  * A {@link StreamMessage} which only publishes a fixed number of objects known at construction time.
  */
-abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
+public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
 
@@ -79,8 +82,8 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     @Override
-    public final boolean isOpen() {
-        // Fixed streams are closed on construction.
+    public boolean isOpen() {
+        // Fixed streams are closed on construction except for AggregatingStreamMessage.
         return false;
     }
 
@@ -88,6 +91,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     public boolean isEmpty() {
         // All fixed streams are non-empty except for `EmptyFixedStreamMessage`.
         return false;
+    }
+
+    @Override
+    public boolean isComplete() {
+        return completed || completionFuture.isDone();
     }
 
     @Override
@@ -101,25 +109,27 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
+        if (isOpen()) {
+            abortSubscriber(executor, subscriber, "a fixed stream is not closed yet");
+            return;
+        }
+
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
-            if (executor.inEventLoop()) {
-                abortLateSubscriber(subscriber);
-            } else {
-                executor.execute(() -> abortLateSubscriber(subscriber));
+            abortSubscriber(executor, subscriber, "subscribed by other subscriber already");
+            return;
+        }
+
+        for (SubscriptionOption option : options) {
+            if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
+                withPooledObjects = true;
+            } else if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
+                notifyCancellation = true;
             }
+        }
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber, executor);
         } else {
-            for (SubscriptionOption option : options) {
-                if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                    withPooledObjects = true;
-                } else if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                    notifyCancellation = true;
-                }
-            }
-            if (executor.inEventLoop()) {
-                subscribe0(subscriber, executor);
-            } else {
-                executor.execute(() -> subscribe0(subscriber, executor));
-            }
+            executor.execute(() -> subscribe0(subscriber, executor));
         }
     }
 
@@ -145,9 +155,17 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
     }
 
-    private void abortLateSubscriber(Subscriber<? super T> subscriber) {
+    private void abortSubscriber(EventExecutor executor, Subscriber<? super T> subscriber, String message) {
+        if (executor.inEventLoop()) {
+            abortSubscriber0(subscriber, message);
+        } else {
+            executor.execute(() -> abortSubscriber0(subscriber, message));
+        }
+    }
+
+    private void abortSubscriber0(Subscriber<? super T> subscriber, String message) {
         subscriber.onSubscribe(NoopSubscription.get());
-        subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        subscriber.onError(new IllegalStateException(message));
     }
 
     @Override
@@ -176,6 +194,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     private void collect(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
                          SubscriptionOption[] options, boolean directExecution) {
+        completed = true;
         final boolean withPooledObjects = containsWithPooledObjects(options);
         collectingFuture.complete(drainAll(withPooledObjects));
         if (directExecution) {
