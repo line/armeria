@@ -119,7 +119,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 if (Flags.verboseExceptionSampler().isSampled(Http1VerboseWriteException.class)) {
                     f = combine(f, lastFuture);
                 } else {
-                   f = lastFuture;
+                    f = lastFuture;
                 }
             }
         }
