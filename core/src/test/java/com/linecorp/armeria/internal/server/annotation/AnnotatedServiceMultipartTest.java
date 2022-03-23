@@ -33,8 +33,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpObject;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.multipart.BodyPart;
@@ -95,14 +95,14 @@ public class AnnotatedServiceMultipartTest {
     @ParameterizedTest
     @ValueSource(strings = { "/uploadWithFileParam", "/uploadWithMultipartObject" })
     void testUploadFile(String path) throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
         final Multipart multipart = Multipart.of(
                 BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
                 BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
                 BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
 
         );
-        final HttpResponse execute = client.execute(multipart.toHttpRequest(path));
-        assertThat(execute.aggregate().get().contentUtf8()).isEqualTo("foo\nbar\narmeria");
+        final AggregatedHttpResponse response =
+                server.webClient().blocking().execute(multipart.toHttpRequest(path));
+        assertThat(response.contentUtf8()).isEqualTo("foo\nbar\narmeria");
     }
 }
