@@ -28,6 +28,7 @@ const endpointPathPlaceHolder = '/foo/bar';
 interface Props {
   editable: boolean;
   isAnnotatedService: boolean;
+  isGraphqlService: boolean;
   endpointPathOpen: boolean;
   examplePaths: SelectOption[];
   additionalPath: string;
@@ -46,7 +47,7 @@ const EndpointPath: React.FunctionComponent<Props> = (props) => (
     {props.endpointPathOpen && (
       // eslint-disable-next-line react/jsx-no-useless-fragment
       <>
-        {props.isAnnotatedService ? (
+        {props.isAnnotatedService || props.isGraphqlService ? (
           <>
             {props.examplePaths.length > 0 && (
               <>

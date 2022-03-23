@@ -1,0 +1,43 @@
+/*
+ * Copyright 2022 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+.CodeMirror {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+}
+
+.CodeMirror:hover {
+  border-bottom: 2px solid rgba(0, 0, 0, 0.87);
+}
+
+.CodeMirror.CodeMirror-focused {
+  border-bottom: 2px solid #3f51b5;
+}
+
+.CodeMirror pre.CodeMirror-placeholder {
+  color: #999;
+}
+
+.CodeMirror div.CodeMirror-linenumber {
+  padding: 0 3px 0 0;
+}
+
+.CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like {
+  font-size: 16px;
+}
+
+.CodeMirror-focused .CodeMirror-selected {
+  background: #b3d7fe;
+}
