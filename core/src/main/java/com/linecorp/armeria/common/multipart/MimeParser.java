@@ -42,8 +42,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.MultipartDecoder.BodyPartPublisher;
-import com.linecorp.armeria.common.stream.HttpDecoderInput;
-import com.linecorp.armeria.common.stream.HttpDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
+import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -91,12 +91,12 @@ final class MimeParser {
     /**
      * The input of multipart data.
      */
-    private final HttpDecoderInput in;
+    private final StreamDecoderInput in;
 
     /**
      * The output which the parsed {@link BodyPart}s are added to.
      */
-    private final HttpDecoderOutput<BodyPart> out;
+    private final StreamDecoderOutput<BodyPart> out;
 
     /**
      * The builder for the headers of a body part.
@@ -139,7 +139,7 @@ final class MimeParser {
     /**
      * Parses the MIME content.
      */
-    MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary,
+    MimeParser(StreamDecoderInput in, StreamDecoderOutput<BodyPart> out, String boundary,
                MultipartDecoder multipartDecoder) {
         this.in = in;
         this.out = out;
@@ -404,7 +404,7 @@ final class MimeParser {
         return body;
     }
 
-    private static ByteBuf safeReadBytes(HttpDecoderInput in, int length) {
+    private static ByteBuf safeReadBytes(StreamDecoderInput in, int length) {
         if (length == 0) {
             return Unpooled.EMPTY_BUFFER;
         } else {

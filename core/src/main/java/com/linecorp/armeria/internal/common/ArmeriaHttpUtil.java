@@ -232,8 +232,8 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
-     * be empty, and instead should be {@code /}.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a>
+     * states the path must not be empty, and instead should be {@code /}.
      */
     private static final String EMPTY_REQUEST_PATH = "/";
 
@@ -424,13 +424,13 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns {@code true} if the specified {@code request} is a CORS preflight request.
+     * Returns {@code true} if the specified {@code headers} is a CORS preflight request.
      */
-    public static boolean isCorsPreflightRequest(com.linecorp.armeria.common.HttpRequest request) {
-        requireNonNull(request, "request");
-        return request.method() == HttpMethod.OPTIONS &&
-               request.headers().contains(HttpHeaderNames.ORIGIN) &&
-               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    public static boolean isCorsPreflightRequest(RequestHeaders headers) {
+        requireNonNull(headers, "headers");
+        return headers.method() == HttpMethod.OPTIONS &&
+               headers.contains(HttpHeaderNames.ORIGIN) &&
+               headers.contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
 
     /**
@@ -787,7 +787,7 @@ public final class ArmeriaHttpUtil {
             builder.remove(disallowed.getKey());
         }
         for (AsciiString disallowed : PSEUDO_HEADERS) {
-           builder.remove(disallowed);
+            builder.remove(disallowed);
         }
         for (Entry<AsciiString, AsciiString> disallowed : HTTP_TRAILER_DISALLOWED_LIST) {
             builder.remove(disallowed.getKey());
@@ -1012,6 +1012,7 @@ public final class ArmeriaHttpUtil {
         if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
             return headers.toBuilder()
                           .contentLength(content.length())
+                          .removeAndThen(HttpHeaderNames.TRANSFER_ENCODING)
                           .build();
         }
 

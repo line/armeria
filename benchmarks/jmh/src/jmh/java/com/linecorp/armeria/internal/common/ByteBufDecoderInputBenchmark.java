@@ -83,7 +83,7 @@ public class ByteBufDecoderInputBenchmark {
     @Benchmark
     public void readByte(ByteBufData data, Blackhole bh) {
         final ByteBufDecoderInput input = data.input;
-        while (input.readableBytes() > 0) {
+        while (input.isReadable()) {
             bh.consume(input.readByte());
         }
     }

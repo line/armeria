@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -50,6 +51,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -69,6 +71,7 @@ import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -349,6 +352,11 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         return res;
     }
 
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        return ExchangeType.UNARY;
+    }
+
     @Nullable
     private SerializationFormat determineSerializationFormat(HttpRequest req) {
         final HttpHeaders headers = req.headers();
@@ -609,13 +617,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
-        if (cause instanceof HttpStatusException) {
-            httpRes.complete(HttpResponse.of(((HttpStatusException) cause).httpStatus()));
-            return;
-        }
-
-        if (cause instanceof HttpResponseException) {
-            httpRes.complete(((HttpResponseException) cause).httpResponse());
+        if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+            httpRes.complete(HttpResponse.ofFailure(cause));
             return;
         }
 

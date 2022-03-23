@@ -16,7 +16,6 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -243,54 +242,6 @@ class LoggingServiceTest {
                             matches(".*headers=\\[:method=GET, :path=/].*"));
         verify(logger).info(eq(RESPONSE_FORMAT), same(ctx), anyString());
         verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void duplicateSetRequestLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .requestLogLevel(LogLevel.INFO)
-                                               .requestLogLevelMapper(log -> LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void reversedDuplicateSetRequestLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .requestLogLevelMapper(log -> LogLevel.INFO)
-                                               .requestLogLevel(LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void duplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .successfulResponseLogLevel(LogLevel.INFO)
-                                               .responseLogLevelMapper(log -> LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void reversedDuplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .responseLogLevelMapper(log -> LogLevel.INFO)
-                                               .successfulResponseLogLevel(LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void duplicateSetFailureResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .failureResponseLogLevel(LogLevel.INFO)
-                                               .responseLogLevelMapper(log -> LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void reversedDuplicateSetFailureResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .responseLogLevelMapper(log -> LogLevel.INFO)
-                                               .failureResponseLogLevel(LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

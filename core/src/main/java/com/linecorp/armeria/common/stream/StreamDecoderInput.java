@@ -16,22 +16,28 @@
 
 package com.linecorp.armeria.common.stream;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
 
 /**
- * An input of {@link HttpDecoder} which is used to read a stream of {@link HttpData}.
+ * An input of {@link StreamDecoder} which is used to read a stream of objects.
  */
 @UnstableApi
-public interface HttpDecoderInput extends SafeCloseable {
+public interface StreamDecoderInput extends SafeCloseable {
 
     /**
      * Returns the number of readable bytes.
      */
     int readableBytes();
+
+    /**
+     * Returns whether this input contains any readable bytes.
+     */
+    default boolean isReadable() {
+        return readableBytes() > 0;
+    }
 
     /**
      * Reads a byte from the readable bytes.
@@ -58,14 +64,14 @@ public interface HttpDecoderInput extends SafeCloseable {
     ByteBuf readBytes(int length);
 
     /**
-     * Returns a byte at the specified absolute {@code index} in this {@link HttpDecoderInput}.
+     * Returns a byte at the specified absolute {@code index} in this {@link StreamDecoderInput}.
      *
      * @throws IllegalStateException if the specified {@code index} is greater than {@link #readableBytes()}
      */
     byte getByte(int index);
 
     /**
-     * Skips bytes of the specified {@code length} in this {@link HttpDecoderInput}.
+     * Skips bytes of the specified {@code length} in this {@link StreamDecoderInput}.
      *
      * @throws IllegalStateException if the specified {@code length} is greater than {@link #readableBytes()}
      */

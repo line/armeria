@@ -20,8 +20,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoder;
-import com.linecorp.armeria.common.stream.HttpDecoderInput;
-import com.linecorp.armeria.common.stream.HttpDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
+import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -81,14 +81,14 @@ class MainTest {
         private String buffer;
 
         @Override
-        public void processHeaders(HttpHeaders headers, HttpDecoderOutput<String> out) throws Exception {
+        public void processHeaders(HttpHeaders headers, StreamDecoderOutput<String> out) throws Exception {
             assertThat(headers)
                     .isEqualTo(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE,
                                                   MediaType.EVENT_STREAM));
         }
 
         @Override
-        public void process(HttpDecoderInput in, HttpDecoderOutput<String> out) throws Exception {
+        public void process(StreamDecoderInput in, StreamDecoderOutput<String> out) throws Exception {
             final int readableBytes = in.readableBytes();
             final ByteBuf byteBuf = in.readBytes(readableBytes);
             final String data;
