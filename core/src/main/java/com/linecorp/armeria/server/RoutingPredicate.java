@@ -62,7 +62,7 @@ final class RoutingPredicate<T> {
      *     <li>{@code !some-name} which means that the request must not contain a {@code some-name} header or
      *     parameter</li>
      *     <li>{@code some-name=some-value || some-other-value} which means that the request must have
-     *     a {@code some-name=some-value} or  a {@code some-other-value} header or parameter</li>
+     *     a {@code some-name=some-value} or a {@code some-other-value} header or parameter</li>
      * </ul>
      */
     private static final Pattern CONTAIN_PATTERN = Pattern.compile("^\\s*([!]?)([^\\s=><!]+)\\s*$");
