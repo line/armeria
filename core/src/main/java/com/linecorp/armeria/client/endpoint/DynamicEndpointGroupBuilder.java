@@ -16,15 +16,24 @@
 package com.linecorp.armeria.client.endpoint;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
-public class DynamicEndpointGroupBuilder
+/**
+ * Builds a new {@link DynamicEndpointGroup}.
+ */
+@UnstableApi
+public final class DynamicEndpointGroupBuilder
         extends AbstractDynamicEndpointGroupBuilder {
 
     @Nullable
     private EndpointSelectionStrategy selectionStrategy;
 
-    protected DynamicEndpointGroupBuilder() { }
+    DynamicEndpointGroupBuilder() {}
 
+    /**
+     * Sets the {@link EndpointSelectionStrategy} of the {@link DynamicEndpointGroup}.
+     * If unspecified, {@link EndpointSelectionStrategy#weightedRoundRobin()} is used.
+     */
     public DynamicEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = selectionStrategy;
         return this;
@@ -35,10 +44,13 @@ public class DynamicEndpointGroupBuilder
         return (DynamicEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 
+    /**
+     * Returns a newly created {@link DynamicEndpointGroup} with the properties configured so far.
+     */
     public DynamicEndpointGroup build() {
-        if(selectionStrategy != null) {
-            return new DynamicEndpointGroup(selectionStrategy, isAllowEmptyEndpoints());
+        if (selectionStrategy != null) {
+            return new DynamicEndpointGroup(selectionStrategy, shouldAllowEmptyEndpoints());
         }
-        return new DynamicEndpointGroup(isAllowEmptyEndpoints());
+        return new DynamicEndpointGroup(shouldAllowEmptyEndpoints());
     }
 }

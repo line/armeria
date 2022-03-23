@@ -13,29 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.endpoint;
 
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
- * A skeletal builder implementation for an {@link EndpointGroup} builder.
+ * A skeletal builder implementation for a {@link DynamicEndpointGroup} and its subtypes.
  */
+@UnstableApi
 public abstract class AbstractDynamicEndpointGroupBuilder {
+
     private boolean allowEmptyEndpoints;
 
-    protected AbstractDynamicEndpointGroupBuilder() { }
-
     /**
-     * Creates a new {@link AbstractDynamicEndpointGroupBuilder}.
-     *
-     * @param allowEmptyEndpoints whether the empty endpoints are allowed.
+     * Creates a new instance.
      */
-    protected AbstractDynamicEndpointGroupBuilder(boolean allowEmptyEndpoints) {
-        this.allowEmptyEndpoints = allowEmptyEndpoints;
-    }
+    protected AbstractDynamicEndpointGroupBuilder() {}
 
     /**
-     * Sets to allow empty endpoints
-     * @see AbstractDynamicEndpointGroupBuilder#allowEmptyEndpoints(boolean)
+     * Sets whether to allow an empty {@link Endpoint} list.
+     * If unspecified, an empty {@link Endpoint} list is not allowed.
      */
     protected AbstractDynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         this.allowEmptyEndpoints = allowEmptyEndpoints;
@@ -43,11 +41,9 @@ public abstract class AbstractDynamicEndpointGroupBuilder {
     }
 
     /**
-     * Returns whether the empty endpoints are allowed.
+     * Returns whether an empty {@link Endpoint} list should be allowed.
      */
-    protected final boolean isAllowEmptyEndpoints() {
+    protected final boolean shouldAllowEmptyEndpoints() {
         return allowEmptyEndpoints;
     }
-
-
 }
