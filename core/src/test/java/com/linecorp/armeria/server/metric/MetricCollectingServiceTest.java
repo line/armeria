@@ -25,7 +25,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -64,8 +63,7 @@ class MetricCollectingServiceTest {
 
     @Test
     void countResponseAsSuccessByServerBuilderSuccessFunction() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
-        client.get("/success401").aggregate().join();
+        server.webClient().blocking().get("/success401");
 
         // prometheus requests are collected.
         await().untilAsserted(() -> {
@@ -78,8 +76,7 @@ class MetricCollectingServiceTest {
 
     @Test
     void countResponseAsFailureByServerBuilderSuccessFunction() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
-        client.get("/failure402").aggregate().join();
+        server.webClient().blocking().get("/failure402");
 
         // prometheus requests are collected.
         await().untilAsserted(() -> {
@@ -92,8 +89,7 @@ class MetricCollectingServiceTest {
 
     @Test
     void countResponseAsSuccessByServiceBuilderSuccessFunction() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
-        client.get("/success402").aggregate().join();
+        server.webClient().blocking().get("/success402");
 
         // prometheus requests are collected.
         await().untilAsserted(() -> {
@@ -106,8 +102,7 @@ class MetricCollectingServiceTest {
 
     @Test
     void countResponseAsFailureByServiceSuccessFunction() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
-        client.get("/failure401").aggregate().join();
+        server.webClient().blocking().get("/failure401");
 
         // prometheus requests are collected.
         await().untilAsserted(() -> {
