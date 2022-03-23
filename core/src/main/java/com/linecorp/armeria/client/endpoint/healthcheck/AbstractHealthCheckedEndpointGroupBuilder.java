@@ -194,6 +194,11 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
         return this;
     }
 
+    @Override
+    protected AbstractHealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (AbstractHealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
+
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
@@ -209,7 +214,8 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
             }
         }
 
-        return new HealthCheckedEndpointGroup(delegate, protocol, port, retryBackoff,
+        return new HealthCheckedEndpointGroup(delegate, shouldAllowEmptyEndpoints(),
+                                              protocol, port, retryBackoff,
                                               clientOptionsBuilder.build(),
                                               newCheckerFactory(), healthCheckStrategy);
     }

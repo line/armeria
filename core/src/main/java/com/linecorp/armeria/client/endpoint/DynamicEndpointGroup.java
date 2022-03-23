@@ -63,23 +63,23 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
-    private boolean allowEmptyEndpoints;
+    private final boolean allowEmptyEndpoints;
 
     /**
      * Creates a new empty instance, using {@link EndpointSelectionStrategy#weightedRoundRobin()}
-     * and disallowing an empty {@link Endpoint} list.
+     * and allowing an empty {@link Endpoint} list.
      */
     public DynamicEndpointGroup() {
         this(EndpointSelectionStrategy.weightedRoundRobin());
     }
 
     /**
-     * Creates a new empty instance, disallowing an empty {@link Endpoint} list.
+     * Creates a new empty instance, allowing an empty {@link Endpoint} list.
      *
      * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
-        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        this(selectionStrategy, true);
     }
 
     /**
@@ -88,8 +88,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
      */
     protected DynamicEndpointGroup(boolean allowEmptyEndpoints) {
-        this();
-        this.allowEmptyEndpoints = allowEmptyEndpoints;
+        this(EndpointSelectionStrategy.weightedRoundRobin(), allowEmptyEndpoints);
     }
 
     /**
@@ -99,7 +98,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
      */
     protected DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints) {
-        this(selectionStrategy);
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         this.allowEmptyEndpoints = allowEmptyEndpoints;
     }
 

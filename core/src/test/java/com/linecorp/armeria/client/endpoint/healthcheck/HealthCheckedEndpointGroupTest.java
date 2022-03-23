@@ -245,7 +245,8 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(candidate1, candidate2);
 
         try (HealthCheckedEndpointGroup group =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {
@@ -271,7 +272,8 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(candidate1, candidate2);
 
         try (HealthCheckedEndpointGroup group =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {
@@ -300,7 +302,8 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(candidate1, candidate2, candidate2);
 
         try (HealthCheckedEndpointGroup unused =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {

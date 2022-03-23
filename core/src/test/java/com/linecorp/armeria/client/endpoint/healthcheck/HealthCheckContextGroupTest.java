@@ -48,7 +48,8 @@ class HealthCheckContextGroupTest {
         final EndpointGroup delegate = firstGroup.orElse(secondGroup);
 
         try (HealthCheckedEndpointGroup endpointGroup =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {
@@ -114,7 +115,8 @@ class HealthCheckContextGroupTest {
         final EndpointGroup delegate = EndpointGroup.of(static1, static2);
 
         try (HealthCheckedEndpointGroup endpointGroup =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {

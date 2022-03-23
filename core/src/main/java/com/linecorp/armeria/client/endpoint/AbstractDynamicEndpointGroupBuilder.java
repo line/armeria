@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public abstract class AbstractDynamicEndpointGroupBuilder {
 
-    private boolean allowEmptyEndpoints;
+    private boolean allowEmptyEndpoints = true;
 
     /**
      * Creates a new instance.
@@ -33,7 +33,7 @@ public abstract class AbstractDynamicEndpointGroupBuilder {
 
     /**
      * Sets whether to allow an empty {@link Endpoint} list.
-     * If unspecified, an empty {@link Endpoint} list is not allowed.
+     * If unspecified, an empty {@link Endpoint} list is allowed.
      */
     protected AbstractDynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         this.allowEmptyEndpoints = allowEmptyEndpoints;
