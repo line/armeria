@@ -84,4 +84,9 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
     public DnsServiceEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         return (DnsServiceEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
     }
+
+    @Override
+    public DnsServiceEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsServiceEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
 }

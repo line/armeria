@@ -26,6 +26,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
@@ -38,7 +39,7 @@ import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
 
-abstract class DnsEndpointGroupBuilder {
+abstract class DnsEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
 
     private final String hostname;
     @Nullable
@@ -176,5 +177,10 @@ abstract class DnsEndpointGroupBuilder {
 
     final EndpointSelectionStrategy selectionStrategy() {
         return selectionStrategy;
+    }
+
+    @Override
+    public DnsEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 }
