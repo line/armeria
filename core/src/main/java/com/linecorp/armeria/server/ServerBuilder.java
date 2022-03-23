@@ -70,6 +70,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -217,6 +218,7 @@ public final class ServerBuilder {
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
+        virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
     }
 
@@ -824,6 +826,16 @@ public final class ServerBuilder {
                                                                   .numThreads(numThreads)
                                                                   .build();
         return blockingTaskExecutor(executor, true);
+    }
+
+    /**
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder successFunction(SuccessFunction successFunction) {
+        virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
+        return this;
     }
 
     /**

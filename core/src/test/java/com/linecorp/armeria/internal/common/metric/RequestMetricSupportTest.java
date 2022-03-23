@@ -19,7 +19,6 @@ import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
-import java.util.function.BiPredicate;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,10 +28,9 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -230,7 +228,8 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, null);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
+                                   SuccessFunction.ofDefault());
         return ctx;
     }
 
@@ -261,7 +260,8 @@ class RequestMetricSupportTest {
         final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, null);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
+                                   SuccessFunction.ofDefault());
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -298,7 +298,8 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, null);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
+                                   SuccessFunction.ofDefault());
 
         ctx.logBuilder().name("BarService", "baz");
 
@@ -316,7 +317,8 @@ class RequestMetricSupportTest {
         final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET,
-                                   MeterIdPrefixFunction.ofDefault("foo"), true, null);
+                                   MeterIdPrefixFunction.ofDefault("foo"), true,
+                                   SuccessFunction.ofDefault());
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -325,7 +327,8 @@ class RequestMetricSupportTest {
                                         .endpoint(Endpoint.of("example.com", 8080))
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
-                                       MeterIdPrefixFunction.ofDefault("bar"), false, null);
+                                       MeterIdPrefixFunction.ofDefault("bar"), false,
+                                       SuccessFunction.ofDefault());
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();
@@ -376,7 +379,7 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        final BiPredicate<RequestContext, RequestLog> successFunction = (context, log) -> {
+        final SuccessFunction successFunction = (context, log) -> {
             final int statusCode = log.responseHeaders().status().code();
             return (statusCode >= 200 && statusCode < 400) || statusCode == 409;
         };

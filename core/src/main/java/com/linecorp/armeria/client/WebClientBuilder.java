@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -146,6 +147,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     @Override
     public WebClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (WebClientBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public WebClientBuilder successFunction(SuccessFunction successFunction) {
+        return (WebClientBuilder) super.successFunction(successFunction);
     }
 
     @Override

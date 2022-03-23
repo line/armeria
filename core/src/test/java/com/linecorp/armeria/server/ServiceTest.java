@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -53,10 +54,11 @@ public class ServiceTest {
 
         // Test if FooService.serviceAdded() is invoked.
         final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultLogName */ null,
-                /* defaultServiceName */ null,
+                                                    /* defaultServiceName */ null,
                                                     ServiceNaming.of("FooService"), 1, 1, true,
                                                     AccessLogWriter.disabled(), false,
                                                     CommonPools.blockingTaskExecutor(), true,
+                                                    SuccessFunction.always(),
                                                     Files.newTemporaryFolder().toPath());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);

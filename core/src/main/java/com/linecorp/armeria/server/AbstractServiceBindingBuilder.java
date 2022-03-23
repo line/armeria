@@ -28,6 +28,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -125,6 +126,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        defaultServiceConfigSetters.successFunction(successFunction);
         return this;
     }
 

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -37,6 +38,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -50,6 +52,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -64,6 +67,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -77,6 +81,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -90,6 +95,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new $$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -103,6 +109,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -116,6 +123,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -130,6 +138,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -143,6 +152,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -156,6 +166,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new $$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -169,6 +180,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -182,6 +194,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -196,6 +209,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -210,6 +224,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -224,6 +239,7 @@ class ServiceNamingTest {
                 new ServiceConfig(Route.ofCatchAll(), new $$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
+                                  SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);

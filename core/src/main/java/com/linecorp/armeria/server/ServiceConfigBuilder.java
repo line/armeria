@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -51,6 +52,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private AccessLogWriter accessLogWriter;
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
+    @Nullable
+    private SuccessFunction successFunction;
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
     @Nullable
@@ -139,6 +142,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder successFunction(
+            SuccessFunction successFunction) {
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         this.multipartUploadsLocation = multipartUploadsLocation;
         return this;
@@ -167,6 +177,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         boolean defaultShutdownAccessLogWriterOnStop,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         boolean defaultShutdownBlockingTaskExecutorOnStop,
+                        SuccessFunction defaultSuccessFunction,
                         Path defaultMultipartUploadsLocation) {
         return new ServiceConfig(
                 route, service, defaultLogName, defaultServiceName,
@@ -179,6 +190,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
                                              : defaultShutdownBlockingTaskExecutorOnStop,
+                successFunction != null ? successFunction : defaultSuccessFunction,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation);
     }
 
@@ -195,6 +207,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .add("blockingTaskExecutor", blockingTaskExecutor)
                           .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
+                          .add("successFunction", successFunction)
                           .add("multipartUploadsLocation", multipartUploadsLocation)
                           .toString();
     }

@@ -29,7 +29,9 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -180,6 +182,12 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (ClientBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    @UnstableApi
+    public ClientBuilder successFunction(SuccessFunction successFunction) {
+        return (ClientBuilder) super.successFunction(successFunction);
     }
 
     @Override
