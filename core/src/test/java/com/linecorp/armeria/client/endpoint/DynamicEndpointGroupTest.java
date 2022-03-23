@@ -74,33 +74,6 @@ class DynamicEndpointGroupTest {
     }
 
     @Test
-    void whenReadyContainsEndpointGroupWhenTheListIsUsedForTheFirstTime() {
-        final DynamicEndpointGroup endpointGroup1 = new DynamicEndpointGroup();
-        endpointGroup1.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
-                                                     Endpoint.of("127.0.0.1", 1111)));
-        assertThat(endpointGroup1.whenReady().join())
-                .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 3333),
-                                           Endpoint.of("127.0.0.1", 1111));
-        // Add a new endpoint.
-        endpointGroup1.addEndpoint(Endpoint.of("127.0.0.1", 2222));
-        // The list from whenReady is not changed.
-        assertThat(endpointGroup1.whenReady().join())
-                .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 3333),
-                                           Endpoint.of("127.0.0.1", 1111));
-
-        final DynamicEndpointGroup endpointGroup2 = new DynamicEndpointGroup();
-        endpointGroup2.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
-                                                     Endpoint.of("127.0.0.1", 1111)));
-        endpointGroup2.addEndpoint(Endpoint.of("127.0.0.1", 2222));
-
-        // whenReady contains every endpoint.
-        assertThat(endpointGroup2.whenReady().join())
-                .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 3333),
-                                           Endpoint.of("127.0.0.1", 1111),
-                                           Endpoint.of("127.0.0.1", 2222));
-    }
-
-    @Test
     void removeEndpointWhenAllowEmptyEndpointsIsTrue() {
         final Endpoint endpoint1 = Endpoint.of("127.0.0.1", 1111);
         final Endpoint endpoint2 = Endpoint.of("127.0.0.1", 2222);
