@@ -44,6 +44,14 @@ import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
  */
 public class DynamicEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
 
+    /**
+     * Returns a newly created builder.
+     */
+    @UnstableApi
+    public static DynamicEndpointGroupBuilder builder() {
+        return new DynamicEndpointGroupBuilder();
+    }
+
     // An empty list of endpoints we also use as a marker that we have not initialized endpoints yet.
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
             new ArrayList<>());
@@ -58,23 +66,26 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     private boolean allowEmptyEndpoints;
 
     /**
-     * Creates a new empty {@link DynamicEndpointGroup} that uses
-     * {@link EndpointSelectionStrategy#weightedRoundRobin()} as its {@link EndpointSelectionStrategy}.
+     * Creates a new empty instance, using {@link EndpointSelectionStrategy#weightedRoundRobin()}
+     * and disallowing an empty {@link Endpoint} list.
      */
     public DynamicEndpointGroup() {
         this(EndpointSelectionStrategy.weightedRoundRobin());
     }
 
     /**
-     * Creates a new empty {@link DynamicEndpointGroup} that uses the specified
-     * {@link EndpointSelectionStrategy}.
+     * Creates a new empty instance, disallowing an empty {@link Endpoint} list.
+     *
+     * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
     }
 
     /**
-     * Creates a new {@link DynamicEndpointGroup} with {@code allowEmptyEndpoints} to allow empty endpoint if necessary.
+     * Creates a new empty instance, using {@link EndpointSelectionStrategy#weightedRoundRobin()}.
+     *
+     * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
      */
     public DynamicEndpointGroup(boolean allowEmptyEndpoints) {
         this();
@@ -82,12 +93,22 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     }
 
     /**
-     * Creates a new {@link DynamicEndpointGroup} with the specified {@link EndpointSelectionStrategy and
-     * {@code allowEmptyEndpoints} to allow empty endpoint if necessary.
+     * Creates a new empty instance.
+     *
+     * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
+     * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints) {
         this(selectionStrategy);
         this.allowEmptyEndpoints = allowEmptyEndpoints;
+    }
+
+    /**
+     * Returns whether this {@link EndpointGroup} allows an empty {@link Endpoint} list.
+     */
+    @UnstableApi
+    public boolean allowsEmptyEndpoints() {
+        return allowEmptyEndpoints;
     }
 
     @Override
@@ -268,12 +289,14 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("selectionStrategy", selectionStrategy.getClass())
-                          .add("endpoints", truncatedEndpoints(endpoints))
-                          .add("numEndpoints", endpoints.size())
-                          .add("initialized", initialEndpointsFuture.isDone())
-                          .toString();
+        return MoreObjects
+                .toStringHelper(this)
+                .add("selectionStrategy", selectionStrategy.getClass())
+                .add("allowsEmptyEndpoints", allowEmptyEndpoints)
+                .add("endpoints", truncatedEndpoints(endpoints))
+                .add("numEndpoints", endpoints.size())
+                .add("initialized", initialEndpointsFuture.isDone())
+                .toString();
     }
 
     /**
@@ -293,13 +316,5 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             return endpoints;
         }
         return endpoints.stream().limit(maxEndpoints).collect(toImmutableList());
-    }
-
-    public boolean isAllowEmptyEndpoints() {
-        return allowEmptyEndpoints;
-    }
-
-    public static DynamicEndpointGroupBuilder builder() {
-        return new DynamicEndpointGroupBuilder();
     }
 }

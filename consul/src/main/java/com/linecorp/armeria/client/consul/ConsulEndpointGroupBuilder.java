@@ -41,7 +41,9 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
  * }</pre>
  */
 @UnstableApi
-public final class ConsulEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder implements ConsulConfigSetters {
+public final class ConsulEndpointGroupBuilder
+        extends AbstractDynamicEndpointGroupBuilder implements ConsulConfigSetters {
+
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
 
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
