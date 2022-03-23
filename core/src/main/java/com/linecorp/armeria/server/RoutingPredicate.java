@@ -154,7 +154,6 @@ final class RoutingPredicate<T> {
             }
         }
 
-        assert result != null;
         return result;
     }
 
