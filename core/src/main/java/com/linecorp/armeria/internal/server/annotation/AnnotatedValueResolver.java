@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy.NONE;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
 
@@ -1010,7 +1009,7 @@ final class AnnotatedValueResolver {
         private BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
         @Nullable
         private BeanFactoryId beanFactoryId;
-        private AggregationStrategy aggregation = NONE;
+        private AggregationStrategy aggregation = AggregationStrategy.NONE;
         private boolean warnedRedundantUse;
 
         private Builder(AnnotatedElement annotatedElement, Type type) {
@@ -1351,7 +1350,7 @@ final class AnnotatedValueResolver {
         requireNonNull(strategy, "strategy");
         final MediaType mediaType = headers.contentType();
         if (isMultipartFormData(mediaType)) {
-            if (strategy == NONE) {
+            if (strategy == AggregationStrategy.NONE) {
                 return AggregationType.NONE;
             }
             return AggregationType.MULTIPART;
@@ -1380,20 +1379,6 @@ final class AnnotatedValueResolver {
      */
     enum AggregationStrategy {
         NONE, ALWAYS, FOR_FORM_DATA;
-
-        /**
-         * Returns whether the request should be aggregated.
-         */
-        static boolean aggregationRequired(AggregationStrategy strategy, RequestHeaders headers) {
-            requireNonNull(strategy, "strategy");
-            switch (strategy) {
-                case ALWAYS:
-                    return true;
-                case FOR_FORM_DATA:
-                    return isFormData(headers.contentType());
-            }
-            return false;
-        }
 
         /**
          * Returns {@link AggregationStrategy} which specifies how to aggregate the request

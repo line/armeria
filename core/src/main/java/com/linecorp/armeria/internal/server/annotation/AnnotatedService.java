@@ -56,8 +56,10 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -101,7 +103,7 @@ public final class AnnotatedService implements HttpService {
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final CompletableFuture<AggregatedResult>
-            NO_AGGREGATION_FUTURE = CompletableFuture.completedFuture(AggregatedResult.EMPTY);
+            NO_AGGREGATION_FUTURE = UnmodifiableFuture.completedFuture(AggregatedResult.EMPTY);
 
     static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
@@ -489,10 +491,10 @@ public final class AnnotatedService implements HttpService {
     @Override
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
         // TODO(ikhoon): Support a non-streaming response type.
-        if (AggregationStrategy.aggregationRequired(aggregationStrategy, headers)) {
-            return ExchangeType.RESPONSE_STREAMING;
-        } else {
+        if (AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) == AggregationType.NONE) {
             return ExchangeType.BIDI_STREAMING;
+        } else {
+            return ExchangeType.RESPONSE_STREAMING;
         }
     }
 

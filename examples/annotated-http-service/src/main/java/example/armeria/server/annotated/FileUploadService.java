@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.AggregatedHttpObject;
@@ -30,7 +29,7 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 public class FileUploadService {
     @Post("/upload")
     public HttpResponse upload(@Param String text, @Param File file) throws IOException {
-        return HttpResponse.from(CompletableFuture.supplyAsync(() -> {
+        return HttpResponse.from(() -> {
             try {
                 final String content = Files.readString(file.toPath());
                 return HttpResponse.ofJson(Arrays.asList(text, content));
@@ -39,7 +38,7 @@ public class FileUploadService {
             } finally {
                 file.delete();
             }
-        }, ServiceRequestContext.current().blockingTaskExecutor().withoutContext()));
+        }, ServiceRequestContext.current().blockingTaskExecutor().withoutContext());
     }
 
     @Post("/multipartObject")
