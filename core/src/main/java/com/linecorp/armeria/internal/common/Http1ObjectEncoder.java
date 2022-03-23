@@ -127,11 +127,12 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         final ChannelPromise promise = channel().newPromise();
         final FutureListener<Void> listener =
                 new FutureListener<Void>() {
-                    private final AtomicInteger counter = new AtomicInteger(2);
+                    private int remaining = 2;
 
                     @Override
                     public void operationComplete(Future<Void> ignore) throws Exception {
-                        if (counter.decrementAndGet() == 0) {
+                        remaining--;
+                        if (remaining == 0) {
                             final Throwable firstCause = first.cause();
                             final Throwable secondCause = second.cause();
                             if (firstCause != null) {
