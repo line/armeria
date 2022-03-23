@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -35,7 +37,7 @@ public final class DynamicEndpointGroupBuilder
      * If unspecified, {@link EndpointSelectionStrategy#weightedRoundRobin()} is used.
      */
     public DynamicEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
-        this.selectionStrategy = selectionStrategy;
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         return this;
     }
 

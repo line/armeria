@@ -31,6 +31,10 @@ public abstract class AbstractDynamicEndpointGroupBuilder {
      */
     protected AbstractDynamicEndpointGroupBuilder() {}
 
+    // Note that we don't have `selectionStrategy()` here because some subclasses are delegating and
+    // thus they use the `EndpointSelectionStrategy` of the delegate.
+    // See: AbstractHealthCheckedEndpointGroupBuilder
+
     /**
      * Sets whether to allow an empty {@link Endpoint} list.
      * If unspecified, an empty {@link Endpoint} list is allowed.
