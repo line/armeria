@@ -115,7 +115,12 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         } else {
             f = write(id, converted, false);
             if (endStream) {
-                f = combine(f, write(id, LastHttpContent.EMPTY_LAST_CONTENT, true));
+                final ChannelFuture lastFuture = write(id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+                if (Flags.verboseExceptionSampler().isSampled(Http1VerboseWriteException.class)) {
+                    f = combine(f, lastFuture);
+                } else {
+                   f = lastFuture;
+                }
             }
         }
         ch.flush();
@@ -124,32 +129,36 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     private ChannelPromise combine(ChannelFuture first, ChannelFuture second) {
         final ChannelPromise promise = channel().newPromise();
-        final FutureListener<Void> listener =
-                new FutureListener<Void>() {
-                    private int remaining = 2;
+        final FutureListener<Void> listener = new FutureListener<Void>() {
+            private int remaining = 2;
 
-                    @Override
-                    public void operationComplete(Future<Void> ignore) throws Exception {
-                        remaining--;
-                        if (remaining == 0) {
-                            final Throwable firstCause = first.cause();
-                            final Throwable secondCause = second.cause();
-                            if (firstCause != null) {
-                                if (Flags.verboseExceptionSampler().isSampled(firstCause.getClass()) &&
-                                    secondCause != null) {
-                                    firstCause.addSuppressed(secondCause);
-                                }
-                                promise.setFailure(firstCause);
-                                return;
-                            }
-                            if (secondCause != null) {
-                                promise.setFailure(secondCause);
-                                return;
-                            }
-                            promise.setSuccess();
+            @Override
+            public void operationComplete(Future<Void> ignore) throws Exception {
+                remaining--;
+                if (remaining == 0) {
+                    final Throwable firstCause = first.cause();
+                    final Throwable secondCause = second.cause();
+
+                    Throwable combinedCause = null;
+                    if (firstCause != null) {
+                        combinedCause = firstCause;
+                    }
+                    if (secondCause != null) {
+                        if (combinedCause == null) {
+                            combinedCause = secondCause;
+                        } else {
+                            combinedCause.addSuppressed(secondCause);
                         }
                     }
-                };
+
+                    if (combinedCause != null) {
+                        promise.setFailure(combinedCause);
+                    } else {
+                        promise.setSuccess();
+                    }
+                }
+            }
+        };
         first.addListener(listener);
         second.addListener(listener);
         return promise;
@@ -433,5 +442,16 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     protected final SessionProtocol protocol() {
         return protocol;
+    }
+
+    /**
+     * A dummy {@link Exception} to sample write exceptions.
+     */
+    @SuppressWarnings("serial")
+    private static final class Http1VerboseWriteException extends Exception {
+       private Http1VerboseWriteException() {
+           // Only the class type is used for sampling.
+           throw new UnsupportedOperationException();
+       }
     }
 }
