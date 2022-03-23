@@ -183,7 +183,8 @@ public final class HttpHeaderNames {
      * The HTTP <a href="https://wicg.github.io/private-network-access/#headers">{@code
      * Access-Control-Allow-Private-Network}</a> header field name.
      */
-    public static final AsciiString ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK = create("Access-Control-Allow-Private-Network");
+    public static final AsciiString ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK =
+            create("Access-Control-Allow-Private-Network");
     /**
      * The HTTP {@code "Access-Control-Request-Headers"} header field name.
      */
