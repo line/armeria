@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Splitter;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Flags;
@@ -44,7 +43,7 @@ import io.netty.util.AsciiString;
 
 /**
  * A {@link Predicate} to evaluate whether a request can be accepted by a service method.
- * Currently predicates for {@link HttpHeaders} and {@link QueryParams} are supported.
+ * Currently, predicates for {@link HttpHeaders} and {@link QueryParams} are supported.
  *
  * @param <T> the type of the object to be tested
  */
@@ -69,17 +68,13 @@ final class RoutingPredicate<T> {
     private static final Pattern CONTAIN_PATTERN = Pattern.compile("^\\s*([!]?)([^\\s=><!]+)\\s*$");
     private static final Pattern COMPARE_PATTERN = Pattern.compile("^\\s*([^\\s!><=]+)\\s*([><!]?=|>|<)(.*)$");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s");
-    private static final Pattern TRAILING_PIPE_PATTERN = Pattern.compile("\\|+$");
-    private static final Splitter OR_SPLITTER = Splitter.on("||").trimResults();
-    private static final RoutingPredicate<?> EMPTY_INSTANCE = new RoutingPredicate<>("", x -> false);
+    private static final Pattern OR_PATTERN = Pattern.compile("\\s*\\|\\|\\s*");
 
-    @SuppressWarnings("unchecked")
     static List<RoutingPredicate<HttpHeaders>> copyOfHeaderPredicates(Iterable<String> predicates) {
         return Streams.stream(predicates)
                       .map(RoutingPredicate::ofHeaders).collect(toImmutableList());
     }
 
-    @SuppressWarnings("unchecked")
     static List<RoutingPredicate<QueryParams>> copyOfParamPredicates(Iterable<String> predicates) {
         return Streams.stream(predicates)
                       .map(RoutingPredicate::ofParams).collect(toImmutableList());
@@ -117,68 +112,61 @@ final class RoutingPredicate<T> {
                                          Function<String, U> nameConverter,
                                          Function<U, Predicate<T>> containsPredicate,
                                          BiFunction<U, String, Predicate<T>> equalsPredicate) {
-        final RoutingPredicate<T> routingPredicate;
-        final RoutingPredicate<T> orRoutingPredicate = buildOrRoutingPredicate(predicateExpr,
-                                                                               nameConverter,
-                                                                               containsPredicate,
-                                                                               equalsPredicate);
-        if (orRoutingPredicate != null) {
-            routingPredicate = orRoutingPredicate;
-        } else {
-            routingPredicate = buildSingleExprRoutingPredicate(predicateExpr,
-                                                               nameConverter,
-                                                               containsPredicate,
-                                                               equalsPredicate);
-        }
+        final RoutingPredicate<T> routingPredicate = parseRoutingPredicate(predicateExpr,
+                                                                           nameConverter,
+                                                                           containsPredicate,
+                                                                           equalsPredicate);
+
         checkArgument(routingPredicate != null,
-                      "Invalid predicate: %s (expected: '%s', '%s' or '%s')",
-                      predicateExpr, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern(), "A combination of " +
-                              "the previous predicates separated by '||'");
+                      "Invalid predicate: %s (expected: " +
+                      "name, !name, name=value, name!=value or any of them concatenated by '||')",
+                      predicateExpr);
+
         return new RoutingPredicate<>(routingPredicate.name, routingPredicate.delegate);
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
-    private static <T, U> RoutingPredicate<T> buildOrRoutingPredicate(
+    private static <T, U> RoutingPredicate<T> parseRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
             Function<U, Predicate<T>> containsPredicate,
             BiFunction<U, String, Predicate<T>> equalsPredicate) {
-        if (predicateExpr.contains("||")) {
-            if (predicateExpr.endsWith("|")) {
-                throw new IllegalArgumentException("Invalid predicate: " + predicateExpr +
-                                                           "(expected: '" +
-                                                           TRAILING_PIPE_PATTERN.matcher(predicateExpr)
-                                                                                .replaceAll("") +
-                                                           "')");
+
+        RoutingPredicate<T> result = null;
+        for (String expr : OR_PATTERN.split(predicateExpr, -1)) {
+            if (expr.isEmpty()) {
+                // Contains an empty expression.
+                return null;
             }
 
-            return Streams
-                    .stream(OR_SPLITTER.split(predicateExpr))
-                    .map(expression -> {
-                        final RoutingPredicate<T> routingPredicate =
-                                buildSingleExprRoutingPredicate(expression,
-                                                                nameConverter,
-                                                                containsPredicate,
-                                                                equalsPredicate);
-                        checkArgument(routingPredicate != null && !expression.isEmpty(),
-                                      "Invalid predicate: %s. Expression: %s (expected: '%s' or " +
-                                              "'%s')",
-                                      predicateExpr,
-                                      expression,
-                                      CONTAIN_PATTERN.pattern(),
-                                      COMPARE_PATTERN.pattern());
-                        return routingPredicate;
-                    })
-                    .reduce((RoutingPredicate<T>) EMPTY_INSTANCE, RoutingPredicate::or);
+            final RoutingPredicate<T> predicate =
+                    parseSingleRoutingPredicate(expr,
+                                                nameConverter,
+                                                containsPredicate,
+                                                equalsPredicate);
+            if (predicate == null) {
+                return null;
+            }
+
+            if (result == null) {
+                result = predicate;
+            } else {
+                result = or(result, predicate);
+            }
         }
-        return null;
+
+        assert result != null;
+        return result;
     }
 
     @Nullable
-    private static <T, U> RoutingPredicate<T> buildSingleExprRoutingPredicate(
+    private static <T, U> RoutingPredicate<T> parseSingleRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
             Function<U, Predicate<T>> containsPredicate,
             BiFunction<U, String, Predicate<T>> equalsPredicate) {
+        if (predicateExpr.contains("|")) {
+            // `|` should appear only in the or-form such as `foo || bar`.
+            return null;
+        }
         final RoutingPredicate<T> routingPredicate;
         final RoutingPredicate<T> containRoutingPredicate =
                 buildContainRoutingPredicate(predicateExpr, nameConverter, containsPredicate);
@@ -204,11 +192,11 @@ final class RoutingPredicate<T> {
 
             final Predicate<T> predicate = equalsPredicate.apply(nameConverter.apply(name), value);
             final String noWsValue = WHITESPACE_PATTERN.matcher(value).replaceAll("_");
-            if ("=".equals(comparator)) {
-                return eq(name, noWsValue, predicate);
-            } else {
-                assert "!=".equals(comparator);
-                return notEq(name, noWsValue, predicate);
+            switch (comparator) {
+                case "=":
+                    return eq(name, noWsValue, predicate);
+                case "!=":
+                    return notEq(name, noWsValue, predicate);
             }
         }
         return null;
