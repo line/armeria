@@ -99,6 +99,7 @@ class DnsAddressEndpointGroupTest {
                                                 .port(8080)
                                                 .serverAddresses(server.addr())
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
+                                                .dnsCache(NoopDnsCache.INSTANCE)
                                                 .build()) {
 
                 assertThat(group.whenReady().get(10, TimeUnit.SECONDS)).containsExactly(
@@ -122,6 +123,7 @@ class DnsAddressEndpointGroupTest {
                                                 .port(8080)
                                                 .serverAddresses(server.addr())
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .dnsCache(NoopDnsCache.INSTANCE)
                                                 .build()) {
 
                 assertThat(group.whenReady().get()).containsExactly(
