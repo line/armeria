@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -535,5 +536,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public GrpcClientBuilder followRedirects(RedirectConfig redirectConfig) {
         return (GrpcClientBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public GrpcClientBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

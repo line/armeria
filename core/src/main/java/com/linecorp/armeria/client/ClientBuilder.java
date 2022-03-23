@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -264,5 +265,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder followRedirects(RedirectConfig redirectConfig) {
         return (ClientBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public ClientBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (ClientBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

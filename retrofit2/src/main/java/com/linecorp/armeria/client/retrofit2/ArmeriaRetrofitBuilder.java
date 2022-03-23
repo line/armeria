@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -37,6 +38,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -425,5 +427,11 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ArmeriaRetrofitBuilder followRedirects(RedirectConfig redirectConfig) {
         return (ArmeriaRetrofitBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (ArmeriaRetrofitBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

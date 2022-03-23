@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -193,5 +194,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {
         return (ClientOptionsBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public ClientOptionsBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (ClientOptionsBuilder) super.contextCustomizer(contextCustomizer);
     }
 }
