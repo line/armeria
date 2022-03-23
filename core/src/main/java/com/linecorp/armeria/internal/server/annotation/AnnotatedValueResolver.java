@@ -1382,6 +1382,20 @@ final class AnnotatedValueResolver {
         NONE, ALWAYS, FOR_FORM_DATA;
 
         /**
+         * Returns whether the request should be aggregated.
+         */
+        static boolean aggregationRequired(AggregationStrategy strategy, RequestHeaders headers) {
+            requireNonNull(strategy, "strategy");
+            switch (strategy) {
+                case ALWAYS:
+                    return true;
+                case FOR_FORM_DATA:
+                    return isFormData(headers.contentType());
+            }
+            return false;
+        }
+
+        /**
          * Returns {@link AggregationStrategy} which specifies how to aggregate the request
          * for injecting its parameters.
          */
