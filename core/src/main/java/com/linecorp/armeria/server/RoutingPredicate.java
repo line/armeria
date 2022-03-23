@@ -168,17 +168,34 @@ final class RoutingPredicate<T> {
         }
         final RoutingPredicate<T> routingPredicate;
         final RoutingPredicate<T> containRoutingPredicate =
-                buildContainRoutingPredicate(predicateExpr, nameConverter, containsPredicate);
+                parseContainRoutingPredicate(predicateExpr, nameConverter, containsPredicate);
         if (containRoutingPredicate != null) {
             routingPredicate = containRoutingPredicate;
         } else {
-            routingPredicate = buildCompareRoutingPredicate(predicateExpr, nameConverter, equalsPredicate);
+            routingPredicate = parseCompareRoutingPredicate(predicateExpr, nameConverter, equalsPredicate);
         }
         return routingPredicate;
     }
 
     @Nullable
-    private static <T, U> RoutingPredicate<T> buildCompareRoutingPredicate(
+    private static <T, U> RoutingPredicate<T> parseContainRoutingPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            Function<U, Predicate<T>> containsPredicate) {
+        final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
+        if (containMatcher.matches()) {
+            final U name = nameConverter.apply(containMatcher.group(2));
+            final Predicate<T> predicate = containsPredicate.apply(name);
+            if ("!".equals(containMatcher.group(1))) {
+                return negated(containMatcher.group(2), predicate);
+            } else {
+                return from(predicateExpr, predicate);
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private static <T, U> RoutingPredicate<T> parseCompareRoutingPredicate(
             String predicateExpr, Function<String, U> nameConverter,
             BiFunction<U, String, Predicate<T>> equalsPredicate) {
         final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicateExpr);
@@ -196,23 +213,6 @@ final class RoutingPredicate<T> {
                     return eq(name, noWsValue, predicate);
                 case "!=":
                     return notEq(name, noWsValue, predicate);
-            }
-        }
-        return null;
-    }
-
-    @Nullable
-    private static <T, U> RoutingPredicate<T> buildContainRoutingPredicate(
-            String predicateExpr, Function<String, U> nameConverter,
-            Function<U, Predicate<T>> containsPredicate) {
-        final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
-        if (containMatcher.matches()) {
-            final U name = nameConverter.apply(containMatcher.group(2));
-            final Predicate<T> predicate = containsPredicate.apply(name);
-            if ("!".equals(containMatcher.group(1))) {
-                return negated(containMatcher.group(2), predicate);
-            } else {
-                return from(predicateExpr, predicate);
             }
         }
         return null;
