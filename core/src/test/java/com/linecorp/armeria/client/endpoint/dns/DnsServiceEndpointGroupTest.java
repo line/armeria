@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.NoopDnsCache;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -43,17 +44,17 @@ public class DnsServiceEndpointGroupTest {
                                          .addRecord(ANSWER, newSrvRecord("foo.com.", 3, 4, "b.foo.com."))
                                          .addRecord(ANSWER, newSrvRecord("unrelated.com.", 0, 0, "asdf.com."))
                                          .addRecord(ANSWER, newTooShortSrvRecord("foo.com."))
-                                         .addRecord(ANSWER, newBadNameSrvRecord("foo.com."))
-        ))) {
-            try (DnsServiceEndpointGroup group =
-                         DnsServiceEndpointGroup.builder("foo.com")
-                                                .serverAddresses(server.addr())
-                                                .build()) {
+                                         .addRecord(ANSWER, newBadNameSrvRecord("foo.com."))));
 
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("a.foo.com", 2).withWeight(1),
-                        Endpoint.of("b.foo.com", 4).withWeight(3));
-            }
+             DnsServiceEndpointGroup group =
+                     DnsServiceEndpointGroup.builder("foo.com")
+                                            .serverAddresses(server.addr())
+                                            .dnsCache(NoopDnsCache.INSTANCE)
+                                            .build()) {
+
+            assertThat(group.whenReady().get()).containsExactly(
+                    Endpoint.of("a.foo.com", 2).withWeight(1),
+                    Endpoint.of("b.foo.com", 4).withWeight(3));
         }
     }
 
@@ -62,16 +63,16 @@ public class DnsServiceEndpointGroupTest {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("bar.com.", SRV),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newCnameRecord("bar.com.", "baz.com."))
-                                         .addRecord(ANSWER, newSrvRecord("baz.com.", 5, 6, "c.baz.com."))
-        ))) {
-            try (DnsServiceEndpointGroup group =
-                         DnsServiceEndpointGroup.builder("bar.com")
-                                                .serverAddresses(server.addr())
-                                                .build()) {
+                                         .addRecord(ANSWER, newSrvRecord("baz.com.", 5, 6, "c.baz.com."))));
 
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("c.baz.com", 6).withWeight(5));
-            }
+             DnsServiceEndpointGroup group =
+                     DnsServiceEndpointGroup.builder("bar.com")
+                                            .serverAddresses(server.addr())
+                                            .dnsCache(NoopDnsCache.INSTANCE)
+                                            .build()) {
+
+            assertThat(group.whenReady().get()).containsExactly(
+                    Endpoint.of("c.baz.com", 6).withWeight(5));
         }
     }
 
@@ -79,14 +80,17 @@ public class DnsServiceEndpointGroupTest {
     void noPort() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("no-port.com.", SRV),
-                new DefaultDnsResponse(0).addRecord(ANSWER, newSrvRecord("no-port.com.", 7, 0, "d.no-port.com"))
-        ))) {
-            try (DnsServiceEndpointGroup group =
-                         DnsServiceEndpointGroup.builder("no-port.com")
-                                                .serverAddresses(server.addr()).build()) {
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("d.no-port.com"));
-            }
+                new DefaultDnsResponse(0).addRecord(ANSWER,
+                                                    newSrvRecord("no-port.com.", 7, 0, "d.no-port.com"))));
+
+             DnsServiceEndpointGroup group =
+                     DnsServiceEndpointGroup.builder("no-port.com")
+                                            .dnsCache(NoopDnsCache.INSTANCE)
+                                            .serverAddresses(server.addr())
+                                            .build()) {
+
+            assertThat(group.whenReady().get()).containsExactly(
+                    Endpoint.of("d.no-port.com"));
         }
     }
 

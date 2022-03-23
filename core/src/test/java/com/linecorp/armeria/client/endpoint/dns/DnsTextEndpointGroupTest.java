@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.NoopDnsCache;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -48,21 +49,24 @@ class DnsTextEndpointGroupTest {
                                          .addRecord(ANSWER, newTooLongTxtRecord("foo.com."))
                                          .addRecord(ANSWER, newTxtRecord("foo.com.", "unrelated_txt"))
                                          .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=group:foo"))
-                                         .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=b:a:d"))
-        ))) {
-            try (DnsTextEndpointGroup group = DnsTextEndpointGroup.builder("foo.com", txt -> {
-                final String txtStr = new String(txt, StandardCharsets.US_ASCII);
-                if (txtStr.startsWith("endpoint=")) {
-                    return Endpoint.parse(txtStr.substring(9));
-                } else {
-                    return null;
-                }
-            }).serverAddresses(server.addr()).build()) {
+                                         .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=b:a:d"))));
 
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("a.foo.com"),
-                        Endpoint.of("b.foo.com"));
-            }
+             DnsTextEndpointGroup group =
+                     DnsTextEndpointGroup.builder("foo.com", txt -> {
+                                             final String txtStr = new String(txt, StandardCharsets.US_ASCII);
+                                             if (txtStr.startsWith("endpoint=")) {
+                                                 return Endpoint.parse(txtStr.substring(9));
+                                             } else {
+                                                 return null;
+                                             }
+                                         })
+                                         .serverAddresses(server.addr())
+                                         .dnsCache(NoopDnsCache.INSTANCE)
+                                         .build()) {
+
+            assertThat(group.whenReady().get()).containsExactly(
+                    Endpoint.of("a.foo.com"),
+                    Endpoint.of("b.foo.com"));
         }
     }
 
