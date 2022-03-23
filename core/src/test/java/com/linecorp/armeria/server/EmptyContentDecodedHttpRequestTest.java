@@ -36,7 +36,7 @@ class EmptyContentDecodedHttpRequestTest {
     void emptyContent() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final EmptyContentDecodedHttpRequest req =
-                new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true);
+                new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true, null, null);
 
         StepVerifier.create(req)
                     .expectComplete()

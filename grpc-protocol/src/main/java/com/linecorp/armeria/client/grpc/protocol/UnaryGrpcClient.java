@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.grpc.protocol;
 
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -211,9 +209,9 @@ public final class UnaryGrpcClient {
 
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                            final ArmeriaMessageDeframer deframer =
-                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE, ctx.alloc(), isGrpcWebText);
                            msg.toHttpResponse()
-                              .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
+                              .decode(deframer, ctx.alloc())
                               .subscribe(new DeframedMessageSubscriber(
                                                  ctx, msg, serializationFormat, responseFuture),
                                          ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);

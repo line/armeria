@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +37,9 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -54,8 +55,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     private final ResponseLogger responseLogger = new ResponseLogger();
 
     private final Logger logger;
-    private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
-    private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
+    private final RequestLogLevelMapper requestLogLevelMapper;
+    private final ResponseLogLevelMapper responseLogLevelMapper;
 
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             requestHeadersSanitizer;
@@ -82,8 +83,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     AbstractLoggingClient(
             Client<I, O> delegate,
             @Nullable Logger logger,
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            RequestLogLevelMapper requestLogLevelMapper,
+            ResponseLogLevelMapper responseLogLevelMapper,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, Object,

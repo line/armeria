@@ -46,6 +46,7 @@ import java.util.zip.InflaterInputStream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -617,6 +618,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
+    @EnabledIf("io.netty.handler.codec.compression.Brotli#isAvailable")
     void testStrings_acceptEncodingBrotli(WebClient client) throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "br");

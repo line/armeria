@@ -62,7 +62,7 @@ configure(projectsWithFlags('java')) {
                     } else {
                         actualThriftPath =
                                 "${libDir}/thrift" +
-                                "/${project.findProperty('thriftVersion')?: '0.15'}" +
+                                "/${project.findProperty('thriftVersion')?: '0.16'}" +
                                 "/thrift.${rootProject.osdetector.classifier}"
                     }
 

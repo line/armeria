@@ -5,7 +5,7 @@ import ReactMixitup from 'react-mixitup';
 import shuffleSeed from 'shuffle-seed';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 
-import styles from './thank-you.module.less';
+import * as styles from './thank-you.module.less';
 
 const { Paragraph } = Typography;
 
