@@ -1041,6 +1041,13 @@ public final class VirtualHostBuilder {
             shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
         }
 
+        final SuccessFunction successFunction;
+        if (this.successFunction != null) {
+            successFunction = this.successFunction;
+        } else {
+            successFunction = template.successFunction;
+        }
+
         final Path multipartUploadsLocation =
                 this.multipartUploadsLocation != null ?
                 this.multipartUploadsLocation : template.multipartUploadsLocation;

@@ -56,7 +56,7 @@ class AnnotatedServiceExchangeTypeTest {
         assertThat(response.contentUtf8()).isEqualTo(ExchangeType.BIDI_STREAMING.toString());
 
         final Multipart multipart = Multipart.of(
-                BodyPart.of(ContentDisposition.of("form-data", "file", "foo.txt"), "foo"));
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"));
         response = server.webClient().blocking().execute(multipart.toHttpRequest("/multipart-bidi-streaming"));
         assertThat(response.contentUtf8()).isEqualTo(ExchangeType.BIDI_STREAMING.toString());
     }
