@@ -87,7 +87,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      *
      * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
      */
-    public DynamicEndpointGroup(boolean allowEmptyEndpoints) {
+    protected DynamicEndpointGroup(boolean allowEmptyEndpoints) {
         this();
         this.allowEmptyEndpoints = allowEmptyEndpoints;
     }
@@ -98,7 +98,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
      * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
      */
-    public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints) {
+    protected DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints) {
         this(selectionStrategy);
         this.allowEmptyEndpoints = allowEmptyEndpoints;
     }
