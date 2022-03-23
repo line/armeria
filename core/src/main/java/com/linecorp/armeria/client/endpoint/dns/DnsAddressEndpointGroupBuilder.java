@@ -77,7 +77,8 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
             }
         });
         return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), backoff(), minTtl(), maxTtl(),
-                                           resolvedAddressTypes, hostname(), port, resolver);
+                                           resolvedAddressTypes, hostname(), port, resolver,
+                                           shouldAllowEmptyEndpoints());
     }
 
     // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.

@@ -424,6 +424,21 @@ class DnsAddressEndpointGroupTest {
         }
     }
 
+    @Test
+    void allowEmptyEndpoint() {
+        try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("foo.com")
+                                                                    .allowEmptyEndpoints(false)
+                                                                    .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isFalse();
+        }
+
+        try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("foo.com")
+                                                                    .allowEmptyEndpoints(true)
+                                                                    .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isTrue();
+        }
+    }
+
     private static DnsRecord newCompatibleAddressRecord(String name, String ipV4Addr) {
         final ByteBuf content = Unpooled.buffer();
         content.writeZero(12);

@@ -26,6 +26,7 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.client.AbstractDnsResolverBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroupSetters;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
@@ -36,13 +37,16 @@ import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import io.netty.channel.EventLoop;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 
-abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
+abstract class DnsEndpointGroupBuilder
+        extends AbstractDnsResolverBuilder implements DynamicEndpointGroupSetters {
 
     private final String hostname;
     @Nullable
     private EventLoop eventLoop;
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
+    private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder =
+            new DnsDynamicEndpointGroupBuilder();
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
@@ -98,16 +102,21 @@ abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
         return selectionStrategy;
     }
 
-    @Override
-    public DnsEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (DnsEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    final boolean shouldAllowEmptyEndpoints() {
+        return dnsDynamicEndpointGroupBuilder.shouldAllowEmptyEndpoints();
     }
 
-    DefaultDnsResolver buildResolver() {
+    @Override
+    public DnsEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        dnsDynamicEndpointGroupBuilder.allowEmptyEndpoints(allowEmptyEndpoints);
+        return this;
+    }
+
+    final DefaultDnsResolver buildResolver() {
         return buildResolver(unused -> {});
     }
 
-    DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer) {
+    final DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer) {
         final EventLoop eventLoop = eventLoop();
         final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop);
         customizer.accept(resolverBuilder);
@@ -116,5 +125,18 @@ abstract class DnsEndpointGroupBuilder extends AbstractDnsResolverBuilder {
         return DefaultDnsResolver.of(resolverBuilder.build(), maybeCreateDnsCache(), eventLoop,
                                      searchDomains(), ndots(), queryTimeoutMillis(),
                                      hostsFileEntriesResolver());
+    }
+
+    /**
+     * This workaround delegates DynamicEndpointGroupSetters properties to AbstractDynamicEndpointGroupBuilder.
+     * DnsEndpointGroupBuilder can't extend AbstractDynamicEndpointGroupBuilder because it already extends
+     * AbstractDnsResolverBuilder.
+     */
+    private static class DnsDynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+
+        @Override
+        public boolean shouldAllowEmptyEndpoints() {
+            return super.shouldAllowEmptyEndpoints();
+        }
     }
 }

@@ -20,13 +20,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -41,11 +35,8 @@ import io.netty.handler.codec.dns.DnsRecord;
 
 public class DnsServiceEndpointGroupTest {
 
-    @Rule
-    public final TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
-
     @Test
-    public void srv() throws Exception {
+    void srv() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", SRV),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newSrvRecord("foo.com.", 1, 2, "a.foo.com."))
@@ -67,7 +58,7 @@ public class DnsServiceEndpointGroupTest {
     }
 
     @Test
-    public void cname() throws Exception {
+    void cname() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("bar.com.", SRV),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newCnameRecord("bar.com.", "baz.com."))
@@ -85,7 +76,7 @@ public class DnsServiceEndpointGroupTest {
     }
 
     @Test
-    public void noPort() throws Exception {
+    void noPort() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("no-port.com.", SRV),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newSrvRecord("no-port.com.", 7, 0, "d.no-port.com"))
@@ -96,6 +87,21 @@ public class DnsServiceEndpointGroupTest {
                 assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("d.no-port.com"));
             }
+        }
+    }
+
+    @Test
+    void allowEmptyEndpoint() {
+        try (DnsServiceEndpointGroup group = DnsServiceEndpointGroup.builder("foo.com")
+                                                                    .allowEmptyEndpoints(false)
+                                                                    .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isFalse();
+        }
+
+        try (DnsServiceEndpointGroup group = DnsServiceEndpointGroup.builder("foo.com")
+                                                                    .allowEmptyEndpoints(true)
+                                                                    .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isTrue();
         }
     }
 
@@ -119,7 +125,7 @@ public class DnsServiceEndpointGroupTest {
     }
 
     private static DnsRecord newBadNameSrvRecord(String hostname) {
-        return new DefaultDnsRawRecord(hostname, SRV, 60, Unpooled.wrappedBuffer(new byte[] {
+        return new DefaultDnsRawRecord(hostname, SRV, 60, Unpooled.wrappedBuffer(new byte[]{
                 0, 0, 0, 0, 0, 0, 127, 127, 127
         }));
     }

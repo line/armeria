@@ -73,11 +73,11 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
 
     DnsTextEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop, Backoff backoff,
                          int minTtl, int maxTtl, String hostname, Function<byte[], @Nullable Endpoint> mapping,
-                         DefaultDnsResolver resolver) {
+                         DefaultDnsResolver resolver, boolean allowEmptyEndpoints) {
 
         super(selectionStrategy, eventLoop,
               ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
-              backoff, minTtl, maxTtl, resolver);
+              backoff, minTtl, maxTtl, resolver, allowEmptyEndpoints);
         this.mapping = mapping;
         start();
     }

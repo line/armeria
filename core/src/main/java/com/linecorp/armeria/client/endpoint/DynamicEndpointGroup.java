@@ -35,6 +35,7 @@ import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;

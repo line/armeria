@@ -90,6 +90,15 @@ class DnsEndpointGroupBuilderTest {
         assertThat(stream.next()).isEqualTo(new InetSocketAddress("1.0.0.1", 53));
     }
 
+    @Test
+    void allowEmptyEndpoints() {
+        final DnsEndpointGroupBuilder builder0 = new Builder("foo.com").allowEmptyEndpoints(false);
+        assertThat(builder0.shouldAllowEmptyEndpoints()).isFalse();
+
+        final DnsEndpointGroupBuilder builder1 = new Builder("foo.com").allowEmptyEndpoints(true);
+        assertThat(builder1.shouldAllowEmptyEndpoints()).isTrue();
+    }
+
     private static Builder builder() {
         return new Builder("foo.com");
     }

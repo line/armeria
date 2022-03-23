@@ -44,7 +44,7 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
      */
     public DnsServiceEndpointGroup build() {
         return new DnsServiceEndpointGroup(selectionStrategy(), eventLoop(), backoff(), minTtl(), maxTtl(),
-                                           hostname(), buildResolver());
+                                           hostname(), buildResolver(), shouldAllowEmptyEndpoints());
     }
 
     // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.

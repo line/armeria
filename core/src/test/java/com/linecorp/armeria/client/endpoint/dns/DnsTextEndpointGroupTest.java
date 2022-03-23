@@ -21,13 +21,8 @@ import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -40,13 +35,10 @@ import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 
-public class DnsTextEndpointGroupTest {
-
-    @Rule
-    public final TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
+class DnsTextEndpointGroupTest {
 
     @Test
-    public void txt() throws Exception {
+    void txt() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", TXT),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=a.foo.com"))
@@ -74,6 +66,21 @@ public class DnsTextEndpointGroupTest {
         }
     }
 
+    @Test
+    void allowEmptyEndpoint() {
+        try (DnsTextEndpointGroup group = DnsTextEndpointGroup.builder("foo.com", txt -> null)
+                                                              .allowEmptyEndpoints(false)
+                                                              .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isFalse();
+        }
+
+        try (DnsTextEndpointGroup group = DnsTextEndpointGroup.builder("foo.com", txt -> null)
+                                                              .allowEmptyEndpoints(true)
+                                                              .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isTrue();
+        }
+    }
+
     private static DnsRecord newTxtRecord(String hostname, String text) {
         final ByteBuf content = Unpooled.buffer();
         content.writeByte(text.length());
@@ -86,7 +93,7 @@ public class DnsTextEndpointGroupTest {
     }
 
     private static DnsRecord newTooLongTxtRecord(String hostname) {
-        return new DefaultDnsRawRecord(hostname, TXT, 60, Unpooled.wrappedBuffer(new byte[] {
+        return new DefaultDnsRawRecord(hostname, TXT, 60, Unpooled.wrappedBuffer(new byte[]{
                 1, 0, 0 // Contains one more byte than expected
         }));
     }

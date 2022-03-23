@@ -66,9 +66,9 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
 
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
                      List<DnsQuestion> questions, Backoff backoff, int minTtl, int maxTtl,
-                     DefaultDnsResolver resolver) {
+                     DefaultDnsResolver resolver, boolean allowEmptyEndpoints) {
 
-        super(selectionStrategy);
+        super(selectionStrategy, allowEmptyEndpoints);
 
         this.eventLoop = eventLoop;
         this.backoff = backoff;
