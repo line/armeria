@@ -23,11 +23,15 @@ import org.slf4j.Logger;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -92,6 +96,28 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
+    @Override
+    public LoggingClientBuilder requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
+        return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
+    @Override
+    public LoggingClientBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
+        return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
+    @Override
+    public LoggingClientBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
+        return (LoggingClientBuilder) super.responseLogLevel(status, logLevel);
+    }
+
+    @Override
+    public LoggingClientBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
+        return (LoggingClientBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
     @Override
     public LoggingClientBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         return (LoggingClientBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
@@ -102,15 +128,15 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
     }
 
-    @Override
-    public LoggingClientBuilder requestLogLevelMapper(
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
-        return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
-    }
-
+    @Deprecated
     @Override
     public LoggingClientBuilder responseLogLevelMapper(
             Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
+    }
+
+    @Override
+    public LoggingClientBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 

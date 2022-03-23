@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -75,6 +76,15 @@ public final class ClientOptions
     @UnstableApi
     public static final ClientOption<RedirectConfig> REDIRECT_CONFIG =
             ClientOption.define("REDIRECT_CONFIG", RedirectConfig.disabled());
+
+    /**
+     * The {@link ClientRequestContext} customizer.
+     *
+     * @see Clients#withContextCustomizer(Consumer)
+     */
+    @UnstableApi
+    public static final ClientOption<Consumer<ClientRequestContext>> CONTEXT_CUSTOMIZER =
+            ClientOption.define("CONTEXT_CUSTOMIZER", ctx -> {});
 
     /**
      * The {@link Function} that decorates the client components.
@@ -290,6 +300,13 @@ public final class ClientOptions
      */
     public Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper() {
         return get(ENDPOINT_REMAPPER);
+    }
+
+    /**
+     * Returns the {@link Consumer} that customizes a {@link ClientRequestContext}.
+     */
+    public Consumer<ClientRequestContext> contextCustomizer() {
+        return get(CONTEXT_CUSTOMIZER);
     }
 
     /**

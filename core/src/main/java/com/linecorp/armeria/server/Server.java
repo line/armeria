@@ -17,10 +17,18 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -43,6 +51,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.net.ssl.SSLSession;
+
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,6 +142,12 @@ public final class Server implements ListenableAsyncCloseable {
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
 
         setupVersionMetrics();
+
+        for (VirtualHost virtualHost : config().virtualHosts()) {
+            if (virtualHost.sslContext() != null) {
+                setupTlsMetrics(virtualHost.sslContext(), virtualHost.defaultHostname());
+            }
+        }
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
@@ -386,6 +407,56 @@ public final class Server implements ListenableAsyncCloseable {
              .description("A metric with a constant '1' value labeled by version and commit hash" +
                           " from which Armeria was built.")
              .register(meterRegistry);
+    }
+
+    /**
+     * Sets up gauge metric for each server certificate.
+     */
+    private void setupTlsMetrics(SslContext sslContext, String hostname) {
+        final MeterRegistry meterRegistry = config().meterRegistry();
+
+        final SSLSession sslSession = validateSslContext(sslContext);
+        for (Certificate certificate : sslSession.getLocalCertificates()) {
+            if (!(certificate instanceof X509Certificate)) {
+                continue;
+            }
+
+            try {
+                final X509Certificate x509Certificate = (X509Certificate) certificate;
+                final String commonName = getCommonName(x509Certificate);
+
+                Gauge.builder("armeria.server.certificate.validity", x509Certificate, x509Cert -> {
+                         try {
+                             x509Cert.checkValidity();
+                         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+                             return 0;
+                         }
+                         return 1;
+                     })
+                     .description("1 if certificate is in validity period, 0 if certificate is not in " +
+                                  "validity period")
+                     .tags("common.name", commonName, "hostname", hostname)
+                     .register(meterRegistry);
+
+                Gauge.builder("armeria.server.certificate.validity.days", x509Certificate, x509Cert -> {
+                         final Duration diff = Duration.between(Instant.now(),
+                                                                x509Cert.getNotAfter().toInstant());
+                         return diff.isNegative() ? -1 : diff.toDays();
+                     })
+                     .description("Duration in day before certificate expires which becomes -1 " +
+                                  "if certificate is expired")
+                     .tags("common.name", commonName, "hostname", hostname)
+                     .register(meterRegistry);
+            } catch (Exception ex) {
+                logger.warn("Failed to set up TLS certificate metrics for a host: {}", hostname, ex);
+            }
+        }
+    }
+
+    private static String getCommonName(X509Certificate certificate) throws CertificateEncodingException {
+        final X500Name x500Name = new JcaX509CertificateHolder(certificate).getSubject();
+        final RDN cn = x500Name.getRDNs(BCStyle.CN)[0];
+        return IETFUtils.valueToString(cn.getFirst().getValue());
     }
 
     @Override

@@ -69,6 +69,14 @@ public interface DocServiceFilter {
     }
 
     /**
+     * Returns a {@link DocServiceFilter} which returns {@code true} only for the services detected by the
+     * graphql service plugin.
+     */
+    static DocServiceFilter ofGraphql() {
+        return ofPluginName("graphql");
+    }
+
+    /**
      * Returns a {@link DocServiceFilter} which returns {@code true} when the name of the plugin matches the
      * specified {@code pluginName}. For Thrift, gRPC and Annotated service, use {@link #ofThrift()},
      * {@link #ofGrpc()} and {@link #ofAnnotated()}, respectively.

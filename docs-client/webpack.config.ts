@@ -3,6 +3,7 @@ import path from 'path';
 import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
+import CompressionWebpackPlugin from 'compression-webpack-plugin';
 import { Configuration, DefinePlugin } from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
 declare module 'webpack' {
@@ -136,5 +137,13 @@ if (!isWindows) {
 plugins.push(new DefinePlugin({
   'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
 }));
+// Do not add CompressionWebpackPlugin on dev
+if (!isDev) {
+  plugins.push(new CompressionWebpackPlugin({
+    test: /\.js(\?.*)?$/i,
+    algorithm: 'brotliCompress',
+    filename: '[path].br',
+  }) as any);
+}
 
 export default config;

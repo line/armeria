@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -219,5 +220,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     @Override
     public WebClientBuilder followRedirects(RedirectConfig redirectConfig) {
         return (WebClientBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public WebClientBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (WebClientBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

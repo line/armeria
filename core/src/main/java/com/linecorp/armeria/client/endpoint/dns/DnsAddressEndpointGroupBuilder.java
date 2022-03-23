@@ -111,4 +111,9 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     public DnsAddressEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         return (DnsAddressEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
     }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsAddressEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
 }

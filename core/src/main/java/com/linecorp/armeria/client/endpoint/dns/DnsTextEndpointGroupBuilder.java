@@ -91,4 +91,9 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     public DnsTextEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         return (DnsTextEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
     }
+
+    @Override
+    public DnsTextEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (DnsTextEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
 }
