@@ -36,29 +36,33 @@ public interface ArmeriaOptionsProvider {
     /**
      * Return verboseExceptionSampler. See {@link Flags#verboseExceptionSampler()}.
      */
+    @Nullable
     default Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
-        return DefaultFlags.VERBOSE_EXCEPTION_SAMPLER;
+        return null;
     }
 
     /**
      * Return verboseExceptionSamplerSpec. See {@link Flags#verboseExceptionSamplerSpec()}.
      */
+    @Nullable
     default String verboseExceptionSamplerSpec() {
-        return DefaultFlags.VERBOSE_EXCEPTION_SAMPLER_SPEC;
+        return null;
     }
 
     /**
      * Return verboseSocketExceptions. See {@link Flags#verboseSocketExceptions()}.
      */
-    default boolean verboseSocketExceptions() {
-        return DefaultFlags.VERBOSE_SOCKET_EXCEPTIONS;
+    @Nullable
+    default Boolean verboseSocketExceptions() {
+        return null;
     }
 
     /**
      * Return verboseResponses. See {@link Flags#verboseResponses()}.
      */
-    default boolean verboseResponses() {
-        return DefaultFlags.VERBOSE_RESPONSES;
+    @Nullable
+    default Boolean verboseResponses() {
+        return null;
     }
 
     /**
@@ -66,242 +70,275 @@ public interface ArmeriaOptionsProvider {
      */
     @Nullable
     default String requestContextStorageProvider() {
-        return DefaultFlags.REQUEST_CONTEXT_STORAGE_PROVIDER;
+        return null;
     }
 
     /**
      * Return warnNettyVersions. See {@link Flags#warnNettyVersions()}.
      */
-    default boolean warnNettyVersions() {
-        return DefaultFlags.WARN_NETTY_VERSIONS;
+    @Nullable
+    default Boolean warnNettyVersions() {
+        return null;
     }
 
     /**
      * Return transportType. See {@link Flags#transportType()}.
      */
+    @Nullable
     default TransportType transportType() {
-        return DefaultFlags.TRANSPORT_TYPE;
+        return null;
     }
 
     /**
      * Return useOpenSsl. See {@link Flags#useOpenSsl()}.
      */
-    default boolean useOpenSsl() {
-        return DefaultFlags.useOpenSsl;
+    @Nullable
+    default Boolean useOpenSsl() {
+        return null;
     }
 
     /**
      * Return dumpOpenSslInfo. See {@link Flags#dumpOpenSslInfo()}.
      */
-    default boolean dumpOpenSslInfo() {
-        return DefaultFlags.dumpOpenSslInfo;
+    @Nullable
+    default Boolean dumpOpenSslInfo() {
+        return null;
     }
 
     /**
      * Return maxNumConnections. See {@link Flags#maxNumConnections()}.
      */
-    default int maxNumConnections() {
-        return DefaultFlags.MAX_NUM_CONNECTIONS;
+    @Nullable
+    default Integer maxNumConnections() {
+        return null;
     }
 
     /**
      * Return numCommonWorkers. See {@link Flags#numCommonWorkers()}.
      */
-    default int numCommonWorkers() {
-        return DefaultFlags.NUM_COMMON_WORKERS;
+    @Nullable
+    default Integer numCommonWorkers() {
+        return null;
     }
 
     /**
      * Return numCommonBlockingTaskThreads. See {@link Flags#numCommonBlockingTaskThreads()}.
      */
-    default int numCommonBlockingTaskThreads() {
-        return DefaultFlags.NUM_COMMON_BLOCKING_TASK_THREADS;
+    @Nullable
+    default Integer numCommonBlockingTaskThreads() {
+        return null;
     }
 
     /**
      * Return defaultMaxRequestLength. See {@link Flags#defaultMaxRequestLength()}.
      */
-    default long defaultMaxRequestLength() {
-        return DefaultFlags.DEFAULT_MAX_REQUEST_LENGTH;
+    @Nullable
+    default Long defaultMaxRequestLength() {
+        return null;
     }
 
     /**
      * Return defaultMaxResponseLength. See {@link Flags#defaultMaxResponseLength()}.
      */
-    default long defaultMaxResponseLength() {
-        return DefaultFlags.DEFAULT_MAX_RESPONSE_LENGTH;
+    @Nullable
+    default Long defaultMaxResponseLength() {
+        return null;
     }
 
     /**
      * Return defaultRequestTimeoutMillis. See {@link Flags#defaultRequestTimeoutMillis()}.
      */
-    default long defaultRequestTimeoutMillis() {
-        return DefaultFlags.DEFAULT_REQUEST_TIMEOUT_MILLIS;
+    @Nullable
+    default Long defaultRequestTimeoutMillis() {
+        return null;
     }
 
     /**
      * Return defaultResponseTimeoutMillis. See {@link Flags#defaultResponseTimeoutMillis()}.
      */
-    default long defaultResponseTimeoutMillis() {
-        return DefaultFlags.DEFAULT_RESPONSE_TIMEOUT_MILLIS;
+    @Nullable
+    default Long defaultResponseTimeoutMillis() {
+        return null;
     }
 
     /**
      * Return defaultConnectTimeoutMillis. See {@link Flags#defaultConnectTimeoutMillis()}.
      */
-    default long defaultConnectTimeoutMillis() {
-        return DefaultFlags.DEFAULT_CONNECT_TIMEOUT_MILLIS;
+    @Nullable
+    default Long defaultConnectTimeoutMillis() {
+        return null;
     }
 
     /**
      * Return defaultWriteTimeoutMillis. See {@link Flags#defaultWriteTimeoutMillis()}.
      */
-    default long defaultWriteTimeoutMillis() {
-        return DefaultFlags.DEFAULT_WRITE_TIMEOUT_MILLIS;
+    @Nullable
+    default Long defaultWriteTimeoutMillis() {
+        return null;
     }
 
     /**
      * Return defaultServerIdleTimeoutMillis. See {@link Flags#defaultServerIdleTimeoutMillis()}.
      */
-    default long defaultServerIdleTimeoutMillis() {
-        return DefaultFlags.DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS;
+    @Nullable
+    default Long defaultServerIdleTimeoutMillis() {
+        return null;
     }
 
     /**
      * Return defaultClientIdleTimeoutMillis. See {@link Flags#defaultClientIdleTimeoutMillis()}.
      */
-    default long defaultClientIdleTimeoutMillis() {
-        return DefaultFlags.DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    @Nullable
+    default Long defaultClientIdleTimeoutMillis() {
+        return null;
     }
 
     /**
      * Return defaultHttp1MaxInitialLineLength. See {@link Flags#defaultHttp1MaxInitialLineLength()}.
      */
-    default int defaultHttp1MaxInitialLineLength() {
-        return DefaultFlags.DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH;
+    @Nullable
+    default Integer defaultHttp1MaxInitialLineLength() {
+        return null;
     }
 
     /**
      * Return defaultHttp1MaxHeaderSize. See {@link Flags#defaultHttp1MaxHeaderSize()}.
      */
-    default int defaultHttp1MaxHeaderSize() {
-        return DefaultFlags.DEFAULT_MAX_HTTP1_HEADER_SIZE;
+    @Nullable
+    default Integer defaultHttp1MaxHeaderSize() {
+        return null;
     }
 
     /**
      * Return defaultHttp1MaxChunkSize. See {@link Flags#defaultHttp1MaxChunkSize()}.
      */
-    default int defaultHttp1MaxChunkSize() {
-        return DefaultFlags.DEFAULT_HTTP1_MAX_CHUNK_SIZE;
+    @Nullable
+    default Integer defaultHttp1MaxChunkSize() {
+        return null;
     }
 
     /**
      * Return defaultUseHttp2Preface. See {@link Flags#defaultUseHttp2Preface()}.
      */
-    default boolean defaultUseHttp2Preface() {
-        return DefaultFlags.DEFAULT_USE_HTTP2_PREFACE;
+    @Nullable
+    default Boolean defaultUseHttp2Preface() {
+        return null;
     }
 
     /**
      * Return defaultUseHttp1Pipelining. See {@link Flags#defaultUseHttp1Pipelining()}.
      */
-    default boolean defaultUseHttp1Pipelining() {
-        return DefaultFlags.DEFAULT_USE_HTTP1_PIPELINING;
+    @Nullable
+    default Boolean defaultUseHttp1Pipelining() {
+        return null;
     }
 
     /**
      * Return defaultPingIntervalMillis. See {@link Flags#defaultPingIntervalMillis()}.
      */
-    default long defaultPingIntervalMillis() {
-        return DefaultFlags.DEFAULT_PING_INTERVAL_MILLIS;
+    @Nullable
+    default Long defaultPingIntervalMillis() {
+        return null;
     }
 
     /**
      * Return defaultMaxServerNumRequestsPerConnection.
      * See {@link Flags#defaultMaxServerNumRequestsPerConnection()}.
      */
-    default int defaultMaxServerNumRequestsPerConnection() {
-        return DefaultFlags.DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION;
+    @Nullable
+    default Integer defaultMaxServerNumRequestsPerConnection() {
+        return null;
     }
 
     /**
      * Return defaultMaxClientNumRequestsPerConnection.
      * See {@link Flags#defaultMaxClientNumRequestsPerConnection()}.
      */
-    default int defaultMaxClientNumRequestsPerConnection() {
-        return DefaultFlags.DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION;
+    @Nullable
+    default Integer defaultMaxClientNumRequestsPerConnection() {
+        return null;
     }
 
     /**
      * Return defaultMaxServerConnectionAgeMillis. See {@link Flags#defaultMaxServerConnectionAgeMillis()}.
      */
-    default long defaultMaxServerConnectionAgeMillis() {
-        return DefaultFlags.DEFAULT_MAX_CONNECTION_AGE_MILLIS;
+    @Nullable
+    default Long defaultMaxServerConnectionAgeMillis() {
+        return null;
     }
 
     /**
      * Return defaultMaxClientConnectionAgeMillis. See {@link Flags#defaultMaxClientConnectionAgeMillis()}.
      */
-    default long defaultMaxClientConnectionAgeMillis() {
-        return DefaultFlags.DEFAULT_MAX_CONNECTION_AGE_MILLIS;
+    @Nullable
+    default Long defaultMaxClientConnectionAgeMillis() {
+        return null;
     }
 
     /**
      * Return defaultServerConnectionDrainDurationMicros.
      * See {@link Flags#defaultServerConnectionDrainDurationMicros()}.
      */
-    default long defaultServerConnectionDrainDurationMicros() {
-        return DefaultFlags.DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
+    @Nullable
+    default Long defaultServerConnectionDrainDurationMicros() {
+        return null;
     }
 
     /**
      * Return defaultHttp2InitialConnectionWindowSize.
      * See {@link Flags#defaultHttp2InitialConnectionWindowSize()}.
      */
-    default int defaultHttp2InitialConnectionWindowSize() {
-        return DefaultFlags.DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE;
+    @Nullable
+    default Integer defaultHttp2InitialConnectionWindowSize() {
+        return null;
     }
 
     /**
      * Return defaultHttp2InitialStreamWindowSize. See {@link Flags#defaultHttp2InitialStreamWindowSize()}.
      */
-    default int defaultHttp2InitialStreamWindowSize() {
-        return DefaultFlags.DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE;
+    @Nullable
+    default Integer defaultHttp2InitialStreamWindowSize() {
+        return null;
     }
 
     /**
      * Return defaultHttp2MaxFrameSize. See {@link Flags#defaultHttp2MaxFrameSize()}.
      */
-    default int defaultHttp2MaxFrameSize() {
-        return DefaultFlags.DEFAULT_HTTP2_MAX_FRAME_SIZE;
+    @Nullable
+    default Integer defaultHttp2MaxFrameSize() {
+        return null;
     }
 
     /**
      * Return defaultHttp2MaxStreamsPerConnection. See {@link Flags#defaultHttp2MaxStreamsPerConnection()}.
      */
-    default long defaultHttp2MaxStreamsPerConnection() {
-        return DefaultFlags.DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION;
+    @Nullable
+    default Long defaultHttp2MaxStreamsPerConnection() {
+        return null;
     }
 
     /**
      * Return defaultHttp2MaxHeaderListSize. See {@link Flags#defaultHttp2MaxHeaderListSize()}.
      */
-    default long defaultHttp2MaxHeaderListSize() {
-        return DefaultFlags.DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE;
+    @Nullable
+    default Long defaultHttp2MaxHeaderListSize() {
+        return null;
     }
 
     /**
      * Return defaultBackoffSpec. See {@link Flags#defaultBackoffSpec()}.
      */
+    @Nullable
     default String defaultBackoffSpec() {
-        return DefaultFlags.DEFAULT_BACKOFF_SPEC;
+        return null;
     }
 
     /**
      * Return defaultMaxTotalAttempts. See {@link Flags#defaultMaxTotalAttempts()}.
      */
-    default int defaultMaxTotalAttempts() {
-        return DefaultFlags.DEFAULT_MAX_TOTAL_ATTEMPTS;
+    @Nullable
+    default Integer defaultMaxTotalAttempts() {
+        return null;
     }
 
     /**
@@ -309,7 +346,7 @@ public interface ArmeriaOptionsProvider {
      */
     @Nullable
     default String routeCacheSpec() {
-        return DefaultFlags.ROUTE_CACHE_SPEC;
+        return null;
     }
 
     /**
@@ -317,7 +354,7 @@ public interface ArmeriaOptionsProvider {
      */
     @Nullable
     default String routeDecoratorCacheSpec() {
-        return DefaultFlags.ROUTE_DECORATOR_CACHE_SPEC;
+        return null;
     }
 
     /**
@@ -325,7 +362,7 @@ public interface ArmeriaOptionsProvider {
      */
     @Nullable
     default String parsedPathCacheSpec() {
-        return DefaultFlags.PARSED_PATH_CACHE_SPEC;
+        return null;
     }
 
     /**
@@ -333,14 +370,15 @@ public interface ArmeriaOptionsProvider {
      */
     @Nullable
     default String headerValueCacheSpec() {
-        return DefaultFlags.HEADER_VALUE_CACHE_SPEC;
+        return null;
     }
 
     /**
      * Return cachedHeaders. See {@link Flags#cachedHeaders()}.
      */
+    @Nullable
     default List<String> cachedHeaders() {
-        return DefaultFlags.CACHED_HEADERS;
+        return null;
     }
 
     /**
@@ -348,14 +386,15 @@ public interface ArmeriaOptionsProvider {
      */
     @Nullable
     default String fileServiceCacheSpec() {
-        return DefaultFlags.FILE_SERVICE_CACHE_SPEC;
+        return null;
     }
 
     /**
      * Return dnsCacheSpec. See {@link Flags#dnsCacheSpec()}.
      */
+    @Nullable
     default String dnsCacheSpec() {
-        return DefaultFlags.DNS_CACHE_SPEC;
+        return null;
     }
 
     /**
@@ -363,62 +402,70 @@ public interface ArmeriaOptionsProvider {
      */
     @Nullable
     default Predicate<InetAddress> preferredIpV4Addresses() {
-        return DefaultFlags.PREFERRED_IP_V4_ADDRESSES;
+        return null;
     }
 
     /**
      * Return useJdkDnsResolver. See {@link Flags#useJdkDnsResolver()}.
      */
-    default boolean useJdkDnsResolver() {
-        return DefaultFlags.USE_JDK_DNS_RESOLVER;
+    @Nullable
+    default Boolean useJdkDnsResolver() {
+        return null;
     }
 
     /**
      * Return reportBlockedEventLoop. See {@link Flags#reportBlockedEventLoop()}.
      */
-    default boolean reportBlockedEventLoop() {
-        return DefaultFlags.REPORT_BLOCKED_EVENT_LOOP;
+    @Nullable
+    default Boolean reportBlockedEventLoop() {
+        return null;
     }
 
     /**
      * Return validateHeaders. See {@link Flags#validateHeaders()}.
      */
-    default boolean validateHeaders() {
-        return DefaultFlags.VALIDATE_HEADERS;
+    @Nullable
+    default Boolean validateHeaders() {
+        return null;
     }
 
     /**
      * Return tlsAllowUnsafeCiphers. See {@link Flags#tlsAllowUnsafeCiphers()}.
      */
-    default boolean tlsAllowUnsafeCiphers() {
-        return DefaultFlags.DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS;
+    @Nullable
+    default Boolean tlsAllowUnsafeCiphers() {
+        return null;
     }
 
     /**
      * Return transientServiceOptions. See {@link Flags#transientServiceOptions()}.
      */
+    @Nullable
     default Set<TransientServiceOption> transientServiceOptions() {
-        return DefaultFlags.TRANSIENT_SERVICE_OPTIONS;
+        return null;
     }
 
     /**
      * Return useDefaultSocketOptions. See {@link Flags#useDefaultSocketOptions()}.
      */
-    default boolean useDefaultSocketOptions() {
-        return DefaultFlags.USE_DEFAULT_SOCKET_OPTIONS;
+    @Nullable
+    default Boolean useDefaultSocketOptions() {
+        return null;
     }
 
     /**
      * Return useLegacyRouteDecoratorOrdering. See {@link Flags#useLegacyRouteDecoratorOrdering()}.
      */
-    default boolean useLegacyRouteDecoratorOrdering() {
-        return DefaultFlags.DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+    @Nullable
+    default Boolean useLegacyRouteDecoratorOrdering() {
+        return null;
     }
 
     /**
      * Return allowDoubleDotsInQueryString. See {@link Flags#allowDoubleDotsInQueryString()}.
      */
-    default boolean allowDoubleDotsInQueryString() {
-        return DefaultFlags.ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
+    @Nullable
+    default Boolean allowDoubleDotsInQueryString() {
+        return null;
     }
 }

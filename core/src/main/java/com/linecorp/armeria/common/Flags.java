@@ -1486,7 +1486,7 @@ public final class Flags {
 
     private static boolean getBoolean(String name, Function<ArmeriaOptionsProvider, Boolean> spiAccessedMethod,
                                       boolean defaultValue, Predicate<Boolean> validator) {
-        return "true".equals(getNormalized(name, spiAccessedMethod.andThen(String::valueOf),
+        return "true".equals(getNormalized(name, spiAccessedMethod.andThen(i -> nullByPass(i, String::valueOf)),
                                            String.valueOf(defaultValue), value -> {
                     if ("true".equals(value)) {
                         return validator.test(true);
@@ -1502,7 +1502,7 @@ public final class Flags {
 
     private static int getInt(String name, Function<ArmeriaOptionsProvider, Integer> spiAccessedMethod,
                               int defaultValue, IntPredicate validator) {
-        return Integer.parseInt(getNormalized(name, spiAccessedMethod.andThen(StringUtil::toString),
+        return Integer.parseInt(getNormalized(name, spiAccessedMethod.andThen(i -> nullByPass(i, StringUtil::toString)),
                                               StringUtil.toString(defaultValue), value -> {
                     try {
                         return validator.test(Integer.parseInt(value));
@@ -1515,7 +1515,7 @@ public final class Flags {
 
     private static long getLong(String name, Function<ArmeriaOptionsProvider, Long> spiAccessedMethod,
                                 long defaultValue, LongPredicate validator) {
-        return Long.parseLong(getNormalized(name, spiAccessedMethod.andThen(StringUtil::toString),
+        return Long.parseLong(getNormalized(name, spiAccessedMethod.andThen(i -> nullByPass(i, StringUtil::toString)),
                                             StringUtil.toString(defaultValue), value -> {
                     try {
                         return validator.test(Long.parseLong(value));
@@ -1527,7 +1527,7 @@ public final class Flags {
     }
 
     @Nullable
-    private static String get(String name, Function<ArmeriaOptionsProvider, String> spiAccessedMethod,
+    private static String get(String name, Function<ArmeriaOptionsProvider, @Nullable String> spiAccessedMethod,
                               @Nullable String defaultValue, Predicate<String> validator) {
         final String fullName = PREFIX + name;
         final String value = System.getProperty(fullName);
@@ -1541,23 +1541,25 @@ public final class Flags {
 
         if (armeriaOptionsProvider != null) {
             final String spi = spiAccessedMethod.apply(armeriaOptionsProvider);
-            if (validator.test(spi)) {
-                logger.info("{}: {} (spi)", fullName, spi);
-                return spi;
+            if (spi != null) {
+                if (validator.test(spi)) {
+                    logger.info("{}: {} (spi)", fullName, spi);
+                    return spi;
+                }
+                logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
             }
-            logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
         }
 
         logger.info("{}: {} (default instead of: {})", fullName, defaultValue, value);
         return defaultValue;
     }
 
-    private static String getNormalized(String name, Function<ArmeriaOptionsProvider, String> spiAccessedMethod,
+    private static String getNormalized(String name, Function<ArmeriaOptionsProvider, @Nullable String> spiAccessedMethod,
                                         String defaultValue, Predicate<String> validator) {
         return getNormalizedTo(name, spiAccessedMethod, defaultValue, validator, validator, unused -> unused);
     }
 
-    private static <T> T getNormalizedTo(String name, Function<ArmeriaOptionsProvider, T> spiAccessedMethod,
+    private static <T> T getNormalizedTo(String name, Function<ArmeriaOptionsProvider, @Nullable T> spiAccessedMethod,
                                          T defaultValue, Predicate<String> jpmOptionValidator,
                                          Predicate<T> spiValidator, Function<String, T> convertFunction) {
         final String fullName = PREFIX + name;
@@ -1572,15 +1574,25 @@ public final class Flags {
 
         if (armeriaOptionsProvider != null) {
             final T spi = spiAccessedMethod.apply(armeriaOptionsProvider);
-            if (spiValidator.test(spi)) {
-                logger.info("{}: {} (spi)", fullName, spi);
-                return spi;
+            if (spi != null) {
+                if (spiValidator.test(spi)) {
+                    logger.info("{}: {} (spi)", fullName, spi);
+                    return spi;
+                }
+                logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
             }
-            logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
         }
 
         logger.info("{}: {} (default)", fullName, defaultValue);
         return defaultValue;
+    }
+
+    @Nullable
+    private static <T> String nullByPass(@Nullable T t, Function<T, String> function) {
+        if (t == null) {
+            return null;
+        }
+        return function.apply(t);
     }
 
     @Nullable

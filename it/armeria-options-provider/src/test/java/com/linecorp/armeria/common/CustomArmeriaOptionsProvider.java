@@ -19,17 +19,17 @@ package com.linecorp.armeria.common;
 public final class CustomArmeriaOptionsProvider implements ArmeriaOptionsProvider {
 
     @Override
-    public boolean useOpenSsl() {
+    public Boolean useOpenSsl() {
         return false;
     }
 
     @Override
-    public int numCommonBlockingTaskThreads() {
+    public Integer numCommonBlockingTaskThreads() {
         return 100;
     }
 
     @Override
-    public long defaultRequestTimeoutMillis() {
+    public Long defaultRequestTimeoutMillis() {
         return -10L;
     }
 
@@ -39,12 +39,12 @@ public final class CustomArmeriaOptionsProvider implements ArmeriaOptionsProvide
     }
 
     @Override
-    public int defaultMaxTotalAttempts() {
+    public Integer defaultMaxTotalAttempts() {
         return 5;
     }
 
     @Override
-    public long defaultMaxClientConnectionAgeMillis() {
-        return 10;
+    public Long defaultMaxClientConnectionAgeMillis() {
+        return 10L;
     }
 }
