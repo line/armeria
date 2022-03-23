@@ -2,7 +2,7 @@ import static org.gradle.internal.os.OperatingSystem.current
 
 import com.pszymczyk.consul.BinariesManager
 
-def consulVersion = '1.9.3'
+def consulVersion = '1.11.3'
 def consulBinaryDownloadDir = new File(gradle.gradleUserHomeDir, "caches/embedded-consul/${consulVersion}")
 
 buildscript {
@@ -31,7 +31,7 @@ task consulBinary {
     outputs.file(consulBinaryFile)
 
     doLast {
-        def binariesManager = new BinariesManager(consulBinaryDownloadDir.toPath(), '1.9.3')
+        def binariesManager = new BinariesManager(consulBinaryDownloadDir.toPath(), consulVersion)
         if (!binariesManager.isBinaryDownloaded()) {
             // Download the binary.
             logger.lifecycle("Downloading the Consul ${consulVersion} into ${consulBinaryDownloadDir} ..")

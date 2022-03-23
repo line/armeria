@@ -38,7 +38,7 @@ class DataClassDocServiceTest {
             .get("/docs/specification.json")
             .asJson(JsonNode::class.java)
             .execute()
-            .content()!!
+            .content()
         val fields = jsonNode.get("services")[0]["methods"][0]["parameters"][0]["childFieldInfos"] as ArrayNode
         assertThat(fields).hasSize(2)
         assertThat(fields[0]["name"].asText()).isEqualTo("name")

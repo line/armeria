@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An {@link EndpointGroupException} raised when the resolution of an {@link EndpointGroup} fails
@@ -30,6 +31,18 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
 
     /**
      * Returns an {@link EmptyEndpointGroupException} which may be a singleton or a new instance, depending on
+     * {@link Flags#verboseExceptionSampler()}'s decision. If {@code endpointGroup} is non-null, a new
+     * instance is always returned.
+     */
+    public static EmptyEndpointGroupException get(@Nullable EndpointGroup endpointGroup) {
+        if (endpointGroup != null) {
+            return new EmptyEndpointGroupException(endpointGroup);
+        }
+        return get();
+    }
+
+    /**
+     * Returns an {@link EmptyEndpointGroupException} which may be a singleton or a new instance, depending on
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static EmptyEndpointGroupException get() {
@@ -38,6 +51,10 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
     }
 
     private EmptyEndpointGroupException() {}
+
+    private EmptyEndpointGroupException(EndpointGroup endpointGroup) {
+        super("Unable to select endpoints from: " + endpointGroup);
+    }
 
     private EmptyEndpointGroupException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);

@@ -153,7 +153,7 @@ class ScheduledHealthCheckerTest {
         assertThat(WebClient.of(uri).get("/hc").aggregate().join().status()).isSameAs(HttpStatus.OK);
 
         health.set(false);
-        await().atMost(Duration.ofSeconds(1))
+        await().atMost(Duration.ofSeconds(5))
                .untilAsserted(
                        () -> assertThat(WebClient.of(uri).get("/hc").aggregate().join().status())
                                .isSameAs(HttpStatus.SERVICE_UNAVAILABLE));

@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
-import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 

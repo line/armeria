@@ -26,6 +26,7 @@ import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.HttpClient;
@@ -104,6 +105,7 @@ class DecodingClientTest {
     }
 
     @Test
+    @EnabledIf("io.netty.handler.codec.compression.Brotli#isAvailable")
     void httpBrotliDecodingTest() throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(DecodingClient.newDecorator(

@@ -22,8 +22,8 @@ apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
 node {
-    version = '14.17.4'
-    npmVersion = '6.14.14'
+    version = '16.14.0'
+    npmVersion = '8.5.2'
     download = true
     npmInstallCommand = "ci"
 

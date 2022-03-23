@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -148,6 +149,11 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
+    private boolean enableHealthCheckService;
+
+    @Nullable
+    private GrpcHealthCheckService grpcHealthCheckService;
+
     GrpcServiceBuilder() {}
 
     /**
@@ -212,11 +218,18 @@ public final class GrpcServiceBuilder {
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
+        requireNonNull(bindableService, "bindableService");
         if (bindableService instanceof ProtoReflectionService) {
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
-
+        if (bindableService instanceof GrpcHealthCheckService) {
+            if (enableHealthCheckService) {
+                throw new IllegalStateException("default gRPC health check service is enabled already.");
+            }
+            grpcHealthCheckService = (GrpcHealthCheckService) bindableService;
+            return this;
+        }
         return addService(bindableService.bindService());
     }
 
@@ -590,6 +603,21 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets the default {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     * The gRPC health check service manages only the health checker that determines
+     * the healthiness of the {@link Server}.
+     *
+     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
+     */
+    public GrpcServiceBuilder enableHealthCheckService(boolean enableHealthCheckService) {
+        if (grpcHealthCheckService != null && enableHealthCheckService) {
+            throw new IllegalStateException("gRPC health check service is set already.");
+        }
+        this.enableHealthCheckService = enableHealthCheckService;
+        return this;
+    }
+
+    /**
      * Sets the specified {@link GrpcStatusFunction} that maps a {@link Throwable} to a gRPC {@link Status}.
      *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
@@ -740,9 +768,14 @@ public final class GrpcServiceBuilder {
                     "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
                     "is enabled");
         }
+        if (enableHealthCheckService) {
+            grpcHealthCheckService = GrpcHealthCheckService.builder().build();
+        }
+        if (grpcHealthCheckService != null) {
+            registryBuilder.addService(grpcHealthCheckService.bindService());
+        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
-
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
@@ -779,7 +812,8 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                enableUnframedRequests || enableHttpJsonTranscoding);
+                enableUnframedRequests || enableHttpJsonTranscoding,
+                grpcHealthCheckService);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,

@@ -1,8 +1,14 @@
 // This module builds and publishes 'armeria-thrift0.15', which is compiled with
 // the source code of ':thrift0.13' and ':thrift0.14.0'.
+final def THRIFT_VERSION = '0.15.0'
 
 dependencies {
-    api("org.apache.thrift:libthrift")
+    api("org.apache.thrift:libthrift") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly THRIFT_VERSION
+        }
+    }
 
     api 'javax.annotation:javax.annotation-api'
 

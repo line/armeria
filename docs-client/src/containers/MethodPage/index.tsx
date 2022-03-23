@@ -30,6 +30,7 @@ import {
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
+import { GRAPHQL_HTTP_MIME_TYPE } from '../../lib/transports/grahpql-http';
 import { SelectOption } from '../../lib/types';
 
 import Section from '../../components/Section';
@@ -150,6 +151,9 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
   const isAnnotatedService =
     debugTransport !== undefined &&
     debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
+  const isGraphqlService =
+    debugTransport !== undefined &&
+    debugTransport.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE);
 
   return (
     <>
@@ -192,6 +196,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           {...props}
           method={method}
           isAnnotatedService={isAnnotatedService}
+          isGraphqlService={isGraphqlService}
           exampleHeaders={getExampleHeaders(
             props.specification,
             service,
@@ -204,7 +209,9 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             method,
           )}
           exactPathMapping={
-            isAnnotatedService ? isSingleExactPathMapping(method) : false
+            isAnnotatedService || isGraphqlService
+              ? isSingleExactPathMapping(method)
+              : false
           }
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
         />
