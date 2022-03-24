@@ -280,9 +280,6 @@ io.netty:
   netty-common:
     javadocs:
     - https://netty.io/4.1/api/
-  # Note that tcnative now needs explicit classifiers
-  # Related: https://github.com/netty/netty-tcnative/pull/709
-  netty-tcnative-boringssl-static: { version: '2.0.51.Final' }
 
 io.netty.incubator:
   netty-incubator-transport-native-io_uring: { version: '0.0.13.Final' }
