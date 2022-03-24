@@ -53,10 +53,12 @@ class FlagsProviderTest {
 
     @Test
     void spiInvalidFallbackToDefault() throws Throwable {
+        final long defaultDefaultRequestTimeoutMillis = 10 * 1000;
         assertFlags("defaultRequestTimeoutMillis")
-                .isEqualTo(DefaultFlags.DEFAULT_REQUEST_TIMEOUT_MILLIS);
+                .isEqualTo(defaultDefaultRequestTimeoutMillis);
+        final String defaultDefaultBackoffSpec = "exponential=200:10000,jitter=0.2";
         assertFlags("defaultBackoffSpec")
-                .isEqualTo(DefaultFlags.DEFAULT_BACKOFF_SPEC);
+                .isEqualTo(defaultDefaultBackoffSpec);
     }
 
     @Test

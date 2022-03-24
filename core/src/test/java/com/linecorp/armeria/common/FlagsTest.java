@@ -153,7 +153,7 @@ class FlagsTest {
     @SetSystemProperty(key = "com.linecorp.armeria.defaultWriteTimeoutMillis", value = "-5")
     void jvmOptionDefaultWriteTimeoutMillisFailValidation() throws Throwable {
         assertFlags("defaultWriteTimeoutMillis")
-                .isEqualTo(DefaultFlags.DEFAULT_WRITE_TIMEOUT_MILLIS);
+                .isEqualTo(1000L);
     }
 
     @Test
