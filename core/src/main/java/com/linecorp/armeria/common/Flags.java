@@ -97,6 +97,8 @@ public final class Flags {
 
     private static final String PREFIX = "com.linecorp.armeria.";
 
+    private static final Predicate alwaysPass = unused -> true;
+
     @Nullable
     private static final FlagsProvider FLAGS_PROVIDER;
 
@@ -200,7 +202,7 @@ public final class Flags {
     @Nullable
     private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES =
             getNormalizedTo("preferredIpV4Addresses", FlagsProvider::preferredIpV4Addresses,
-                            null, inetAddressValidator, unused -> true, strToInetAddress);
+                            null, inetAddressValidator, alwaysPass, strToInetAddress);
 
     private static final boolean DEFAULT_VERBOSE_SOCKET_EXCEPTIONS = false;
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS =
@@ -216,7 +218,7 @@ public final class Flags {
     @Nullable
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
             get("requestContextStorageProvider", FlagsProvider::requestContextStorageProvider,
-                DEFAULT_REQUEST_CONTEXT_STORAGE_PROVIDER, unused -> true);
+                DEFAULT_REQUEST_CONTEXT_STORAGE_PROVIDER, alwaysPass);
 
     private static final boolean DEFAULT_WARN_NETTY_VERSIONS = true;
     private static final boolean WARN_NETTY_VERSIONS =
@@ -585,7 +587,7 @@ public final class Flags {
                 } catch (Exception e) {
                     return false;
                 }
-            }, unused -> true,
+            }, alwaysPass,
             transientServiceOptions -> Sets.immutableEnumSet(
                     Streams.stream(CSV_SPLITTER.split(transientServiceOptions))
                            .map(feature -> TransientServiceOption.valueOf(
@@ -1531,7 +1533,6 @@ public final class Flags {
 
     private static boolean getBoolean(String name, Function<FlagsProvider, Boolean> spiAccessedMethod,
                                       boolean defaultValue) {
-        final Predicate<Boolean> alwaysPass = unused -> true;
         return getBoolean(name, spiAccessedMethod, defaultValue, alwaysPass);
     }
 
@@ -1547,7 +1548,6 @@ public final class Flags {
             }
             return false;
         };
-        final Predicate<Boolean> alwaysPass = unused -> true;
         return getNormalizedTo(name, spiAccessedMethod, defaultValue, combinedValidator, alwaysPass,
                                Boolean::new);
     }
@@ -1615,7 +1615,7 @@ public final class Flags {
     }
 
     private static <T> T getNormalizedTo(String name, Function<FlagsProvider, @Nullable T> spiAccessedMethod,
-                                         T defaultValue, Predicate<String> jpmOptionValidator,
+                                         @Nullable T defaultValue, Predicate<String> jpmOptionValidator,
                                          Predicate<T> spiValidator, Function<String, T> convertFunction) {
         final String fullName = PREFIX + name;
         final String value = getLowerCased(fullName);
