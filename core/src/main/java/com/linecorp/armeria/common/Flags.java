@@ -157,53 +157,50 @@ public final class Flags {
         }
     }
 
-    private static final Predicate<InetAddress> DEFAULT_PREFERRED_IP_V4_ADDRESSES = null;
-    @Nullable
-    private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES = getNormalizedTo(
-            "preferredIpV4Addresses",
-            FlagsProvider::preferredIpV4Addresses,
-            DEFAULT_PREFERRED_IP_V4_ADDRESSES,
-            val -> {
-                try {
-                    CSV_SPLITTER.splitToList(val)
-                                .forEach(InetAddressPredicates::ofCidr);
-                } catch (Exception ex) {
-                    return false;
-                }
-                return true;
-            },
-            unused -> true,
-            preferredIpV4Addresses -> {
-                final List<Predicate<InetAddress>> preferredIpV4Addresses2 =
-                        CSV_SPLITTER.splitToList(preferredIpV4Addresses)
-                                    .stream()
-                                    .map(cidr -> {
-                                        try {
-                                            return InetAddressPredicates.ofCidr(cidr);
-                                        } catch (Exception e) {
-                                            logger.warn("Failed to parse a preferred IPv4: {}", cidr);
-                                        }
-                                        return null;
-                                    })
-                                    .filter(Objects::nonNull)
-                                    .collect(toImmutableList());
-                switch (preferredIpV4Addresses2.size()) {
-                    case 0:
-                        return null;
-                    case 1:
-                        return preferredIpV4Addresses2.get(0);
-                    default:
-                        return inetAddress -> {
-                            for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses2) {
-                                if (preferredIpV4Addr.test(inetAddress)) {
-                                    return true;
-                                }
-                            }
-                            return false;
-                        };
-                }
+    private static final Predicate<String> inetAddressValidator = val -> {
+        for (String cidr : CSV_SPLITTER.splitToList(val)) {
+            try {
+                InetAddressPredicates.ofCidr(cidr);
+            } catch (Exception ex) {
+                logger.warn("Failed to parse a preferred IPv4: {}", cidr);
+                return false;
             }
-    );
+        }
+        return true;
+    };
+    private static final Function<String, @Nullable Predicate<InetAddress>> strToInetAddress = str -> {
+        final List<Predicate<InetAddress>> preferredIpV4Addresses =
+                CSV_SPLITTER.splitToList(str)
+                    .stream()
+                    .map(cidr -> {
+                        try {
+                            return InetAddressPredicates.ofCidr(cidr);
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(toImmutableList());
+        switch (preferredIpV4Addresses.size()) {
+            case 0:
+                return null;
+            case 1:
+                return preferredIpV4Addresses.get(0);
+            default:
+                return inetAddress -> {
+                    for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses) {
+                        if (preferredIpV4Addr.test(inetAddress)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+        }
+    };
+    @Nullable
+    private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES =
+            getNormalizedTo("preferredIpV4Addresses", FlagsProvider::preferredIpV4Addresses,
+                            null, inetAddressValidator, unused -> true, strToInetAddress);
 
     private static final boolean DEFAULT_VERBOSE_SOCKET_EXCEPTIONS = false;
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS =
