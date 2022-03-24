@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.graphql.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -25,6 +24,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
@@ -33,6 +33,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -44,12 +45,23 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class AbstractGraphqlServiceTest {
 
     private TestGraphqlService testGraphqlService;
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/graphql", new TestGraphqlService());
+        }
+    };
 
     @BeforeEach
     void setUp() {
@@ -115,11 +127,11 @@ class AbstractGraphqlServiceTest {
                                                .contentJson(content)
                                                .build();
 
-        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
-        assertThatThrownBy(() -> {
-            testGraphqlService.serve(ctx, request).aggregate().join();
-        }).hasRootCauseInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Unknown parameter type variables");
+        final BlockingWebClient client = server.webClient().blocking();
+        final AggregatedHttpResponse response = client.execute(request);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        final RequestLog log = server.requestContextCaptor().take().log().whenComplete().join();
+        assertThat(log.responseCause()).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
