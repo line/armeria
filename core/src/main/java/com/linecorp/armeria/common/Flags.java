@@ -30,8 +30,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
-import java.util.function.IntPredicate;
-import java.util.function.LongPredicate;
 import java.util.function.Predicate;
 
 import javax.net.ssl.SSLEngine;
@@ -62,7 +60,6 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
-import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
@@ -160,7 +157,6 @@ public final class Flags {
         }
     }
 
-
     private static final Predicate<InetAddress> DEFAULT_PREFERRED_IP_V4_ADDRESSES = null;
     @Nullable
     private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES = getNormalizedTo(
@@ -209,7 +205,6 @@ public final class Flags {
             }
     );
 
-
     private static final boolean DEFAULT_VERBOSE_SOCKET_EXCEPTIONS = false;
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS =
             getBoolean("verboseSocketExceptions", FlagsProvider::verboseSocketExceptions,
@@ -236,7 +231,8 @@ public final class Flags {
                                                         DEFAULT_USE_EPOLL,
                                                         value -> TransportType.EPOLL.isAvailable() || !value);
 
-    private static final TransportType DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? TransportType.EPOLL : TransportType.NIO;
+    private static final TransportType DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? TransportType.EPOLL
+                                                                          : TransportType.NIO;
     private static final Predicate<TransportType> transportTypeValidator = transportType -> {
         switch (transportType) {
             case IO_URING:
@@ -1538,49 +1534,53 @@ public final class Flags {
 
     private static boolean getBoolean(String name, Function<FlagsProvider, Boolean> spiAccessedMethod,
                                       boolean defaultValue) {
-        return getBoolean(name, spiAccessedMethod, defaultValue, unused -> true);
+        final Predicate<Boolean> alwaysPass = unused -> true;
+        return getBoolean(name, spiAccessedMethod, defaultValue, alwaysPass);
     }
 
     private static boolean getBoolean(String name, Function<FlagsProvider, Boolean> spiAccessedMethod,
                                       boolean defaultValue, Predicate<Boolean> validator) {
-        return "true".equals(getNormalized(name, spiAccessedMethod.andThen(i -> nullByPass(i, String::valueOf)),
-                                           String.valueOf(defaultValue), value -> {
-                    if ("true".equals(value)) {
-                        return validator.test(true);
-                    }
+        final Predicate<String> combinedValidator = value -> {
+            if ("true".equals(value)) {
+                return validator.test(true);
+            }
 
-                    if ("false".equals(value)) {
-                        return validator.test(false);
-                    }
-
-                    return false;
-                }));
+            if ("false".equals(value)) {
+                return validator.test(false);
+            }
+            return false;
+        };
+        final Predicate<Boolean> alwaysPass = unused -> true;
+        return getNormalizedTo(name, spiAccessedMethod, defaultValue, combinedValidator, alwaysPass,
+                               Boolean::new);
     }
 
     private static int getInt(String name, Function<FlagsProvider, Integer> spiAccessedMethod,
-                              int defaultValue, IntPredicate validator) {
-        return Integer.parseInt(getNormalized(name, spiAccessedMethod.andThen(i -> nullByPass(i, StringUtil::toString)),
-                                              StringUtil.toString(defaultValue), value -> {
-                    try {
-                        return validator.test(Integer.parseInt(value));
-                    } catch (Exception e) {
-                        // null or non-integer
-                        return false;
-                    }
-                }));
+                              int defaultValue, Predicate<Integer> validator) {
+        final Predicate<String> combinedValidator = value -> {
+            try {
+                return validator.test(Integer.parseInt(value));
+            } catch (Exception e) {
+                // null or non-integer
+                return false;
+            }
+        };
+        return getNormalizedTo(name, spiAccessedMethod, defaultValue, combinedValidator, validator,
+                               Integer::parseInt);
     }
 
     private static long getLong(String name, Function<FlagsProvider, Long> spiAccessedMethod,
-                                long defaultValue, LongPredicate validator) {
-        return Long.parseLong(getNormalized(name, spiAccessedMethod.andThen(i -> nullByPass(i, StringUtil::toString)),
-                                            StringUtil.toString(defaultValue), value -> {
-                    try {
-                        return validator.test(Long.parseLong(value));
-                    } catch (Exception e) {
-                        // null or non-integer
-                        return false;
-                    }
-                }));
+                                long defaultValue, Predicate<Long> validator) {
+        final Predicate<String> combinedValidator = value -> {
+            try {
+                return validator.test(Long.parseLong(value));
+            } catch (Exception e) {
+                // null or non-integer
+                return false;
+            }
+        };
+        return getNormalizedTo(name, spiAccessedMethod, defaultValue, combinedValidator, validator,
+                               Long::parseLong);
     }
 
     @Nullable
@@ -1611,7 +1611,8 @@ public final class Flags {
         return defaultValue;
     }
 
-    private static String getNormalized(String name, Function<FlagsProvider, @Nullable String> spiAccessedMethod,
+    private static String getNormalized(String name,
+                                        Function<FlagsProvider, @Nullable String> spiAccessedMethod,
                                         String defaultValue, Predicate<String> validator) {
         return getNormalizedTo(name, spiAccessedMethod, defaultValue, validator, validator, unused -> unused);
     }
@@ -1642,14 +1643,6 @@ public final class Flags {
 
         logger.info("{}: {} (default)", fullName, defaultValue);
         return defaultValue;
-    }
-
-    @Nullable
-    private static <T> String nullByPass(@Nullable T t, Function<T, String> function) {
-        if (t == null) {
-            return null;
-        }
-        return function.apply(t);
     }
 
     @Nullable

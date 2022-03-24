@@ -52,6 +52,12 @@ class FlagsProviderTest {
     }
 
     @Test
+    void useDefaultGivenFlagIsNotOverride() throws Throwable {
+        final int defaultDefaultHttp2MaxFrameSize = 16384;
+        assertFlags("defaultHttp2MaxFrameSize").isEqualTo(defaultDefaultHttp2MaxFrameSize);
+    }
+
+    @Test
     void spiInvalidFallbackToDefault() throws Throwable {
         final long defaultDefaultRequestTimeoutMillis = 10 * 1000;
         assertFlags("defaultRequestTimeoutMillis")
