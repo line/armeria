@@ -351,6 +351,7 @@ public final class Flags {
                     DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
+    // Use slightly greater value than the client-side default so that clients close the connection more often.
     private static final long DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
     private static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS =
             getLong("defaultServerIdleTimeoutMillis",
@@ -429,7 +430,7 @@ public final class Flags {
 
     // Can't use 0xFFFFFFFFL because some implementations use a signed 32-bit integer to store HTTP/2 SETTINGS
     // parameter values, thus anything greater than 0x7FFFFFFF will break them or make them unhappy.
-    static final long DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
+    private static final long DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
     private static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION =
             getLong("defaultHttp2MaxStreamsPerConnection",
                     FlagsProvider::defaultHttp2MaxStreamsPerConnection,
