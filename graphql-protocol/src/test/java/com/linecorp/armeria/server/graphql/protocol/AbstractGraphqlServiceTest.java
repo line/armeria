@@ -151,6 +151,8 @@ class AbstractGraphqlServiceTest {
 
     private static Stream<Arguments> providePostMethodArguments() {
         return Stream.of(
+                Arguments.of(ImmutableMap.of(), HttpStatus.BAD_REQUEST),
+                Arguments.of(ImmutableMap.of("query", ""), HttpStatus.BAD_REQUEST),
                 Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}"), HttpStatus.OK),
                 Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
                                              "operationName", "dummy"), HttpStatus.OK),
