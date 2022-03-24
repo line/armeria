@@ -112,17 +112,22 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
             return;
         }
 
-        // TTL has expired. Update the old Endpoints.
-        sendQueries(questions);
+        // TTL has expired. Refresh the old Endpoints.
+        eventLoop.execute(() -> sendQueries(questions));
     }
 
     private void sendQueries(List<DnsQuestion> questions) {
         if (isClosing()) {
             return;
         }
+        final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(false);
+        }
 
-        resolver.resolve(questions, logPrefix).handle(this::onDnsRecords);
+        final CompletableFuture<List<DnsRecord>> future = resolver.resolve(questions, logPrefix);
         attemptsSoFar++;
+        future.handle(this::onDnsRecords);
     }
 
     private Void onDnsRecords(@Nullable List<DnsRecord> records, @Nullable Throwable cause) {
@@ -150,6 +155,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
             setEndpoints(onDnsRecords(records, effectiveTtl));
         } catch (Throwable t) {
             logger.warn("{} Failed to process the DNS query result: {}", logPrefix, records, t);
+        } finally {
+            scheduledFuture = eventLoop.schedule(() -> sendQueries(questions), effectiveTtl, TimeUnit.SECONDS);
         }
         return null;
     }

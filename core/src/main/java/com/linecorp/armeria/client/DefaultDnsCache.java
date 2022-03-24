@@ -87,6 +87,7 @@ final class DefaultDnsCache implements DnsCache {
                 throw new Error();
             }
         });
+        caffeine.executor(executor);
         cache = caffeine.build();
 
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.client.dns.cache");

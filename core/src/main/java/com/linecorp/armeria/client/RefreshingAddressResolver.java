@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.client.dns.DnsUtil.extractAddressBytes;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -32,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.retry.Backoff;
@@ -172,6 +172,10 @@ final class RefreshingAddressResolver
     @Override
     public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
                           @Nullable UnknownHostException cause) {
+        if (resolverClosed) {
+            return;
+        }
+
         final CacheEntry entry = addressResolverCache.getIfPresent(question.name());
         if (entry != null && entry.refreshable()) {
             entry.refresh();
@@ -203,14 +207,9 @@ final class RefreshingAddressResolver
         @Nullable
         private final ScheduledFuture<?> negativeCacheFuture;
 
-        @VisibleForTesting
         @Nullable
-        ScheduledFuture<?> retryFuture;
-
-        /**
-         * No need to be volatile because updated only by the {@link #executor()}.
-         */
-        private int numAttemptsSoFar = 1;
+        private volatile ScheduledFuture<?> retryFuture;
+        private volatile int numAttemptsSoFar = 1;
 
         CacheEntry(String hostname, @Nullable InetAddress address, List<DnsQuestion> questions,
                    @Nullable Throwable cause) {
@@ -252,14 +251,7 @@ final class RefreshingAddressResolver
         }
 
         void clear() {
-            if (executor().inEventLoop()) {
-                clear0();
-            } else {
-                executor().execute(this::clear0);
-            }
-        }
-
-        void clear0() {
+            final ScheduledFuture<?> retryFuture = this.retryFuture;
             if (retryFuture != null) {
                 retryFuture.cancel(false);
             }
@@ -273,10 +265,10 @@ final class RefreshingAddressResolver
                 return;
             }
 
-            assert address != null;
-            final String hostName = address.getHostName();
+            assert refreshable();
+            final String hostname = address.getHostName();
 
-            sendQueries(questions, hostName).handle((entry, unused) -> {
+            sendQueries(questions, hostname).handle((entry, unused) -> {
                 if (resolverClosed) {
                     return null;
                 }
@@ -285,16 +277,16 @@ final class RefreshingAddressResolver
                 if (cause != null) {
                     final long nextDelayMillis = retryBackoff.nextDelayMillis(numAttemptsSoFar++);
                     if (nextDelayMillis < 0) {
-                        addressResolverCache.invalidate(hostName);
-                        return null;
+                        addressResolverCache.invalidate(hostname);
+                    } else {
+                        retryFuture = executor().schedule(this::refresh, nextDelayMillis, MILLISECONDS);
                     }
-                    retryFuture = executor().schedule(this::refresh, nextDelayMillis, TimeUnit.MILLISECONDS);
                     return null;
                 }
 
                 // Got the response successfully so reset the state.
                 numAttemptsSoFar = 1;
-                addressResolverCache.put(hostName, entry);
+                addressResolverCache.put(hostname, entry);
                 return null;
             });
         }
