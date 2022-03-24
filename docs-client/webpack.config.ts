@@ -140,9 +140,9 @@ plugins.push(new DefinePlugin({
 // Do not add CompressionWebpackPlugin on dev
 if (!isDev) {
   plugins.push(new CompressionWebpackPlugin({
-    test: /\.js(\?.*)?$/i,
+    test: /\.(js|css|html|svg)$/,
     algorithm: 'brotliCompress',
-    filename: '[path].br',
+    filename: '[path][base].br',
   }) as any);
 }
 
