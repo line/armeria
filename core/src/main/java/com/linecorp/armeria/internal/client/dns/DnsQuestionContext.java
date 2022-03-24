@@ -26,12 +26,10 @@ import io.netty.util.concurrent.EventExecutor;
 final class DnsQuestionContext {
 
     private final long queryTimeoutMillis;
-    private final boolean isRefreshing;
     private final CompletableFuture<Void> whenCancelled = new CompletableFuture<>();
 
-    DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis, boolean isRefreshing) {
+    DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis) {
         this.queryTimeoutMillis = queryTimeoutMillis;
-        this.isRefreshing = isRefreshing;
         executor.schedule(() -> whenCancelled.cancel(true), queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
@@ -47,10 +45,6 @@ final class DnsQuestionContext {
         return whenCancelled.isCompletedExceptionally();
     }
 
-    boolean isRefreshing() {
-        return isRefreshing;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -61,15 +55,13 @@ final class DnsQuestionContext {
         }
 
         final DnsQuestionContext that = (DnsQuestionContext) o;
-        return queryTimeoutMillis == that.queryTimeoutMillis && isRefreshing == that.isRefreshing &&
-               whenCancelled.equals(that.whenCancelled);
+        return queryTimeoutMillis == that.queryTimeoutMillis && whenCancelled.equals(that.whenCancelled);
     }
 
     @Override
     public int hashCode() {
         int result = whenCancelled.hashCode();
         result = 31 * result + (int) queryTimeoutMillis;
-        result = 31 * result + (isRefreshing ? 1 : 0);
         return result;
     }
 
@@ -77,7 +69,6 @@ final class DnsQuestionContext {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("queryTimeoutMillis", queryTimeoutMillis)
-                          .add("isRefreshing", isRefreshing)
                           .add("whenCancelled", whenCancelled)
                           .toString();
     }

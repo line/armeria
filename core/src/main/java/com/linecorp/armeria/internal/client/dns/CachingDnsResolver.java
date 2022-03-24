@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DnsCache;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -53,7 +52,7 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
     @Override
     public CompletableFuture<List<DnsRecord>> resolve(DnsQuestionContext ctx, DnsQuestion question) {
         try {
-            final List<DnsRecord> dnsRecords = cachedValue(ctx, question);
+            final List<DnsRecord> dnsRecords = dnsCache.get(question);
             if (dnsRecords != null) {
                 return UnmodifiableFuture.completedFuture(dnsRecords);
             } else {
@@ -70,7 +69,7 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
                     try {
                         // Re-check the DNS cache to avoid duplicate requests.
                         // Because a request could be computed right after the in-flight request is removed.
-                        final List<DnsRecord> dnsRecords = cachedValue(ctx, key);
+                        final List<DnsRecord> dnsRecords = dnsCache.get(key);
                         if (dnsRecords != null) {
                             return UnmodifiableFuture.completedFuture(dnsRecords);
                         }
@@ -102,15 +101,6 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
         // Remove the cached in-flight request.
         future.handle((unused0, unused1) -> inflightRequests.remove(question));
         return future;
-    }
-
-    @Nullable
-    private List<DnsRecord> cachedValue(DnsQuestionContext ctx, DnsQuestion question)
-            throws UnknownHostException {
-        if (ctx.isRefreshing()) {
-            return null;
-        }
-        return dnsCache.get(question);
     }
 
     @Override

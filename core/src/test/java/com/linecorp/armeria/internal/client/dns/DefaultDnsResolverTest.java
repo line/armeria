@@ -78,7 +78,7 @@ class DefaultDnsResolverTest {
                             DnsCache.ofDefault(), eventLoop, ImmutableList.of(), 1,
                             1, HostsFileEntriesResolver.DEFAULT);
 
-            final DnsQuestionContext ctx = new DnsQuestionContext(eventLoop, 1, true);
+            final DnsQuestionContext ctx = new DnsQuestionContext(eventLoop, 1);
             resolver.resolveAll(ctx,
                                 ImmutableList.of(new DefaultDnsQuestion("foo.com.", DnsRecordType.A),
                                                  new DefaultDnsQuestion("bar.com.", DnsRecordType.A)),
