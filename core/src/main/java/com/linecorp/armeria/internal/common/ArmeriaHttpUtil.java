@@ -1074,7 +1074,7 @@ public final class ArmeriaHttpUtil {
      * More details can be found at https://github.com/line/armeria/issues/3055.
      */
     public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
-        return httpResponse.status() == HttpResponseStatus.REQUEST_TIMEOUT &&
+        return httpResponse.status().code() == HttpResponseStatus.REQUEST_TIMEOUT.code() &&
                "close".equalsIgnoreCase(httpResponse.headers().get(HttpHeaderNames.CONNECTION));
     }
 
