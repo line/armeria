@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -218,6 +219,7 @@ public final class ServerBuilder {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -782,6 +784,18 @@ public final class ServerBuilder {
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                    gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     *
+     * @param path the path of the directory stores the file.
+     */
+    @UnstableApi
+    public ServerBuilder multipartUploadsLocation(Path path) {
+        requireNonNull(path, "path");
+        virtualHostTemplate.multipartUploadsLocation(path);
         return this;
     }
 

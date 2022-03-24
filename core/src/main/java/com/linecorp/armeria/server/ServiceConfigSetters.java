@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -147,4 +148,13 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters successFunction(SuccessFunction successFunction);
+
+    /**
+     * Sets the {@link Path} for storing the files uploaded from
+     * {@code multipart/form-data} requests.
+     *
+     * @param multipartUploadsLocation the path of the directory which stores the files.
+     */
+    @UnstableApi
+    ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
 }

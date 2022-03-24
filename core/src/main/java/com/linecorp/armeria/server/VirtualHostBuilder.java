@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -133,9 +134,10 @@ public final class VirtualHostBuilder {
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
     private boolean shutdownBlockingTaskExecutorOnStop;
-
     @Nullable
     private SuccessFunction successFunction;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -936,6 +938,17 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link Path} for storing the files uploaded from
+     * {@code multipart/form-data} requests.
+     *
+     * @param multipartUploadsLocation the path of the directory which stores the files.
+     */
+    public VirtualHostBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -1036,12 +1049,17 @@ public final class VirtualHostBuilder {
             successFunction = template.successFunction;
         }
 
+        final Path multipartUploadsLocation =
+                this.multipartUploadsLocation != null ?
+                this.multipartUploadsLocation : template.multipartUploadsLocation;
+
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
         assert blockingTaskExecutor != null;
         assert successFunction != null;
+        assert multipartUploadsLocation != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -1063,14 +1081,15 @@ public final class VirtualHostBuilder {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
                                             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                                            successFunction);
+                                            successFunction, multipartUploadsLocation);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
-                               shutdownBlockingTaskExecutorOnStop, successFunction);
+                               shutdownBlockingTaskExecutorOnStop, successFunction,
+                               multipartUploadsLocation);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;

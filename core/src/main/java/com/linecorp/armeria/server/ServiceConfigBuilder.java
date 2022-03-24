@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -55,6 +56,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private SuccessFunction successFunction;
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -146,6 +149,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = multipartUploadsLocation;
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -168,7 +177,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         boolean defaultShutdownAccessLogWriterOnStop,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         boolean defaultShutdownBlockingTaskExecutorOnStop,
-                        SuccessFunction defaultSuccessFunction) {
+                        SuccessFunction defaultSuccessFunction,
+                        Path defaultMultipartUploadsLocation) {
         return new ServiceConfig(
                 route, service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
@@ -180,7 +190,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
                                              : defaultShutdownBlockingTaskExecutorOnStop,
-                successFunction != null ? successFunction : defaultSuccessFunction);
+                successFunction != null ? successFunction : defaultSuccessFunction,
+                multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation);
     }
 
     @Override
@@ -197,6 +208,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("blockingTaskExecutor", blockingTaskExecutor)
                           .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
                           .add("successFunction", successFunction)
+                          .add("multipartUploadsLocation", multipartUploadsLocation)
                           .toString();
     }
 }
