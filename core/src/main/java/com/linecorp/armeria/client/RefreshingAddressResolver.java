@@ -68,11 +68,11 @@ final class RefreshingAddressResolver
                               int negativeTtl, Backoff retryBackoff) {
         super(eventLoop);
         this.addressResolverCache = addressResolverCache;
-        dnsResolverCache.addListener(this);
         this.resolver = resolver;
         this.dnsRecordTypes = dnsRecordTypes;
         this.negativeTtl = negativeTtl;
         this.retryBackoff = retryBackoff;
+        dnsResolverCache.addListener(this);
     }
 
     @Override
@@ -97,7 +97,7 @@ final class RefreshingAddressResolver
             return;
         }
 
-        // Duplicate queries will be blocked by CachingDnsResolver.
+        // Duplicate queries will be merged into the previous one by CachingDnsResolver.
         final CompletableFuture<CacheEntry> entryFuture = sendQuery(hostname);
         entryFuture.handle((entry0, unused) -> {
             if (entry0.cacheable()) {

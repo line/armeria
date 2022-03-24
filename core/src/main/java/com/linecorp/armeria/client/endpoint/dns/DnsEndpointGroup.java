@@ -66,17 +66,16 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     @VisibleForTesting
     int attemptsSoFar;
 
-    DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
-                     List<DnsQuestion> questions, Backoff backoff, int minTtl, int maxTtl,
-                     DefaultDnsResolver resolver, boolean allowEmptyEndpoints) {
+    DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                     DefaultDnsResolver resolver, EventLoop eventLoop, List<DnsQuestion> questions,
+                     Backoff backoff, int minTtl, int maxTtl) {
 
         super(selectionStrategy, allowEmptyEndpoints);
 
+        this.resolver = resolver;
         this.eventLoop = eventLoop;
         this.backoff = backoff;
         this.questions = questions;
-        this.resolver = resolver;
-        resolver.dnsCache().addListener(this);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         assert !this.questions.isEmpty();
@@ -85,6 +84,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                                   .map(DnsQuestion::name)
                                   .distinct()
                                   .collect(Collectors.joining(", "));
+        resolver.dnsCache().addListener(this);
     }
 
     final Logger logger() {
