@@ -1583,29 +1583,8 @@ public final class Flags {
     @Nullable
     private static String get(String name, Function<FlagsProvider, @Nullable String> spiAccessedMethod,
                               @Nullable String defaultValue, Predicate<String> validator) {
-        final String fullName = PREFIX + name;
-        final String value = System.getProperty(fullName);
-        if (value != null) {
-            if (validator.test(value)) {
-                logger.info("{}: {} (jvm option)", fullName, value);
-                return value;
-            }
-            logger.warn("{}: {} (jvm option) fail validation", fullName, value);
-        }
-
-        if (FLAGS_PROVIDER != null) {
-            final String spi = spiAccessedMethod.apply(FLAGS_PROVIDER);
-            if (spi != null) {
-                if (validator.test(spi)) {
-                    logger.info("{}: {} (spi)", fullName, spi);
-                    return spi;
-                }
-                logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
-            }
-        }
-
-        logger.info("{}: {} (default instead of: {})", fullName, defaultValue, value);
-        return defaultValue;
+        return resolveFlag(name, System::getProperty, spiAccessedMethod, defaultValue,
+                           validator, validator, unused -> unused);
     }
 
     private static String getNormalized(String name,
@@ -1617,8 +1596,23 @@ public final class Flags {
     private static <T> T getNormalizedTo(String name, Function<FlagsProvider, @Nullable T> spiAccessedMethod,
                                          @Nullable T defaultValue, Predicate<String> jpmOptionValidator,
                                          Predicate<T> spiValidator, Function<String, T> convertFunction) {
+        final Function<String, @Nullable String> getLowerCased = fullName -> {
+            String value = System.getProperty(fullName);
+            if (value != null) {
+                value = Ascii.toLowerCase(value);
+            }
+            return value;
+        };
+        return resolveFlag(name, getLowerCased, spiAccessedMethod, defaultValue,
+                           jpmOptionValidator, spiValidator, convertFunction);
+    }
+
+    private static <T> T resolveFlag(String name, Function<String, @Nullable String> valueProvider,
+                                     Function<FlagsProvider, @Nullable T> spiAccessedMethod,
+                                     @Nullable T defaultValue, Predicate<String> jpmOptionValidator,
+                                     Predicate<T> spiValidator, Function<String, T> convertFunction) {
         final String fullName = PREFIX + name;
-        final String value = getLowerCased(fullName);
+        final String value = valueProvider.apply(fullName);
         if (value != null) {
             if (jpmOptionValidator.test(value)) {
                 logger.info("{}: {} (jvm option)", fullName, value);
@@ -1626,7 +1620,6 @@ public final class Flags {
             }
             logger.warn("{}: {} (jvm option) fail validation", fullName, value);
         }
-
         if (FLAGS_PROVIDER != null) {
             final T spi = spiAccessedMethod.apply(FLAGS_PROVIDER);
             if (spi != null) {
@@ -1637,18 +1630,8 @@ public final class Flags {
                 logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
             }
         }
-
         logger.info("{}: {} (default)", fullName, defaultValue);
         return defaultValue;
-    }
-
-    @Nullable
-    private static String getLowerCased(String fullName) {
-        String value = System.getProperty(fullName);
-        if (value != null) {
-            value = Ascii.toLowerCase(value);
-        }
-        return value;
     }
 
     private Flags() {}
