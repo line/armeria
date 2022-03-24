@@ -938,7 +938,8 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the {@link Path} for storing uploaded files through {@code multipart/form-data}.
+     * Sets the {@link Path} for storing the files uploaded from
+     * {@code multipart/form-data} requests.
      *
      * @param multipartUploadsLocation the path of the directory which stores the files.
      */
