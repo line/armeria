@@ -204,26 +204,19 @@ public final class Flags {
             getNormalizedTo("preferredIpV4Addresses", FlagsProvider::preferredIpV4Addresses,
                             null, inetAddressValidator, alwaysPass, strToInetAddress);
 
-    private static final boolean DEFAULT_VERBOSE_SOCKET_EXCEPTIONS = false;
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS =
-            getBoolean("verboseSocketExceptions", FlagsProvider::verboseSocketExceptions,
-                       DEFAULT_VERBOSE_SOCKET_EXCEPTIONS);
+            getBoolean("verboseSocketExceptions", FlagsProvider::verboseSocketExceptions, false);
 
-    private static final boolean DEFAULT_VERBOSE_RESPONSES = false;
     private static final boolean VERBOSE_RESPONSES =
-            getBoolean("verboseResponses", FlagsProvider::verboseResponses,
-                       DEFAULT_VERBOSE_RESPONSES);
+            getBoolean("verboseResponses", FlagsProvider::verboseResponses, false);
 
-    private static final String DEFAULT_REQUEST_CONTEXT_STORAGE_PROVIDER = null;
     @Nullable
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
             get("requestContextStorageProvider", FlagsProvider::requestContextStorageProvider,
-                DEFAULT_REQUEST_CONTEXT_STORAGE_PROVIDER, alwaysPass);
+                null, alwaysPass);
 
-    private static final boolean DEFAULT_WARN_NETTY_VERSIONS = true;
     private static final boolean WARN_NETTY_VERSIONS =
-            getBoolean("warnNettyVersions", FlagsProvider::warnNettyVersions,
-                       DEFAULT_WARN_NETTY_VERSIONS);
+            getBoolean("warnNettyVersions", FlagsProvider::warnNettyVersions, true);
 
     private static final boolean DEFAULT_USE_EPOLL = TransportType.EPOLL.isAvailable();
     private static final boolean USE_EPOLL = getBoolean("useEpoll", unused -> DEFAULT_USE_EPOLL,
@@ -264,7 +257,6 @@ public final class Flags {
                 return false;
         }
     };
-
     private static final Function<String, @Nullable TransportType> strToTransportType = strType -> {
         switch (strType) {
             case "nio":
@@ -297,13 +289,13 @@ public final class Flags {
     @Nullable
     private static Boolean dumpOpenSslInfo;
 
-    static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
+    private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
     private static final int MAX_NUM_CONNECTIONS =
             getInt("maxNumConnections", FlagsProvider::maxNumConnections,
                    DEFAULT_MAX_NUM_CONNECTIONS, value -> value > 0);
 
     private static final int DEFAULT_NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
-    static final int DEFAULT_NUM_COMMON_WORKERS = DEFAULT_NUM_CPU_CORES * 2;
+    private static final int DEFAULT_NUM_COMMON_WORKERS = DEFAULT_NUM_CPU_CORES * 2;
     private static final int NUM_COMMON_WORKERS =
             getInt("numCommonWorkers", FlagsProvider::numCommonWorkers,
                    DEFAULT_NUM_COMMON_WORKERS, value -> value > 0);
@@ -322,14 +314,14 @@ public final class Flags {
                     DEFAULT_DEFAULT_MAX_REQUEST_LENGTH,
                     value -> value >= 0);
 
-    static final long DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH = 10 * 1024 * 1024; // 10 MiB
+    private static final long DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH = 10 * 1024 * 1024; // 10 MiB
     private static final long DEFAULT_MAX_RESPONSE_LENGTH =
             getLong("defaultMaxResponseLength",
                     FlagsProvider::defaultMaxResponseLength,
                     DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH,
                     value -> value >= 0);
 
-    static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = 10 * 1000; // 10 seconds
+    private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = 10 * 1000; // 10 seconds
     private static final long DEFAULT_REQUEST_TIMEOUT_MILLIS =
             getLong("defaultRequestTimeoutMillis",
                     FlagsProvider::defaultRequestTimeoutMillis,
@@ -473,17 +465,12 @@ public final class Flags {
                    DEFAULT_DEFAULT_HTTP1_MAX_CHUNK_SIZE,
                    value -> value >= 0);
 
-    private static final boolean DEFAULT_DEFAULT_USE_HTTP2_PREFACE = true;
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
-            getBoolean("defaultUseHttp2Preface",
-                       FlagsProvider::defaultUseHttp2Preface,
-                       DEFAULT_DEFAULT_USE_HTTP2_PREFACE);
+            getBoolean("defaultUseHttp2Preface", FlagsProvider::defaultUseHttp2Preface, true);
 
-    private static final boolean DEFAULT_DEFAULT_USE_HTTP1_PIPELINING = false;
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING =
             getBoolean("defaultUseHttp1Pipelining",
-                       FlagsProvider::defaultUseHttp1Pipelining,
-                       DEFAULT_DEFAULT_USE_HTTP1_PIPELINING);
+                       FlagsProvider::defaultUseHttp1Pipelining, false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
     private static final String DEFAULT_BACKOFF_SPEC =
@@ -556,27 +543,20 @@ public final class Flags {
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
-    private static final boolean DEFAULT_USE_JDK_DNS_RESOLVER = false;
     private static final boolean USE_JDK_DNS_RESOLVER =
-            getBoolean("useJdkDnsResolver", FlagsProvider::useJdkDnsResolver,
-                       DEFAULT_USE_JDK_DNS_RESOLVER);
+            getBoolean("useJdkDnsResolver", FlagsProvider::useJdkDnsResolver, false);
 
-    private static final boolean DEFAULT_REPORT_BLOCKED_EVENT_LOOP = true;
     private static final boolean REPORT_BLOCKED_EVENT_LOOP =
-            getBoolean("reportBlockedEventLoop", FlagsProvider::reportBlockedEventLoop,
-                       DEFAULT_REPORT_BLOCKED_EVENT_LOOP);
+            getBoolean("reportBlockedEventLoop", FlagsProvider::reportBlockedEventLoop, true);
 
-    private static final boolean DEFAULT_VALIDATE_HEADERS = true;
     private static final boolean VALIDATE_HEADERS =
-            getBoolean("validateHeaders", FlagsProvider::validateHeaders,
-                       DEFAULT_VALIDATE_HEADERS);
+            getBoolean("validateHeaders", FlagsProvider::validateHeaders, true);
 
-    private static final boolean DEFAULT_DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS = false;
     private static final boolean DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS =
-            getBoolean("tlsAllowUnsafeCiphers", FlagsProvider::tlsAllowUnsafeCiphers,
-                       DEFAULT_DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS);
+            getBoolean("tlsAllowUnsafeCiphers", FlagsProvider::tlsAllowUnsafeCiphers, false);
 
     private static final Set<TransientServiceOption> DEFAULT_TRANSIENT_SERVICE_OPTIONS = ImmutableSet.of();
+
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS = getNormalizedTo(
             "transientServiceOptions", FlagsProvider::transientServiceOptions,
             DEFAULT_TRANSIENT_SERVICE_OPTIONS, val -> {
@@ -595,22 +575,18 @@ public final class Flags {
                            .collect(toImmutableSet()))
     );
 
-    private static final boolean DEFAULT_DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = false;
     private static final boolean DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING =
             getBoolean("useLegacyRouteDecoratorOrdering",
-                       FlagsProvider::useLegacyRouteDecoratorOrdering,
-                       DEFAULT_DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING
-            );
+                       FlagsProvider::useLegacyRouteDecoratorOrdering, false);
 
     private static final boolean DEFAULT_USE_DEFAULT_SOCKET_OPTIONS = true;
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
             getBoolean("useDefaultSocketOptions", FlagsProvider::useDefaultSocketOptions,
                        DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
 
-    private static final boolean DEFAULT_ALLOW_DOUBLE_DOTS_IN_QUERY_STRING = false;
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getBoolean("allowDoubleDotsInQueryString", FlagsProvider::allowDoubleDotsInQueryString,
-                       DEFAULT_ALLOW_DOUBLE_DOTS_IN_QUERY_STRING);
+                       false);
 
     /**
      * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
