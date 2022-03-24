@@ -17,7 +17,9 @@
 package com.linecorp.armeria.server.graphql.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -91,6 +94,34 @@ class AbstractGraphqlServiceTest {
         }
     }
 
+    @MethodSource("providePostMethodArguments")
+    @ParameterizedTest
+    void post(Map<String, Object> content, HttpStatus status) throws Exception {
+        final HttpRequest request = HttpRequest.builder()
+                .post("/graphql")
+                .contentJson(content)
+                .build();
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final AggregatedHttpResponse response = testGraphqlService.serve(ctx, request).aggregate().join();
+        assertThat(response.status()).isEqualTo(status);
+    }
+
+    @MethodSource("provideThrowsExceptionPostMethodArguments")
+    @ParameterizedTest
+    void throwsExceptionPost(Map<Object, Object> content) throws Exception {
+        final HttpRequest request = HttpRequest.builder()
+                                               .post("/graphql")
+                                               .contentJson(content)
+                                               .build();
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        assertThatThrownBy(() -> {
+            testGraphqlService.serve(ctx, request).aggregate().join();
+        }).hasRootCauseInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Unknown parameter type variables");
+    }
+
     @Test
     void decodeVariablesAndExtensionsAsMap() throws Exception {
         final QueryParams query = QueryParams.of("query", "query={users(id: \"1\") {name}}",
@@ -118,6 +149,30 @@ class AbstractGraphqlServiceTest {
         }
     }
 
+    private static Stream<Arguments> providePostMethodArguments() {
+        return Stream.of(
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}"), HttpStatus.OK),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "operationName", "dummy"), HttpStatus.OK),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "variables", ImmutableMap.of()), HttpStatus.OK),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "extensions", ImmutableMap.of()), HttpStatus.OK)
+        );
+    }
+
+    private static Stream<Arguments> provideThrowsExceptionPostMethodArguments() {
+        return Stream.of(
+                Arguments.of(ImmutableMap.of("query", ImmutableMap.of())),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "operationName", ImmutableMap.of())),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "variables", "variables_string")),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "extensions", "extension_string"))
+        );
+    }
+
     private static class TestGraphqlService extends AbstractGraphqlService {
 
         @Nullable
@@ -129,7 +184,7 @@ class AbstractGraphqlServiceTest {
         protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
             graphqlRequest = req;
             produceType = GraphqlUtil.produceType(ctx.request().headers());
-            return null;
+            return HttpResponse.of(HttpStatus.OK);
         }
     }
 }

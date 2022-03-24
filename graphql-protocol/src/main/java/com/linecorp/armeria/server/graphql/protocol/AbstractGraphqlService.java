@@ -107,11 +107,11 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                                "Failed to parse a JSON document: " + body);
                     }
 
-                    final String query = (String) requestMap.get("query");
+                    final String query = toStringFromJson(requestMap.get("query"));
                     if (Strings.isNullOrEmpty(query)) {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
                     }
-                    final String operationName = (String) requestMap.get("operationName");
+                    final String operationName = toStringFromJson(requestMap.get("operationName"));
                     final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"));
                     final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"));
 
@@ -162,6 +162,19 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             return ImmutableMap.of();
         }
         return parseJsonString(value);
+    }
+
+    @Nullable
+    private static String toStringFromJson(@Nullable Object maybeString) {
+        if (maybeString == null) {
+            return null;
+        }
+
+        if (maybeString instanceof String) {
+            return (String) maybeString;
+        } else {
+            throw new IllegalArgumentException("Unknown parameter type variables");
+        }
     }
 
     /**
