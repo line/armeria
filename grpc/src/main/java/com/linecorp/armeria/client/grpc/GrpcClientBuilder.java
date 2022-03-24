@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -58,6 +59,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -467,6 +469,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public GrpcClientBuilder successFunction(SuccessFunction successFunction) {
+        return (GrpcClientBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
     public GrpcClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (GrpcClientBuilder) super.endpointRemapper(endpointRemapper);
@@ -535,5 +542,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public GrpcClientBuilder followRedirects(RedirectConfig redirectConfig) {
         return (GrpcClientBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public GrpcClientBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

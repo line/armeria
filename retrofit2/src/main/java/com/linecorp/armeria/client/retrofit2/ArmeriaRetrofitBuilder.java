@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -37,6 +38,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -48,6 +50,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -148,7 +151,7 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
 
     /**
      * Adds the specified converter factory for serialization and deserialization of objects.
-     * @see Retrofit.Builder#addCallAdapterFactory(CallAdapter.Factory)
+     * @see Retrofit.Builder#addConverterFactory(Converter.Factory)
      */
     public ArmeriaRetrofitBuilder addConverterFactory(Converter.Factory factory) {
         retrofitBuilder.addConverterFactory(requireNonNull(factory, "factory"));
@@ -335,6 +338,11 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ArmeriaRetrofitBuilder successFunction(SuccessFunction successFunction) {
+        return (ArmeriaRetrofitBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
     public ArmeriaRetrofitBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (ArmeriaRetrofitBuilder) super.endpointRemapper(endpointRemapper);
@@ -425,5 +433,11 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ArmeriaRetrofitBuilder followRedirects(RedirectConfig redirectConfig) {
         return (ArmeriaRetrofitBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (ArmeriaRetrofitBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

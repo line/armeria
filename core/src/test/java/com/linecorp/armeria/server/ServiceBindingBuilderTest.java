@@ -23,9 +23,11 @@ import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
+import org.assertj.core.util.Files;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableSet;
@@ -41,6 +43,7 @@ public class ServiceBindingBuilderTest {
     public void serviceBindingBuilder() {
         final ServerBuilder sb = Server.builder();
         final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
         sb.route().get("/foo/bar")
           .consumes(JSON, PLAIN_TEXT_UTF_8)
@@ -49,6 +52,7 @@ public class ServiceBindingBuilderTest {
           .maxRequestLength(8192)
           .verboseResponses(true)
           .accessLogWriter(accessLogWriter, true)
+          .multipartUploadsLocation(multipartUploadsLocation)
           .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
@@ -66,10 +70,13 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
         assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isTrue();
+        assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
     }
 
     @Test
     public void withRoute() {
+        final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
+
         final ServerBuilder sb = Server.builder();
         sb.withRoute(builder -> builder.get("/foo/bar")
                                        .consumes(JSON, PLAIN_TEXT_UTF_8)
@@ -77,6 +84,7 @@ public class ServiceBindingBuilderTest {
                                        .requestTimeoutMillis(10)
                                        .maxRequestLength(8192)
                                        .verboseResponses(true)
+                                       .multipartUploadsLocation(multipartUploadsLocation)
                                        .build((ctx, req) -> HttpResponse.of(OK)));
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
@@ -91,35 +99,44 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
+        assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
     }
 
     @Test
     public void overwriteServerBuilderProperty() {
         final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        final Path overWrittenMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final Path routeMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
         final ServerBuilder sb = Server.builder();
         sb.defaultVirtualHost()
           .maxRequestLength(1024)
           .accessLogWriter(accessLogWriter, false)
           .requestTimeoutMillis(10000) // This is overwritten.
+          .multipartUploadsLocation(overWrittenMultipartUploadsLocation) // This is overwritten.
           .defaultServiceNaming(ctx -> "globalServiceNaming"); // This is overwritten.
 
         sb.route().get("/foo/bar")
           .requestTimeout(Duration.ofMillis(10))
           .defaultServiceNaming(ctx -> "serviceNaming")
+          .multipartUploadsLocation(routeMultipartUploadsLocation)
+          .build((ctx, req) -> HttpResponse.of(OK));
+
+        sb.route().get("/foo/bar/baz")
           .build((ctx, req) -> HttpResponse.of(OK));
 
         sb.defaultVirtualHost().maxRequestLength(1024);
         sb.verboseResponses(true);
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
-        assertThat(serviceConfigs.size()).isOne();
+        assertThat(serviceConfigs.size()).isEqualTo(2);
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
         final Route route = serviceConfig.route();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.defaultServiceNaming()).isNotNull();
+        assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(routeMultipartUploadsLocation);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
         assertThat(serviceConfig.defaultServiceNaming().serviceName(sctx)).isEqualTo("serviceNaming");
@@ -127,6 +144,48 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
         assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isFalse();
+    }
+
+    @Test
+    public void usingServerBuilderProperty() {
+        final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        final Path overWrittenMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final Path routeMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
+
+        final ServerBuilder sb = Server.builder();
+        sb.defaultVirtualHost()
+          .maxRequestLength(1024)
+          .accessLogWriter(accessLogWriter, false)
+          .requestTimeoutMillis(10000)
+          .multipartUploadsLocation(overWrittenMultipartUploadsLocation)
+          .defaultServiceNaming(ctx -> "globalServiceNaming");
+
+        // Not affect other route using ServerBuilder's property.
+        sb.route().get("/foo/bar")
+          .requestTimeout(Duration.ofMillis(10))
+          .defaultServiceNaming(ctx -> "serviceNaming")
+          .multipartUploadsLocation(routeMultipartUploadsLocation)
+          .build((ctx, req) -> HttpResponse.of(OK));
+
+        sb.route().get("/foo/bar/baz")
+          .build((ctx, req) -> HttpResponse.of(OK));
+
+        sb.defaultVirtualHost().maxRequestLength(1024);
+        sb.verboseResponses(true);
+
+        final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
+        assertThat(serviceConfigs.size()).isEqualTo(2);
+        final ServiceConfig bazServiceConfig = serviceConfigs.get(1);
+        final Route bazRoute = bazServiceConfig.route();
+        assertThat(bazRoute.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(bazRoute.paths()).containsExactly("/foo/bar/baz", "/foo/bar/baz");
+        final ServiceRequestContext bazSctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .build();
+        assertThat(bazServiceConfig.defaultServiceNaming().serviceName(bazSctx))
+                .isEqualTo("globalServiceNaming");
+        assertThat(bazServiceConfig.requestTimeoutMillis()).isEqualTo(10000);
+        assertThat(bazServiceConfig.multipartUploadsLocation()).isSameAs(overWrittenMultipartUploadsLocation);
     }
 
     @Test

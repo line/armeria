@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -69,6 +70,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -216,6 +218,8 @@ public final class ServerBuilder {
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
+        virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -784,6 +788,18 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     *
+     * @param path the path of the directory stores the file.
+     */
+    @UnstableApi
+    public ServerBuilder multipartUploadsLocation(Path path) {
+        requireNonNull(path, "path");
+        virtualHostTemplate.multipartUploadsLocation(path);
+        return this;
+    }
+
+    /**
      * Sets the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
      * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
      *
@@ -810,6 +826,16 @@ public final class ServerBuilder {
                                                                   .numThreads(numThreads)
                                                                   .build();
         return blockingTaskExecutor(executor, true);
+    }
+
+    /**
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder successFunction(SuccessFunction successFunction) {
+        virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
+        return this;
     }
 
     /**

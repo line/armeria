@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -26,6 +27,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -221,6 +223,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        return (ServiceBindingBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
     public ServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return (ServiceBindingBuilder) super.requestTimeout(requestTimeout);
     }
@@ -248,6 +255,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         return (ServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
+    }
+
+    @Override
+    public ServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        return (ServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
     }
 
     @Override

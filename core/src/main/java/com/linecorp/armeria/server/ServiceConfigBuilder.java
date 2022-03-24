@@ -19,12 +19,14 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -50,8 +52,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private AccessLogWriter accessLogWriter;
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
+    @Nullable
+    private SuccessFunction successFunction;
     private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -136,6 +142,19 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder successFunction(
+            SuccessFunction successFunction) {
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = multipartUploadsLocation;
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -157,7 +176,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         boolean defaultShutdownAccessLogWriterOnStop,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
-                        boolean defaultShutdownBlockingTaskExecutorOnStop) {
+                        boolean defaultShutdownBlockingTaskExecutorOnStop,
+                        SuccessFunction defaultSuccessFunction,
+                        Path defaultMultipartUploadsLocation) {
         return new ServiceConfig(
                 route, service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
@@ -168,7 +189,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop,
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
-                                             : defaultShutdownBlockingTaskExecutorOnStop);
+                                             : defaultShutdownBlockingTaskExecutorOnStop,
+                successFunction != null ? successFunction : defaultSuccessFunction,
+                multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation);
     }
 
     @Override
@@ -184,6 +207,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .add("blockingTaskExecutor", blockingTaskExecutor)
                           .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
+                          .add("successFunction", successFunction)
+                          .add("multipartUploadsLocation", multipartUploadsLocation)
                           .toString();
     }
 }

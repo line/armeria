@@ -19,9 +19,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiPredicate;
 
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.server.ServerBuilder;
 
 /**
  * Builds an implementing class of {@link AbstractMetricCollectingBuilder} instance.
@@ -67,7 +70,11 @@ public abstract class AbstractMetricCollectingBuilder {
      *         })
      *         .newDecorator();
      * }</pre>
+     *
+     * @deprecated Use {@link ClientBuilder#successFunction(SuccessFunction)} or
+     *                 {@link ServerBuilder#successFunction(SuccessFunction)}.
      */
+    @Deprecated
     public AbstractMetricCollectingBuilder successFunction(
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
