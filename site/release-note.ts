@@ -293,7 +293,9 @@ function labelToCategory(label: any): Category {
 
 function today(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  return `${d.getFullYear()}-` +
+      `${d.getMonth() + 1}`.padStart(2, '0') + '-' +
+      `${d.getDate()}`.padStart(2, '0')
 }
 
 async function main() {
