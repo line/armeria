@@ -151,7 +151,7 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
 
     /**
      * Adds the specified converter factory for serialization and deserialization of objects.
-     * @see Retrofit.Builder#addCallAdapterFactory(CallAdapter.Factory)
+     * @see Retrofit.Builder#addConverterFactory(Converter.Factory)
      */
     public ArmeriaRetrofitBuilder addConverterFactory(Converter.Factory factory) {
         retrofitBuilder.addConverterFactory(requireNonNull(factory, "factory"));
