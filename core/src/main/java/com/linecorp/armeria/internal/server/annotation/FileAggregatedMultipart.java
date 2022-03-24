@@ -95,9 +95,7 @@ final class FileAggregatedMultipart {
                                                     ExecutorService blockingExecutorService) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                if (!Files.exists(targetDirectory)) {
-                    Files.createDirectories(targetDirectory);
-                }
+                Files.createDirectories(targetDirectory);
                 // Avoid name duplication, create new file at target place and replace it.
                 return Files.move(file, Files.createTempFile(targetDirectory, null, ".multipart"),
                                   StandardCopyOption.REPLACE_EXISTING);
@@ -111,9 +109,7 @@ final class FileAggregatedMultipart {
                                                           ExecutorService blockingExecutorService) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                if (!Files.exists(directory)) {
-                    Files.createDirectories(directory);
-                }
+                Files.createDirectories(directory);
                 return Files.createTempFile(directory, null, ".multipart");
             } catch (IOException e) {
                 throw new UncheckedIOException(e);

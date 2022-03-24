@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -1357,7 +1357,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the {@link Path} that is used to store uploaded file through multipart/form-data.
+     * Returns the {@link Path} that is used to store the files uploaded from {@code multipart/form-data}
+     * requests.
      */
     public static Path defaultMultipartUploadsLocation() {
         return DEFAULT_MULTIPART_UPLOADS_LOCATION;

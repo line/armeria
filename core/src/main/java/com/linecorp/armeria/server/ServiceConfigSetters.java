@@ -150,9 +150,9 @@ interface ServiceConfigSetters {
     ServiceConfigSetters successFunction(SuccessFunction successFunction);
 
     /**
-     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     * Sets the {@link Path} for storing uploaded files through {@code multipart/form-data}.
      *
-     * @param multipartUploadsLocation the path of the directory stores the file.
+     * @param multipartUploadsLocation the path of the directory which stores the files.
      */
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);

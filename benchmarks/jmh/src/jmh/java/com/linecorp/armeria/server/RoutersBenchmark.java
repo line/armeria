@@ -50,21 +50,21 @@ public class RoutersBenchmark {
         final String defaultLogName = null;
         final String defaultServiceName = null;
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
-        final Path multipartUploadLocation = Flags.defaultMultipartUploadsLocation();
+        final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
         SERVICES = ImmutableList.of(
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true, SuccessFunction.always(), multipartUploadLocation),
+                                  true, SuccessFunction.always(), multipartUploadsLocation),
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true, SuccessFunction.always(), multipartUploadLocation)
+                                  true, SuccessFunction.always(), multipartUploadsLocation)
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              false, CommonPools.blockingTaskExecutor(), true,
-                                             SuccessFunction.always(), multipartUploadLocation);
+                                             SuccessFunction.always(), multipartUploadsLocation);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,

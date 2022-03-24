@@ -793,7 +793,7 @@ final class AnnotatedValueResolver {
                 }
                 return resolvedValues;
             } catch (Throwable cause) {
-                throw new IllegalArgumentException("Cannot resolve : " + name, cause);
+                throw new IllegalArgumentException("Cannot resolve a file param: " + name, cause);
             }
         };
     }
@@ -1400,16 +1400,12 @@ final class AnnotatedValueResolver {
     }
 
     static class AggregatedResult {
-        static final AggregatedResult EMPTY = new AggregatedResult();
+        static final AggregatedResult EMPTY = new AggregatedResult(null, null);
 
         @Nullable
         private final FileAggregatedMultipart aggregatedMultipart;
         @Nullable
         private final AggregatedHttpRequest aggregatedHttpRequest;
-
-        private AggregatedResult() {
-            this(null, null);
-        }
 
         private AggregatedResult(@Nullable FileAggregatedMultipart aggregatedMultipart,
                                  @Nullable AggregatedHttpRequest aggregatedHttpRequest) {
@@ -1436,7 +1432,6 @@ final class AnnotatedValueResolver {
         @Nullable
         private final AggregatedResult aggregatedResult;
 
-        @Nullable
         private volatile QueryParams queryParams;
 
         ResolverContext(ServiceRequestContext context, HttpRequest request,
