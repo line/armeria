@@ -39,7 +39,7 @@ class SearchDomainTest {
                                                                      "armeria.org", "armeria.dev");
         final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, ndots);
         final DnsQuestion firstQuestion = ctx.nextQuestion();
-        assertThat(firstQuestion).isEqualTo(DnsQuestionWithoutTrailingDot.of(hostname + '.', DnsRecordType.A));
+        assertThat(firstQuestion).isEqualTo(original);
         for (String searchDomain : searchDomains) {
             final DnsQuestion expected =
                     DnsQuestionWithoutTrailingDot.of(hostname + '.' + searchDomain + '.', DnsRecordType.A);
@@ -62,7 +62,7 @@ class SearchDomainTest {
         }
 
         final DnsQuestion lastQuestion = ctx.nextQuestion();
-        assertThat(lastQuestion).isEqualTo(DnsQuestionWithoutTrailingDot.of(hostname + '.', DnsRecordType.A));
+        assertThat(lastQuestion).isEqualTo(original);
         assertThat(ctx.nextQuestion()).isNull();
     }
 
