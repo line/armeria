@@ -478,6 +478,15 @@ class RefreshingAddressResolverTest {
             final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
             final Cache<String, CacheEntry> cache = group.cache();
 
+            final Future<InetSocketAddress> fooWithTrailingDot0 = resolver.resolve(
+                    InetSocketAddress.createUnresolved("foo.com.", 36462));
+            await().untilAsserted(() -> assertThat(fooWithTrailingDot0.isSuccess()).isTrue());
+            // Should resolve hostname IP
+            assertThat(fooWithTrailingDot0.getNow().getAddress().getAddress())
+                    .isEqualTo(NetUtil.createByteArrayFromIpAddressString("1.1.1.1"));
+            final CacheEntry fooWithTrailingDotCache0 = cache.getIfPresent("foo.com.");
+            assertThat(cache.estimatedSize()).isOne();
+
             final Future<InetSocketAddress> foo0 = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
             await().untilAsserted(() -> assertThat(foo0.isSuccess()).isTrue());
@@ -493,14 +502,27 @@ class RefreshingAddressResolverTest {
             assertThat(fooAddress1).isEqualTo(fooAddress0);
             final CacheEntry fooCache1 = cache.getIfPresent("foo.com");
             assertThat(fooCache1.address()).isSameAs(fooCache0.address());
-            assertThat(cache.estimatedSize()).isEqualTo(1);
+            assertThat(cache.estimatedSize()).isEqualTo(2);
 
             dnsCache.remove(barQuestion);
             // Wait until the removal event is delivered.
             Thread.sleep(2000);
 
+            // Unrelated cache is removed. Should not refresh the cached values.
+            final CacheEntry fooWithTrailingDotCache1 = cache.getIfPresent("foo.com.");
+            assertThat(fooWithTrailingDotCache1.address()).isSameAs(fooWithTrailingDotCache0.address());
             final CacheEntry fooCache2 = cache.getIfPresent("foo.com");
             assertThat(fooCache2.address()).isSameAs(fooCache0.address());
+
+            final DnsQuestionWithoutTrailingDot fooWithTrailingDotQuestion =
+                    DnsQuestionWithoutTrailingDot.of("foo.com.", A);
+            dnsCache.remove(fooWithTrailingDotQuestion);
+            // Wait until the removal event is delivered.
+            Thread.sleep(2000);
+            final CacheEntry fooWithTrailingDotCache3 = cache.getIfPresent("foo.com.");
+            // The address has been refreshed.
+            assertThat(fooWithTrailingDotCache3.address()).isNotSameAs(fooWithTrailingDotCache0.address());
+            assertThat(fooWithTrailingDotCache3.address()).isEqualTo(fooWithTrailingDotCache0.address());
 
             final DnsQuestionWithoutTrailingDot fooQuestion =
                     DnsQuestionWithoutTrailingDot.of("foo.com", "foo.com.armeria.dev.", A);

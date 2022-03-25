@@ -42,7 +42,8 @@ class SearchDomainTest {
         assertThat(firstQuestion.name()).isEqualTo(hostname + '.');
         for (String searchDomain : searchDomains) {
             final DnsQuestion expected =
-                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + '.' + searchDomain + '.', DnsRecordType.A);
+                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + '.' + searchDomain + '.',
+                                                     DnsRecordType.A);
             assertThat(ctx.nextQuestion()).isEqualTo(expected);
         }
         assertThat(ctx.nextQuestion()).isNull();
@@ -57,7 +58,8 @@ class SearchDomainTest {
         final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, ndots);
         for (String searchDomain : searchDomains) {
             final DnsQuestion expected =
-                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + '.' + searchDomain + '.', DnsRecordType.A);
+                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + '.' + searchDomain + '.',
+                                                     DnsRecordType.A);
             assertThat(ctx.nextQuestion()).isEqualTo(expected);
         }
 
