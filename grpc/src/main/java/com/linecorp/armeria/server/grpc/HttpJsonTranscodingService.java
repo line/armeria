@@ -420,6 +420,33 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return file.findMessageTypeByName(messageType.getName());
     }
 
+    @Nullable
+    private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
+        String responseBody = spec.httpRule.getResponseBody();
+        if (StringUtil.isNullOrEmpty(responseBody)) {
+            return null;
+        } else {
+            return httpData -> {
+                byte[] array = httpData.array();
+                ObjectMapper om = new ObjectMapper();
+                final ObjectReader reader = om.reader();
+                try {
+                    final JsonNode jsonNode = reader.readTree(array);
+                    if (jsonNode.has(responseBody)) {
+                        JsonNode responseBodyJsonNode = jsonNode.get(responseBody);
+                        final ObjectWriter writer = om.writer();
+                        byte[] bytes = writer.writeValueAsBytes(responseBodyJsonNode);
+                        return HttpData.copyOf(bytes);
+                    } else {
+                        return httpData;
+                    }
+                } catch (IOException e) {
+                    return httpData;
+                }
+            };
+        }
+    }
+
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final Map<Route, TranscodingSpec> routeAndSpecs;
@@ -477,33 +504,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return unwrap().serve(ctx, req);
     }
 
-    @Nullable
-    private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
-        String responseBody = spec.httpRule.getResponseBody();
-        if (StringUtil.isNullOrEmpty(responseBody)) {
-            return null;
-        } else {
-            return httpData -> {
-                byte[] array = httpData.array();
-                ObjectMapper om = new ObjectMapper();
-                final ObjectReader reader = om.reader();
-                try {
-                    final JsonNode jsonNode = reader.readTree(array);
-                    if (jsonNode.has(responseBody)) {
-                        JsonNode responseBodyJsonNode = jsonNode.get(responseBody);
-                        final ObjectWriter writer = om.writer();
-                        byte[] bytes = writer.writeValueAsBytes(responseBodyJsonNode);
-                        return HttpData.copyOf(bytes);
-                    } else {
-                        return httpData;
-                    }
-                } catch (IOException e) {
-                    return httpData;
-                }
-            };
-        }
-    }
-
     private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
                                 TranscodingSpec spec) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
@@ -546,53 +546,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return null;
         });
         return HttpResponse.from(responseFuture);
-/*
-        final HttpResponse response = HttpResponse.from(responseFuture);
-
-        String responseBodyField = spec.httpRule.getResponseBody();
-        if (responseBodyField == null) {
-            return response;
-        }
-
-
-        return response.mapData(data -> {
-            try (HttpData body = data) {
-            ObjectMapper om = new ObjectMapper();
-
-            final ObjectWriter writer = om.writer();
-
-                //final byte[] bytes = writer.writeValueAsBytes(node);
-                final ObjectReader reader = om.reader();
-
-                ArrayNode arrayNode = om.createArrayNode();
-                arrayNode.add("1");
-                arrayNode.add("2");
-                //arrayNode.add("3");
-
-
-                JsonNode newNode = om.createObjectNode();
-                ((ObjectNode)newNode).put("value", arrayNode);
-                System.out.println(newNode);
-                //data.close();
-                final byte[] bytes = writer.writeValueAsBytes(newNode);
-                //return HttpData.ofUtf8("{}");
-                body.close();
-                return HttpData.copyOf(bytes);
-                //return HttpData.copyOf(array);
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-                byte[] bytes = new byte[1];
-                return HttpData.wrap(bytes);
-            } catch (IOException e) {
-                e.printStackTrace();
-                byte[] bytes = new byte[1];
-                return HttpData.wrap(bytes);
-            } finally {
-                data.close();
-            }
-        });
-
-*/
 
     }
 
