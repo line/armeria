@@ -100,7 +100,7 @@ class FlagsTest {
                 return super.loadClass(name);
             }
 
-            // Reload every class in common package.
+            // Reload every class in armeria package.
             try {
                 // Classes do not have an inner class.
                 final String replaced = name.replace('.', '/') + ".class";
