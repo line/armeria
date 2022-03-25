@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -102,22 +103,27 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     final Map<String, Object> requestMap;
                     try {
                         requestMap = parseJsonString(body);
+                        final String query = toStringFromJson("query", requestMap.get("query"));
+                        if (Strings.isNullOrEmpty(query)) {
+                            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                                   "Missing query");
+                        }
+
+                        final String operationName =
+                                toStringFromJson("operationName", requestMap.get("operationName"));
+                        final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"));
+                        final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"));
+
+                        return executeGraphql(ctx, GraphqlRequest.of(query, operationName,
+                                                                     variables, extensions));
                     } catch (JsonProcessingException ex) {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                                "Failed to parse a JSON document: " + body);
-                    }
-
-                    final String query = (String) requestMap.get("query");
-                    if (Strings.isNullOrEmpty(query)) {
-                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
-                    }
-                    final String operationName = (String) requestMap.get("operationName");
-                    final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"));
-                    final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"));
-
-                    try {
-                        return executeGraphql(ctx,
-                                              GraphqlRequest.of(query, operationName, variables, extensions));
+                    } catch (IllegalArgumentException ex) {
+                        final HttpResponse response = HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                                                      MediaType.PLAIN_TEXT, ex.getMessage());
+                        final HttpResponseException cause = HttpResponseException.of(response, ex);
+                        return HttpResponse.ofFailure(cause);
                     } catch (Exception ex) {
                         return HttpResponse.ofFailure(ex);
                     }
@@ -162,6 +168,19 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             return ImmutableMap.of();
         }
         return parseJsonString(value);
+    }
+
+    @Nullable
+    private static String toStringFromJson(String name, @Nullable Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof String) {
+            return (String) value;
+        } else {
+            throw new IllegalArgumentException("Invalid " + name + " (expected: string)");
+        }
     }
 
     /**
