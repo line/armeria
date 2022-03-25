@@ -61,8 +61,10 @@ date: 2022-03-24
     .service(
       GrpcService
         .builder()
-        .addService(GrpcHealthCheckService.of()) // 👈👈👈
         .addService(new MyGrpcService())
+        .enableHealthCheckService(true) // 👈👈👈
+        // or customize:
+        // .addService(GrpcHealthCheckService.of(...))
         .build()
     )
     .build()

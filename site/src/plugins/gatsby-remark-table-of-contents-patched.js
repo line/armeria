@@ -77,7 +77,9 @@ const transformer = (props) => {
       children: [
         {
           type: 'text',
-          value: `${dayjs(frontmatter.date, 'yyyy-MM-dd', true).format('Do MMMM YYYY')}`,
+          value: `${dayjs(frontmatter.date, 'yyyy-MM-dd', true).format(
+            'Do MMMM YYYY',
+          )}`,
         },
       ],
       data: {
