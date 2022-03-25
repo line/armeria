@@ -124,7 +124,9 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                     return original;
                 }
                 if (shouldStartWithHostname) {
-                    return newQuestion(hostname + '.');
+                    // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
+                    // share the cache key.
+                    return newQuestion(hostname);
                 } else {
                     final String searchDomain = searchDomains.get(0);
                     return newQuestion(hostname + '.' + searchDomain + '.');
@@ -140,7 +142,9 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                 return newQuestion(hostname + '.' + searchDomains.get(nextSearchDomainPos) + '.');
             }
             if (nextSearchDomainPos == searchDomains.size() && !shouldStartWithHostname) {
-                return newQuestion(hostname + '.');
+                // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
+                // share the cache key.
+                return newQuestion(hostname);
             }
             return null;
         }
