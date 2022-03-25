@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -99,7 +99,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final long queryTimeoutMillis;
     private final HostsFileEntriesResolver hostsFileEntriesResolver;
     private final Cache<String, CacheEntry> addressResolverCache;
-    private final BiConsumer<DnsNameResolverBuilder, EventExecutor> resolverConfigurator;
+    private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
 
     @Nullable
     private final ResolvedAddressTypes resolvedAddressTypes;
@@ -109,7 +109,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
             @Nullable ResolvedAddressTypes resolvedAddressTypes,
             DnsCache dnsResolverCache, List<String> searchDomains, int ndots, long queryTimeoutMillis,
             HostsFileEntriesResolver hostsFileEntriesResolver,
-            BiConsumer<DnsNameResolverBuilder, EventExecutor> resolverConfigurator) {
+            Consumer<DnsNameResolverBuilder> resolverConfigurator) {
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
@@ -142,7 +142,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         if (resolvedAddressTypes != null) {
             builder.resolvedAddressTypes(resolvedAddressTypes);
         }
-        resolverConfigurator.accept(builder, executor);
+        resolverConfigurator.accept(builder);
         final DefaultDnsResolver resolver = DefaultDnsResolver.of(builder.build(), dnsResolverCache, executor,
                                                                   searchDomains, ndots, queryTimeoutMillis,
                                                                   hostsFileEntriesResolver);

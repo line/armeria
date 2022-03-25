@@ -22,15 +22,18 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.base.MoreObjects;
 
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 
 final class DnsQuestionContext {
 
     private final long queryTimeoutMillis;
     private final CompletableFuture<Void> whenCancelled = new CompletableFuture<>();
+    private final ScheduledFuture<?> scheduledFuture;
 
     DnsQuestionContext(EventExecutor executor, long queryTimeoutMillis) {
         this.queryTimeoutMillis = queryTimeoutMillis;
-        executor.schedule(() -> whenCancelled.cancel(true), queryTimeoutMillis, TimeUnit.MILLISECONDS);
+        scheduledFuture = executor.schedule(() -> whenCancelled.cancel(true),
+                                            queryTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     long queryTimeoutMillis() {
@@ -45,6 +48,12 @@ final class DnsQuestionContext {
         return whenCancelled.isCompletedExceptionally();
     }
 
+    void cancel() {
+        if (!scheduledFuture.isDone()) {
+            scheduledFuture.cancel(false);
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -55,12 +64,15 @@ final class DnsQuestionContext {
         }
 
         final DnsQuestionContext that = (DnsQuestionContext) o;
-        return queryTimeoutMillis == that.queryTimeoutMillis && whenCancelled.equals(that.whenCancelled);
+        return queryTimeoutMillis == that.queryTimeoutMillis &&
+               whenCancelled.equals(that.whenCancelled) &&
+               scheduledFuture.equals(that.scheduledFuture);
     }
 
     @Override
     public int hashCode() {
         int result = whenCancelled.hashCode();
+        result = 31 * result + scheduledFuture.hashCode();
         result = 31 * result + (int) queryTimeoutMillis;
         return result;
     }
@@ -70,6 +82,7 @@ final class DnsQuestionContext {
         return MoreObjects.toStringHelper(this)
                           .add("queryTimeoutMillis", queryTimeoutMillis)
                           .add("whenCancelled", whenCancelled)
+                          .add("scheduledFuture", scheduledFuture)
                           .toString();
     }
 }

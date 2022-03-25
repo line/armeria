@@ -24,7 +24,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableList;
@@ -51,7 +51,6 @@ import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.resolver.dns.NoopAuthoritativeDnsServerCache;
 import io.netty.resolver.dns.NoopDnsCache;
 import io.netty.resolver.dns.NoopDnsCnameCache;
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A skeletal builder implementation for DNS resolvers.
@@ -482,8 +481,7 @@ public abstract class AbstractDnsResolverBuilder {
      * Builds a configurator that configures a {@link DnsNameResolverBuilder} with the properties set.
      */
     @UnstableApi
-    protected final BiConsumer<DnsNameResolverBuilder, EventExecutor> buildConfigurator(
-            EventLoopGroup eventLoopGroup) {
+    protected final Consumer<DnsNameResolverBuilder> buildConfigurator(EventLoopGroup eventLoopGroup) {
 
         if (queryTimeoutMillisForEachAttempt > -1) {
             checkState(queryTimeoutMillis >= queryTimeoutMillisForEachAttempt,
@@ -507,7 +505,7 @@ public abstract class AbstractDnsResolverBuilder {
         final boolean dnsQueryMetricsEnabled = this.dnsQueryMetricsEnabled;
         final boolean decodeIdn = this.decodeIdn;
 
-        return (builder, executor) -> {
+        return builder -> {
             builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
                    .socketChannelType(TransportType.socketChannelType(eventLoopGroup))
                    // Disable all caches provided by Netty and use DnsCache instead.
