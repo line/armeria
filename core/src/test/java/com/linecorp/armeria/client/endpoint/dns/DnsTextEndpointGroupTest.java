@@ -21,17 +21,13 @@ import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.NoopDnsCache;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -40,13 +36,10 @@ import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 
-public class DnsTextEndpointGroupTest {
-
-    @Rule
-    public final TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
+class DnsTextEndpointGroupTest {
 
     @Test
-    public void txt() throws Exception {
+    void txt() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", TXT),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=a.foo.com"))
@@ -56,21 +49,39 @@ public class DnsTextEndpointGroupTest {
                                          .addRecord(ANSWER, newTooLongTxtRecord("foo.com."))
                                          .addRecord(ANSWER, newTxtRecord("foo.com.", "unrelated_txt"))
                                          .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=group:foo"))
-                                         .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=b:a:d"))
-        ))) {
-            try (DnsTextEndpointGroup group = DnsTextEndpointGroup.builder("foo.com", txt -> {
-                final String txtStr = new String(txt, StandardCharsets.US_ASCII);
-                if (txtStr.startsWith("endpoint=")) {
-                    return Endpoint.parse(txtStr.substring(9));
-                } else {
-                    return null;
-                }
-            }).serverAddresses(server.addr()).build()) {
+                                         .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=b:a:d"))));
 
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("a.foo.com"),
-                        Endpoint.of("b.foo.com"));
-            }
+             DnsTextEndpointGroup group =
+                     DnsTextEndpointGroup.builder("foo.com", txt -> {
+                                             final String txtStr = new String(txt, StandardCharsets.US_ASCII);
+                                             if (txtStr.startsWith("endpoint=")) {
+                                                 return Endpoint.parse(txtStr.substring(9));
+                                             } else {
+                                                 return null;
+                                             }
+                                         })
+                                         .serverAddresses(server.addr())
+                                         .dnsCache(NoopDnsCache.INSTANCE)
+                                         .build()) {
+
+            assertThat(group.whenReady().get()).containsExactly(
+                    Endpoint.of("a.foo.com"),
+                    Endpoint.of("b.foo.com"));
+        }
+    }
+
+    @Test
+    void allowEmptyEndpoint() {
+        try (DnsTextEndpointGroup group = DnsTextEndpointGroup.builder("foo.com", txt -> null)
+                                                              .allowEmptyEndpoints(false)
+                                                              .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isFalse();
+        }
+
+        try (DnsTextEndpointGroup group = DnsTextEndpointGroup.builder("foo.com", txt -> null)
+                                                              .allowEmptyEndpoints(true)
+                                                              .build()) {
+            assertThat(group.allowsEmptyEndpoints()).isTrue();
         }
     }
 

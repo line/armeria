@@ -485,7 +485,7 @@ public final class AnnotatedService implements HttpService {
         if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
             return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
-        return CompletableFuture.completedFuture(obj);
+        return UnmodifiableFuture.completedFuture(obj);
     }
 
     @Override

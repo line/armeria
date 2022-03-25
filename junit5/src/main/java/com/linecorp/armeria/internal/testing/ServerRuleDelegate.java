@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -121,7 +122,7 @@ public abstract class ServerRuleDelegate {
     public CompletableFuture<Void> stop() {
         final Server server = this.server.getAndSet(null);
         if (server == null || server.activePorts().isEmpty()) {
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         }
 
         return server.stop();

@@ -29,6 +29,8 @@ import org.jboss.resteasy.resteasy_jaxrs.i18n.Messages;
 import org.jboss.resteasy.spi.ResteasyAsynchronousResponse;
 import org.jboss.resteasy.spi.RunnableWithException;
 
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+
 import io.netty.util.concurrent.FastThreadLocalThread;
 
 /**
@@ -120,7 +122,7 @@ final class ResteasyAsynchronousExecutionContextImpl extends AbstractExecutionCo
                 ret.completeExceptionally(e);
                 return ret;
             }
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         } else if (!hasInterceptors) {
             final Map<Class<?>, Object> context = ResteasyContext.getContextDataMap();
             // turn any sync request into async

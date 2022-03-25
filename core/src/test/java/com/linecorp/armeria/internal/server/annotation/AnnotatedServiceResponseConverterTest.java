@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
@@ -327,7 +328,7 @@ public class AnnotatedServiceResponseConverterTest {
                 @ProducesJson
                 public HttpResult<CompletionStage<Map<String, String>>> asyncExpectCustomHeader() {
                     return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
-                                         CompletableFuture.completedFuture(ImmutableMap.of("a", "b")));
+                                         UnmodifiableFuture.completedFuture(ImmutableMap.of("a", "b")));
                 }
 
                 @Get("/async/expect-custom-trailers")
