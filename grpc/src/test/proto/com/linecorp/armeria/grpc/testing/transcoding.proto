@@ -94,6 +94,7 @@ service HttpJsonTranscodingTestService {
   rpc EchoListValue(EchoListValueRequest) returns (EchoListValueResponse) {
     option (google.api.http) = {
       get: "/v1/echo/list_value"
+
       additional_bindings {
         post: "/v1/echo/list_value"
         body: "value"

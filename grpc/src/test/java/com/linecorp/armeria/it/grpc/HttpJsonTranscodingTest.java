@@ -223,7 +223,6 @@ class HttpJsonTranscodingTest {
             final GrpcService grpcService = GrpcService.builder()
                                                        .addService(new HttpJsonTranscodingTestService())
                                                        .enableHttpJsonTranscoding(true)
-
                                                        .build();
             // gRPC transcoding will not work under '/foo'.
             // You may get the following log messages when calling the following 'serviceUnder' method:
@@ -231,10 +230,8 @@ class HttpJsonTranscodingTest {
             //   but the routes will be ignored. It will be served at the route you specified: path=/foo,
             //   service=...
             sb.service(grpcService)
-                    .decorator(LoggingService.newDecorator())
-              //.requestTimeout(Duration.ZERO)
+              .requestTimeout(Duration.ZERO)
               .serviceUnder("/foo", grpcService)
-
               .serviceUnder("/docs", DocService.builder().build());
         }
     };
@@ -244,7 +241,7 @@ class HttpJsonTranscodingTest {
     final HttpJsonTranscodingTestServiceBlockingStub grpcClient =
             GrpcClients.builder(server.httpUri())
                        .build(HttpJsonTranscodingTestServiceBlockingStub.class);
-    final WebClient webClient = WebClient.builder(server.httpUri()).responseTimeout(Duration.ofMinutes(1)).build();
+    final WebClient webClient = WebClient.builder(server.httpUri()).build();
 
     @Test
     void shouldGetMessageV1ByGrpcClient() {
