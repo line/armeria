@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.netty.channel.EventLoop;
@@ -112,9 +113,18 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
             return;
         }
 
-        // TTL has expired. Refresh the old Endpoints.
-        eventLoop.execute(() -> sendQueries(questions));
+        assert question instanceof DnsQuestionWithoutTrailingDot;
+        final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
+
+        final boolean matched = questions.stream()
+                                         .anyMatch(q -> q.name().equals(cast.hostname()) &&
+                                                        q.type().equals(cast.type()));
+        if (matched) {
+            // The TTL of DnsRecords associated the 'questions' has expired. Refresh the old Endpoints.
+            eventLoop.execute(() -> sendQueries(questions));
+        }
     }
+
 
     private void sendQueries(List<DnsQuestion> questions) {
         if (isClosing()) {

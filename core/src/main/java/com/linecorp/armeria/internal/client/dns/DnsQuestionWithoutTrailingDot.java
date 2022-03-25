@@ -29,16 +29,37 @@ import io.netty.handler.codec.dns.DnsRecordType;
  */
 public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
 
+    private final String hostname;
     private final String name;
     private final DnsRecordType type;
+    private final int hashCode;
 
     public static DnsQuestionWithoutTrailingDot of(String name, DnsRecordType type) {
-        return new DnsQuestionWithoutTrailingDot(name, type);
+        return new DnsQuestionWithoutTrailingDot(name, name, type);
     }
 
-    private DnsQuestionWithoutTrailingDot(String name, DnsRecordType type) {
+    /**
+     * Creates a new instance.
+     * @param hostname the hostname set when querying the initial DNS question.
+     * @param name the name to resolve.
+     * @param type the {@link DnsRecordType}
+     */
+    public static DnsQuestionWithoutTrailingDot of(String hostname, String name, DnsRecordType type) {
+        return new DnsQuestionWithoutTrailingDot(hostname, name, type);
+    }
+
+    private DnsQuestionWithoutTrailingDot(String hostname, String name, DnsRecordType type) {
+        this.hostname = requireNonNull(hostname, "hostname");
         this.name = IDN.toASCII(requireNonNull(name, "name"));
         this.type = requireNonNull(type, "type");
+        int hashCode = hostname.hashCode();
+        hashCode = hashCode * 31 + name.hashCode();
+        hashCode = hashCode * 31 + type.hashCode();
+        this.hashCode = hashCode;
+    }
+
+    public String hostname() {
+        return hostname;
     }
 
     @Override
@@ -70,12 +91,12 @@ public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
             return false;
         }
         final DnsQuestionWithoutTrailingDot that = (DnsQuestionWithoutTrailingDot) o;
-        return type.equals(that.type) && name.equals(that.name);
+        return type.equals(that.type) && hostname.equals(that.hostname) && name.equals(that.name);
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode() * 31 + type.hashCode();
+        return hashCode;
     }
 
     @Override

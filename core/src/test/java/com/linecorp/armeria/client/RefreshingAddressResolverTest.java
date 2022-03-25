@@ -45,6 +45,8 @@ import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -60,6 +62,7 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 
@@ -440,6 +443,74 @@ class RefreshingAddressResolverTest {
             // The address has been refreshed.
             assertThat(fooCache2.address()).isNotSameAs(fooCache1.address());
             assertThat(fooAddress2).isEqualTo(fooAddress1);
+            group.close();
+        }
+    }
+
+    @Test
+    void shouldRefreshWhenSearchDnsCacheIsExpired() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1")),
+                new DefaultDnsQuestion("foo.com.armeria.dev", A),
+                new DefaultDnsResponse(0)
+                        .addRecord(ANSWER, newAddressRecord("foo.com.armeria.dev", "2.2.2.2"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder().build();
+
+            // Mock cache data
+            final DnsQuestionWithoutTrailingDot barQuestion = DnsQuestionWithoutTrailingDot.of("bar.com.", A);
+            dnsCache.cache(barQuestion, ByteArrayDnsRecord.copyOf(newAddressRecord("bar.com.", "3.3.3.3")));
+
+            final DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
+                    hostname -> DnsServerAddresses.sequential(
+                            Stream.of(server).map(TestDnsServer::addr).collect(toImmutableList())).stream();
+
+            final RefreshingAddressResolverGroup group = new DnsResolverGroupBuilder()
+                    .serverAddressStreamProvider(dnsServerAddressStreamProvider)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .searchDomains("armeria.dev")
+                    // Make foo.com.aremeria.dev take precedence.
+                    .ndots(2)
+                    .dnsCache(dnsCache)
+                    .build(eventLoop);
+            final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+            final Cache<String, CacheEntry> cache = group.cache();
+
+            final Future<InetSocketAddress> foo0 = resolver.resolve(
+                    InetSocketAddress.createUnresolved("foo.com", 36462));
+            await().untilAsserted(() -> assertThat(foo0.isSuccess()).isTrue());
+            final InetSocketAddress fooAddress0 = foo0.getNow();
+            // Should resolve search domain IP
+            assertThat(fooAddress0.getAddress().getAddress())
+                    .isEqualTo(NetUtil.createByteArrayFromIpAddressString("2.2.2.2"));
+
+            final CacheEntry fooCache0 = cache.getIfPresent("foo.com");
+            final Future<InetSocketAddress> foo1 = resolver.resolve(
+                    InetSocketAddress.createUnresolved("foo.com", 36462));
+            final InetSocketAddress fooAddress1 = foo1.getNow();
+            assertThat(fooAddress1).isEqualTo(fooAddress0);
+            final CacheEntry fooCache1 = cache.getIfPresent("foo.com");
+            assertThat(fooCache1.address()).isSameAs(fooCache0.address());
+            assertThat(cache.estimatedSize()).isEqualTo(1);
+
+            dnsCache.remove(barQuestion);
+            // Wait until the removal event is delivered.
+            Thread.sleep(2000);
+
+            final CacheEntry fooCache2 = cache.getIfPresent("foo.com");
+            assertThat(fooCache2.address()).isSameAs(fooCache0.address());
+
+            final DnsQuestionWithoutTrailingDot fooQuestion =
+                    DnsQuestionWithoutTrailingDot.of("foo.com", "foo.com.armeria.dev.", A);
+            dnsCache.remove(fooQuestion);
+            // Wait until the removal event is delivered.
+            Thread.sleep(2000);
+            final CacheEntry fooCache3 = cache.getIfPresent("foo.com");
+            // The address has been refreshed.
+            assertThat(fooCache3.address()).isNotSameAs(fooCache0.address());
+            assertThat(fooCache3.address()).isEqualTo(fooCache0.address());
             group.close();
         }
     }

@@ -86,7 +86,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
     static final class SearchDomainQuestionContext {
 
         private final DnsQuestion original;
-        private final String hostname;
+        private final String orignalName;
         private final List<String> searchDomains;
         private final boolean shouldStartWithHostname;
         private volatile int numAttemptsSoFar;
@@ -94,8 +94,8 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
         SearchDomainQuestionContext(DnsQuestion original, List<String> searchDomains, int ndots) {
             this.original = original;
             this.searchDomains = searchDomains;
-            hostname = original.name();
-            shouldStartWithHostname = hasNDots(hostname, ndots);
+            orignalName = original.name();
+            shouldStartWithHostname = hasNDots(orignalName, ndots);
         }
 
         private static boolean hasNDots(String hostname, int ndots) {
@@ -120,16 +120,16 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
         private DnsQuestion nextQuestion0() {
             final int numAttemptsSoFar = this.numAttemptsSoFar;
             if (numAttemptsSoFar == 0) {
-                if (hostname.endsWith(".") || searchDomains.isEmpty()) {
+                if (orignalName.endsWith(".") || searchDomains.isEmpty()) {
                     return original;
                 }
                 if (shouldStartWithHostname) {
                     // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
                     // share the cache key.
-                    return newQuestion(hostname);
+                    return newQuestion(orignalName + '.');
                 } else {
                     final String searchDomain = searchDomains.get(0);
-                    return newQuestion(hostname + '.' + searchDomain + '.');
+                    return newQuestion(orignalName + '.' + searchDomain + '.');
                 }
             }
 
@@ -139,18 +139,18 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
             }
 
             if (nextSearchDomainPos < searchDomains.size()) {
-                return newQuestion(hostname + '.' + searchDomains.get(nextSearchDomainPos) + '.');
+                return newQuestion(orignalName + '.' + searchDomains.get(nextSearchDomainPos) + '.');
             }
             if (nextSearchDomainPos == searchDomains.size() && !shouldStartWithHostname) {
                 // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
                 // share the cache key.
-                return newQuestion(hostname);
+                return newQuestion(orignalName + '.');
             }
             return null;
         }
 
         private DnsQuestion newQuestion(String hostname) {
-            return DnsQuestionWithoutTrailingDot.of(hostname, original.type());
+            return DnsQuestionWithoutTrailingDot.of(orignalName, hostname, original.type());
         }
     }
 }

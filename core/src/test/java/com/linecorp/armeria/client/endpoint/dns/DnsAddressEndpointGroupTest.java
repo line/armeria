@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NoopDnsCache;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -444,9 +445,22 @@ class DnsAddressEndpointGroupTest {
         try (TestDnsServer server = new TestDnsServer(
                 ImmutableMap.of(new DefaultDnsQuestion("foo.com", A),
                                 new DefaultDnsResponse(0)
-                                        .addRecord(ANSWER, newAddressRecord("foo.com", "1.1.1.1"))));
-             DnsAddressEndpointGroup group =
+                                        .addRecord(ANSWER, newAddressRecord("foo.com", "1.1.1.1")),
+                                new DefaultDnsQuestion("bar.com", A),
+                                new DefaultDnsResponse(0)
+                                        .addRecord(ANSWER, newAddressRecord("bar.com", "2.2.2.2"))));
+             DnsAddressEndpointGroup fooGroup =
                      DnsAddressEndpointGroup.builder("foo.com")
+                                            .port(8080)
+                                            .serverAddresses(server.addr())
+                                            .queryTimeoutMillisForEachAttempt(1000)
+                                            .queryTimeoutMillis(7000)
+                                            .searchDomains(ImmutableList.of())
+                                            .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                                            .dnsCache(dnsCache)
+                                            .build();
+             DnsAddressEndpointGroup barGroup =
+                     DnsAddressEndpointGroup.builder("bar.com")
                                             .port(8080)
                                             .serverAddresses(server.addr())
                                             .queryTimeoutMillisForEachAttempt(1000)
@@ -456,36 +470,54 @@ class DnsAddressEndpointGroupTest {
                                             .dnsCache(dnsCache)
                                             .build()) {
 
-            assertThat(group.whenReady().get())
+            assertThat(fooGroup.whenReady().get())
                     .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
+            assertThat(barGroup.whenReady().get())
+                    .containsExactly(Endpoint.of("bar.com", 8080).withIpAddr("2.2.2.2"));
 
             server.setResponses(
                     ImmutableMap.of(new DefaultDnsQuestion("foo.com", A),
                                     new DefaultDnsResponse(0)
-                                            .addRecord(ANSWER, newAddressRecord("foo.com", "2.2.2.2"))));
-            assertThat(group.endpoints())
+                                            .addRecord(ANSWER, newAddressRecord("foo.com", "1.1.1.2")),
+                                    new DefaultDnsQuestion("bar.com", A),
+                                    new DefaultDnsResponse(0)
+                                            .addRecord(ANSWER, newAddressRecord("bar.com", "2.2.2.3"))));
+
+            assertThat(fooGroup.whenReady().get())
                     .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
-            dnsCache.removeAll();
+            assertThat(barGroup.whenReady().get())
+                    .containsExactly(Endpoint.of("bar.com", 8080).withIpAddr("2.2.2.2"));
+
+            // Forcibly trigger removal event.
+            dnsCache.remove(DnsQuestionWithoutTrailingDot.of("foo.com", A));
             await().untilAsserted(() -> {
-                // The endpoints should be updated with the new IP address.
-                assertThat(group.endpoints())
-                        .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("2.2.2.2"));
+                // fooGroup should be updated with the new IP address.
+                assertThat(fooGroup.endpoints())
+                        .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.2"));
             });
+
+            // TTL of barGroup has not expired yet.
+            assertThat(barGroup.whenReady().get())
+                    .containsExactly(Endpoint.of("bar.com", 8080).withIpAddr("2.2.2.2"));
 
             server.setResponses(
                     ImmutableMap.of(new DefaultDnsQuestion("foo.com", A),
                                     new DefaultDnsResponse(0)
-                                            .addRecord(ANSWER, newAddressRecord("foo.com", "3.3.3.3"))));
+                                            .addRecord(ANSWER, newAddressRecord("foo.com", "1.1.1.3")),
+                                    new DefaultDnsQuestion("bar.com", A),
+                                    new DefaultDnsResponse(0)
+                                            .addRecord(ANSWER, newAddressRecord("bar.com", "2.2.2.3"))));
 
-            assertThat(group.endpoints())
-                    .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("2.2.2.2"));
-
-            dnsCache.removeAll();
+            dnsCache.remove(DnsQuestionWithoutTrailingDot.of("bar.com", A));
             await().untilAsserted(() -> {
-                // The endpoints should be updated with the new IP address.
-                assertThat(group.endpoints())
-                        .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("3.3.3.3"));
+                // fooGroup should be updated with the new IP address.
+                assertThat(barGroup.endpoints())
+                        .containsExactly(Endpoint.of("bar.com", 8080).withIpAddr("2.2.2.3"));
             });
+
+            // fooGroup should not be updated.
+            assertThat(fooGroup.endpoints())
+                    .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.2"));
         }
     }
 

@@ -176,9 +176,18 @@ final class RefreshingAddressResolver
             return;
         }
 
-        final CacheEntry entry = addressResolverCache.getIfPresent(question.name());
+        final DnsRecordType type = question.type();
+        if (!(type.equals(DnsRecordType.A) || type.equals(DnsRecordType.AAAA))) {
+            // AddressResolver only uses A or AAAA.
+            return;
+        }
+        
+        assert question instanceof DnsQuestionWithoutTrailingDot;
+        final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
+        final CacheEntry entry = addressResolverCache.getIfPresent(cast.hostname());
         if (entry != null && entry.refreshable()) {
-            entry.refresh();
+            // onRemoval is invoked by the executor of 'dnsResolverCache'.
+            executor().execute(entry::refresh);
         }
     }
 
@@ -207,9 +216,10 @@ final class RefreshingAddressResolver
         @Nullable
         private final ScheduledFuture<?> negativeCacheFuture;
 
+        private boolean refreshing;
         @Nullable
-        private volatile ScheduledFuture<?> retryFuture;
-        private volatile int numAttemptsSoFar = 1;
+        private ScheduledFuture<?> retryFuture;
+        private int numAttemptsSoFar = 1;
 
         CacheEntry(String hostname, @Nullable InetAddress address, List<DnsQuestion> questions,
                    @Nullable Throwable cause) {
@@ -251,13 +261,14 @@ final class RefreshingAddressResolver
         }
 
         void clear() {
-            final ScheduledFuture<?> retryFuture = this.retryFuture;
-            if (retryFuture != null) {
-                retryFuture.cancel(false);
-            }
-            if (negativeCacheFuture != null) {
-                negativeCacheFuture.cancel(false);
-            }
+            executor().execute(() -> {
+                if (retryFuture != null) {
+                    retryFuture.cancel(false);
+                }
+                if (negativeCacheFuture != null) {
+                    negativeCacheFuture.cancel(false);
+                }
+            });
         }
 
         void refresh() {
@@ -267,28 +278,47 @@ final class RefreshingAddressResolver
 
             assert refreshable();
             final String hostname = address.getHostName();
+            if (refreshing) {
+                return;
+            }
+            refreshing = true;
 
-            sendQueries(questions, hostname).handle((entry, unused) -> {
-                if (resolverClosed) {
-                    return null;
+            // 'sendQueries()' always successfully completes.
+            sendQueries(questions, hostname).thenAccept(entry -> {
+                if (executor().inEventLoop()) {
+                    maybeUpdate(hostname, entry);
+                } else {
+                    executor().execute(() -> maybeUpdate(hostname, entry));
                 }
-
-                final Throwable cause = entry.cause();
-                if (cause != null) {
-                    final long nextDelayMillis = retryBackoff.nextDelayMillis(numAttemptsSoFar++);
-                    if (nextDelayMillis < 0) {
-                        addressResolverCache.invalidate(hostname);
-                    } else {
-                        retryFuture = executor().schedule(this::refresh, nextDelayMillis, MILLISECONDS);
-                    }
-                    return null;
-                }
-
-                // Got the response successfully so reset the state.
-                numAttemptsSoFar = 1;
-                addressResolverCache.put(hostname, entry);
-                return null;
             });
+        }
+
+        @Nullable
+        private Object maybeUpdate(String hostname, CacheEntry entry) {
+            if (resolverClosed) {
+                return null;
+            }
+            refreshing = false;
+
+            final Throwable cause = entry.cause();
+            if (cause != null) {
+                final long nextDelayMillis = retryBackoff.nextDelayMillis(numAttemptsSoFar++);
+                if (nextDelayMillis < 0) {
+                    addressResolverCache.invalidate(hostname);
+                } else {
+                    final ScheduledFuture<?> retryFuture = this.retryFuture;
+                    if (retryFuture != null) {
+                        retryFuture.cancel(false);
+                    }
+                    this.retryFuture = executor().schedule(this::refresh, nextDelayMillis, MILLISECONDS);
+                }
+                return null;
+            }
+
+            // Got the response successfully so reset the state.
+            numAttemptsSoFar = 1;
+            addressResolverCache.put(hostname, entry);
+            return null;
         }
 
         boolean refreshable() {
