@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -104,7 +105,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             ServiceRequestContext ctx,
             RequestHeaders grpcHeaders,
             HttpData content,
-            CompletableFuture<HttpResponse> res) {
+            CompletableFuture<HttpResponse> res,
+            Function<HttpData, HttpData> responseBodyConverter) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
@@ -135,7 +137,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                         if (t != null) {
                             res.completeExceptionally(t);
                         } else {
-                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler);
+                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler, responseBodyConverter);
                         }
                     }
                     return null;
@@ -146,7 +148,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     static void deframeAndRespond(ServiceRequestContext ctx,
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
-                                  UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+                                  UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+                                  Function<HttpData, HttpData> responseBodyConverter) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -181,12 +184,13 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE);
         grpcResponse.toHttpResponse().decode(deframer, ctx.alloc())
-                    .subscribe(singleSubscriber(unframedHeaders, res), ctx.eventLoop(),
+                    .subscribe(singleSubscriber(unframedHeaders, res, responseBodyConverter), ctx.eventLoop(),
                                SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
-                                                        CompletableFuture<HttpResponse> res) {
+                                                        CompletableFuture<HttpResponse> res,
+                                                        Function<HttpData, HttpData> responseBodyConverter) {
         return new Subscriber<DeframedMessage>() {
 
             @Override
@@ -197,7 +201,10 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             @Override
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
-                final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
+                HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
+                if (responseBodyConverter != null) {
+                    unframedContent = responseBodyConverter.apply(unframedContent);
+                }
                 unframedHeaders.contentLength(unframedContent.length());
                 res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
             }

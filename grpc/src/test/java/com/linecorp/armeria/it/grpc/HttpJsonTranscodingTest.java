@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.linecorp.armeria.server.logging.LoggingService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -222,6 +223,7 @@ class HttpJsonTranscodingTest {
             final GrpcService grpcService = GrpcService.builder()
                                                        .addService(new HttpJsonTranscodingTestService())
                                                        .enableHttpJsonTranscoding(true)
+
                                                        .build();
             // gRPC transcoding will not work under '/foo'.
             // You may get the following log messages when calling the following 'serviceUnder' method:
@@ -229,8 +231,10 @@ class HttpJsonTranscodingTest {
             //   but the routes will be ignored. It will be served at the route you specified: path=/foo,
             //   service=...
             sb.service(grpcService)
-              .requestTimeout(Duration.ZERO)
+                    .decorator(LoggingService.newDecorator())
+              //.requestTimeout(Duration.ZERO)
               .serviceUnder("/foo", grpcService)
+
               .serviceUnder("/docs", DocService.builder().build());
         }
     };
@@ -240,7 +244,7 @@ class HttpJsonTranscodingTest {
     final HttpJsonTranscodingTestServiceBlockingStub grpcClient =
             GrpcClients.builder(server.httpUri())
                        .build(HttpJsonTranscodingTestServiceBlockingStub.class);
-    final WebClient webClient = WebClient.builder(server.httpUri()).build();
+    final WebClient webClient = WebClient.builder(server.httpUri()).responseTimeout(Duration.ofMinutes(1)).build();
 
     @Test
     void shouldGetMessageV1ByGrpcClient() {

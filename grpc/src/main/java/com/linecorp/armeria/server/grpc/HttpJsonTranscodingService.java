@@ -23,7 +23,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
@@ -33,10 +32,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -476,6 +477,33 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return unwrap().serve(ctx, req);
     }
 
+    @Nullable
+    private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
+        String responseBody = spec.httpRule.getResponseBody();
+        if (StringUtil.isNullOrEmpty(responseBody)) {
+            return null;
+        } else {
+            return httpData -> {
+                byte[] array = httpData.array();
+                ObjectMapper om = new ObjectMapper();
+                final ObjectReader reader = om.reader();
+                try {
+                    final JsonNode jsonNode = reader.readTree(array);
+                    if (jsonNode.has(responseBody)) {
+                        JsonNode responseBodyJsonNode = jsonNode.get(responseBody);
+                        final ObjectWriter writer = om.writer();
+                        byte[] bytes = writer.writeValueAsBytes(responseBodyJsonNode);
+                        return HttpData.copyOf(bytes);
+                    } else {
+                        return httpData;
+                    }
+                } catch (IOException e) {
+                    return httpData;
+                }
+            };
+        }
+    }
+
     private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
                                 TranscodingSpec spec) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
@@ -502,13 +530,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     responseFuture.completeExceptionally(t);
                 } else {
                     try {
-                        String requestBody = spec.httpRule.getResponseBody();
-                        HttpData httpData = convertToJson(ctx, clientRequest, spec);
 
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                       convertToJson(ctx, clientRequest, spec),
-                                      responseFuture);
+                                      responseFuture, generateResponseBodyConverter(spec));
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
@@ -519,37 +545,54 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             }
             return null;
         });
-        //return HttpResponse.from(responseFuture);
+        return HttpResponse.from(responseFuture);
+/*
         final HttpResponse response = HttpResponse.from(responseFuture);
+
         String responseBodyField = spec.httpRule.getResponseBody();
         if (responseBodyField == null) {
             return response;
         }
+
+
         return response.mapData(data -> {
-            // Note that the data is a reference counted object that
-            // should be released/closed after using it.
             try (HttpData body = data) {
-                ObjectMapper om = new ObjectMapper();
-                byte[] array = body.array();
-                // 1. Parse the array to JsonNode using Jackson
-                // 2. Read the field value of `response_body`
-                // 3. Serialize and convert it into `HttpData`
+            ObjectMapper om = new ObjectMapper();
+
+            final ObjectWriter writer = om.writer();
+
+                //final byte[] bytes = writer.writeValueAsBytes(node);
                 final ObjectReader reader = om.reader();
 
-                final JsonNode newNode = reader.readTree(new ByteArrayInputStream(array));
-                if (newNode.has(responseBodyField)) {
-                    final ObjectWriter writer = om.writer();
-                    JsonNode node = mapper.createObjectNode();
-                    final byte[] bytes = writer.writeValueAsBytes(newNode);
-                    return HttpData.wrap(bytes);
-                } else {
-                    return HttpData.wrap(array);
-                }
+                ArrayNode arrayNode = om.createArrayNode();
+                arrayNode.add("1");
+                arrayNode.add("2");
+                //arrayNode.add("3");
 
+
+                JsonNode newNode = om.createObjectNode();
+                ((ObjectNode)newNode).put("value", arrayNode);
+                System.out.println(newNode);
+                //data.close();
+                final byte[] bytes = writer.writeValueAsBytes(newNode);
+                //return HttpData.ofUtf8("{}");
+                body.close();
+                return HttpData.copyOf(bytes);
+                //return HttpData.copyOf(array);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+                byte[] bytes = new byte[1];
+                return HttpData.wrap(bytes);
             } catch (IOException e) {
-                return data;
+                e.printStackTrace();
+                byte[] bytes = new byte[1];
+                return HttpData.wrap(bytes);
+            } finally {
+                data.close();
             }
         });
+
+*/
 
     }
 
