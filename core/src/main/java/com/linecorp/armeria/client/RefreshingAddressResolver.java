@@ -181,7 +181,7 @@ final class RefreshingAddressResolver
             // AddressResolver only uses A or AAAA.
             return;
         }
-        
+
         assert question instanceof DnsQuestionWithoutTrailingDot;
         final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
         final CacheEntry entry = addressResolverCache.getIfPresent(cast.hostname());

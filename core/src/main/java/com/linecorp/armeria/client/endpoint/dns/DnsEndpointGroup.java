@@ -125,7 +125,6 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         }
     }
 
-
     private void sendQueries(List<DnsQuestion> questions) {
         if (isClosing()) {
             return;
