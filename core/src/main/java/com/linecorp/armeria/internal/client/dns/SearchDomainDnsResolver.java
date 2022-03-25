@@ -124,7 +124,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                     return original;
                 }
                 if (shouldStartWithHostname) {
-                    return newQuestion(hostname);
+                    return newQuestion(hostname + '.');
                 } else {
                     final String searchDomain = searchDomains.get(0);
                     return newQuestion(hostname + '.' + searchDomain + '.');
