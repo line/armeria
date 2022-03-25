@@ -184,7 +184,7 @@ final class RefreshingAddressResolver
 
         assert question instanceof DnsQuestionWithoutTrailingDot;
         final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
-        final CacheEntry entry = addressResolverCache.getIfPresent(cast.hostname());
+        final CacheEntry entry = addressResolverCache.getIfPresent(cast.originalName());
         if (entry != null && entry.refreshable()) {
             // onRemoval is invoked by the executor of 'dnsResolverCache'.
             executor().execute(entry::refresh);

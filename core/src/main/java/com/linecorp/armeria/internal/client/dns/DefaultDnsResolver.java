@@ -86,7 +86,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
         this.queryTimeoutMillis = queryTimeoutMillis;
     }
 
-    public CompletableFuture<List<DnsRecord>> resolve(List<DnsQuestion> questions, String logPrefix) {
+    public CompletableFuture<List<DnsRecord>> resolve(List<? extends DnsQuestion> questions, String logPrefix) {
         assert !questions.isEmpty();
         final DnsQuestionContext ctx = new DnsQuestionContext(executor, queryTimeoutMillis);
         if (questions.size() == 1) {
@@ -114,7 +114,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
     }
 
     @VisibleForTesting
-    CompletableFuture<List<DnsRecord>> resolveAll(DnsQuestionContext ctx, List<DnsQuestion> questions,
+    CompletableFuture<List<DnsRecord>> resolveAll(DnsQuestionContext ctx, List<? extends DnsQuestion> questions,
                                                   String logPrefix) {
 
         final List<CompletableFuture<List<DnsRecord>>> results =

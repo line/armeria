@@ -35,7 +35,6 @@ import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.ResolvedAddressTypes;
@@ -95,7 +94,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
         start();
     }
 
-    private static List<DnsQuestion> newQuestions(
+    private static List<DnsQuestionWithoutTrailingDot> newQuestions(
             String hostname, @Nullable ResolvedAddressTypes resolvedAddressTypes) {
 
         if (resolvedAddressTypes == null) {
@@ -106,7 +105,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             }
         }
 
-        final ImmutableList.Builder<DnsQuestion> builder = ImmutableList.builder();
+        final ImmutableList.Builder<DnsQuestionWithoutTrailingDot> builder = ImmutableList.builder();
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
             case IPV4_PREFERRED:

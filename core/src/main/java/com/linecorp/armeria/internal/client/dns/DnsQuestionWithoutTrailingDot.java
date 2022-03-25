@@ -29,7 +29,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
  */
 public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
 
-    private final String hostname;
+    private final String originalName;
     private final String name;
     private final DnsRecordType type;
     private final int hashCode;
@@ -40,26 +40,26 @@ public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
 
     /**
      * Creates a new instance.
-     * @param hostname the hostname set when querying the initial DNS question.
-     * @param name the name to resolve.
+     * @param originalName the original name set when querying the initial DNS question
+     * @param name the name to resolve
      * @param type the {@link DnsRecordType}
      */
-    public static DnsQuestionWithoutTrailingDot of(String hostname, String name, DnsRecordType type) {
-        return new DnsQuestionWithoutTrailingDot(hostname, name, type);
+    public static DnsQuestionWithoutTrailingDot of(String originalName, String name, DnsRecordType type) {
+        return new DnsQuestionWithoutTrailingDot(originalName, name, type);
     }
 
-    private DnsQuestionWithoutTrailingDot(String hostname, String name, DnsRecordType type) {
-        this.hostname = requireNonNull(hostname, "hostname");
+    private DnsQuestionWithoutTrailingDot(String originalName, String name, DnsRecordType type) {
+        this.originalName = requireNonNull(originalName, "originalName");
         this.name = IDN.toASCII(requireNonNull(name, "name"));
         this.type = requireNonNull(type, "type");
-        int hashCode = hostname.hashCode();
+        int hashCode = originalName.hashCode();
         hashCode = hashCode * 31 + name.hashCode();
         hashCode = hashCode * 31 + type.hashCode();
         this.hashCode = hashCode;
     }
 
-    public String hostname() {
-        return hostname;
+    public String originalName() {
+        return originalName;
     }
 
     @Override
@@ -91,7 +91,7 @@ public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
             return false;
         }
         final DnsQuestionWithoutTrailingDot that = (DnsQuestionWithoutTrailingDot) o;
-        return type.equals(that.type) && hostname.equals(that.hostname) && name.equals(that.name);
+        return type.equals(that.type) && originalName.equals(that.originalName) && name.equals(that.name);
     }
 
     @Override

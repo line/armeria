@@ -54,7 +54,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
 
     private final EventLoop eventLoop;
     private final Backoff backoff;
-    private final List<DnsQuestion> questions;
+    private final List<DnsQuestionWithoutTrailingDot> questions;
     private final DefaultDnsResolver resolver;
     private final Logger logger;
     private final String logPrefix;
@@ -68,7 +68,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     int attemptsSoFar;
 
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
-                     DefaultDnsResolver resolver, EventLoop eventLoop, List<DnsQuestion> questions,
+                     DefaultDnsResolver resolver, EventLoop eventLoop,
+                     List<DnsQuestionWithoutTrailingDot> questions,
                      Backoff backoff, int minTtl, int maxTtl) {
 
         super(selectionStrategy, allowEmptyEndpoints);
@@ -117,7 +118,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
 
         final boolean matched = questions.stream()
-                                         .anyMatch(q -> q.name().equals(cast.hostname()) &&
+                                         .anyMatch(q -> q.originalName().equals(cast.originalName()) &&
                                                         q.type().equals(cast.type()));
         if (matched) {
             // The TTL of DnsRecords associated the 'questions' has expired. Refresh the old Endpoints.
@@ -125,7 +126,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         }
     }
 
-    private void sendQueries(List<DnsQuestion> questions) {
+    private void sendQueries(List<DnsQuestionWithoutTrailingDot> questions) {
         if (isClosing()) {
             return;
         }
