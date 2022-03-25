@@ -96,7 +96,7 @@ class FlagsTest {
 
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
-            if (!name.startsWith("com.linecorp.armeria.common")) {
+            if (!name.startsWith("com.linecorp.armeria")) {
                 return super.loadClass(name);
             }
 
