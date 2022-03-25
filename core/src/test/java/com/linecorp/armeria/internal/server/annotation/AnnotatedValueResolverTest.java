@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
@@ -117,7 +118,7 @@ class AnnotatedValueResolverTest {
                                        .routingResult(builder.build())
                                        .build();
 
-        resolverContext = new ResolverContext(context, request, null);
+        resolverContext = new ResolverContext(context, request, AggregatedResult.EMPTY);
     }
 
     @AfterAll

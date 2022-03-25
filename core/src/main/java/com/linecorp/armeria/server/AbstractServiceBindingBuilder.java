@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -131,6 +132,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder successFunction(SuccessFunction successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
         return this;
     }
 

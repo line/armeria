@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -259,6 +260,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder successFunction(SuccessFunction successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
         return this;
     }
 

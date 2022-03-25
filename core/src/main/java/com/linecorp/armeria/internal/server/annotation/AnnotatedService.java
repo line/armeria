@@ -1,17 +1,17 @@
 /*
- *  Copyright 2017 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
- *  LINE Corporation licenses this file to you under the Apache License,
- *  version 2.0 (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at:
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- *  License for the specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 
 package com.linecorp.armeria.internal.server.annotation;
@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
@@ -57,7 +56,10 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -99,6 +101,9 @@ public final class AnnotatedService implements HttpService {
                              new HttpFileResponseConverterFunction());
 
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
+
+    private static final CompletableFuture<AggregatedResult>
+            NO_AGGREGATION_FUTURE = UnmodifiableFuture.completedFuture(AggregatedResult.EMPTY);
 
     static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
@@ -326,11 +331,20 @@ public final class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<AggregatedHttpRequest> f;
-        if (AggregationStrategy.aggregationRequired(aggregationStrategy, req.headers())) {
-            f = req.aggregate();
-        } else {
-            f = CompletableFuture.completedFuture(null);
+        final CompletableFuture<AggregatedResult> f;
+        switch (AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers())) {
+            case MULTIPART:
+                f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
+                break;
+            case ALL:
+                f = req.aggregate().thenApply(AggregatedResult::new);
+                break;
+            case NONE:
+                f = NO_AGGREGATION_FUTURE;
+                break;
+            default:
+                // Should never reach here.
+                throw new Error();
         }
 
         ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
@@ -360,7 +374,7 @@ public final class AnnotatedService implements HttpService {
                 return composedFuture
                         .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
-                final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
+                final Function<AggregatedResult, HttpResponse> defaultApplyFunction =
                         aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
                 if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
@@ -374,10 +388,9 @@ public final class AnnotatedService implements HttpService {
      * Invokes the service method with arguments.
      */
     @Nullable
-    private Object invoke(ServiceRequestContext ctx, HttpRequest req,
-                          @Nullable AggregatedHttpRequest aggregatedRequest) {
+    private Object invoke(ServiceRequestContext ctx, HttpRequest req, AggregatedResult aggregatedResult) {
         try (SafeCloseable ignored = ctx.push()) {
-            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
+            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedResult);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
@@ -478,7 +491,7 @@ public final class AnnotatedService implements HttpService {
     @Override
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
         // TODO(ikhoon): Support a non-streaming response type.
-        if (AggregationStrategy.aggregationRequired(aggregationStrategy, headers)) {
+        if (AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) == AggregationType.ALL) {
             return ExchangeType.RESPONSE_STREAMING;
         } else {
             return ExchangeType.BIDI_STREAMING;
