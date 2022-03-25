@@ -154,7 +154,7 @@ com.netflix.eureka:
 
 # DGS is used only for testing in it:dgs module.
 com.netflix.graphql.dgs:
-  graphql-dgs-client: { version: '4.9.22' }
+  graphql-dgs-client: { version: '4.9.24' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
@@ -595,7 +595,7 @@ org.springframework:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.6.4'
+    version: &SPRING_BOOT_VERSION '2.6.5'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
