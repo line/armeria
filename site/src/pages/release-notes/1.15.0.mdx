@@ -26,7 +26,7 @@ date: 2022-03-24
     .annotatedService(new Object() {
       @Post("/upload")
       @Consumes("multipart/form-data")
-      String upload(@Param File file) {
+      public String upload(@Param File file) {
         return "Successfully uploaded a file to " + file;
       }
     })
@@ -34,8 +34,8 @@ date: 2022-03-24
   ```
 - You can now use the `||` (logical OR) operator in parameter and header predicate expressions. #4116 #4138
   ```java
-  // "Hello!" for /greet or /greet?casual=false
   // "Hi!" for /greet?casual or /greet?casual=true
+  // "Hello!" for /greet or /greet?casual=false
   Server
     .builder()
     .route()
@@ -49,7 +49,7 @@ date: 2022-03-24
   ```
   <Tip>
   
-  You can use the same syntax in [annotated services](../docs/server-annotated-service)
+  You can use the same syntax in [annotated services](/docs/server-annotated-service)
   using <type://@MatchesParam> and <type://@MatchesHeader>.
   
   </Tip>
@@ -91,11 +91,12 @@ date: 2022-03-24
 - Armeria now has the global shared DNS cache by default for higher hit ratio and less DNS traffic.
   You can also build and share a custom DNS cache across multiple resolvers. #2940 #4133
   ```java
-  DnsCache dnsCache = DnsCache
-    .builder()
-    .ttl(60, 3600)
-    .negativeTtl(600)
-    .build();
+  DnsCache dnsCache = 
+    DnsCache
+      .builder()
+      .ttl(60, 3600)
+      .negativeTtl(600)
+      .build();
   
   EndpointGroup endpointGroup = 
     DnsAddressEndpointGroup
@@ -181,7 +182,7 @@ date: 2022-03-24
       .builder()
       .contextCustomizer(ctx -> { // 👈👈👈
         String userId = MyUserContext.current().getId();
-          ctx.setAttr(USER_ID, userId);
+        ctx.setAttr(USER_ID, userId);
       })
       .build();
   ```
@@ -197,7 +198,7 @@ date: 2022-03-24
   WebClient
     .builder()
     .contextCustomizer(TraceContextPropagation.inject(() -> {
-      // Propagate Reactor's TracingContext to Armeria's TractContext.
+      // Propagate Reactor's TraceContext to Armeria's TraceContext.
       return reactorTracing.currentTraceContext().get();
     })
     .decorator(BraveClient.newDecorator(requestContextTracing))
@@ -323,7 +324,7 @@ date: 2022-03-24
 - scala-collection-compat 2.6.0 → 2.7.0
 - SLF4J 1.7.34 → 1.7.36
 - Spring 5.3.15 → 5.3.17
-- Spring Boot 2.6.3 → 2.6.4
+- Spring Boot 2.6.3 → 2.6.5
 
 ## 🙇 Thank you
 
