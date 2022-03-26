@@ -101,6 +101,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.user.localcert.dev
 *.usercontent.goog
 *.vps.myjino.ru
 *.vultrobjects.com
