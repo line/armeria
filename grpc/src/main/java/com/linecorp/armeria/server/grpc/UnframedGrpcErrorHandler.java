@@ -17,8 +17,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
-
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;
@@ -93,14 +92,7 @@ public interface UnframedGrpcErrorHandler {
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
-            final Map<String, Object> message;
             final String grpcMessage = status.getDescription();
-            if (grpcMessage != null) {
-                message = ImmutableMap.of("grpc-code", grpcCode.name(),
-                                          "message", grpcMessage);
-            } else {
-                message = ImmutableMap.of("grpc-code", grpcCode.name());
-            }
             final RequestLogAccess log = ctx.log();
             final Throwable cause;
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
@@ -114,7 +106,15 @@ public interface UnframedGrpcErrorHandler {
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
                                                                            grpcCode.value())
                                                                    .build();
-            return HttpResponse.ofJson(responseHeaders, message);
+            final ImmutableMap.Builder<String, String> messageBuilder = ImmutableMap.builder();
+            messageBuilder.put("grpc-code", grpcCode.name());
+            if (grpcMessage != null) {
+                messageBuilder.put("message", grpcMessage);
+            }
+            if (cause != null && ctx.config().verboseResponses() && !status.isOk()) {
+                messageBuilder.put("stack-trace", Exceptions.traceText(cause));
+            }
+            return HttpResponse.ofJson(responseHeaders, messageBuilder.build());
         };
     }
 
@@ -139,11 +139,6 @@ public interface UnframedGrpcErrorHandler {
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
-            final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());
-            final String grpcMessage = status.getDescription();
-            if (grpcMessage != null) {
-                message.append(", ").append(grpcMessage);
-            }
             final RequestLogAccess log = ctx.log();
             final Throwable cause;
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
@@ -157,6 +152,14 @@ public interface UnframedGrpcErrorHandler {
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
                                                                            grpcCode.value())
                                                                    .build();
+            final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());
+            final String grpcMessage = status.getDescription();
+            if (grpcMessage != null) {
+                message.append(", ").append(grpcMessage);
+            }
+            if (cause != null && ctx.config().verboseResponses() && !status.isOk()) {
+                message.append("\nstack-trace:\n").append(Exceptions.traceText(cause));
+            }
             return HttpResponse.of(responseHeaders, HttpData.ofUtf8(message.toString()));
         };
     }
