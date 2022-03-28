@@ -217,7 +217,7 @@ public abstract class AbstractHttpRequestBuilder
         if (queryParams == null) {
             queryParams = QueryParams.builder();
         }
-        queryParams.setObject(name, value);
+        queryParams.addObject(name, value);
         return this;
     }
 
