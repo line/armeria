@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
- * Implementation of {@link FlagsProvider} which provides values from jvm options to {@link Flags}.
+ * Implementation of {@link FlagsProvider} which provides values from JVM options to {@link Flags}.
  */
 public final class SystemPropertyFlagsProvider implements FlagsProvider {
 

@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
- * Default implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
+ * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
  */
 public final class DefaultFlagsProvider implements FlagsProvider {
 

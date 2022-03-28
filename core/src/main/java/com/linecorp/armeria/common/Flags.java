@@ -79,9 +79,9 @@ import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
 
 /**
- * The system properties that affect Armeria's runtime behavior.
- * Priority ordering is JVM option, SPI interface provided by {@link FlagsProvider} and default
- * respectively. if value is fail to validated. The next candidate will be used.
+ * The system properties that affect Armeria's runtime behavior. The priority or each flag is determined
+ * by {@link FlagsProvider#priority()}. On each flag, if value is fail to validated. The next candidate will be
+ * used.
  */
 public final class Flags {
 

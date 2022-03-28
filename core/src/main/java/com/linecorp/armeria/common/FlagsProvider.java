@@ -27,7 +27,15 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
- * A Java SPI (Service Provider Interface) for the {@link Flags} value. //todo add proper document
+ * A Java SPI (Service Provider Interface) for the {@link Flags} value. Returning null to indicates that this
+ * FlagsProvider doesn't provide the flag. 2 Implementations already provided by default.
+ *
+ * <ul>
+ *     <li>{@link SystemPropertyFlagsProvider} which provides value from JVM option</li>
+ *     <li>{@link DefaultFlagsProvider} which provides the default values when flag isn't provides or fail
+ *     to validated</li>
+ * </ul>
+ *
  */
 @UnstableApi
 @FunctionalInterface
