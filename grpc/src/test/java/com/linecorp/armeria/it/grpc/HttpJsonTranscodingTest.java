@@ -611,7 +611,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shoudAcceptResponseBodyValue() {
+    void shouldAcceptResponseBodyValue() {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("value", "value");
         final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" +
@@ -621,7 +621,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shoudAcceptResponseBodyRepeated() throws JsonProcessingException {
+    void shouldAcceptResponseBodyRepeated() throws JsonProcessingException {
         final AggregatedHttpResponse response = webClient.get(
                 "/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
                 .aggregate().join();
@@ -632,7 +632,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shoudAcceptResponseBodyValueStruct() throws JsonProcessingException {
+    void shouldAcceptResponseBodyValueStruct() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}," +
                 "\"array_field\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
@@ -643,7 +643,7 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shoudAcceptResponseBodyValueNoMatch() throws JsonProcessingException {
+    void shouldAcceptResponseBodyValueNoMatch() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}" +
                 ",\"array_field\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
