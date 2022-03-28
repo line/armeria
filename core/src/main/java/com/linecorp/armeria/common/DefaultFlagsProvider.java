@@ -15,7 +15,10 @@
  */
 package com.linecorp.armeria.common;
 
+import java.io.File;
 import java.net.InetAddress;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -308,5 +311,12 @@ public final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowDoubleDotsInQueryString() {
         return false;
+    }
+
+    @Override
+    public Path defaultMultipartUploadsLocation() {
+        return Paths.get(System.getProperty("java.io.tmpdir") +
+                         File.separatorChar + "armeria" +
+                         File.separatorChar + "multipart-uploads");
     }
 }

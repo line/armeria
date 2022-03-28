@@ -19,6 +19,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.net.InetAddress;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -363,6 +365,11 @@ public final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowDoubleDotsInQueryString() {
         return getBoolean("allowDoubleDotsInQueryString");
+    }
+
+    @Override
+    public Path defaultMultipartUploadsLocation() {
+        return getAndParse("defaultMultipartUploadsLocation", Paths::get);
     }
 
     @Nullable

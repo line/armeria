@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import java.net.InetAddress;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -481,6 +482,14 @@ public interface FlagsProvider {
      */
     @Nullable
     default Boolean allowDoubleDotsInQueryString() {
+        return null;
+    }
+
+    /**
+     * Return defaultMultipartUploadsLocation. See {@link Flags#defaultMultipartUploadsLocation()}.
+     */
+    @Nullable
+    default Path defaultMultipartUploadsLocation() {
         return null;
     }
 }

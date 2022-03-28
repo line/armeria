@@ -15,12 +15,10 @@
  */
 package com.linecorp.armeria.common;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -372,15 +370,8 @@ public final class Flags {
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getValue(FlagsProvider::allowDoubleDotsInQueryString, "allowDoubleDotsInQueryString");
 
-    private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION;
-
-    static {
-        DEFAULT_MULTIPART_UPLOADS_LOCATION = Paths.get(get("defaultMultipartUploadsLocation",
-                                                           System.getProperty("java.io.tmpdir") +
-                                                           File.separatorChar + "armeria" +
-                                                           File.separatorChar + "multipart-uploads",
-                                                           ignore -> true));
-    }
+    private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
+            getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
 
     /**
      * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
