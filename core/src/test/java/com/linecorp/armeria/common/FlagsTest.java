@@ -40,6 +40,7 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
@@ -51,12 +52,11 @@ import io.netty.handler.ssl.OpenSsl;
 class FlagsTest {
 
     private static final String osName = Ascii.toLowerCase(System.getProperty("os.name"));
-    private FlagsClassLoader classLoader;
     private Class<?> flags;
 
     @BeforeEach
     private void reloadFlags() throws ClassNotFoundException {
-        classLoader = new FlagsClassLoader();
+        final FlagsClassLoader classLoader = new FlagsClassLoader();
         flags = classLoader.loadClass(Flags.class.getCanonicalName());
     }
 
@@ -140,9 +140,9 @@ class FlagsTest {
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.transientServiceOptions", value = "with_tracing")
     void systemPropertyTransientServiceOptions() throws Throwable {
-        //To compare result, need use ENUM from the FlagsClassLoader
-        final Class enumClass = classLoader.loadClass(TransientServiceOption.class.getCanonicalName());
-        final Enum withTracing = Enum.valueOf(enumClass, "WITH_TRACING");
+        assertFlags("transientServiceOptions")
+                .usingRecursiveComparison()
+                .isEqualTo(Sets.immutableEnumSet(TransientServiceOption.WITH_TRACING));
     }
 
     @Test
