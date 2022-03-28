@@ -31,9 +31,11 @@ import java.net.URLConnection;
 import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.ClearSystemProperty;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.InetAddressPredicates;
 
 class FlagsProviderTest {
 
@@ -46,7 +48,7 @@ class FlagsProviderTest {
     }
 
     @Test
-    void overrideDefaultArmeriaOptionsProvider() throws Throwable {
+    void overrideDefaultFlagsProvider() throws Throwable {
         assertFlags("useOpenSsl").isEqualTo(false);
         assertFlags("numCommonBlockingTaskThreads").isEqualTo(100);
     }
@@ -69,14 +71,42 @@ class FlagsProviderTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.defaultMaxTotalAttempts", value = "-5")
-    void jvmOptionInvalidFallbackToSpi() throws Throwable {
+    void systemPropertyProviderInvalidFallbackToNextSpi() throws Throwable {
         assertFlags("defaultMaxTotalAttempts").isEqualTo(5);
     }
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.defaultMaxClientConnectionAgeMillis", value = "20")
-    void jvmOptionPriorityHigherThanSpi() throws Throwable {
+    void systemPropertyProviderPriorityHigherThanSpi() throws Throwable {
         assertFlags("defaultMaxClientConnectionAgeMillis").isEqualTo(20L);
+    }
+
+    @Test
+    void useHigherPriorityFlag() throws Throwable {
+        assertFlags("defaultServerConnectionDrainDurationMicros").isEqualTo(1000L);
+    }
+
+    @Test
+    void useLowerPriorityFlagWhenHigherPriorityFlagInputIsInvalid() throws Throwable {
+        assertFlags("maxNumConnections").isEqualTo(20);
+    }
+
+    @Test
+    void nullAbleCacheSpecFlagOffValue() throws Throwable {
+        assertFlags("routeCacheSpec").isNull();
+    }
+
+    @Test
+    void overrideNullableFlag() throws Throwable {
+        assertFlags("headerValueCacheSpec").isEqualTo("maximumSize=4096,expireAfterAccess=600s");
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses")
+    void nullableValueOfDefaultPreferredIpV4Addresses() throws Throwable {
+        assertFlags("preferredIpV4Addresses")
+                .usingRecursiveComparison()
+                .isEqualTo(InetAddressPredicates.ofCidr("211.111.111.111"));
     }
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {

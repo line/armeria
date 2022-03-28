@@ -16,35 +16,20 @@
 
 package com.linecorp.armeria.common;
 
-public final class CustomFlagsProvider implements FlagsProvider {
+public final class HighPriorityFlagsProvider implements FlagsProvider {
 
     @Override
-    public Boolean useOpenSsl() {
-        return false;
-    }
-
-    @Override
-    public Integer numCommonBlockingTaskThreads() {
+    public int priority() {
         return 100;
     }
 
     @Override
-    public Long defaultRequestTimeoutMillis() {
-        return -10L;
+    public Integer maxNumConnections() {
+        return -1; //invalid
     }
 
     @Override
-    public String defaultBackoffSpec() {
-        return "invalid backoff spec";
-    }
-
-    @Override
-    public Integer defaultMaxTotalAttempts() {
-        return 5;
-    }
-
-    @Override
-    public Long defaultMaxClientConnectionAgeMillis() {
-        return 10L;
+    public Long defaultServerConnectionDrainDurationMicros() {
+        return 1000L;
     }
 }

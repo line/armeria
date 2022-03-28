@@ -1,1 +1,2 @@
-com.linecorp.armeria.common.CustomFlagsProvider
+com.linecorp.armeria.common.BaseFlagsProvider
+com.linecorp.armeria.common.HighPriorityFlagsProvider

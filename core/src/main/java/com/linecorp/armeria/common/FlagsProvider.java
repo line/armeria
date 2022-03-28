@@ -27,11 +27,18 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
- * A Java SPI (Service Provider Interface) for the {@link Flags} value.
- * Value provides from Java SPI will be ignored if there corresponding valid JVM option.
+ * A Java SPI (Service Provider Interface) for the {@link Flags} value. //todo add proper document
  */
 @UnstableApi
+@FunctionalInterface
 public interface FlagsProvider {
+
+    /**
+     * Return a priority of {@code FlagsProvider} to determine which implementation to use first.
+     * The {@code FlagsProvider} with the highest priority would be used at first. The value could be
+     * specified between {@value Integer#MIN_VALUE} and {@value Integer#MAX_VALUE}.
+     */
+    int priority();
 
     /**
      * Return verboseExceptionSampler. See {@link Flags#verboseExceptionSampler()}.

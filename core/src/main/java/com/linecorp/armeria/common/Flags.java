@@ -15,22 +15,20 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -41,11 +39,8 @@ import org.slf4j.LoggerFactory;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
+import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -55,7 +50,6 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
@@ -93,139 +87,73 @@ public final class Flags {
 
     private static final Logger logger = LoggerFactory.getLogger(Flags.class);
 
-    private static final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
-
     private static final String PREFIX = "com.linecorp.armeria.";
 
-    private static final Predicate alwaysPass = unused -> true;
+    private static final List<FlagsProvider> FLAGS_PROVIDER =
+            Lists.newArrayList(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
+                 .stream()
+                 .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
+                 .collect(Collectors.toList());
 
-    @Nullable
-    private static final FlagsProvider FLAGS_PROVIDER;
-
-    static {
-        //For testing, we need ArmeriaOptionsProvider that is loaded using the same loader as Flags class.
-        final List<FlagsProvider> providers = ImmutableList.copyOf(
-                ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()));
-        if (!providers.isEmpty()) {
-            FLAGS_PROVIDER = providers.get(0);
-            if (providers.size() > 1) {
-                logger.warn("Found {} {}s. The first provider found will be used among {}",
-                            providers.size(), FlagsProvider.class.getSimpleName(), providers);
-            } else {
-                logger.info("Using {} as a {}",
-                            FLAGS_PROVIDER.getClass().getSimpleName(),
-                            FlagsProvider.class.getSimpleName());
-            }
-        } else {
-            FLAGS_PROVIDER = null;
+    private static final Predicate<String> SPEC_VALIDATOR = val -> {
+        if ("true".equals(val) || "false".equals(val)) {
+            return true;
         }
-    }
+        try {
+            Sampler.of(val);
+            return true;
+        } catch (Exception e) {
+            // Invalid sampler specification
+            return false;
+        }
+    };
 
-    private static final String DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limit=10";
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
-    private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
 
     static {
-        final String spec = getNormalized("verboseExceptions",
-                                          FlagsProvider::verboseExceptionSamplerSpec,
-                                          DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
-                    if ("true".equals(val) || "false".equals(val)) {
-                        return true;
-                    }
-
-                    try {
-                        Sampler.of(val);
-                        return true;
-                    } catch (Exception e) {
-                        // Invalid sampler specification
-                        return false;
-                    }
-                });
-
+        final String spec = getValue(FlagsProvider::verboseExceptionSamplerSpec,
+                                     "verboseExceptionSamplerSpec", SPEC_VALIDATOR);
         switch (spec) {
             case "true":
             case "always":
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = "always";
-                VERBOSE_EXCEPTION_SAMPLER = Sampler.always();
                 break;
             case "false":
             case "never":
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
-                VERBOSE_EXCEPTION_SAMPLER = Sampler.never();
                 break;
             default:
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
-                VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
         }
     }
 
-    private static final Predicate<String> inetAddressValidator = val -> {
-        for (String cidr : CSV_SPLITTER.splitToList(val)) {
-            try {
-                InetAddressPredicates.ofCidr(cidr);
-            } catch (Exception ex) {
-                logger.warn("Failed to parse a preferred IPv4: {}", cidr);
-                return false;
-            }
-        }
-        return true;
-    };
-    private static final Function<String, @Nullable Predicate<InetAddress>> strToInetAddress = str -> {
-        final List<Predicate<InetAddress>> preferredIpV4Addresses =
-                CSV_SPLITTER.splitToList(str)
-                    .stream()
-                    .map(cidr -> {
-                        try {
-                            return InetAddressPredicates.ofCidr(cidr);
-                        } catch (Exception e) {
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(toImmutableList());
-        switch (preferredIpV4Addresses.size()) {
-            case 0:
-                return null;
-            case 1:
-                return preferredIpV4Addresses.get(0);
-            default:
-                return inetAddress -> {
-                    for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses) {
-                        if (preferredIpV4Addr.test(inetAddress)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                };
-        }
-    };
+    private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER =
+            getValue(FlagsProvider::verboseExceptionSampler, "verboseExceptionSampler");
+
     @Nullable
     private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES =
-            getNormalizedTo("preferredIpV4Addresses", FlagsProvider::preferredIpV4Addresses,
-                            null, inetAddressValidator, alwaysPass, strToInetAddress);
+            getNullableValue(FlagsProvider::preferredIpV4Addresses, "preferredIpV4Addresses");
 
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS =
-            getBoolean("verboseSocketExceptions", FlagsProvider::verboseSocketExceptions, false);
+            getValue(FlagsProvider::verboseSocketExceptions, "verboseSocketExceptions");
 
     private static final boolean VERBOSE_RESPONSES =
-            getBoolean("verboseResponses", FlagsProvider::verboseResponses, false);
+            getValue(FlagsProvider::verboseResponses, "verboseResponses");
 
     @Nullable
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
-            get("requestContextStorageProvider", FlagsProvider::requestContextStorageProvider,
-                null, alwaysPass);
+            getNullableValue(FlagsProvider::requestContextStorageProvider, "preferredIpV4Addresses");
 
     private static final boolean WARN_NETTY_VERSIONS =
-            getBoolean("warnNettyVersions", FlagsProvider::warnNettyVersions, true);
+            getValue(FlagsProvider::warnNettyVersions, "verboseResponses");
 
+    //TODO add into interface??
     private static final boolean DEFAULT_USE_EPOLL = TransportType.EPOLL.isAvailable();
-    private static final boolean USE_EPOLL = getBoolean("useEpoll", unused -> DEFAULT_USE_EPOLL,
+    private static final boolean USE_EPOLL = getBoolean("useEpoll",
                                                         DEFAULT_USE_EPOLL,
                                                         value -> TransportType.EPOLL.isAvailable() || !value);
 
-    private static final TransportType DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? TransportType.EPOLL
-                                                                          : TransportType.NIO;
-    private static final Predicate<TransportType> transportTypeValidator = transportType -> {
+    private static final Predicate<TransportType> TRANSPORT_TYPE_VALIDATOR = transportType -> {
         switch (transportType) {
             case IO_URING:
                 if (TransportType.IO_URING.isAvailable()) {
@@ -253,341 +181,195 @@ public final class Flags {
                     }
                     return false;
                 }
+            case NIO:
+                return true;
             default:
                 return false;
         }
     };
-    private static final Function<String, @Nullable TransportType> strToTransportType = strType -> {
-        switch (strType) {
-            case "nio":
-                return TransportType.NIO;
-            case "epoll":
-                return TransportType.EPOLL;
-            case "io_uring":
-                return TransportType.IO_URING;
-            default:
-                return null;
-        }
-    };
     private static final TransportType TRANSPORT_TYPE =
-            getNormalizedTo("transportType",
-                            FlagsProvider::transportType,
-                            DEFAULT_TRANSPORT_TYPE,
-                            strType -> {
-                                final TransportType type =
-                                        strToTransportType.apply(strType);
-                                if (type == null) {
-                                    return false;
-                                }
-                                return transportTypeValidator.test(type);
-                            },
-                            transportTypeValidator,
-                            strToTransportType);
+            getValue(FlagsProvider::transportType, "transportType", TRANSPORT_TYPE_VALIDATOR);
 
     @Nullable
     private static Boolean useOpenSsl;
     @Nullable
     private static Boolean dumpOpenSslInfo;
 
-    private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
     private static final int MAX_NUM_CONNECTIONS =
-            getInt("maxNumConnections", FlagsProvider::maxNumConnections,
-                   DEFAULT_MAX_NUM_CONNECTIONS, value -> value > 0);
+            getValue(FlagsProvider::maxNumConnections, "maxNumConnections", value -> value > 0);
 
-    private static final int DEFAULT_NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_NUM_COMMON_WORKERS = DEFAULT_NUM_CPU_CORES * 2;
     private static final int NUM_COMMON_WORKERS =
-            getInt("numCommonWorkers", FlagsProvider::numCommonWorkers,
-                   DEFAULT_NUM_COMMON_WORKERS, value -> value > 0);
+            getValue(FlagsProvider::numCommonWorkers, "numCommonWorkers", value -> value > 0);
 
-    private static final int DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS = 200; // from Tomcat default maxThreads
     private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
-            getInt("numCommonBlockingTaskThreads",
-                   FlagsProvider::numCommonBlockingTaskThreads,
-                   DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS,
-                   value -> value > 0);
+            getValue(FlagsProvider::numCommonBlockingTaskThreads, "numCommonBlockingTaskThreads",
+                     value -> value > 0);
 
-    private static final long DEFAULT_DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MiB
     private static final long DEFAULT_MAX_REQUEST_LENGTH =
-            getLong("defaultMaxRequestLength",
-                    FlagsProvider::defaultMaxRequestLength,
-                    DEFAULT_DEFAULT_MAX_REQUEST_LENGTH,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultMaxRequestLength, "defaultMaxRequestLength",
+                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH = 10 * 1024 * 1024; // 10 MiB
     private static final long DEFAULT_MAX_RESPONSE_LENGTH =
-            getLong("defaultMaxResponseLength",
-                    FlagsProvider::defaultMaxResponseLength,
-                    DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultMaxResponseLength, "defaultMaxResponseLength",
+                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = 10 * 1000; // 10 seconds
     private static final long DEFAULT_REQUEST_TIMEOUT_MILLIS =
-            getLong("defaultRequestTimeoutMillis",
-                    FlagsProvider::defaultRequestTimeoutMillis,
-                    DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultRequestTimeoutMillis, "defaultRequestTimeoutMillis",
+                     value -> value >= 0);
 
-    // Use slightly greater value than the default request timeout so that clients have a higher chance of
-    // getting proper 503 Service Unavailable response when server-side timeout occurs.
-    private static final long DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS = 15 * 1000; // 15 seconds
     private static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS =
-            getLong("defaultResponseTimeoutMillis",
-                    FlagsProvider::defaultResponseTimeoutMillis,
-                    DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultResponseTimeoutMillis, "defaultResponseTimeoutMillis",
+                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     private static final long DEFAULT_CONNECT_TIMEOUT_MILLIS =
-            getLong("defaultConnectTimeoutMillis",
-                    FlagsProvider::defaultConnectTimeoutMillis,
-                    DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS,
-                    value -> value > 0);
+            getValue(FlagsProvider::defaultConnectTimeoutMillis, "defaultConnectTimeoutMillis",
+                     value -> value > 0);
 
-    private static final long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
     private static final long DEFAULT_WRITE_TIMEOUT_MILLIS =
-            getLong("defaultWriteTimeoutMillis",
-                    FlagsProvider::defaultWriteTimeoutMillis,
-                    DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultWriteTimeoutMillis, "defaultWriteTimeoutMillis",
+                     value -> value >= 0);
 
-    // Use slightly greater value than the client-side default so that clients close the connection more often.
-    private static final long DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
     private static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS =
-            getLong("defaultServerIdleTimeoutMillis",
-                    FlagsProvider::defaultServerIdleTimeoutMillis,
-                    DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultServerIdleTimeoutMillis, "defaultServerIdleTimeoutMillis",
+                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
-            getLong("defaultClientIdleTimeoutMillis",
-                    FlagsProvider::defaultClientIdleTimeoutMillis,
-                    DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultClientIdleTimeoutMillis, "defaultClientIdleTimeoutMillis",
+                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_PING_INTERVAL_MILLIS = 0; // Disabled
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
-            getLong("defaultPingIntervalMillis",
-                    FlagsProvider::defaultPingIntervalMillis,
-                    DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultPingIntervalMillis, "defaultPingIntervalMillis",
+                     value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION = 0; // Disabled
     private static final int DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION =
-            getInt("defaultMaxServerNumRequestsPerConnection",
-                   FlagsProvider::defaultMaxServerNumRequestsPerConnection,
-                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
-                   value -> value >= 0);
+            getValue(FlagsProvider::defaultMaxServerNumRequestsPerConnection,
+                     "defaultMaxServerNumRequestsPerConnection", value -> value >= 0);
 
     private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
-            getInt("defaultMaxClientNumRequestsPerConnection",
-                   FlagsProvider::defaultMaxClientNumRequestsPerConnection,
-                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
-                   value -> value >= 0);
+            getValue(FlagsProvider::defaultMaxClientNumRequestsPerConnection,
+                     "defaultMaxClientNumRequestsPerConnection", value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
-            getLong("defaultMaxServerConnectionAgeMillis",
-                    FlagsProvider::defaultMaxServerConnectionAgeMillis,
-                    DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultMaxServerConnectionAgeMillis,
+                     "defaultMaxServerConnectionAgeMillis", value -> value >= 0);
 
     private static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS =
-            getLong("defaultMaxClientConnectionAgeMillis",
-                    FlagsProvider::defaultMaxClientConnectionAgeMillis,
-                    DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultMaxClientConnectionAgeMillis,
+                     "defaultMaxClientConnectionAgeMillis", value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
     private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
-            getLong("defaultServerConnectionDrainDurationMicros",
-                    FlagsProvider::defaultServerConnectionDrainDurationMicros,
-                    DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
-                    value -> value >= 0);
+            getValue(FlagsProvider::defaultServerConnectionDrainDurationMicros,
+                     "defaultServerConnectionDrainDurationMicros", value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
-            getInt("defaultHttp2InitialConnectionWindowSize",
-                   FlagsProvider::defaultHttp2InitialConnectionWindowSize,
-                   DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE,
-                   value -> value > 0);
+            getValue(FlagsProvider::defaultHttp2InitialConnectionWindowSize,
+                     "defaultHttp2InitialConnectionWindowSize", value -> value > 0);
 
-    private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
     private static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE =
-            getInt("defaultHttp2InitialStreamWindowSize",
-                   FlagsProvider::defaultHttp2InitialStreamWindowSize,
-                   DEFAULT_DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE,
-                   value -> value > 0);
+            getValue(FlagsProvider::defaultHttp2InitialStreamWindowSize,
+                     "defaultHttp2InitialStreamWindowSize", value -> value > 0);
 
-    private static final int DEFAULT_DEFAULT_HTTP2_MAX_FRAME_SIZE = 16384; // From HTTP/2 specification
     private static final int DEFAULT_HTTP2_MAX_FRAME_SIZE =
-            getInt("defaultHttp2MaxFrameSize",
-                   FlagsProvider::defaultHttp2MaxFrameSize,
-                   DEFAULT_DEFAULT_HTTP2_MAX_FRAME_SIZE,
-                   value -> value >= Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND &&
-                            value <= Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND);
+            getValue(FlagsProvider::defaultHttp2MaxFrameSize, "defaultHttp2MaxFrameSize",
+                     value -> value >= Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND &&
+                              value <= Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND);
 
-    // Can't use 0xFFFFFFFFL because some implementations use a signed 32-bit integer to store HTTP/2 SETTINGS
-    // parameter values, thus anything greater than 0x7FFFFFFF will break them or make them unhappy.
-    private static final long DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
     private static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION =
-            getLong("defaultHttp2MaxStreamsPerConnection",
-                    FlagsProvider::defaultHttp2MaxStreamsPerConnection,
-                    DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION,
-                    value -> value > 0 && value <= 0xFFFFFFFFL);
+            getValue(FlagsProvider::defaultHttp2MaxStreamsPerConnection, "defaultHttp2MaxStreamsPerConnection",
+                     value -> value > 0 && value <= 0xFFFFFFFFL);
 
-    // from Netty default maxHeaderSize
-    private static final long DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192;
     private static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE =
-            getLong("defaultHttp2MaxHeaderListSize",
-                    FlagsProvider::defaultHttp2MaxHeaderListSize,
-                    DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE,
-                    value -> value > 0 && value <= 0xFFFFFFFFL);
+            getValue(FlagsProvider::defaultHttp2MaxHeaderListSize, "defaultHttp2MaxHeaderListSize",
+                     value -> value > 0 && value <= 0xFFFFFFFFL);
 
-    private static final int DEFAULT_DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH = 4096; // from Netty
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
-            getInt("defaultHttp1MaxInitialLineLength",
-                   FlagsProvider::defaultHttp1MaxInitialLineLength,
-                   DEFAULT_DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH,
-                   value -> value >= 0);
+            getValue(FlagsProvider::defaultHttp1MaxInitialLineLength, "defaultHttp1MaxInitialLineLength",
+                     value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_HTTP1_MAX_HEADER_SIZE = 8192; // from Netty
     private static final int DEFAULT_MAX_HTTP1_HEADER_SIZE =
-            getInt("defaultHttp1MaxHeaderSize",
-                   FlagsProvider::defaultHttp1MaxHeaderSize,
-                   DEFAULT_DEFAULT_HTTP1_MAX_HEADER_SIZE,
-                   value -> value >= 0);
+            getValue(FlagsProvider::defaultHttp1MaxHeaderSize,
+                     "defaultHttp1MaxHeaderSize", value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_HTTP1_MAX_CHUNK_SIZE = 8192; // from Netty
     private static final int DEFAULT_HTTP1_MAX_CHUNK_SIZE =
-            getInt("defaultHttp1MaxChunkSize",
-                   FlagsProvider::defaultHttp1MaxChunkSize,
-                   DEFAULT_DEFAULT_HTTP1_MAX_CHUNK_SIZE,
-                   value -> value >= 0);
+            getValue(FlagsProvider::defaultHttp1MaxChunkSize,
+                     "defaultHttp1MaxChunkSize", value -> value >= 0);
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
-            getBoolean("defaultUseHttp2Preface", FlagsProvider::defaultUseHttp2Preface, true);
+            getValue(FlagsProvider::defaultUseHttp2Preface, "defaultUseHttp2Preface");
 
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING =
-            getBoolean("defaultUseHttp1Pipelining",
-                       FlagsProvider::defaultUseHttp1Pipelining, false);
+            getValue(FlagsProvider::defaultUseHttp1Pipelining, "defaultUseHttp1Pipelining");
 
-    private static final String DEFAULT_DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
     private static final String DEFAULT_BACKOFF_SPEC =
-            getNormalized("defaultBackoffSpec", FlagsProvider::defaultBackoffSpec,
-                          DEFAULT_DEFAULT_BACKOFF_SPEC, value -> {
-                        try {
-                            Backoff.of(value);
-                            return true;
-                        } catch (Exception e) {
-                            // Invalid backoff specification
-                            return false;
-                        }
-                    });
+            getValue(FlagsProvider::defaultBackoffSpec, "defaultBackoffSpec", value -> {
+                try {
+                    Backoff.of(value);
+                    return true;
+                } catch (Exception e) {
+                    // Invalid backoff specification
+                    return false;
+                }
+            });
 
-    private static final int DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
     private static final int DEFAULT_MAX_TOTAL_ATTEMPTS =
-            getInt("defaultMaxTotalAttempts",
-                   FlagsProvider::defaultMaxTotalAttempts,
-                   DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS,
-                   value -> value > 0);
+            getValue(FlagsProvider::defaultMaxTotalAttempts, "defaultMaxTotalAttempts", value -> value > 0);
 
-    private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
-            nullableCaffeineSpec("routeCache", FlagsProvider::routeCacheSpec,
-                                 DEFAULT_ROUTE_CACHE_SPEC);
+            nullableCaffeineSpec(FlagsProvider::routeCacheSpec, "routeCacheSpec");
 
-    private static final String DEFAULT_ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_DECORATOR_CACHE_SPEC =
-            nullableCaffeineSpec("routeDecoratorCache", FlagsProvider::routeDecoratorCacheSpec,
-                                 DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
+            nullableCaffeineSpec(FlagsProvider::routeDecoratorCacheSpec, "routeDecoratorCacheSpec");
 
-    private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String PARSED_PATH_CACHE_SPEC =
-            nullableCaffeineSpec("parsedPathCache", FlagsProvider::parsedPathCacheSpec,
-                                 DEFAULT_PARSED_PATH_CACHE_SPEC);
+            nullableCaffeineSpec(FlagsProvider::parsedPathCacheSpec, "parsedPathCacheSpec");
 
-    private static final String DEFAULT_HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String HEADER_VALUE_CACHE_SPEC =
-            nullableCaffeineSpec("headerValueCache", FlagsProvider::headerValueCacheSpec,
-                                 DEFAULT_HEADER_VALUE_CACHE_SPEC);
+            nullableCaffeineSpec(FlagsProvider::headerValueCacheSpec, "headerValueCacheSpec");
 
-    private static final String DEFAULT_CACHED_HEADERS =
-            ":authority,:scheme,:method,accept-encoding,content-type";
     private static final List<String> CACHED_HEADERS =
-            getNormalizedTo("cachedHeaders",
-                            FlagsProvider::cachedHeaders,
-                            CSV_SPLITTER.splitToList(DEFAULT_CACHED_HEADERS),
-                            CharMatcher.ascii()::matchesAllOf,
-                            list -> list.stream().allMatch(CharMatcher.ascii()::matchesAllOf),
-                            CSV_SPLITTER::splitToList
-            );
+            getValue(FlagsProvider::cachedHeaders, "cachedHeaders",
+                     list -> list.stream().allMatch(CharMatcher.ascii()::matchesAllOf));
 
-    private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
     @Nullable
     private static final String FILE_SERVICE_CACHE_SPEC =
-            nullableCaffeineSpec("fileServiceCache", FlagsProvider::fileServiceCacheSpec,
-                                 DEFAULT_FILE_SERVICE_CACHE_SPEC);
+            nullableCaffeineSpec(FlagsProvider::fileServiceCacheSpec, "fileServiceCacheSpec");
 
-    private static final String DEFAULT_DNS_CACHE_SPEC = "maximumSize=4096";
     private static final String DNS_CACHE_SPEC =
-            nonnullCaffeineSpec("dnsCacheSpec", FlagsProvider::dnsCacheSpec,
-                                DEFAULT_DNS_CACHE_SPEC);
+            nonnullCaffeineSpec(FlagsProvider::dnsCacheSpec, "dnsCacheSpec");
 
+    //TODO add in interface
     private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final boolean USE_JDK_DNS_RESOLVER =
-            getBoolean("useJdkDnsResolver", FlagsProvider::useJdkDnsResolver, false);
+            getValue(FlagsProvider::useJdkDnsResolver, "useJdkDnsResolver");
 
     private static final boolean REPORT_BLOCKED_EVENT_LOOP =
-            getBoolean("reportBlockedEventLoop", FlagsProvider::reportBlockedEventLoop, true);
+            getValue(FlagsProvider::reportBlockedEventLoop, "reportBlockedEventLoop");
 
     private static final boolean VALIDATE_HEADERS =
-            getBoolean("validateHeaders", FlagsProvider::validateHeaders, true);
+            getValue(FlagsProvider::validateHeaders, "validateHeaders");
 
     private static final boolean DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS =
-            getBoolean("tlsAllowUnsafeCiphers", FlagsProvider::tlsAllowUnsafeCiphers, false);
+            getValue(FlagsProvider::tlsAllowUnsafeCiphers, "tlsAllowUnsafeCiphers");
 
-    private static final Set<TransientServiceOption> DEFAULT_TRANSIENT_SERVICE_OPTIONS = ImmutableSet.of();
-
-    private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS = getNormalizedTo(
-            "transientServiceOptions", FlagsProvider::transientServiceOptions,
-            DEFAULT_TRANSIENT_SERVICE_OPTIONS, val -> {
-                try {
-                    Streams.stream(CSV_SPLITTER.split(val)).forEach(
-                            feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)));
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
-            }, alwaysPass,
-            transientServiceOptions -> Sets.immutableEnumSet(
-                    Streams.stream(CSV_SPLITTER.split(transientServiceOptions))
-                           .map(feature -> TransientServiceOption.valueOf(
-                                   Ascii.toUpperCase(feature)))
-                           .collect(toImmutableSet()))
-    );
+    private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
+            getValue(FlagsProvider::transientServiceOptions, "transientServiceOptions");
 
     private static final boolean DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING =
-            getBoolean("useLegacyRouteDecoratorOrdering",
-                       FlagsProvider::useLegacyRouteDecoratorOrdering, false);
+            getValue(FlagsProvider::useLegacyRouteDecoratorOrdering, "useLegacyRouteDecoratorOrdering");
 
-    private static final boolean DEFAULT_USE_DEFAULT_SOCKET_OPTIONS = true;
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
-            getBoolean("useDefaultSocketOptions", FlagsProvider::useDefaultSocketOptions,
-                       DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
+            getValue(FlagsProvider::useDefaultSocketOptions, "useDefaultSocketOptions");
 
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
-            getBoolean("allowDoubleDotsInQueryString", FlagsProvider::allowDoubleDotsInQueryString,
-                       false);
+            getValue(FlagsProvider::allowDoubleDotsInQueryString, "allowDoubleDotsInQueryString");
 
     /**
      * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
@@ -605,8 +387,8 @@ public final class Flags {
      * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
      * trace.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC}, which retains
-     * the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#verboseExceptionSamplerSpec}, which
+     * retains the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
      * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
      * the default. See {@link Sampler#of(String)} for the specification string format.</p>
      */
@@ -721,7 +503,7 @@ public final class Flags {
     }
 
     private static void setUseOpenSslAndDumpOpenSslInfo() {
-        final boolean useOpenSsl = getBoolean("useOpenSsl", FlagsProvider::useOpenSsl, true);
+        final boolean useOpenSsl = getValue(FlagsProvider::useOpenSsl, "useOpenSsl");
         if (!useOpenSsl) {
             // OpenSSL explicitly disabled
             Flags.useOpenSsl = false;
@@ -738,8 +520,7 @@ public final class Flags {
         Flags.useOpenSsl = true;
         logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
-        dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", FlagsProvider::dumpOpenSslInfo,
-                                     false);
+        dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
@@ -778,7 +559,7 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#maxNumConnections(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_MAX_NUM_CONNECTIONS}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#maxNumConnections}. Specify the
      * {@code -Dcom.linecorp.armeria.maxNumConnections=<integer>} JVM option to override
      * the default value.
      */
@@ -804,9 +585,9 @@ public final class Flags {
      * threads. Note that this flag has no effect if a user specified the blocking task executor explicitly
      * via {@link ServerBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<integer>} JVM option to override
-     * the default value.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#numCommonBlockingTaskThreads}.
+     * Specify the {@code -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<integer>} JVM option
+     * to override the default value.
      */
     public static int numCommonBlockingTaskThreads() {
         return NUM_COMMON_BLOCKING_TASK_THREADS;
@@ -816,7 +597,7 @@ public final class Flags {
      * Returns the default server-side maximum length of a request. Note that this flag has no effect if a user
      * specified the value explicitly via {@link ServerBuilder#maxRequestLength(long)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_REQUEST_LENGTH}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxRequestLength}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultMaxRequestLength=<long>} to override the default value.
      * {@code 0} disables the length limit.
      */
@@ -828,7 +609,7 @@ public final class Flags {
      * Returns the default client-side maximum length of a response. Note that this flag has no effect if a user
      * specified the value explicitly via {@link ClientBuilder#maxResponseLength(long)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxResponseLength}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultMaxResponseLength=<long>} to override the default value.
      * {@code 0} disables the length limit.
      */
@@ -840,7 +621,7 @@ public final class Flags {
      * Returns the default server-side timeout of a request in milliseconds. Note that this flag has no effect
      * if a user specified the value explicitly via {@link ServerBuilder#requestTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultRequestTimeoutMillis}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>} to override
      * the default value. {@code 0} disables the timeout.
      */
@@ -852,7 +633,7 @@ public final class Flags {
      * Returns the default client-side timeout of a response in milliseconds. Note that this flag has no effect
      * if a user specified the value explicitly via {@link ClientBuilder#responseTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultResponseTimeoutMillis}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultResponseTimeoutMillis=<long>} to override
      * the default value. {@code 0} disables the timeout.
      */
@@ -865,8 +646,8 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#channelOption(ChannelOption, Object)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>} JVM option to override
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultConnectTimeoutMillis}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>} JVM option to override
      * the default value.
      */
     public static long defaultConnectTimeoutMillis() {
@@ -878,7 +659,7 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientBuilder#writeTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultWriteTimeoutMillis}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>} JVM option to override
      * the default value. {@code 0} disables the timeout.
      */
@@ -891,9 +672,9 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#idleTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} JVM option to override
-     * the default value.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultServerIdleTimeoutMillis}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} JVM option to
+     * override the default value.
      */
     public static long defaultServerIdleTimeoutMillis() {
         return DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS;
@@ -904,9 +685,9 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
      *
-     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} JVM option to override
-     * the default value.
+     * <p>This default value of this flag is {@link DefaultFlagsProvider#defaultClientIdleTimeoutMillis}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} JVM option to
+     * override the default value.
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
@@ -918,7 +699,7 @@ public final class Flags {
      * {@link ServerBuilder#http1MaxInitialLineLength(int)} or
      * {@link ClientFactoryBuilder#http1MaxInitialLineLength(int)}.
      *
-     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH}.
+     * <p>This default value of this flag is {@link DefaultFlagsProvider#defaultHttp1MaxInitialLineLength}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxInitialLineLength=<integer>} JVM option
      * to override the default value.
      */
@@ -932,7 +713,7 @@ public final class Flags {
      * {@link ServerBuilder#http1MaxHeaderSize(int)} or
      * {@link ClientFactoryBuilder#http1MaxHeaderSize(int)}.
      *
-     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_HTTP1_MAX_HEADER_SIZE}.
+     * <p>This default value of this flag is {@link DefaultFlagsProvider#defaultHttp1MaxHeaderSize}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxHeaderSize=<integer>} JVM option
      * to override the default value.
      */
@@ -948,7 +729,7 @@ public final class Flags {
      * {@link ServerBuilder#http1MaxChunkSize(int)} or
      * {@link ClientFactoryBuilder#http1MaxChunkSize(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP1_MAX_CHUNK_SIZE}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp1MaxChunkSize}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxChunkSize=<integer>} JVM option
      * to override the default value.
      */
@@ -996,7 +777,7 @@ public final class Flags {
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
      * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_PING_INTERVAL_MILLIS} milliseconds.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultPingIntervalMillis} milliseconds.
      * Specify the {@code -Dcom.linecorp.armeria.defaultPingIntervalMillis=<integer>} JVM option to override
      * the default value. If the specified value was smaller than 10 seconds, bumps PING interval to 10 seconds.
      */
@@ -1010,7 +791,8 @@ public final class Flags {
      * <p>Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#maxNumRequestsPerConnection(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * <p>The default value of this flag is
+     * {@link DefaultFlagsProvider#defaultMaxServerNumRequestsPerConnection}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerNumRequestsPerConnection=<integer>} JVM option
      * to override the default value. {@code 0} disables the limit.
      */
@@ -1024,7 +806,8 @@ public final class Flags {
      * <p>Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#maxNumRequestsPerConnection(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * <p>The default value of this flag is
+     * {@link DefaultFlagsProvider#defaultMaxClientNumRequestsPerConnection}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientNumRequestsPerConnection=<integer>} JVM option
      * to override the default value. {@code 0} disables the limit.
      */
@@ -1037,7 +820,7 @@ public final class Flags {
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxServerConnectionAgeMillis}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerConnectionAgeMillis=<integer>} JVM option
      * to override the default value. If the specified value was smaller than 1 second,
      * bumps the max connection age to 1 second.
@@ -1053,7 +836,7 @@ public final class Flags {
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxClientConnectionAgeMillis}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientConnectionAgeMillis=<integer>} JVM option
      * to override the default value. If the specified value was smaller than 1 second,
      * bumps the max connection age to 1 second.
@@ -1069,7 +852,8 @@ public final class Flags {
      * If the value of this flag is greater than {@code 0}, a connection shutdown will have a drain period
      * when client will be notified about the shutdown, but in flight requests will still be accepted.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
+     * <p>The default value of this flag is
+     * {@link DefaultFlagsProvider#defaultServerConnectionDrainDurationMicros}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
      * JVM option to override the default value.
      *
@@ -1099,7 +883,8 @@ public final class Flags {
      * {@link ServerBuilder#http2InitialConnectionWindowSize(int)} or
      * {@link ClientFactoryBuilder#http2InitialConnectionWindowSize(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE}.
+     * <p>The default value of this flag is
+     * {@link DefaultFlagsProvider#defaultHttp2InitialConnectionWindowSize}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2InitialConnectionWindowSize=<integer>} JVM option
      * to override the default value.
      */
@@ -1114,7 +899,7 @@ public final class Flags {
      * {@link ServerBuilder#http2InitialStreamWindowSize(int)} or
      * {@link ClientFactoryBuilder#http2InitialStreamWindowSize(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2InitialStreamWindowSize}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2InitialStreamWindowSize=<integer>} JVM option
      * to override the default value.
      */
@@ -1129,7 +914,7 @@ public final class Flags {
      * {@link ServerBuilder#http2MaxFrameSize(int)} or {@link ClientFactoryBuilder#http2MaxFrameSize(int)}.
      *
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_FRAME_SIZE}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2MaxFrameSize}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxFrameSize=<integer>} JVM option
      * to override the default value.
      */
@@ -1142,7 +927,7 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#http2MaxStreamsPerConnection(long)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2MaxStreamsPerConnection}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxStreamsPerConnection=<integer>} JVM option
      * to override the default value.
      */
@@ -1157,7 +942,7 @@ public final class Flags {
      * {@link ServerBuilder#http2MaxHeaderListSize(long)} or
      * {@link ClientFactoryBuilder#http2MaxHeaderListSize(long)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE}.
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2MaxHeaderListSize}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxHeaderListSize=<integer>} JVM option
      * to override the default value.
      */
@@ -1170,7 +955,7 @@ public final class Flags {
      * returned by {@link Backoff#ofDefault()}. Note that this flag has no effect if a user specified the
      * {@link Backoff} explicitly.
      *
-     * <p>The default value of this flag is {@value DEFAULT_DEFAULT_BACKOFF_SPEC}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultBackoffSpec}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultBackoffSpec=<spec>} JVM option to override the default value.
      */
     public static String defaultBackoffSpec() {
@@ -1181,7 +966,7 @@ public final class Flags {
      * Returns the default maximum number of total attempts. Note that this flag has no effect if a user
      * specified the value explicitly when creating a {@link RetryingClient} or a {@link RetryingRpcClient}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxTotalAttempts}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>} JVM option to
      * override the default value.
      */
@@ -1193,7 +978,7 @@ public final class Flags {
      * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
      * request routing history for all {@link Service}s.
      *
-     * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#routeCacheSpec}. Specify the
      * {@code -Dcom.linecorp.armeria.routeCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.routeCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeCache=off} JVM option to disable it.
@@ -1207,7 +992,7 @@ public final class Flags {
      * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
      * request routing history for all route decorators.
      *
-     * <p>The default value of this flag is {@value DEFAULT_ROUTE_DECORATOR_CACHE_SPEC}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#routeDecoratorCacheSpec}. Specify the
      * {@code -Dcom.linecorp.armeria.routeDecoratorCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.routeDecoratorCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeDecoratorCache=off} JVM option to disable it.
@@ -1221,7 +1006,7 @@ public final class Flags {
      * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
      * results for parsing a raw HTTP path into a decoded pair of path and query string.
      *
-     * <p>The default value of this flag is {@value DEFAULT_PARSED_PATH_CACHE_SPEC}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#parsedPathCacheSpec}. Specify the
      * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.parsedPathCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.parsedPathCache=off} JVM option to disable it.
@@ -1236,7 +1021,7 @@ public final class Flags {
      * results for converting a raw HTTP ASCII header value into a {@link String}. Only the header values
      * whose corresponding header name is listed in {@link #cachedHeaders()} will be cached.
      *
-     * <p>The default value of this flag is {@value DEFAULT_HEADER_VALUE_CACHE_SPEC}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#headerValueCacheSpec}. Specify the
      * {@code -Dcom.linecorp.armeria.headerValueCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.headerValueCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.headerValueCache=off} JVM option to disable it.
@@ -1252,7 +1037,7 @@ public final class Flags {
      * flag will be cached. It is not recommended to specify a header with high cardinality, which will defeat
      * the purpose of caching.
      *
-     * <p>The default value of this flag is {@value DEFAULT_CACHED_HEADERS}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#cachedHeaders}. Specify the
      * {@code -Dcom.linecorp.armeria.cachedHeaders=<comma separated list>} JVM option to override the default.
      */
     public static List<String> cachedHeaders() {
@@ -1264,7 +1049,7 @@ public final class Flags {
      * of the {@link HttpFile}s read by a {@link FileService}. This value is used as the default of
      * {@link FileServiceBuilder#entryCacheSpec(String)}.
      *
-     * <p>The default value of this flag is {@value DEFAULT_FILE_SERVICE_CACHE_SPEC}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#fileServiceCacheSpec}. Specify the
      * {@code -Dcom.linecorp.armeria.fileServiceCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.fileServiceCache=maximumSize=1024,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.fileServiceCache=off} JVM option to disable it.
@@ -1279,7 +1064,7 @@ public final class Flags {
      * domain names and their resolved addresses. This value is used as the default of
      * {@link DnsResolverGroupBuilder#cacheSpec(String)}.
      *
-     * <p>The default value of this flag is {@value DEFAULT_DNS_CACHE_SPEC}. Specify the
+     * <p>The default value of this flag is {@link DefaultFlagsProvider#dnsCacheSpec}. Specify the
      * {@code -Dcom.linecorp.armeria.dnsCacheSpec=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.dnsCacheSpec=maximumSize=1024,expireAfterAccess=600s}.
      *
@@ -1460,24 +1245,20 @@ public final class Flags {
     }
 
     @Nullable
-    private static String nullableCaffeineSpec(String name,
-                                               Function<FlagsProvider, String> spiAccessedMethod,
-                                               String defaultValue) {
-        return caffeineSpec(name, spiAccessedMethod, defaultValue, true);
+    private static String nullableCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
+        return caffeineSpec(method, flagName, true);
     }
 
-    private static String nonnullCaffeineSpec(String name,
-                                              Function<FlagsProvider, String> spiAccessedMethod,
-                                              String defaultValue) {
-        final String spec = caffeineSpec(name, spiAccessedMethod, defaultValue, false);
+    private static String nonnullCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
+        final String spec = caffeineSpec(method, flagName,false);
         assert spec != null; // Can never be null if allowOff is false.
         return spec;
     }
 
     @Nullable
-    private static String caffeineSpec(String name, Function<FlagsProvider, String> spiAccessedMethod,
-                                       String defaultValue, boolean allowOff) {
-        final String spec = get(name, spiAccessedMethod, defaultValue, value -> {
+    private static String caffeineSpec(Function<FlagsProvider, String> method, String flagName,
+                                       boolean allowOff) {
+        final String spec = getValue(method, flagName, value -> {
             try {
                 if ("off".equals(value)) {
                     return allowOff;
@@ -1502,18 +1283,13 @@ public final class Flags {
     }
 
     private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {
-        final String mode = getNormalized(name, unused -> defaultValue, defaultValue,
+        final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
         return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
-    private static boolean getBoolean(String name, Function<FlagsProvider, Boolean> spiAccessedMethod,
-                                      boolean defaultValue) {
-        return getBoolean(name, spiAccessedMethod, defaultValue, alwaysPass);
-    }
-
-    private static boolean getBoolean(String name, Function<FlagsProvider, Boolean> spiAccessedMethod,
+    private static boolean getBoolean(String name,
                                       boolean defaultValue, Predicate<Boolean> validator) {
         final Predicate<String> combinedValidator = value -> {
             if ("true".equals(value)) {
@@ -1525,71 +1301,23 @@ public final class Flags {
             }
             return false;
         };
-        return getNormalizedTo(name, spiAccessedMethod, defaultValue, combinedValidator, alwaysPass,
-                               Boolean::new);
-    }
-
-    private static int getInt(String name, Function<FlagsProvider, Integer> spiAccessedMethod,
-                              int defaultValue, Predicate<Integer> validator) {
-        final Predicate<String> combinedValidator = value -> {
-            try {
-                return validator.test(Integer.parseInt(value));
-            } catch (Exception e) {
-                // null or non-integer
-                return false;
-            }
-        };
-        return getNormalizedTo(name, spiAccessedMethod, defaultValue, combinedValidator, validator,
-                               Integer::parseInt);
-    }
-
-    private static long getLong(String name, Function<FlagsProvider, Long> spiAccessedMethod,
-                                long defaultValue, Predicate<Long> validator) {
-        final Predicate<String> combinedValidator = value -> {
-            try {
-                return validator.test(Long.parseLong(value));
-            } catch (Exception e) {
-                // null or non-integer
-                return false;
-            }
-        };
-        return getNormalizedTo(name, spiAccessedMethod, defaultValue, combinedValidator, validator,
-                               Long::parseLong);
-    }
-
-    @Nullable
-    private static String get(String name, Function<FlagsProvider, @Nullable String> spiAccessedMethod,
-                              @Nullable String defaultValue, Predicate<String> validator) {
-        return resolveFlag(name, System::getProperty, spiAccessedMethod, defaultValue,
-                           validator, validator, unused -> unused);
+        return getNormalizedTo(name, defaultValue, combinedValidator, Boolean::new);
     }
 
     private static String getNormalized(String name,
-                                        Function<FlagsProvider, @Nullable String> spiAccessedMethod,
                                         String defaultValue, Predicate<String> validator) {
-        return getNormalizedTo(name, spiAccessedMethod, defaultValue, validator, validator, unused -> unused);
+        return getNormalizedTo(name, defaultValue, validator, unused -> unused);
     }
 
-    private static <T> T getNormalizedTo(String name, Function<FlagsProvider, @Nullable T> spiAccessedMethod,
-                                         @Nullable T defaultValue, Predicate<String> jpmOptionValidator,
-                                         Predicate<T> spiValidator, Function<String, T> convertFunction) {
-        final Function<String, @Nullable String> getLowerCased = fullName -> {
-            String value = System.getProperty(fullName);
-            if (value != null) {
-                value = Ascii.toLowerCase(value);
-            }
-            return value;
-        };
-        return resolveFlag(name, getLowerCased, spiAccessedMethod, defaultValue,
-                           jpmOptionValidator, spiValidator, convertFunction);
-    }
-
-    private static <T> T resolveFlag(String name, Function<String, @Nullable String> valueProvider,
-                                     Function<FlagsProvider, @Nullable T> spiAccessedMethod,
-                                     @Nullable T defaultValue, Predicate<String> jpmOptionValidator,
-                                     Predicate<T> spiValidator, Function<String, T> convertFunction) {
+    private static <T> T getNormalizedTo(String name, @Nullable T defaultValue,
+                                         Predicate<String> jpmOptionValidator,
+                                         Function<String, T> convertFunction) {
         final String fullName = PREFIX + name;
-        final String value = valueProvider.apply(fullName);
+        String value = System.getProperty(fullName);
+        if (value != null) {
+            value = Ascii.toLowerCase(value);
+        }
+
         if (value != null) {
             if (jpmOptionValidator.test(value)) {
                 logger.info("{}: {} (jvm option)", fullName, value);
@@ -1597,18 +1325,60 @@ public final class Flags {
             }
             logger.warn("{}: {} (jvm option) fail validation", fullName, value);
         }
-        if (FLAGS_PROVIDER != null) {
-            final T spi = spiAccessedMethod.apply(FLAGS_PROVIDER);
-            if (spi != null) {
-                if (spiValidator.test(spi)) {
-                    logger.info("{}: {} (spi)", fullName, spi);
-                    return spi;
-                }
-                logger.warn("{}: {} (spi interface) fail validation", fullName, spi);
-            }
-        }
         logger.info("{}: {} (default)", fullName, defaultValue);
         return defaultValue;
+    }
+
+    private static <T> T getValue(Function<FlagsProvider, @Nullable T> method, String flagName) {
+        return getValue(method, flagName, unused -> true);
+    }
+
+    private static <T> T getValue(Function<FlagsProvider, @Nullable T> method,
+                                  String flagName, Predicate<T> validator) {
+        for (FlagsProvider provider : FLAGS_PROVIDER) {
+            T value = null;
+            try {
+                value = method.apply(provider);
+            } catch (Exception ex) {
+                logger.warn("{}: ({}) fail to get value , {}", flagName, provider.getClass().getSimpleName(),
+                            ex.getMessage());
+            }
+
+            if (value == null) {
+                continue;
+            }
+
+            if (!validator.test(value)) {
+                logger.warn("{}: {} ({}) fail validation",
+                            flagName, value, provider.getClass().getSimpleName());
+                continue;
+            }
+
+            logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
+            return value;
+        }
+        throw new IllegalStateException(String.format("Cannot setup Flag %s", flagName));
+    }
+
+    @Nullable
+    private static <T> T getNullableValue(Function<FlagsProvider, @Nullable T> method, String flagName) {
+        for (FlagsProvider provider : FLAGS_PROVIDER) {
+            T value = null;
+            try {
+                value = method.apply(provider);
+            } catch (Exception ex) {
+                logger.warn("{}: ({}) fail to get value, {}", flagName, provider.getClass().getSimpleName(),
+                            ex.getMessage());
+            }
+
+            if (value == null && !(provider instanceof DefaultFlagsProvider)) {
+                continue; //Skip null but not if it's DefaultFlagsProvider
+            }
+
+            logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
+            return value;
+        }
+        throw new IllegalStateException(String.format("Cannot setup Flag %s", flagName));
     }
 
     private Flags() {}

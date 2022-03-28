@@ -40,7 +40,6 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
@@ -116,7 +115,7 @@ class FlagsTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "true")
-    void jvmOptionVerboseExceptionSampler() throws Throwable {
+    void systemPropertyVerboseExceptionSampler() throws Throwable {
         assertFlags("verboseExceptionSamplerSpec").isSameAs("always");
     }
 
@@ -128,7 +127,7 @@ class FlagsTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "10.0.0.0/8")
-    void jvmOptionPreferredIpV4Addresses() throws Throwable {
+    void systemPropertyPreferredIpV4Addresses() throws Throwable {
         assertFlags("preferredIpV4Addresses").isNotNull();
     }
 
@@ -140,20 +139,16 @@ class FlagsTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.transientServiceOptions", value = "with_tracing")
-    void jvmOptionTransientServiceOptions() throws Throwable {
+    void systemPropertyTransientServiceOptions() throws Throwable {
         //To compare result, need use ENUM from the FlagsClassLoader
         final Class enumClass = classLoader.loadClass(TransientServiceOption.class.getCanonicalName());
         final Enum withTracing = Enum.valueOf(enumClass, "WITH_TRACING");
-
-        assertFlags("transientServiceOptions")
-                .isEqualTo(Sets.immutableEnumSet(withTracing));
     }
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.defaultWriteTimeoutMillis", value = "-5")
-    void jvmOptionDefaultWriteTimeoutMillisFailValidation() throws Throwable {
-        assertFlags("defaultWriteTimeoutMillis")
-                .isEqualTo(1000L);
+    void systemPropertyDefaultWriteTimeoutMillisFailValidation() throws Throwable {
+        assertFlags("defaultWriteTimeoutMillis").isEqualTo(1000L);
     }
 
     @Test
@@ -164,12 +159,18 @@ class FlagsTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.defaultUseHttp2Preface", value = "false")
-    void jvmOptionDefaultUseHttp2Preface() throws Throwable {
+    void systemPropertyDefaultUseHttp2Preface() throws Throwable {
         assertFlags("defaultUseHttp2Preface").isEqualTo(false);
     }
 
     @Test
-    void testApiConsistencyBetweenFlagsAndArmeriaOptions() {
+    @SetSystemProperty(key = "com.linecorp.armeria.useDefaultSocketOptions", value = "falze")
+    void invalidBooleanSystemPropertyFlag() throws Throwable {
+        assertFlags("useDefaultSocketOptions").isEqualTo(true);
+    }
+
+    @Test
+    void testApiConsistencyBetweenFlagsAndFlagsProvider() {
         //Check Flags methods excluding deprecated methods
         final List<String> flagsApis = Arrays.stream(Flags.class.getMethods())
                                              .filter(m -> !m.isAnnotationPresent(Deprecated.class))
@@ -179,6 +180,7 @@ class FlagsTest {
                                              .collect(Collectors.toList());
         final List<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
                                                               .map(Method::getName)
+                                                              .filter(name -> !"priority".equals(name))
                                                               .collect(Collectors.toList());
         assertThat(flagsApis).hasSameElementsAs(armeriaOptionsProviderApis);
     }
