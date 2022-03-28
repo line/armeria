@@ -97,6 +97,7 @@ public class GrpcMetricsIntegrationTest {
                                   .build(),
                        MetricCollectingService.newDecorator(GrpcMeterIdPrefixFunction.of("server")),
                        LoggingService.newDecorator());
+            sb.verboseResponses(false);
         }
     };
 
