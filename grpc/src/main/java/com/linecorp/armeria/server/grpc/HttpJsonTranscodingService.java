@@ -24,25 +24,31 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.util.*;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.*;
-import com.google.common.base.CaseFormat;
-import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.AnnotationsProto;
 import com.google.api.HttpRule;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.CaseFormat;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -107,6 +113,7 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.protobuf.ProtoMethodDescriptorSupplier;
 import io.grpc.protobuf.ProtoServiceDescriptorSupplier;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Converts HTTP/JSON request to gRPC request and delegates it to the {@link FramedGrpcService}.
@@ -417,20 +424,21 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     @Nullable
     private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
         // convert abc_def to abcDef to match json key
-        String responseBody = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,spec.httpRule.getResponseBody());
+        final String responseBody =
+                CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,spec.httpRule.getResponseBody());
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         } else {
             return httpData -> {
                 final byte[] array = httpData.array();
-                ObjectMapper om = new ObjectMapper();
+                final ObjectMapper om = new ObjectMapper();
                 final ObjectReader reader = om.reader();
                 try {
                     final JsonNode jsonNode = reader.readTree(array);
                     if (jsonNode.has(responseBody)) {
-                        JsonNode responseBodyJsonNode = jsonNode.get(responseBody);
+                        final JsonNode responseBodyJsonNode = jsonNode.get(responseBody);
                         final ObjectWriter writer = om.writer();
-                        byte[] bytes = writer.writeValueAsBytes(responseBodyJsonNode);
+                        final byte[] bytes = writer.writeValueAsBytes(responseBodyJsonNode);
                         httpData.close();
                         return HttpData.copyOf(bytes);
                     } else {
@@ -542,7 +550,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return null;
         });
         return HttpResponse.from(responseFuture);
-
     }
 
     /**
