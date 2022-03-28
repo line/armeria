@@ -137,7 +137,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                         if (t != null) {
                             res.completeExceptionally(t);
                         } else {
-                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler, responseBodyConverter);
+                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
+                                    responseBodyConverter);
                         }
                     }
                     return null;

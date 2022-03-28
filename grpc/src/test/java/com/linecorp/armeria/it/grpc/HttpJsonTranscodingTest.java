@@ -28,7 +28,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import com.linecorp.armeria.grpc.testing.Transcoding;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -234,26 +233,27 @@ class HttpJsonTranscodingTest {
 
         @Override
         public void echoResponseBodyRepeated(EchoResponseBodyRequest request,
-                                             StreamObserver<Transcoding.EchoResponseBodyResponse> responseObserver) {
+                                             StreamObserver<EchoResponseBodyResponse>
+                                                     responseObserver) {
             responseObserver.onNext(getResponseBodyResponse(request));
             responseObserver.onCompleted();
         }
 
         @Override
-        public void echoResponseBodyStruct(Transcoding.EchoResponseBodyRequest request,
-                                           StreamObserver<EchoResponseBodyResponse> responseObserver) {
+        public void echoResponseBodyStruct(EchoResponseBodyRequest request,
+                                           StreamObserver<EchoResponseBodyResponse>
+                                                   responseObserver) {
             responseObserver.onNext(getResponseBodyResponse(request));
             responseObserver.onCompleted();
         }
 
         @Override
         public void echoResponseBodyNoMatching(EchoResponseBodyRequest request,
-                                               StreamObserver<Transcoding.EchoResponseBodyResponse> responseObserver) {
+                                               StreamObserver<EchoResponseBodyResponse>
+                                                       responseObserver) {
             responseObserver.onNext(getResponseBodyResponse(request));
             responseObserver.onCompleted();
         }
-
-
     }
 
     @RegisterExtension
@@ -614,14 +614,16 @@ class HttpJsonTranscodingTest {
     void shoudAcceptResponseBodyValue() {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("value", "value");
-        final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" + query.toQueryString())
+        final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" +
+                query.toQueryString())
                 .aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("value");
     }
 
     @Test
     void shoudAcceptResponseBodyRepeated() throws JsonProcessingException {
-        final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
+        final AggregatedHttpResponse response = webClient.get(
+                "/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
                 .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.isArray()).isTrue();
@@ -631,14 +633,10 @@ class HttpJsonTranscodingTest {
 
     @Test
     void shoudAcceptResponseBodyValueStruct() throws JsonProcessingException {
-        String jsonContent = "{\n"
-                + "\t\"value\": \"value\",\n"
-                + "\t\"structBody\": {\n"
-                + "\t\t\"structBody\": \"struct_value\"\n"
-                + "\t},\n"
-                + "\t\"arrayField\": [\"value1\", \"value2\"]\n"
-                + "}";
-        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/response_body/struct", jsonContent);
+        final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}," +
+                "\"array_field\":[\"value1\",\"value2\"]}";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient,
+                "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.has("structBody")).isTrue();
         assertThat(root.get("structBody").asText()).isEqualTo("struct_value");
@@ -646,14 +644,10 @@ class HttpJsonTranscodingTest {
 
     @Test
     void shoudAcceptResponseBodyValueNoMatch() throws JsonProcessingException {
-        String jsonContent = "{\n"
-                + "\t\"value\": \"value\",\n"
-                + "\t\"structBody\": {\n"
-                + "\t\t\"structBody\": \"struct_value\"\n"
-                + "\t},\n"
-                + "\t\"array_field\": [\"value1\", \"value2\"]\n"
-                + "}";
-        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/response_body/nomatch", jsonContent);
+        final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}" +
+                ",\"array_field\":[\"value1\",\"value2\"]}";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient,
+                "/v1/echo/response_body/nomatch", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.has("value")).isTrue();
         assertThat(root.has("structBody")).isTrue();
