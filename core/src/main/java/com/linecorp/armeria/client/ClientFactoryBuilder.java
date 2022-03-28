@@ -106,7 +106,7 @@ public final class ClientFactoryBuilder {
 
     // Netty-related properties:
     @Nullable
-    private List<Consumer<? super DnsResolverGroupBuilder>> dnsResolverGroupCustomizers;
+    private Consumer<DnsResolverGroupBuilder> dnsResolverGroupCustomizer;
 
     // Armeria-related properties:
     private int maxNumEventLoopsPerEndpoint;
@@ -366,7 +366,7 @@ public final class ClientFactoryBuilder {
             Function<? super EventLoopGroup,
                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory) {
         requireNonNull(addressResolverGroupFactory, "addressResolverGroupFactory");
-        checkState(dnsResolverGroupCustomizers == null,
+        checkState(dnsResolverGroupCustomizer == null,
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
         option(ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY, addressResolverGroupFactory);
         return this;
@@ -384,15 +384,19 @@ public final class ClientFactoryBuilder {
         requireNonNull(dnsResolverGroupCustomizer, "dnsResolverGroupCustomizer");
         checkState(!options.containsKey(ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY),
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
-        if (dnsResolverGroupCustomizers == null) {
-            dnsResolverGroupCustomizers = new ArrayList<>();
+        if (this.dnsResolverGroupCustomizer == null) {
+            //noinspection unchecked
+            this.dnsResolverGroupCustomizer = (Consumer<DnsResolverGroupBuilder>) dnsResolverGroupCustomizer;
+        } else {
+            this.dnsResolverGroupCustomizer =
+                    this.dnsResolverGroupCustomizer.andThen(dnsResolverGroupCustomizer);
         }
-        dnsResolverGroupCustomizers.add(dnsResolverGroupCustomizer);
         return this;
     }
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
+     * Sets the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>. The HTTP/2 connection is first established with
      * {@value Http2CodecUtil#DEFAULT_WINDOW_SIZE} bytes of connection flow-control window size,
      * and it is changed if and only if {@code http2InitialConnectionWindowSize} is set.
@@ -409,7 +413,8 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * Sets the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control. Note that this setting affects the window size of all streams,
      * not the connection-level window size.
      *
@@ -424,7 +429,8 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * Sets the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public ClientFactoryBuilder http2MaxFrameSize(int http2MaxFrameSize) {
@@ -437,7 +443,8 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * Sets the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public ClientFactoryBuilder http2MaxHeaderListSize(long http2MaxHeaderListSize) {
@@ -720,22 +727,23 @@ public final class ClientFactoryBuilder {
                         // FIXME(ikhoon): Remove DefaultAddressResolverGroup registration after fixing Window
                         //                domain name resolution failure.
                         //                https://github.com/line/armeria/issues/2243
-                        if (Flags.useJdkDnsResolver() && dnsResolverGroupCustomizers == null) {
+                        if (Flags.useJdkDnsResolver() && dnsResolverGroupCustomizer == null) {
                             return DefaultAddressResolverGroup.INSTANCE;
                         }
+
                         final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder();
-                        if (dnsResolverGroupCustomizers != null) {
-                            dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
+                        if (dnsResolverGroupCustomizer != null) {
+                            dnsResolverGroupCustomizer.accept(builder);
                         }
 
-                        final ClientFactoryOptionValue<?> opt = options.getOrDefault(
-                                ClientFactoryOptions.METER_REGISTRY,
-                                ClientFactoryOptions.METER_REGISTRY.newValue(
-                                        ClientFactoryOptions.of().meterRegistry()));
-
-                        return builder
-                                .meterRegistry((MeterRegistry) opt.value())
-                                .build(eventLoopGroup);
+                        if (builder.meterRegistry0() == null) {
+                            final ClientFactoryOptionValue<?> opt = options.getOrDefault(
+                                    ClientFactoryOptions.METER_REGISTRY,
+                                    ClientFactoryOptions.METER_REGISTRY.newValue(
+                                            ClientFactoryOptions.of().meterRegistry()));
+                            builder.meterRegistry((MeterRegistry) opt.value());
+                        }
+                        return builder.build(eventLoopGroup);
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });

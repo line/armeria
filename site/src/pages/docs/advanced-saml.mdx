@@ -161,12 +161,12 @@ class MyAuthorizer implements Authorizer<HttpRequest> {
         // proper validation in your application.
         final String cookie = data.headers().get(HttpHeaderNames.COOKIE);
         if (cookie == null) {
-            return CompletableFuture.completedFuture(false);
+            return UnmodifiableFuture.completedFuture(false);
         }
 
         final boolean authenticated = Cookie.fromCookieHeader(cookie).stream().anyMatch(
                 c -> "username".equals(c.name()) && !Strings.isNullOrEmpty(c.value()));
-        return CompletableFuture.completedFuture(authenticated);
+        return UnmodifiableFuture.completedFuture(authenticated);
     }
 }
 ```

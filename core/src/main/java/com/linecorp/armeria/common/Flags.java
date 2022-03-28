@@ -1,23 +1,26 @@
 /*
- *  Copyright 2017 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
- *  LINE Corporation licenses this file to you under the Apache License,
- *  version 2.0 (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at:
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- *  License for the specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 package com.linecorp.armeria.common;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -368,6 +371,16 @@ public final class Flags {
 
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getValue(FlagsProvider::allowDoubleDotsInQueryString, "allowDoubleDotsInQueryString");
+
+    private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION;
+
+    static {
+        DEFAULT_MULTIPART_UPLOADS_LOCATION = Paths.get(get("defaultMultipartUploadsLocation",
+                                                           System.getProperty("java.io.tmpdir") +
+                                                           File.separatorChar + "armeria" +
+                                                           File.separatorChar + "multipart-uploads",
+                                                           ignore -> true));
+    }
 
     /**
      * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
@@ -1226,6 +1239,14 @@ public final class Flags {
      */
     public static boolean useLegacyRouteDecoratorOrdering() {
         return DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+    }
+
+    /**
+     * Returns the {@link Path} that is used to store the files uploaded from {@code multipart/form-data}
+     * requests.
+     */
+    public static Path defaultMultipartUploadsLocation() {
+        return DEFAULT_MULTIPART_UPLOADS_LOCATION;
     }
 
     /**

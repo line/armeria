@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -32,12 +31,13 @@ import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.util.NetUtil;
@@ -90,34 +90,48 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final int minTtl;
     private final int maxTtl;
     private final int negativeTtl;
-    private final long queryTimeoutMillis;
+
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
+    private final DnsCache dnsResolverCache;
+    private final List<String> searchDomains;
+    private final int ndots;
+    private final long queryTimeoutMillis;
+    private final HostsFileEntriesResolver hostsFileEntriesResolver;
+    private final Cache<String, CacheEntry> addressResolverCache;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
-    private final Cache<String, CompletableFuture<CacheEntry>> cache;
 
-    RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
-                                   int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
-                                   Backoff refreshBackoff,
-                                   @Nullable ResolvedAddressTypes resolvedAddressTypes,
-                                   String cacheSpec) {
-        this.resolverConfigurator = resolverConfigurator;
+    @Nullable
+    private final ResolvedAddressTypes resolvedAddressTypes;
+
+    RefreshingAddressResolverGroup(
+            String cacheSpec, int minTtl, int maxTtl, int negativeTtl, Backoff refreshBackoff,
+            @Nullable ResolvedAddressTypes resolvedAddressTypes,
+            DnsCache dnsResolverCache, List<String> searchDomains, int ndots, long queryTimeoutMillis,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            Consumer<DnsNameResolverBuilder> resolverConfigurator) {
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
-        this.queryTimeoutMillis = queryTimeoutMillis;
         this.refreshBackoff = refreshBackoff;
         if (resolvedAddressTypes == null) {
             dnsRecordTypes = defaultDnsRecordTypes;
         } else {
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
-        cache = buildCache(cacheSpec);
+        this.dnsResolverCache = dnsResolverCache;
+        this.searchDomains = searchDomains;
+        this.ndots = ndots;
+        this.queryTimeoutMillis = queryTimeoutMillis;
+        this.hostsFileEntriesResolver = hostsFileEntriesResolver;
+        addressResolverCache = buildCache(cacheSpec);
+        this.resolverConfigurator = resolverConfigurator;
+        this.resolvedAddressTypes = resolvedAddressTypes;
     }
 
     @VisibleForTesting
-    Cache<String, CompletableFuture<CacheEntry>> cache() {
-        return cache;
+    Cache<String, CacheEntry> cache() {
+        return addressResolverCache;
     }
 
     @Override
@@ -125,27 +139,28 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         assert executor instanceof EventLoop;
         final EventLoop eventLoop = (EventLoop) executor;
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
+        if (resolvedAddressTypes != null) {
+            builder.resolvedAddressTypes(resolvedAddressTypes);
+        }
         resolverConfigurator.accept(builder);
-        final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
-                                                                           queryTimeoutMillis);
-        return new RefreshingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
-                                             negativeTtl, refreshBackoff);
+        final DefaultDnsResolver resolver = DefaultDnsResolver.of(builder.build(), dnsResolverCache, executor,
+                                                                  searchDomains, ndots, queryTimeoutMillis,
+                                                                  hostsFileEntriesResolver);
+        return new RefreshingAddressResolver(eventLoop, resolver, dnsRecordTypes, addressResolverCache,
+                                             dnsResolverCache, negativeTtl, refreshBackoff);
     }
 
     @Override
     public void close() {
         super.close();
-        cache.invalidateAll();
+        addressResolverCache.invalidateAll();
     }
 
-    private static Cache<String, CompletableFuture<CacheEntry>> buildCache(String cacheSpec) {
+    private static Cache<String, CacheEntry> buildCache(String cacheSpec) {
         final Caffeine<Object, Object> b = Caffeine.from(cacheSpec);
-        b.removalListener((RemovalListener<String, CompletableFuture<CacheEntry>>) (key, value, cause) -> {
+        b.removalListener((RemovalListener<String, CacheEntry>) (key, value, cause) -> {
             if (value != null) {
-                value.handle((cacheEntry, throwable) -> {
-                    cacheEntry.clear();
-                    return null;
-                });
+                value.clear();
             }
         });
         return b.build();

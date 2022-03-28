@@ -372,7 +372,7 @@ class StreamMessageCollectingTest {
     private static Map<HttpData, ByteBuf> newHttpData(int size) {
         final ImmutableMap.Builder<HttpData, ByteBuf> builder = ImmutableMap.builderWithExpectedSize(size);
         for (int i = 0; i < size; i++) {
-            final ByteBuf buf = Unpooled.wrappedBuffer(new byte[]{ (byte) i });
+            final ByteBuf buf = Unpooled.wrappedBuffer(new byte[] { (byte) i });
             builder.put(HttpData.wrap(buf), buf);
         }
         return builder.build();
@@ -381,7 +381,7 @@ class StreamMessageCollectingTest {
     private static void assertData(List<HttpData> httpData, int size) {
         assertThat(httpData).hasSize(size);
         for (int i = 0; i < size; i++) {
-            assertThat(httpData.get(i).array()).isEqualTo(new byte[]{ (byte) i });
+            assertThat(httpData.get(i).array()).isEqualTo(new byte[] { (byte) i });
         }
     }
 

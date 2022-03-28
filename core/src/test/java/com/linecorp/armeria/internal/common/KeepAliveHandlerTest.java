@@ -44,6 +44,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -55,6 +56,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 
+@FlakyTest
 @MockitoSettings(strictness = Strictness.LENIENT)
 class KeepAliveHandlerTest {
 

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -26,6 +27,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -272,6 +274,16 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        return (VirtualHostServiceBindingBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        return (VirtualHostServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
     }
 
     /**

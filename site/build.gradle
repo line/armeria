@@ -23,7 +23,7 @@ apply plugin: 'com.github.node-gradle.node'
 
 node {
     version = '16.14.0'
-    npmVersion = '6.14.16'
+    npmVersion = '8.5.2'
     download = true
     npmInstallCommand = "ci"
 
@@ -155,7 +155,9 @@ class ApiIndexTask extends DefaultTask {
                     // Make the type of parameters from FQCN to Simple class name in order to use as a key.
                     def parameters = ''
                     for (int i = 1; i < split.length; i++) {
-                        parameters += ',' + split[i].substring(split[i].lastIndexOf('.') + 1)
+                        // Remove the trailing '...' in varargs
+                        def p = split[i].replaceAll(/\.+$/, '')
+                        parameters += ',' + p.substring(p.lastIndexOf('.') + 1)
                     }
                     methodSignature = split[0] + '(' + parameters.substring(1) + ')'
                 }
@@ -200,6 +202,7 @@ class ContributorListTask extends DefaultTask {
                             "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
                 } else {
                     throw new Exception('Received a non-200 response from Github: ' +
+                            'Maybe specify "-PgithubToken=<personalAccessToken>" option: ' +
                             "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
                 }
             }

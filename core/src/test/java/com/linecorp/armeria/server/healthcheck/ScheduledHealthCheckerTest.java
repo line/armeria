@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.Server;
 
 class ScheduledHealthCheckerTest {
@@ -141,7 +142,7 @@ class ScheduledHealthCheckerTest {
         final AtomicBoolean health = new AtomicBoolean(true);
         final ScheduledHealthChecker healthChecker =
                 (ScheduledHealthChecker) HealthChecker.of(
-                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(health.get(), 100)),
+                        () -> UnmodifiableFuture.completedFuture(new HealthCheckStatus(health.get(), 100)),
                         Duration.ofDays(10));
         final Server server =
                 Server.builder()

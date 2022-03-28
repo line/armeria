@@ -101,6 +101,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.user.localcert.dev
 *.usercontent.goog
 *.vps.myjino.ru
 *.vultrobjects.com
@@ -297,6 +298,9 @@ airbus
 aircraft.aero
 airforce
 airguard.museum
+airkitapps-au.com
+airkitapps.com
+airkitapps.eu
 airline.aero
 airport.aero
 airtel
@@ -1140,6 +1144,7 @@ cambridge.museum
 camdvr.org
 camera
 camp
+campaign.gov.uk
 campania.it
 campidano-medio.it
 campidanomedio.it
@@ -1919,6 +1924,8 @@ design
 design.aero
 design.museum
 det.br
+deta.app
+deta.dev
 detroit.museum
 dev
 dev-myqnapcloud.com
@@ -2292,6 +2299,8 @@ emr.it
 en-root.fr
 en.it
 ena.gifu.jp
+encoreapi.com
+encr.app
 encyclopedic.museum
 endofinternet.net
 endofinternet.org
@@ -5329,6 +5338,7 @@ music
 music.museum
 musica.ar
 musica.bo
+musician.io
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
 mutual
@@ -8194,6 +8204,7 @@ tx.us
 tychy.pl
 tydal.no
 tynset.no
+typedream.app
 tysfjord.no
 tysnes.no
 tysvar.no

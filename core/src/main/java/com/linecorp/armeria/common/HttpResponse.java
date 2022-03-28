@@ -48,7 +48,6 @@ import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.ThreeElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -57,11 +56,9 @@ import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.JacksonUtil;
-import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -715,12 +712,6 @@ public interface HttpResponse extends Response, HttpMessage {
     @CheckReturnValue
     default SplitHttpResponse split(EventExecutor executor) {
         return new DefaultSplitHttpResponse(this, executor);
-    }
-
-    @Override
-    default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
-                                        Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
-        return new DecodedHttpStreamMessage<>(this, decoder, alloc, byteBufConverter);
     }
 
     /**

@@ -124,6 +124,14 @@ public interface HttpFile {
     }
 
     /**
+     * Returns an {@link HttpFile} redirected to the specified {@code location}.
+     */
+    static HttpFile ofRedirect(String location) {
+        requireNonNull(location, "location");
+        return new NonExistentHttpFile(location);
+    }
+
+    /**
      * Returns an {@link HttpFile} that becomes readable when the specified {@link CompletionStage} is complete.
      * All {@link HttpFile} operations will wait until the specified {@link CompletionStage} is completed.
      */

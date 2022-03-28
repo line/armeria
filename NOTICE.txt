@@ -38,6 +38,11 @@ This product contains Font Awesome, distributed by Dave Gandy:
              license/LICENSE.fontawesome.mit.txt (MIT License)
   * Homepage: http://fontawesome.io/
 
+This product contains GraphiQL, distributed by graphql:
+
+  * License: license/LICENSE.bootstrap.mit.txt (MIT License)
+  * Homepage: https://graphiql-test.netlify.app/typedoc/
+
 This product contains Handlebars, distributed by Yehuda Katz:
 
   * License: license/LICENSE.handlebars.mit.txt (MIT License)

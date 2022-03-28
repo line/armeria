@@ -81,6 +81,7 @@ sensible defaults. By applying them, you can:
    ```groovy
    plugins {
        id 'com.google.osdetector' version '1.6.2' apply false
+       id 'io.github.gradle-nexus.publish-plugin' version '1.1.0' apply false
    }
 
    apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
@@ -398,7 +399,7 @@ When a project has a `java` flag:
     files.
     - Consider adding dependency tasks to the `generateSources` task to do
       other source generation jobs.
-  - Thrift compiler 0.14 will be used by default. Override `thriftVersion`
+  - Thrift compiler 0.16 will be used by default. Override `thriftVersion`
     property if you prefer 0.9:
 
     ```groovy

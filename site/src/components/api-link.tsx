@@ -1,7 +1,7 @@
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import React from 'react';
 
-import styles from './api-link.module.less';
+import * as styles from './api-link.module.less';
 
 interface TypeLinkProps {
   name: string;

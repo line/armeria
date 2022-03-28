@@ -21,7 +21,6 @@ import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenScopeValidator.
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -32,6 +31,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AbstractAuthorizerWithHandlers;
@@ -66,7 +66,7 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
     static final String INVALID_TOKEN = "invalid_token";
 
     private static final CompletionStage<AuthorizationStatus> SUCCESS_STATUS_FUTURE =
-            CompletableFuture.completedFuture(AuthorizationStatus.ofSuccess());
+            UnmodifiableFuture.completedFuture(AuthorizationStatus.ofSuccess());
 
     private final Cache<String, OAuth2TokenDescriptor> tokenCache;
     private final Set<String> permittedScope;
@@ -95,7 +95,7 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
                                                                                :
                                                       String.join(" ", permittedScope));
         failureStatus = AuthorizationStatus.ofFailure(authFailureHandler);
-        failureStatusFuture = CompletableFuture.completedFuture(failureStatus);
+        failureStatusFuture = UnmodifiableFuture.completedFuture(failureStatus);
     }
 
     /**

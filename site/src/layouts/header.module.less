@@ -129,21 +129,26 @@
 }
 
 .sidebarDrawer {
+  :global(.ant-drawer-header),
   :global(.ant-drawer-content) {
     background-color: @armeria-darkgray;
   }
   :global(.ant-drawer-body) {
     padding: 4px 0 0 0;
   }
+  :global(.ant-drawer-header) {
+    padding: @margin-sm @margin-md @margin-xs;
+  }
+  :global(.ant-drawer-header-title) {
+    justify-content: end;
+  }
   :global(.ant-drawer-close) {
     color: @menu-dark-color;
+    margin: 0;
+    padding: 0;
     &:active {
       color: @menu-dark-highlight-color;
     }
-  }
-
-  .sidebarCloseIcon {
-    margin-right: @margin-sm;
   }
 
   .sidebarMenuIcons {

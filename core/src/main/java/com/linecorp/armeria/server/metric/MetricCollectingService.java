@@ -89,7 +89,9 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
-            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, successFunction);
+            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
+                                       successFunction != null ? successFunction::test
+                                                               : ctx.config().successFunction());
         }
         return unwrap().serve(ctx, req);
     }
