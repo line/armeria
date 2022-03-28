@@ -147,7 +147,6 @@ public final class Flags {
     private static final boolean WARN_NETTY_VERSIONS =
             getValue(FlagsProvider::warnNettyVersions, "verboseResponses");
 
-    //TODO add into interface??
     private static final boolean DEFAULT_USE_EPOLL = TransportType.EPOLL.isAvailable();
     private static final boolean USE_EPOLL = getBoolean("useEpoll",
                                                         DEFAULT_USE_EPOLL,
@@ -341,7 +340,6 @@ public final class Flags {
     private static final String DNS_CACHE_SPEC =
             nonnullCaffeineSpec(FlagsProvider::dnsCacheSpec, "dnsCacheSpec");
 
-    //TODO add in interface
     private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
@@ -1289,8 +1287,7 @@ public final class Flags {
         return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
-    private static boolean getBoolean(String name,
-                                      boolean defaultValue, Predicate<Boolean> validator) {
+    private static boolean getBoolean(String name, Boolean defaultValue, Predicate<Boolean> validator) {
         final Predicate<String> combinedValidator = value -> {
             if ("true".equals(value)) {
                 return validator.test(true);
@@ -1301,17 +1298,11 @@ public final class Flags {
             }
             return false;
         };
-        return getNormalizedTo(name, defaultValue, combinedValidator, Boolean::new);
+        return Boolean.valueOf(getNormalized(name, defaultValue.toString(), combinedValidator));
     }
 
-    private static String getNormalized(String name,
-                                        String defaultValue, Predicate<String> validator) {
-        return getNormalizedTo(name, defaultValue, validator, unused -> unused);
-    }
-
-    private static <T> T getNormalizedTo(String name, @Nullable T defaultValue,
-                                         Predicate<String> jpmOptionValidator,
-                                         Function<String, T> convertFunction) {
+    private static String getNormalized(String name, String defaultValue,
+                                        Predicate<String> validator) {
         final String fullName = PREFIX + name;
         String value = System.getProperty(fullName);
         if (value != null) {
@@ -1319,9 +1310,9 @@ public final class Flags {
         }
 
         if (value != null) {
-            if (jpmOptionValidator.test(value)) {
+            if (validator.test(value)) {
                 logger.info("{}: {} (jvm option)", fullName, value);
-                return convertFunction.apply(value);
+                return value;
             }
             logger.warn("{}: {} (jvm option) fail validation", fullName, value);
         }
@@ -1340,7 +1331,7 @@ public final class Flags {
             try {
                 value = method.apply(provider);
             } catch (Exception ex) {
-                logger.warn("{}: ({}) fail to get value , {}", flagName, provider.getClass().getSimpleName(),
+                logger.warn("{}: ({}) fail to get value, {}", flagName, provider.getClass().getSimpleName(),
                             ex.getMessage());
             }
 
