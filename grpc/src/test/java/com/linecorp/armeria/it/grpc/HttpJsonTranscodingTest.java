@@ -617,7 +617,7 @@ class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" +
                 query.toQueryString())
                 .aggregate().join();
-        assertThat(response.contentUtf8()).isEqualTo("value");
+        assertThat(response.contentUtf8()).isEqualTo("\"value\"");
     }
 
     @Test
