@@ -62,6 +62,18 @@ class WebClientBuilderTest {
     }
 
     @Test
+    void repeatQueryParams() {
+        final String response = WebClient.of("http://127.0.0.1:" + server.httpPort())
+                                         .prepare()
+                                         .get("/echo-path")
+                                         .queryParam("bar", 1)
+                                         .queryParam("bar", 2)
+                                         .execute()
+                                         .aggregate().join().contentUtf8();
+        assertThat(response).isEqualTo("/echo-path?bar=1&bar=2");
+    }
+
+    @Test
     void uriWithNonePlusProtocol() {
         final WebClient client = WebClient.builder("none+https://google.com/").build();
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
