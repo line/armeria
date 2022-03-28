@@ -109,7 +109,7 @@ abstract class AbstractHttpMessageBuilder {
 
     AbstractHttpMessageBuilder content(MediaType contentType, byte[] content) {
         requireNonNull(content, "content");
-        return content(contentType,  HttpData.wrap(content));
+        return content(contentType, HttpData.wrap(content));
     }
 
     AbstractHttpMessageBuilder content(MediaType contentType, HttpData content) {
