@@ -24,26 +24,20 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.util.*;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
-import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.*;
+import com.google.common.base.CaseFormat;
 import io.netty.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.AnnotationsProto;
@@ -422,12 +416,13 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     @Nullable
     private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
-        String responseBody = spec.httpRule.getResponseBody();
+        // convert abc_def to abcDef to match json key
+        String responseBody = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,spec.httpRule.getResponseBody());
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         } else {
             return httpData -> {
-                byte[] array = httpData.array();
+                final byte[] array = httpData.array();
                 ObjectMapper om = new ObjectMapper();
                 final ObjectReader reader = om.reader();
                 try {
@@ -436,6 +431,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         JsonNode responseBodyJsonNode = jsonNode.get(responseBody);
                         final ObjectWriter writer = om.writer();
                         byte[] bytes = writer.writeValueAsBytes(responseBodyJsonNode);
+                        httpData.close();
                         return HttpData.copyOf(bytes);
                     } else {
                         return httpData;

@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.linecorp.armeria.grpc.testing.Transcoding;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -54,6 +55,8 @@ import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoRecursiveRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoRecursiveResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoResponseBodyRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoResponseBodyResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoStructRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoStructResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationRequest;
@@ -213,6 +216,44 @@ class HttpJsonTranscodingTest {
             responseObserver.onNext(request);
             responseObserver.onCompleted();
         }
+
+        static EchoResponseBodyResponse getResponseBodyResponse(EchoResponseBodyRequest request) {
+            return EchoResponseBodyResponse.newBuilder()
+                    .setValue(request.getValue())
+                    .addAllArrayField(request.getArrayFieldList())
+                    .setStructBody(request.getStructBody())
+                    .build();
+        }
+
+        @Override
+        public void echoResponseBodyValue(EchoResponseBodyRequest request,
+                                          StreamObserver<EchoResponseBodyResponse> responseObserver) {
+            responseObserver.onNext(getResponseBodyResponse(request));
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoResponseBodyRepeated(EchoResponseBodyRequest request,
+                                             StreamObserver<Transcoding.EchoResponseBodyResponse> responseObserver) {
+            responseObserver.onNext(getResponseBodyResponse(request));
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoResponseBodyStruct(Transcoding.EchoResponseBodyRequest request,
+                                           StreamObserver<EchoResponseBodyResponse> responseObserver) {
+            responseObserver.onNext(getResponseBodyResponse(request));
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoResponseBodyNoMatching(EchoResponseBodyRequest request,
+                                               StreamObserver<Transcoding.EchoResponseBodyResponse> responseObserver) {
+            responseObserver.onNext(getResponseBodyResponse(request));
+            responseObserver.onCompleted();
+        }
+
+
     }
 
     @RegisterExtension
@@ -567,6 +608,56 @@ class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = webClient.get("/foo/").aggregate().join();
         // Because the FramedGrpcService only support HTTP POST.
         assertThat(response.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @Test
+    void shoudAcceptResponseBodyValue() {
+        final QueryParamsBuilder query = QueryParams.builder();
+        query.add("value", "value");
+        final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" + query.toQueryString())
+                .aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("value");
+    }
+
+    @Test
+    void shoudAcceptResponseBodyRepeated() throws JsonProcessingException {
+        final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
+                .aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.isArray()).isTrue();
+        assertThat(root.get(0).asText()).isEqualTo("value1");
+        assertThat(root.get(1).asText()).isEqualTo("value2");
+    }
+
+    @Test
+    void shoudAcceptResponseBodyValueStruct() throws JsonProcessingException {
+        String jsonContent = "{\n"
+                + "\t\"value\": \"value\",\n"
+                + "\t\"structBody\": {\n"
+                + "\t\t\"structBody\": \"struct_value\"\n"
+                + "\t},\n"
+                + "\t\"arrayField\": [\"value1\", \"value2\"]\n"
+                + "}";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/response_body/struct", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.has("structBody")).isTrue();
+        assertThat(root.get("structBody").asText()).isEqualTo("struct_value");
+    }
+
+    @Test
+    void shoudAcceptResponseBodyValueNoMatch() throws JsonProcessingException {
+        String jsonContent = "{\n"
+                + "\t\"value\": \"value\",\n"
+                + "\t\"structBody\": {\n"
+                + "\t\t\"structBody\": \"struct_value\"\n"
+                + "\t},\n"
+                + "\t\"array_field\": [\"value1\", \"value2\"]\n"
+                + "}";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/response_body/nomatch", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.has("value")).isTrue();
+        assertThat(root.has("structBody")).isTrue();
+        assertThat(root.has("arrayField")).isTrue();
     }
 
     @Test
