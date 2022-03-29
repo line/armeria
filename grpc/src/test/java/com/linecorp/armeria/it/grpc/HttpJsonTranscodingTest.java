@@ -643,6 +643,16 @@ class HttpJsonTranscodingTest {
     }
 
     @Test
+    void shouldAcceptResponseBodyValueNullValue() throws JsonProcessingException {
+        final String jsonContent = "{\"value\":\"value\", " +
+                "\"array_field\":[\"value1\",\"value2\"]}";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient,
+                "/v1/echo/response_body/struct", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.isEmpty()).isTrue();
+    }
+
+    @Test
     void shouldAcceptResponseBodyValueNoMatch() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}" +
                 ",\"array_field\":[\"value1\",\"value2\"]}";
