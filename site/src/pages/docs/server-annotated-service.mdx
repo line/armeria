@@ -324,13 +324,21 @@ public class MyAnnotatedService {
 }
 ```
 
-If you specify query delimiter while building an annotated service, a single parameter will be converted into
-separated values if the parameter is mapped to a `List<?>` or `Set<?>`, e.g. `/hello1?number=1,2,3`.
+If you specify query delimiter while building an annotated service, or a `Delimiter` annotation with a query
+parameter, a single parameter will be converted into separated values if the parameter is mapped to a `List<?>`
+or `Set<?>`, e.g. `/hello1?number=1,2,3`.
 
 ```java
 sb.annotatedService()
   .useQueryDelimiter(",")
   .build(new MyAnnotatedService());
+```
+
+```java
+public class MyAnnotatedService {
+    @Get("/hello1")
+    public HttpResponse hello1(@Param("number") @Delimiter(",") List<Integer> numbers) { ... }
+}
 ```
 
 If an HTTP `POST` request with a `Content-Type: x-www-form-urlencoded` header is received and

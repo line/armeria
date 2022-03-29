@@ -23,9 +23,21 @@ import java.lang.annotation.Target;
 
 import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 
+/**
+ * Specifies a delimiter of a parameter.
+ *
+ * <p>The {@link Delimiter} annotation has precedence over annotated service settings.</p>
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.PARAMETER, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR })
 public @interface Delimiter {
 
+    /**
+     * A delimiter to use when the request parameter is resolved to collection type and the number of values of
+     * the request parameter is one. When {@link Delimiter} annotation exists but {@link Delimiter#value()} is
+     * not specified, the parameter would not be delimited.
+     *
+     * <p>Note that the {@link Delimiter} annotation is only allowed for a query parameter.</p>
+     */
     String value() default DefaultValues.UNSPECIFIED;
 }
