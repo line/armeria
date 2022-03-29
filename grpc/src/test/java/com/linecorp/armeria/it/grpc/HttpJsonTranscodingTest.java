@@ -644,7 +644,7 @@ class HttpJsonTranscodingTest {
 
     @Test
     void shouldAcceptResponseBodyValueNullValue() throws JsonProcessingException {
-        final String jsonContent = "{\"value\":\"value\", " +
+        final String jsonContent = "{\"value\":\"value\"," +
                 "\"array_field\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/struct", jsonContent);
