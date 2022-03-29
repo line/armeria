@@ -75,6 +75,7 @@ import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Delimiter;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Order;
@@ -758,6 +759,13 @@ class AnnotatedServiceTest {
             validateContext(ctx);
             return String.join("/", params);
         }
+
+        @Get("/param/multiWithDelimiter")
+        public String multiParamsWithDelimiter(RequestContext ctx,
+                                               @Param("params") @Delimiter("$") List<String> params) {
+            validateContext(ctx);
+            return String.join("/", params);
+        }
     }
 
     @Test
@@ -1133,6 +1141,27 @@ class AnnotatedServiceTest {
             testBody(hc, get("/14/param/multi?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
             testBody(hc, get("/15/param/multi?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
             testBody(hc, get("/16/param/multi?params=a:b:c&params=d:e:f"), "a:b:c/d:e:f");
+        }
+    }
+
+    @Test
+    void testMultiParamsWithDelimiter() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a&params=b&params=c"), "a/b/c");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a&params=b&params=c"), "a/b/c");
+
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a,b,c"), "a,b,c");
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a$b$c"), "a/b/c");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a,b,c"), "a,b,c");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a$b$c"), "a/b/c");
+
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a"), "a");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a"), "a");
+
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a$b$c&params=d$e$f"), "a$b$c/d$e$f");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a$b$c&params=d$e$f"), "a$b$c/d$e$f");
         }
     }
 

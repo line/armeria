@@ -80,6 +80,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegis
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Delimiter;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
@@ -527,7 +528,14 @@ final class AnnotatedValueResolver {
                                                        AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
                                                        @Nullable String description,
-                                                       @Nullable String queryDelimiter) {
+                                                       @Nullable String serviceQueryDelimiter) {
+        String queryDelimiter = serviceQueryDelimiter;
+        final Delimiter delimiter = annotatedElement.getAnnotation(Delimiter.class);
+        if (delimiter != null) {
+            if (DefaultValues.isSpecified(delimiter.value())) {
+                queryDelimiter = delimiter.value();
+            }
+        }
         return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
