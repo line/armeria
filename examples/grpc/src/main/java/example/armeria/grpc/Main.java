@@ -69,7 +69,8 @@ public final class Main {
                                                    "BlockingHello", exampleRequest)
                                   .exclude(DocServiceFilter.ofServiceName(
                                           ServerReflectionGrpc.SERVICE_NAME))
-                                  .build());
+                                  .build())
+          .verboseResponses(false);
     }
 
     private Main() {}
