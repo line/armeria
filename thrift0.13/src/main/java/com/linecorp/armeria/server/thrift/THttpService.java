@@ -71,9 +71,10 @@ import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -353,7 +354,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
         return ExchangeType.UNARY;
     }
 

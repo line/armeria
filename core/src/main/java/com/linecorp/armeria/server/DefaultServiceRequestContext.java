@@ -88,6 +88,7 @@ public final class DefaultServiceRequestContext
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
+    private final Routed<ServiceConfig> routed;
     private final CancellationScheduler requestCancellationScheduler;
     @Nullable
     private final SSLSession sslSession;
@@ -133,19 +134,21 @@ public final class DefaultServiceRequestContext
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
-            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            RequestId id, RoutingContext routingContext, RoutingResult routingResult,
+            Routed<ServiceConfig> routed, HttpRequest req, @Nullable SSLSession sslSession,
+            ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             long requestStartTimeNanos, long requestStartTimeMicros) {
 
-        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
+        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, routed, req,
              sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
     DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
-            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            RequestId id, RoutingContext routingContext, RoutingResult routingResult,
+            Routed<ServiceConfig> routed, HttpRequest req, @Nullable SSLSession sslSession,
+            ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
@@ -159,6 +162,7 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
+        this.routed = routed;
         if (requestCancellationScheduler != null) {
             this.requestCancellationScheduler = requestCancellationScheduler;
         } else {
@@ -231,6 +235,14 @@ public final class DefaultServiceRequestContext
     @Override
     public RoutingContext routingContext() {
         return routingContext;
+    }
+
+    /**
+     * Returns the {@link Routed} of the request that is mapped to the service by the {@link Router}.
+     */
+    @UnstableApi
+    public Routed<ServiceConfig> routed() {
+        return routed;
     }
 
     @Override

@@ -19,11 +19,18 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -49,7 +56,7 @@ import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
@@ -69,8 +76,8 @@ public class ObservableResponseConverterFunctionTest {
         }
     }
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/maybe", new Object() {
@@ -327,8 +334,8 @@ public class ObservableResponseConverterFunctionTest {
     };
 
     @Test
-    public void maybe() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/maybe");
+    void maybe() {
+        final WebClient client = WebClient.of(server.httpUri() + "/maybe");
 
         AggregatedHttpResponse res;
 
@@ -361,8 +368,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void single() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/single");
+    void single() {
+        final WebClient client = WebClient.of(server.httpUri() + "/single");
 
         AggregatedHttpResponse res;
 
@@ -399,8 +406,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void completable() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/completable");
+    void completable() {
+        final WebClient client = WebClient.of(server.httpUri() + "/completable");
 
         AggregatedHttpResponse res;
 
@@ -418,8 +425,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void observable() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/observable");
+    void observable() {
+        final WebClient client = WebClient.of(server.httpUri() + "/observable");
 
         AggregatedHttpResponse res;
 
@@ -447,8 +454,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void flowable() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/flowable");
+    void flowable() {
+        final WebClient client = WebClient.of(server.httpUri() + "/flowable");
 
         AggregatedHttpResponse res;
 
@@ -476,8 +483,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void streaming() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/streaming");
+    void streaming() {
+        final WebClient client = WebClient.of(server.httpUri() + "/streaming");
         final AtomicBoolean isFinished = new AtomicBoolean();
         client.get("/json").subscribe(new DefaultSubscriber<HttpObject>() {
             final ImmutableList.Builder<HttpObject> received = new Builder<>();
@@ -514,8 +521,8 @@ public class ObservableResponseConverterFunctionTest {
     }
 
     @Test
-    public void failure() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/failure");
+    void failure() {
+        final WebClient client = WebClient.of(server.httpUri() + "/failure");
 
         AggregatedHttpResponse res;
 
@@ -536,5 +543,61 @@ public class ObservableResponseConverterFunctionTest {
         if (ServiceRequestContext.current() != ctx) {
             throw new RuntimeException("ServiceRequestContext instances are not same!");
         }
+    }
+
+    @Test
+    void responseStreaming() throws NoSuchMethodException {
+        final ObservableResponseConverterFunction converter =
+                new ObservableResponseConverterFunction((ctx, headers, result, trailers) -> null);
+        for (Method method : RxJavaService.class.getDeclaredMethods()) {
+            final String isResponseStreaming = method.getAnnotation(Streaming.class).value();
+            final Boolean expected;
+            if ("null".equals(isResponseStreaming)) {
+                expected = null;
+            } else {
+                expected = Boolean.valueOf(isResponseStreaming);
+            }
+
+            final Type returnType = method.getGenericReturnType();
+            assertThat(converter.isResponseStreaming(returnType, null))
+                    .as("response streaming from %s should be %s", returnType, isResponseStreaming)
+                    .isEqualTo(expected);
+        }
+    }
+
+    private static final class RxJavaService {
+        @Streaming("false")
+        public Single<Object> single() {
+            return null;
+        }
+
+        @Streaming("false")
+        public Maybe<Object> maybe() {
+            return null;
+        }
+
+        @Streaming("false")
+        public Completable completable() {
+            return null;
+        }
+
+        @Streaming("true")
+        public Observable<Object> jsonSeqPublisher() {
+            return null;
+        }
+
+        @Streaming("null")
+        public Publisher<Object> unknown() {
+            return null;
+        }
+    }
+
+    /**
+     * Indicates that response streaming should be enabled.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface Streaming {
+        String value();
     }
 }

@@ -16,7 +16,10 @@
 package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.streamingFrom;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType;
 
+import java.lang.reflect.Type;
 import java.util.stream.Stream;
 
 import org.reactivestreams.Publisher;
@@ -41,6 +44,24 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * so you don't have to specify this converter explicitly.
  */
 public final class ByteArrayResponseConverterFunction implements ResponseConverterFunction {
+
+    @Override
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        final Class<?> clazz = typeToClass(unwrapIoType(returnType));
+        if (clazz == null) {
+            return null;
+        }
+
+        if (HttpData.class.isAssignableFrom(clazz) || byte[].class.isAssignableFrom(clazz)) {
+            return false;
+        }
+
+        if (produceType != null && (produceType.is(MediaType.APPLICATION_BINARY) ||
+                                    produceType.is(MediaType.OCTET_STREAM))) {
+            return Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz);
+        }
+        return null;
+    }
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,

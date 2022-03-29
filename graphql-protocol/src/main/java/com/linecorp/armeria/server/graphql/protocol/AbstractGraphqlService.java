@@ -38,7 +38,8 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -152,7 +153,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
         // Response stream will be supported via WebSocket.
         return ExchangeType.UNARY;
     }

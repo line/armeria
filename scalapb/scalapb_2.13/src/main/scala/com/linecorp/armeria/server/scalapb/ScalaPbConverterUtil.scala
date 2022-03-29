@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.scalapb
 
 import com.google.protobuf.{CodedInputStream, CodedOutputStream, Descriptors}
 import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType
 import java.lang.invoke.{MethodHandle, MethodHandles, MethodType}
 import java.lang.reflect.{ParameterizedType, Type}
 import org.reactivestreams.Publisher
@@ -39,8 +40,8 @@ private[scalapb] object ScalaPbConverterUtil {
   def isProtobuf(contentType: MediaType): Boolean =
     contentType.is(MediaType.PROTOBUF) || contentType.is(X_PROTOBUF) || contentType.is(MediaType.OCTET_STREAM)
 
-  def toResultType(tpe: Type): ResultType.Value =
-    tpe match {
+  def toResultType(tpe: Type): ResultType.Value = {
+    unwrapIoType(tpe) match {
       case clazz: Class[_] if isProtobufMessage(clazz) => ResultType.PROTOBUF
       case parameterizedType: ParameterizedType =>
         val rawType = parameterizedType.getRawType.asInstanceOf[Class[_]]
@@ -77,6 +78,7 @@ private[scalapb] object ScalaPbConverterUtil {
           ResultType.UNKNOWN
       case _ => ResultType.UNKNOWN
     }
+  }
 
   def isSupportedGenericType(tpe: Type): Boolean =
     tpe match {

@@ -53,7 +53,8 @@ import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -106,7 +107,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
         return ExchangeType.UNARY;
     }
 

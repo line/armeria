@@ -37,7 +37,7 @@ public abstract class SimpleDecoratingHttpService extends SimpleDecoratingServic
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        return ((HttpService) unwrap()).exchangeType(headers, route);
+    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+        return ((HttpService) unwrap()).exchangeType(headers, routed);
     }
 }

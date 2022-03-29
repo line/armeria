@@ -15,12 +15,16 @@
  */
 package com.linecorp.armeria.server.rxjava2;
 
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -73,6 +77,27 @@ public final class ObservableResponseConverterFunction implements ResponseConver
     public ObservableResponseConverterFunction(ResponseConverterFunction responseConverter) {
         this.responseConverter = requireNonNull(responseConverter, "responseConverter");
         exceptionHandler = null;
+    }
+
+    @Override
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        final Class<?> clazz = typeToClass(unwrapIoType(returnType));
+        if (clazz == null) {
+            return null;
+        }
+
+        // Non-streaming types.
+        if (Maybe.class.isAssignableFrom(clazz) ||
+            Single.class.isAssignableFrom(clazz) ||
+            Completable.class.isAssignableFrom(clazz)) {
+            return false;
+        }
+
+        if (Observable.class.isAssignableFrom(clazz)) {
+            return true;
+        }
+
+        return null;
     }
 
     @Override

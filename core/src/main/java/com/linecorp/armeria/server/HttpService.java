@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An HTTP/2 {@link Service}.
@@ -67,7 +68,8 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
      * <p>Note that an {@link HttpRequest} will be aggregated before serving the {@link HttpService} if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
      */
-    default ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    @UnstableApi
+    default ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
         return ExchangeType.BIDI_STREAMING;
     }
 }

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
@@ -48,6 +49,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -101,6 +103,13 @@ class ProtobufResponseAnnotatedServiceTest {
         @ProducesProtobuf
         public SimpleResponse produceProtobuf() {
             return SimpleResponse.newBuilder().setMessage("Hello, Armeria!").build();
+        }
+
+        @Get("/protobuf/future")
+        @ProducesProtobuf
+        public CompletableFuture<SimpleResponse> produceProtobufFuture() {
+            return UnmodifiableFuture.completedFuture(
+                    SimpleResponse.newBuilder().setMessage("Hello, Armeria!").build());
         }
 
         @Get("/json")
@@ -185,7 +194,7 @@ class ProtobufResponseAnnotatedServiceTest {
         }
     }
 
-    @CsvSource({ "default-content-type", "protobuf" })
+    @CsvSource({ "default-content-type", "protobuf", "protobuf/future" })
     @ParameterizedTest
     void protobufResponse(String path) throws InvalidProtocolBufferException {
         final AggregatedHttpResponse response = client.get('/' + path).aggregate().join();
@@ -243,7 +252,7 @@ class ProtobufResponseAnnotatedServiceTest {
         assertThatJson(response.content().array()).isEqualTo(out.toByteArray());
     }
 
-    @CsvSource({"stream", "list", "set"})
+    @CsvSource({ "stream", "list", "set" })
     @ParameterizedTest
     void protobufJsonCollectionResponse(String type) {
         final AggregatedHttpResponse response = client.get("/protobuf+json/" + type).aggregate().join();

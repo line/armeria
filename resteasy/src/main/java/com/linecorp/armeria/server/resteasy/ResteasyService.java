@@ -53,11 +53,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerBuilder;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthTokenExtractors;
 
@@ -169,7 +170,7 @@ public final class ResteasyService<T> implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
         return ExchangeType.RESPONSE_STREAMING;
     }
 

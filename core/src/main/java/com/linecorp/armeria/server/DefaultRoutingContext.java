@@ -182,9 +182,9 @@ final class DefaultRoutingContext implements RoutingContext {
     // 3 : Content-Type
     // 4 : Accept
     //
-    // Note that we don't use query(), params() and header() for generating hashCode and comparing objects,
-    // because this class can be cached in RouteCache class. Using all properties may cause cache misses
-    // from RouteCache so it would be better if we choose the properties which can be a cache key.
+    // Note that we don't use query(), params(), header() and routed() for generating hashCode and comparing
+    // objects, because this class can be cached in RouteCache class. Using all properties may cause cache
+    // misses from RouteCache so it would be better if we choose the properties which can be a cache key.
 
     @Override
     public int hashCode() {

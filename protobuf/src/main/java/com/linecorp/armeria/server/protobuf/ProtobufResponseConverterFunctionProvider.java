@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.protobuf;
 
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -50,6 +52,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
      * {@link ProtobufResponseConverterFunction}.
      */
     private static boolean isSupportedType(Type type) {
+        type = unwrapIoType(type);
         if (type instanceof Class) {
             return MessageLite.class.isAssignableFrom((Class<?>) type);
         }

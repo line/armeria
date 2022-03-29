@@ -25,7 +25,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class EncodingServiceTest {
@@ -34,7 +35,7 @@ class EncodingServiceTest {
     void exchangeType() {
         final EncodingService encodingService = EncodingService.newDecorator().apply(new HttpService() {
             @Override
-            public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+            public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
                 return ExchangeType.UNARY;
             }
 

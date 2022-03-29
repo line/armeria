@@ -15,10 +15,13 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromEvent;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromPublisher;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromStream;
 
+import java.lang.reflect.Type;
 import java.util.stream.Stream;
 
 import org.reactivestreams.Publisher;
@@ -38,6 +41,24 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * on an annotated service method.
  */
 public final class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {
+
+    @Override
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
+        final Class<?> clazz = typeToClass(unwrapIoType(returnType));
+        if (clazz == null) {
+            return null;
+        }
+
+        if (contentType != null && contentType.is(MediaType.EVENT_STREAM)) {
+            return Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz);
+        }
+
+        if (ServerSentEvent.class.isAssignableFrom(clazz)) {
+            return false;
+        }
+
+        return null;
+    }
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.reflect.Type;
 import java.util.function.Consumer;
 
 import com.google.errorprone.annotations.CheckReturnValue;
@@ -26,6 +27,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -36,6 +38,24 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @FunctionalInterface
 public interface ResponseConverterFunction {
+
+    /**
+     * Returns whether an {@link HttpResponse} of an annotated service should be streamed.
+     * {@code null} if this converter cannot convert the {@code responseType} to an {@link HttpResponse}.
+     *
+     * <p>Note that this method is used for a performance optimization hint.
+     * Therefore, you may want to return {@code false}, if the {@code returnType} and {@code produceType} are
+     * not a streaming response.
+     *
+     * @param returnType the return type of the annotated service.
+     * @param produceType the negotiated producible media type of the annotated service.
+     *                    {@code null} if the media type negotiation is not used for the service.
+     */
+    @UnstableApi
+    @Nullable
+    default Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        return true;
+    }
 
     /**
      * Returns {@link HttpResponse} instance corresponds to the given {@code result}.

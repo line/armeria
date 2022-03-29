@@ -20,9 +20,10 @@ import _root_.scalapb.json4s.Printer
 import _root_.scalapb.{GeneratedMessage, GeneratedSealedOneof}
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.collect.Iterables
+import com.linecorp.armeria.common._
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
-import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
+import com.linecorp.armeria.internal.server.annotation.ClassUtil.{typeToClass, unwrapIoType}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isProtobuf}
@@ -33,7 +34,7 @@ import com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction.{
 }
 import com.linecorp.armeria.server.streaming.JsonTextSequences
 import java.lang.invoke.{MethodHandle, MethodHandles}
-import java.lang.reflect.Method
+import java.lang.reflect.{Method, Type}
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.concurrent.Executor
 import java.util.function.{Function => JFunction}
@@ -70,6 +71,29 @@ import scala.collection.mutable.ArrayBuffer
 @UnstableApi
 final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonPrinter)
     extends ResponseConverterFunction {
+
+  // Use java.lang.Boolean as the return type.
+  // Because scala.Boolean is equivalent to Java primitive boolean that does not allow null.
+  override def isResponseStreaming(returnType: Type, @Nullable produceType: MediaType): java.lang.Boolean = {
+    val clazz = typeToClass(unwrapIoType(returnType))
+    if (clazz == null) {
+      return null
+    }
+    if (classOf[GeneratedMessage].isAssignableFrom(clazz) ||
+      classOf[GeneratedSealedOneof].isAssignableFrom(clazz)) {
+      return false
+    }
+
+    if (produceType != null) {
+      if (produceType.isJson || isProtobuf(produceType)) {
+        return false
+      } else if (produceType.is(MediaType.JSON_SEQ)) {
+        return classOf[Publisher[_]].isAssignableFrom(clazz) || classOf[Stream[_]].isAssignableFrom(clazz)
+      }
+    }
+
+    null
+  }
 
   override def convertResponse(
       ctx: ServiceRequestContext,

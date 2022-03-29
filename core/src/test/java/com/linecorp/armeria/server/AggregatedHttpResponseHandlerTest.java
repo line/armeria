@@ -46,7 +46,7 @@ class AggregatedHttpResponseHandlerTest {
 
             sb.service("/echo", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
                     return ExchangeType.UNARY;
                 }
 
@@ -63,7 +63,7 @@ class AggregatedHttpResponseHandlerTest {
 
             sb.service("/exception", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
                     return ExchangeType.UNARY;
                 }
 
@@ -75,7 +75,7 @@ class AggregatedHttpResponseHandlerTest {
 
             sb.service("/status-exception", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
                     return ExchangeType.UNARY;
                 }
 
@@ -88,7 +88,7 @@ class AggregatedHttpResponseHandlerTest {
 
             sb.service("/response-exception", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
                     return ExchangeType.UNARY;
                 }
 
@@ -101,7 +101,7 @@ class AggregatedHttpResponseHandlerTest {
 
             sb.service("/failed", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
                     return ExchangeType.UNARY;
                 }
 
@@ -114,7 +114,7 @@ class AggregatedHttpResponseHandlerTest {
 
             sb.service("/informational-trailers", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
                     return ExchangeType.UNARY;
                 }
 
