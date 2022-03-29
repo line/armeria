@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
@@ -29,7 +31,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -41,7 +42,6 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -91,10 +91,10 @@ public final class Flags {
     private static final String PREFIX = "com.linecorp.armeria.";
 
     private static final List<FlagsProvider> FLAGS_PROVIDER =
-            Lists.newArrayList(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
+            ImmutableList.copyOf(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
                  .stream()
                  .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
-                 .collect(Collectors.toList());
+                 .collect(toImmutableList());
 
     private static final Predicate<String> SPEC_VALIDATOR = val -> {
         if ("true".equals(val) || "false".equals(val)) {
