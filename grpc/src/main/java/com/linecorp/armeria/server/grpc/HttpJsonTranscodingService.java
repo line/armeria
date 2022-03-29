@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.AnnotationsProto;
@@ -436,7 +435,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         }
-        for (FieldDescriptor fieldDescriptor: topLevelFields) {
+        for (FieldDescriptor fieldDescriptor : topLevelFields) {
             if (fieldDescriptor.getName().equals(responseBody)) {
                 return responseBody;
             }
@@ -446,31 +445,30 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     @Nullable
     private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
-        final String responseBody = spec.httpRule.getResponseBody();
-        if (spec.responseBody == null) {
+        @Nullable final String responseBody = spec.responseBody;
+        if (responseBody == null) {
             return null;
         } else {
             return httpData -> {
-                try (HttpData body = httpData) {
-                    final byte[] array = body.array();
-                    try {
-                        final JsonNode jsonNode = JacksonUtil.readValue(array, JsonNode.class);
-                        final String responseBodyJsonKey =
-                                CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
-                        final Iterator<String> fieldNames = jsonNode.fieldNames();
-                        while (fieldNames.hasNext()) {
-                            final String fieldName = fieldNames.next();
-                            if (CaseFormat.UPPER_UNDERSCORE.to(
-                                    CaseFormat.LOWER_CAMEL, responseBody).equalsIgnoreCase(fieldName)) {
-                                final JsonNode responseBodyJsonNode = jsonNode.get(responseBodyJsonKey);
-                                final byte[] bytes = JacksonUtil.writeValueAsBytes(responseBodyJsonNode);
-                                return HttpData.copyOf(bytes);
-                            }
+                final byte[] array = httpData.array();
+                try {
+                    final JsonNode jsonNode = JacksonUtil.readValue(array, JsonNode.class);
+                    final String responseBodyJsonKey =
+                            CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
+                    final Iterator<String> fieldNames = jsonNode.fieldNames();
+                    while (fieldNames.hasNext()) {
+                        final String fieldName = fieldNames.next();
+                        if (CaseFormat.UPPER_UNDERSCORE.to(
+                                CaseFormat.LOWER_CAMEL, responseBody).equalsIgnoreCase(fieldName)) {
+                            httpData.close();
+                            final JsonNode responseBodyJsonNode = jsonNode.get(responseBodyJsonKey);
+                            final byte[] bytes = JacksonUtil.writeValueAsBytes(responseBodyJsonNode);
+                            return HttpData.copyOf(bytes);
                         }
-                        return HttpData.ofAscii("null");
-                    } catch (IOException e) {
-                        return HttpData.ofAscii("null");
                     }
+                    return httpData;
+                } catch (IOException e) {
+                    return httpData;
                 }
             };
         }
