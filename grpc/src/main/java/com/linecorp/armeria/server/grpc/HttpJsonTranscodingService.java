@@ -453,10 +453,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return httpData -> {
                 try (HttpData body = httpData) {
                     final byte[] array = body.array();
-                    final ObjectMapper om = new ObjectMapper();
-                    final ObjectReader reader = om.reader();
                     try {
-                        final JsonNode jsonNode = reader.readTree(array);
+                        final JsonNode jsonNode = JacksonUtil.readValue(array, JsonNode.class);
                         final String responseBodyJsonKey =
                                 CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
                         final Iterator<String> fieldNames = jsonNode.fieldNames();
