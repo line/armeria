@@ -90,6 +90,7 @@ public final class Flags {
     private static final String PREFIX = "com.linecorp.armeria.";
 
     private static final List<FlagsProvider> FLAGS_PROVIDERS;
+
     static {
         final List<FlagsProvider> flagsProviders =
                 ImmutableList.copyOf(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
