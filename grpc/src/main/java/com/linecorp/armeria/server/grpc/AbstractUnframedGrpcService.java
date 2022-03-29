@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -106,7 +107,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             RequestHeaders grpcHeaders,
             HttpData content,
             CompletableFuture<HttpResponse> res,
-            Function<HttpData, HttpData> responseBodyConverter) {
+            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
@@ -138,7 +139,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                             res.completeExceptionally(t);
                         } else {
                             deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                    responseBodyConverter);
+                                              responseBodyConverter);
                         }
                     }
                     return null;
@@ -150,7 +151,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
                                   UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                  Function<HttpData, HttpData> responseBodyConverter) {
+                                  @Nullable Function<HttpData, HttpData> responseBodyConverter) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -191,7 +192,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
     static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
                                                         CompletableFuture<HttpResponse> res,
-                                                        Function<HttpData, HttpData> responseBodyConverter) {
+                                                        @Nullable Function<HttpData, HttpData>
+                                                                responseBodyConverter) {
         return new Subscriber<DeframedMessage>() {
 
             @Override
