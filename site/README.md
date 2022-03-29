@@ -92,3 +92,9 @@ how much space using `source-map-explorer`.
 2. A web browser will show a tree map.
    See [here](https://github.com/danvk/source-map-explorer#readme) to
    learn more about how to interpret the report.
+
+### Generating release notes
+
+```console
+$ npm run release-note <version>
+```

@@ -28,7 +28,7 @@ import yaml from 'react-syntax-highlighter/dist/esm/languages/prism/yaml';
 import shellSession from 'refractor/lang/shell-session';
 /* eslint-enable import/no-extraneous-dependencies */
 
-import styles from './code-block.module.less';
+import * as styles from './code-block.module.less';
 
 // Register 'none' language.
 const none = (prism: any) => {
@@ -229,9 +229,8 @@ function process(code: React.ReactNode) {
     return '';
   }
 
-  return (indentation !== 0
-    ? lines.map((line) => line.substring(indentation))
-    : lines
+  return (
+    indentation !== 0 ? lines.map((line) => line.substring(indentation)) : lines
   ).join('\n');
 }
 

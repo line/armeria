@@ -12,8 +12,10 @@ interface Dependency {
 }
 
 interface RequiredDependenciesProps {
+  /* eslint-disable react/no-unused-prop-types */
   boms?: Dependency[];
   dependencies: Dependency[];
+  /* eslint-enable react/no-unused-prop-types */
 }
 
 function gradleBom(boms: Dependency[]) {

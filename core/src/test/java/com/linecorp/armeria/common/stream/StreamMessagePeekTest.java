@@ -56,4 +56,54 @@ class StreamMessagePeekTest {
                     .verifyComplete();
         await().untilAsserted(() -> assertThat(collected).isEqualTo(ImmutableList.of(1, 2, 3)));
     }
+
+    @Test
+    void peekError() {
+        final IllegalStateException first = new IllegalStateException("1");
+        final IllegalStateException second = new IllegalStateException("2");
+        final IllegalStateException third = new IllegalStateException("3");
+        final StreamMessage<Object> aborted = StreamMessage
+                .aborted(first)
+                .peekError(error -> assertThat(error).isSameAs(first))
+                .mapError(error -> second)
+                .peekError(error -> assertThat(error).isSameAs(second))
+                .mapError(error -> third);
+        StepVerifier.create(aborted)
+                    .expectErrorMatches(cause -> cause == third)
+                    .verify();
+
+        final StreamMessage<Integer> fixed =
+                StreamMessage.of(1, 2, 3, 4)
+                             .map(i -> {
+                                 if (i < 3) {
+                                     return i + 1;
+                                 } else {
+                                     throw first;
+                                 }
+                             })
+                             .peekError(error -> assertThat(error).isSameAs(first))
+                             .mapError(error -> second)
+                             .peekError(error -> assertThat(error).isSameAs(second))
+                             .mapError(error -> third);
+        StepVerifier.create(fixed)
+                    .expectNext(2, 3)
+                    .expectErrorMatches(cause -> cause == third)
+                    .verify();
+
+        final DefaultStreamMessage<Integer> defaultStream = new DefaultStreamMessage<>();
+        defaultStream.write(1);
+        defaultStream.write(2);
+        defaultStream.close(first);
+        final StreamMessage<Integer> defaultStream2 =
+                defaultStream.peekError(error -> assertThat(error).isSameAs(first))
+                             .mapError(error -> second)
+                             .peekError(error -> assertThat(error).isSameAs(second))
+                             .mapError(error -> third)
+                             .map(i -> i + 1)
+                             .map(i -> i + 1);
+        StepVerifier.create(defaultStream2)
+                    .expectNext(3, 4)
+                    .expectErrorMatches(cause -> cause == third)
+                    .verify();
+    }
 }

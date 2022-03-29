@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentTooLargeException;
@@ -96,8 +97,8 @@ class DefaultServerErrorHandlerTest {
     })
     void serviceErrorsWithoutStackTrace(String path, int expectedCode, String expectedDescription) {
         final HttpStatus expectedStatus = HttpStatus.valueOf(expectedCode);
-        final WebClient client = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = client.get(path).aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get(path);
         assertThat(res.status()).isSameAs(expectedStatus);
         assertThat(res.contentUtf8()).isEqualTo("Status: " + expectedCode + '\n' +
                                                 "Description: " + expectedDescription + '\n');
@@ -113,8 +114,8 @@ class DefaultServerErrorHandlerTest {
     })
     void serviceErrorsWithStackTrace(String path, int expectedCode,
                                      String expectedDescription, String expectedException) {
-        final WebClient client = WebClient.of(verboseServer.httpUri());
-        final AggregatedHttpResponse res = client.get(path).aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(verboseServer.httpUri());
+        final AggregatedHttpResponse res = client.get(path);
         assertThat(res.status().code()).isEqualTo(expectedCode);
         final String content = res.contentUtf8();
         assertThat(content).startsWith("Status: " + expectedCode + '\n' +
@@ -125,8 +126,8 @@ class DefaultServerErrorHandlerTest {
 
     @Test
     void responseException() {
-        final WebClient client = WebClient.of(verboseServer.httpUri());
-        final AggregatedHttpResponse res = client.get("/response/504").aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(verboseServer.httpUri());
+        final AggregatedHttpResponse res = client.get("/response/504");
         assertThat(res.status()).isSameAs(HttpStatus.GATEWAY_TIMEOUT);
         assertThat(res.contentUtf8()).isEqualTo("custom_status=504");
         assertThat(res.trailers()).isEmpty();
@@ -138,8 +139,8 @@ class DefaultServerErrorHandlerTest {
      */
     @Test
     void test200() {
-        final WebClient client = WebClient.of(verboseServer.httpUri());
-        final AggregatedHttpResponse res = client.get("/status/200").aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(verboseServer.httpUri());
+        final AggregatedHttpResponse res = client.get("/status/200");
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("Status: 200\nDescription: OK\n");
         assertThat(res.trailers()).isEmpty();
@@ -147,8 +148,8 @@ class DefaultServerErrorHandlerTest {
 
     @Test
     void test204() {
-        final WebClient client = WebClient.of(verboseServer.httpUri());
-        final AggregatedHttpResponse res = client.get("/status/204").aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(verboseServer.httpUri());
+        final AggregatedHttpResponse res = client.get("/status/204");
         assertThat(res.status()).isSameAs(HttpStatus.NO_CONTENT);
         assertThat(res.contentUtf8()).isEmpty();
         assertThat(res.trailers()).isEmpty();

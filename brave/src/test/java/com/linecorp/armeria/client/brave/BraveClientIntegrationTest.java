@@ -31,9 +31,6 @@ import org.junit.runners.Parameterized.Parameters;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -149,35 +146,31 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Override
     protected void get(WebClient client, String pathIncludingQuery) {
-        client.get(pathIncludingQuery).aggregate().join();
+        client.blocking().get(pathIncludingQuery);
     }
 
     @Override
     protected void get(WebClient client, String path, BiConsumer<Integer, Throwable> callback) {
-        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-            final HttpResponse res = client.get(path);
-            final ClientRequestContext ctx = ctxCaptor.get();
-            res.aggregate().handle((response, cause) -> {
-                try (SafeCloseable ignored = ctx.push()) {
-                    if (cause == null) {
-                        callback.accept(response.status().code(), null);
-                    } else {
-                        callback.accept(null, cause);
-                    }
-                }
-                return null;
-            });
-        }
+        final HttpResponse res = client.get(path);
+        // Use 'handleAsync' to make sure a callback is invoked without the current trace context
+        res.aggregate().handleAsync((response, cause) -> {
+            if (cause == null) {
+                callback.accept(response.status().code(), null);
+            } else {
+                callback.accept(null, cause);
+            }
+            return null;
+        });
     }
 
     @Override
     protected void post(WebClient client, String pathIncludingQuery, String body) {
-        client.post(pathIncludingQuery, body).aggregate().join();
+        client.blocking().post(pathIncludingQuery, body);
     }
 
     @Override
     protected void options(WebClient client, String path) {
-        client.options(path).aggregate().join();
+        client.blocking().options(path);
     }
 
     static ServiceRequestContext serverContext() {

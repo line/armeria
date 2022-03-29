@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -57,6 +58,7 @@ public final class FileServiceBuilder {
     boolean canSetEntryCacheSpec = true;
     @Nullable
     HttpHeadersBuilder headers;
+    MediaTypeResolver mediaTypeResolver = MediaTypeResolver.ofDefault();
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -227,6 +229,15 @@ public final class FileServiceBuilder {
     }
 
     /**
+     * Sets the {@link MediaTypeResolver} that determines a file's {@link MediaType} using its path.
+     * If not set, {@link MediaTypeResolver#ofDefault()} is used by default.
+     */
+    public FileServiceBuilder mediaTypeResolver(MediaTypeResolver mediaTypeResolver) {
+        this.mediaTypeResolver = requireNonNull(mediaTypeResolver, "mediaTypeResolver");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link FileService} based on the properties of this builder.
      */
     public FileService build() {
@@ -236,12 +247,13 @@ public final class FileServiceBuilder {
 
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders()));
+                serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(),
+                mediaTypeResolver.orElse(MediaTypeResolver.ofDefault())));
     }
 
     @Override
     public String toString() {
         return FileServiceConfig.toString(this, vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                                          serveCompressedFiles, autoIndex, headers);
+                                          serveCompressedFiles, autoIndex, headers, mediaTypeResolver);
     }
 }

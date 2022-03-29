@@ -18,13 +18,14 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageDuplicator;
+import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -74,15 +75,30 @@ public interface HttpMessage extends StreamMessage<HttpObject> {
      * the specified {@link HttpDecoder} and {@link ByteBufAllocator}.
      */
     default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc) {
-        requireNonNull(decoder, "decoder");
-        requireNonNull(alloc, "alloc");
-        return decode(decoder, alloc, HttpData::byteBuf);
+        return DecodedStreamMessage.of(this, decoder, alloc);
     }
 
     /**
-     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
-     * the specified {@link HttpDecoder} and {@link ByteBufAllocator} and {@code byteBufConverter}.
+     * Transforms the {@link HttpData}s emitted by this {@link HttpMessage} by applying the
+     * specified {@link Function}.
      */
-    <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
-                                Function<? super HttpData, ? extends ByteBuf> byteBufConverter);
+    HttpMessage mapData(Function<? super HttpData, ? extends HttpData> function);
+
+    /**
+     * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpMessage} by applying the
+     * specified {@link Function}.
+     */
+    HttpMessage mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function);
+
+    /**
+     * Applies the specified {@link Consumer} to the {@link HttpData}s
+     * emitted by this {@link HttpMessage}.
+     */
+    HttpMessage peekData(Consumer<? super HttpData> action);
+
+    /**
+     * Applies the specified {@link Consumer} to the {@linkplain HttpHeaders trailers}
+     * emitted by this {@link HttpMessage}.
+     */
+    HttpMessage peekTrailers(Consumer<? super HttpHeaders> action);
 }

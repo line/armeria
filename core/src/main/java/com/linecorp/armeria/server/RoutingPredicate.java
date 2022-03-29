@@ -37,12 +37,13 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
 /**
  * A {@link Predicate} to evaluate whether a request can be accepted by a service method.
- * Currently predicates for {@link HttpHeaders} and {@link QueryParams} are supported.
+ * Currently, predicates for {@link HttpHeaders} and {@link QueryParams} are supported.
  *
  * @param <T> the type of the object to be tested
  */
@@ -60,19 +61,20 @@ final class RoutingPredicate<T> {
      *     parameter</li>
      *     <li>{@code !some-name} which means that the request must not contain a {@code some-name} header or
      *     parameter</li>
+     *     <li>{@code some-name=some-value || some-other-value} which means that the request must have
+     *     a {@code some-name=some-value} or a {@code some-other-value} header or parameter</li>
      * </ul>
      */
     private static final Pattern CONTAIN_PATTERN = Pattern.compile("^\\s*([!]?)([^\\s=><!]+)\\s*$");
     private static final Pattern COMPARE_PATTERN = Pattern.compile("^\\s*([^\\s!><=]+)\\s*([><!]?=|>|<)(.*)$");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s");
+    private static final Pattern OR_PATTERN = Pattern.compile("\\s*\\|\\|\\s*");
 
-    @SuppressWarnings("unchecked")
     static List<RoutingPredicate<HttpHeaders>> copyOfHeaderPredicates(Iterable<String> predicates) {
         return Streams.stream(predicates)
                       .map(RoutingPredicate::ofHeaders).collect(toImmutableList());
     }
 
-    @SuppressWarnings("unchecked")
     static List<RoutingPredicate<QueryParams>> copyOfParamPredicates(Iterable<String> predicates) {
         return Streams.stream(predicates)
                       .map(RoutingPredicate::ofParams).collect(toImmutableList());
@@ -108,37 +110,112 @@ final class RoutingPredicate<T> {
     @VisibleForTesting
     static <T, U> RoutingPredicate<T> of(String predicateExpr,
                                          Function<String, U> nameConverter,
-                                         Function<U, Predicate<T>> containsPredicateFactory,
-                                         BiFunction<U, String, Predicate<T>> equalsPredicateFactory) {
-        final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
-        if (containMatcher.matches()) {
-            final U name = nameConverter.apply(containMatcher.group(2));
-            final Predicate<T> predicate = containsPredicateFactory.apply(name);
-            if ("!".equals(containMatcher.group(1))) {
-                return new RoutingPredicate<>("not_" + containMatcher.group(2), predicate.negate());
+                                         Function<U, Predicate<T>> containsPredicate,
+                                         BiFunction<U, String, Predicate<T>> equalsPredicate) {
+        final RoutingPredicate<T> routingPredicate = parseRoutingPredicate(predicateExpr,
+                                                                           nameConverter,
+                                                                           containsPredicate,
+                                                                           equalsPredicate);
+
+        checkArgument(routingPredicate != null,
+                      "Invalid predicate: %s (expected: " +
+                      "name, !name, name=value, name!=value or any of them concatenated by '||')",
+                      predicateExpr);
+
+        return new RoutingPredicate<>(routingPredicate.name, routingPredicate.delegate);
+    }
+
+    @Nullable
+    private static <T, U> RoutingPredicate<T> parseRoutingPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            Function<U, Predicate<T>> containsPredicate,
+            BiFunction<U, String, Predicate<T>> equalsPredicate) {
+
+        RoutingPredicate<T> result = null;
+        for (String expr : OR_PATTERN.split(predicateExpr, -1)) {
+            if (expr.isEmpty()) {
+                // Contains an empty expression.
+                return null;
+            }
+
+            final RoutingPredicate<T> predicate =
+                    parseSingleRoutingPredicate(expr,
+                                                nameConverter,
+                                                containsPredicate,
+                                                equalsPredicate);
+            if (predicate == null) {
+                return null;
+            }
+
+            if (result == null) {
+                result = predicate;
             } else {
-                return new RoutingPredicate<>(predicateExpr, predicate);
+                result = or(result, predicate);
             }
         }
 
-        final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicateExpr);
-        checkArgument(compareMatcher.matches(),
-                      "Invalid predicate: %s (expected: '%s' or '%s')",
-                      predicateExpr, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern());
-        assert compareMatcher.groupCount() == 3;
+        return result;
+    }
 
-        final String name = compareMatcher.group(1);
-        final String comparator = compareMatcher.group(2);
-        final String value = compareMatcher.group(3);
-
-        final Predicate<T> predicate = equalsPredicateFactory.apply(nameConverter.apply(name), value);
-        final String noWsValue = WHITESPACE_PATTERN.matcher(value).replaceAll("_");
-        if ("=".equals(comparator)) {
-            return new RoutingPredicate<>(name + "_eq_" + noWsValue, predicate);
-        } else {
-            assert "!=".equals(comparator);
-            return new RoutingPredicate<>(name + "_ne_" + noWsValue, predicate.negate());
+    @Nullable
+    private static <T, U> RoutingPredicate<T> parseSingleRoutingPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            Function<U, Predicate<T>> containsPredicate,
+            BiFunction<U, String, Predicate<T>> equalsPredicate) {
+        if (predicateExpr.contains("|")) {
+            // `|` should appear only in the or-form such as `foo || bar`.
+            return null;
         }
+        final RoutingPredicate<T> routingPredicate;
+        final RoutingPredicate<T> containRoutingPredicate =
+                parseContainRoutingPredicate(predicateExpr, nameConverter, containsPredicate);
+        if (containRoutingPredicate != null) {
+            routingPredicate = containRoutingPredicate;
+        } else {
+            routingPredicate = parseCompareRoutingPredicate(predicateExpr, nameConverter, equalsPredicate);
+        }
+        return routingPredicate;
+    }
+
+    @Nullable
+    private static <T, U> RoutingPredicate<T> parseContainRoutingPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            Function<U, Predicate<T>> containsPredicate) {
+        final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
+        if (containMatcher.matches()) {
+            final U name = nameConverter.apply(containMatcher.group(2));
+            final Predicate<T> predicate = containsPredicate.apply(name);
+            if ("!".equals(containMatcher.group(1))) {
+                return negated(containMatcher.group(2), predicate);
+            } else {
+                return from(predicateExpr, predicate);
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private static <T, U> RoutingPredicate<T> parseCompareRoutingPredicate(
+            String predicateExpr, Function<String, U> nameConverter,
+            BiFunction<U, String, Predicate<T>> equalsPredicate) {
+        final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicateExpr);
+        if (compareMatcher.matches()) {
+            assert compareMatcher.groupCount() == 3;
+
+            final String name = compareMatcher.group(1);
+            final String comparator = compareMatcher.group(2);
+            final String value = compareMatcher.group(3);
+
+            final Predicate<T> predicate = equalsPredicate.apply(nameConverter.apply(name), value);
+            final String noWsValue = WHITESPACE_PATTERN.matcher(value).replaceAll("_");
+            switch (comparator) {
+                case "=":
+                    return eq(name, noWsValue, predicate);
+                case "!=":
+                    return notEq(name, noWsValue, predicate);
+            }
+        }
+        return null;
     }
 
     private final CharSequence name;
@@ -199,5 +276,35 @@ final class RoutingPredicate<T> {
                           .add("name", name)
                           .add("delegate", delegate)
                           .toString();
+    }
+
+    private static <T> RoutingPredicate<T> eq(String name, String value, Predicate<T> predicate) {
+        return new RoutingPredicate<>(name + "_eq_" + value, predicate);
+    }
+
+    private static <T> RoutingPredicate<T> notEq(String name, String value, Predicate<T> predicate) {
+        return new RoutingPredicate<>(name + "_ne_" + value, predicate.negate());
+    }
+
+    private static <T> RoutingPredicate<T> negated(String name, Predicate<T> predicate) {
+        return new RoutingPredicate<>("not_" + name, predicate.negate());
+    }
+
+    private static <T> RoutingPredicate<T> from(String name, Predicate<T> predicate) {
+        return new RoutingPredicate<>(name, predicate);
+    }
+
+    private static <T> RoutingPredicate<T> or(RoutingPredicate<T> current, RoutingPredicate<T> other) {
+        final String currentName = String.valueOf(current.name);
+        if (currentName.isEmpty()) {
+            return new RoutingPredicate<>(other.name + "_or_", current.delegate.or(other.delegate));
+        } else {
+            if (currentName.endsWith("_or_")) {
+                return new RoutingPredicate<>(currentName + other.name,
+                                              current.delegate.or(other.delegate));
+            }
+            return new RoutingPredicate<>(currentName + "_or_" + other.name,
+                                          current.delegate.or(other.delegate));
+        }
     }
 }

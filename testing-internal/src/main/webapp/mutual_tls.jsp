@@ -1,6 +1,7 @@
 <%@ page import="java.security.cert.X509Certificate"%>
 <%@ page contentType="application/json; charset=UTF-8" %>
 {
+    "remoteHost": "<%= request.getRemoteHost() %>",
     "sessionId": "<%= request.getAttribute("javax.servlet.request.ssl_session_id") %>",
     "cipherSuite": "<%= request.getAttribute("javax.servlet.request.cipher_suite") %>",
     "keySize": <%= request.getAttribute("javax.servlet.request.key_size") %>,

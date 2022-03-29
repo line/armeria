@@ -18,17 +18,17 @@ class HelloApplicationIntegrationTest(@Autowired server: Server) {
 
     @Test
     fun success() {
-        val response = client.get("/hello/Spring").aggregate().join()
+        val response = client.prepare().get("/hello/Spring").asString().execute().join()
         assertThat(response.status()).isEqualTo(HttpStatus.OK)
-        assertThat(response.contentUtf8())
+        assertThat(response.content())
             .isEqualTo("Hello, Spring! This message is from Armeria annotated service!")
     }
 
     @Test
     fun failure() {
-        val response = client.get("/hello/a").aggregate().join()
+        val response = client.prepare().get("/hello/a").asString().execute().join()
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST)
-        assertThatJson(response.contentUtf8()).node("message")
+        assertThatJson(response.content()).node("message")
             .isEqualTo("hello.name: name should have between 3 and 10 characters")
     }
 }

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -65,28 +65,28 @@ class CancellationPropagationTest {
 
     @Test
     void testCancellationPropagation() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         AggregatedHttpResponse res;
 
-        res = client.get("/cancel/single-value-pub").aggregate().join();
+        res = client.get("/cancel/single-value-pub");
         validateCancellation(res, singleValuePublisherCancelCallCounter);
-        res = client.get("/cancel/multi-value-pub").aggregate().join();
+        res = client.get("/cancel/multi-value-pub");
         validateCancellation(res, multiValuePublisherCancelCallCounter);
-        res = client.get("/cancel/future").aggregate().join();
+        res = client.get("/cancel/future");
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         // Should not cancel CompletableFuture. A HttpResponse could be leaked if it is set after completion.
         assertThat(futureCancelCallCounter).hasValue(0);
 
         resetCancelCallCounters(); // Reset cancellation call counter.
 
-        res = client.get("/cancel/single-value-pub-json").aggregate().join();
+        res = client.get("/cancel/single-value-pub-json");
         validateCancellation(res, singleValuePublisherCancelCallCounter);
-        res = client.get("/cancel/multi-value-pub-json").aggregate().join();
+        res = client.get("/cancel/multi-value-pub-json");
         validateCancellation(res, multiValuePublisherCancelCallCounter);
 
         resetCancelCallCounters();
 
-        res = client.get("/cancel/multi-value-pub-json-seq").aggregate().join();
+        res = client.get("/cancel/multi-value-pub-json-seq");
         validateCancellation(res, multiValuePublisherCancelCallCounter);
     }
 

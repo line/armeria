@@ -106,6 +106,7 @@ public final class MoreMeters {
                                    .tags(tags)
                                    .publishPercentiles(distStatCfg.getPercentiles())
                                    .publishPercentileHistogram(distStatCfg.isPercentileHistogram())
+                                   .percentilePrecision(distStatCfg.getPercentilePrecision())
                                    .distributionStatisticBufferLength(distStatCfg.getBufferLength())
                                    .distributionStatisticExpiry(distStatCfg.getExpiry());
 
@@ -151,6 +152,7 @@ public final class MoreMeters {
                     .minimumExpectedValue(minExpectedValue)
                     .publishPercentiles(distStatCfg.getPercentiles())
                     .publishPercentileHistogram(distStatCfg.isPercentileHistogram())
+                    .percentilePrecision(distStatCfg.getPercentilePrecision())
                     .distributionStatisticBufferLength(distStatCfg.getBufferLength())
                     .distributionStatisticExpiry(distStatCfg.getExpiry())
                     .register(registry);

@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.grpc;
 
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.UncheckedIOException;
@@ -44,6 +43,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -91,10 +91,11 @@ class GrpcWebTextTest {
 
         @Override
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
-            final CompletableFuture<ByteBuf> deframedByteBuf = new CompletableFuture<>();
             final ByteBufAllocator alloc = ctx.alloc();
-            req.decode(deframer, alloc, byteBufConverter(alloc, true))
+            final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE,
+                                                                               alloc, true);
+            final CompletableFuture<ByteBuf> deframedByteBuf = new CompletableFuture<>();
+            req.decode(deframer, alloc)
                .subscribe(singleSubscriber(deframedByteBuf), ctx.eventLoop());
             final CompletableFuture<HttpResponse> responseFuture =
                     deframedByteBuf
@@ -210,7 +211,7 @@ class GrpcWebTextTest {
             final SimpleResponse response = SimpleResponse.newBuilder()
                                                           .setPayload(request.getPayload())
                                                           .build();
-            return CompletableFuture.completedFuture(
+            return UnmodifiableFuture.completedFuture(
                     Unpooled.wrappedBuffer(response.toByteArray()));
         }
     }

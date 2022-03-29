@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
@@ -115,5 +117,14 @@ final class OrElseEndpointGroup extends AbstractEndpointGroup implements Listena
     @Override
     public void close() {
         closeable.close();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("first", first)
+                          .add("second", second)
+                          .add("initialized", initialEndpointsFuture.isDone())
+                          .toString();
     }
 }

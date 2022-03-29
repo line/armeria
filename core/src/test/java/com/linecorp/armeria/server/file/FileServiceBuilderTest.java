@@ -20,8 +20,38 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class FileServiceBuilderTest {
+
+    private static final String BASE_RESOURCE_DIR =
+            FileServiceBuilderTest.class.getPackage().getName().replace('.', '/') + '/';
+
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.serviceUnder(
+                    "/mediaTypeResolver",
+                    FileService.builder(getClass().getClassLoader(), BASE_RESOURCE_DIR + "bar")
+                               .mediaTypeResolver((path, contentEncoding) -> {
+                                   if (path.endsWith(".custom-json-extension")) {
+                                       return MediaType.JSON_UTF_8;
+                                   }
+                                   if (path.endsWith(".custom-txt-extension")) {
+                                       return MediaType.PLAIN_TEXT_UTF_8;
+                                   }
+                                   return null;
+                               })
+                               .build());
+        }
+    };
 
     @Test
     void autoDecompress() {
@@ -36,5 +66,31 @@ class FileServiceBuilderTest {
                                             .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should enable serveCompressedFiles when autoDecompress is set");
+    }
+
+    @Test
+    void testCustomMediaTypeResolverGuessFromPathCustomJsonExtension() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .get("/mediaTypeResolver/bar.custom-json-extension")
+                                                         .aggregate()
+                                                         .join();
+        assertThat(response.headers().contentType()).isSameAs(MediaType.JSON_UTF_8);
+    }
+
+    @Test
+    void testCustomMediaTypeResolverGuessFromPathCustomTextExtension() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .get("/mediaTypeResolver/bar.custom-txt-extension")
+                                                         .aggregate()
+                                                         .join();
+        assertThat(response.headers().contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
+    }
+
+    @Test
+    void testCustomMediaTypeResolverNotMatchThenDefaultIsUsed() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .get("/mediaTypeResolver/bar.xhtml").aggregate()
+                                                         .join();
+        assertThat(response.headers().contentType()).isSameAs(MediaType.XHTML_UTF_8);
     }
 }

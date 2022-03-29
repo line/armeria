@@ -2,7 +2,7 @@ import { Typography } from 'antd';
 import React from 'react';
 
 import { useStaticQuery, graphql } from 'gatsby';
-import styles from './blockquote.module.less';
+import * as styles from './blockquote.module.less';
 
 const { Title, Paragraph } = Typography;
 

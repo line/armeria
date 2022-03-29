@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -245,7 +245,8 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(candidate1, candidate2);
 
         try (HealthCheckedEndpointGroup group =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {
@@ -271,7 +272,8 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(candidate1, candidate2);
 
         try (HealthCheckedEndpointGroup group =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {
@@ -300,7 +302,8 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(candidate1, candidate2, candidate2);
 
         try (HealthCheckedEndpointGroup unused =
-                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {

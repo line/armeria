@@ -76,10 +76,11 @@ class DnsMetricsTest {
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
-                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.serverAddressStreamProvider(dnsServerList(server));
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
+                                          builder.dnsCache(NoopDnsCache.INSTANCE);
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -127,10 +128,11 @@ class DnsMetricsTest {
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
-                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.serverAddressStreamProvider(dnsServerList(server));
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
+                                          builder.dnsCache(NoopDnsCache.INSTANCE);
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -184,9 +186,10 @@ class DnsMetricsTest {
                                           // the configuration in /etc/resolve.conf
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
-                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.serverAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.dnsCache(NoopDnsCache.INSTANCE);
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -234,9 +237,10 @@ class DnsMetricsTest {
                                           // the configuration in /etc/resolve.conf
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
-                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.serverAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.dnsCache(NoopDnsCache.INSTANCE);
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -290,9 +294,10 @@ class DnsMetricsTest {
                                           // the configuration in /etc/resolve.conf
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
-                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.serverAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.dnsCache(NoopDnsCache.INSTANCE);
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -335,11 +340,12 @@ class DnsMetricsTest {
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
-                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.serverAddressStreamProvider(dnsServerList(server));
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
-                                          builder.disableDnsQueryMetrics();
+                                          builder.enableDnsQueryMetrics(false);
+                                          builder.dnsCache(NoopDnsCache.INSTANCE);
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -380,13 +386,13 @@ class DnsMetricsTest {
         }
     }
 
-    public static DnsRecord newCnameRecord(String name, String actualName) {
+    static DnsRecord newCnameRecord(String name, String actualName) {
         final ByteBuf content = Unpooled.buffer();
         DnsNameEncoder.encodeName(actualName, content);
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
     }
 
-    public static DnsRecord newSrvRecord(String hostname, int weight, int port, String target) {
+    static DnsRecord newSrvRecord(String hostname, int weight, int port, String target) {
         final ByteBuf content = Unpooled.buffer();
         content.writeShort(1); // priority unused
         content.writeShort(weight);
