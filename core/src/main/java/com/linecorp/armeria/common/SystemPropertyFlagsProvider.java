@@ -79,7 +79,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     @Override
     public Boolean verboseResponses() {
-        return getBoolean("verboseSocketExceptions");
+        return getBoolean("verboseResponses");
     }
 
     @Override
