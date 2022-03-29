@@ -170,6 +170,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of());
 
                 final List<FieldDescriptor> topLevelFields = methodDesc.getOutputType().getFields();
+
+                @Nullable
                 final String responseBody = calculateResponseBody(
                         topLevelFields, httpRule.getResponseBody());
 
@@ -795,6 +797,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 MethodDescriptor methodDescriptor,
                                 Map<String, Field> fields,
                                 List<PathVariable> pathVariables,
+                                @Nullable
                                 String responseBody) {
             this.order = order;
             this.httpRule = httpRule;
