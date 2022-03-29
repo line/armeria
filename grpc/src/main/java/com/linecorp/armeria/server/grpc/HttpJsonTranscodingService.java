@@ -435,7 +435,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         }
-        for (FieldDescriptor fieldDescriptor : topLevelFields) {
+        for (FieldDescriptor fieldDescriptor: topLevelFields) {
             if (fieldDescriptor.getName().equals(responseBody)) {
                 return responseBody;
             }
