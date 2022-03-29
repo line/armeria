@@ -33,7 +33,9 @@ import com.linecorp.armeria.server.TransientServiceOption;
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
  */
-public final class DefaultFlagsProvider implements FlagsProvider {
+final class DefaultFlagsProvider implements FlagsProvider {
+
+    public static final DefaultFlagsProvider INSTANCE = new DefaultFlagsProvider();
 
     @Override
     public int priority() {
@@ -319,4 +321,6 @@ public final class DefaultFlagsProvider implements FlagsProvider {
                          File.separatorChar + "armeria" +
                          File.separatorChar + "multipart-uploads");
     }
+
+    private DefaultFlagsProvider() {}
 }

@@ -37,7 +37,7 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 
-class FlagsProviderTest {
+public class FlagsProviderTest {
 
     private Class<?> flags;
 

@@ -40,7 +40,9 @@ import com.linecorp.armeria.server.TransientServiceOption;
 /**
  * Implementation of {@link FlagsProvider} which provides values from JVM options to {@link Flags}.
  */
-public final class SystemPropertyFlagsProvider implements FlagsProvider {
+final class SystemPropertyFlagsProvider implements FlagsProvider {
+
+    public static final SystemPropertyFlagsProvider INSTANCE = new SystemPropertyFlagsProvider();
 
     private static final String PREFIX = "com.linecorp.armeria.";
     private static final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
@@ -412,4 +414,6 @@ public final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
         return value;
     }
+
+    private SystemPropertyFlagsProvider() {}
 }

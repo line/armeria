@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
@@ -31,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -90,11 +89,16 @@ public final class Flags {
 
     private static final String PREFIX = "com.linecorp.armeria.";
 
-    private static final List<FlagsProvider> FLAGS_PROVIDER =
-            ImmutableList.copyOf(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
-                 .stream()
-                 .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
-                 .collect(toImmutableList());
+    private static final List<FlagsProvider> FLAGS_PROVIDERS;
+    static {
+        final List<FlagsProvider> flagsProviders =
+                ImmutableList.copyOf(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
+                             .stream()
+                             .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
+                             .collect(Collectors.toList());
+        flagsProviders.add(0, SystemPropertyFlagsProvider.INSTANCE);
+        FLAGS_PROVIDERS = ImmutableList.copyOf(flagsProviders);
+    }
 
     private static final Predicate<String> SPEC_VALIDATOR = val -> {
         if ("true".equals(val) || "false".equals(val)) {
@@ -133,7 +137,7 @@ public final class Flags {
 
     @Nullable
     private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES =
-            getNullableValue(FlagsProvider::preferredIpV4Addresses, "preferredIpV4Addresses");
+            getValue(FlagsProvider::preferredIpV4Addresses, "preferredIpV4Addresses");
 
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS =
             getValue(FlagsProvider::verboseSocketExceptions, "verboseSocketExceptions");
@@ -143,7 +147,7 @@ public final class Flags {
 
     @Nullable
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
-            getNullableValue(FlagsProvider::requestContextStorageProvider, "preferredIpV4Addresses");
+            getValue(FlagsProvider::requestContextStorageProvider, "preferredIpV4Addresses");
 
     private static final boolean WARN_NETTY_VERSIONS =
             getValue(FlagsProvider::warnNettyVersions, "verboseResponses");
@@ -1338,7 +1342,7 @@ public final class Flags {
 
     private static <T> T getValue(Function<FlagsProvider, @Nullable T> method,
                                   String flagName, Predicate<T> validator) {
-        for (FlagsProvider provider : FLAGS_PROVIDER) {
+        for (FlagsProvider provider : FLAGS_PROVIDERS) {
             T value = null;
             try {
                 value = method.apply(provider);
@@ -1360,28 +1364,9 @@ public final class Flags {
             logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
             return value;
         }
-        throw new IllegalStateException(String.format("Cannot setup Flag %s", flagName));
-    }
-
-    @Nullable
-    private static <T> T getNullableValue(Function<FlagsProvider, @Nullable T> method, String flagName) {
-        for (FlagsProvider provider : FLAGS_PROVIDER) {
-            T value = null;
-            try {
-                value = method.apply(provider);
-            } catch (Exception ex) {
-                logger.warn("{}: ({}) fail to get value, {}", flagName, provider.getClass().getSimpleName(),
-                            ex.getMessage());
-            }
-
-            if (value == null && !(provider instanceof DefaultFlagsProvider)) {
-                continue; //Skip null but not if it's DefaultFlagsProvider
-            }
-
-            logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
-            return value;
-        }
-        throw new IllegalStateException(String.format("Cannot setup Flag %s", flagName));
+        final T defaultValue = method.apply(DefaultFlagsProvider.INSTANCE);
+        logger.info("{}: {} ({})", flagName, defaultValue, DefaultFlagsProvider.class.getSimpleName());
+        return defaultValue;
     }
 
     private Flags() {}
