@@ -147,10 +147,10 @@ public final class Flags {
 
     @Nullable
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
-            getValue(FlagsProvider::requestContextStorageProvider, "preferredIpV4Addresses");
+            getValue(FlagsProvider::requestContextStorageProvider, "requestContextStorageProvider");
 
     private static final boolean WARN_NETTY_VERSIONS =
-            getValue(FlagsProvider::warnNettyVersions, "verboseResponses");
+            getValue(FlagsProvider::warnNettyVersions, "warnNettyVersions");
 
     private static final boolean DEFAULT_USE_EPOLL = TransportType.EPOLL.isAvailable();
     private static final boolean USE_EPOLL = getBoolean("useEpoll",
@@ -359,13 +359,13 @@ public final class Flags {
     private static final boolean VALIDATE_HEADERS =
             getValue(FlagsProvider::validateHeaders, "validateHeaders");
 
-    private static final boolean DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS =
+    private static final boolean TLS_ALLOW_UNSAFE_CIPHERS =
             getValue(FlagsProvider::tlsAllowUnsafeCiphers, "tlsAllowUnsafeCiphers");
 
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             getValue(FlagsProvider::transientServiceOptions, "transientServiceOptions");
 
-    private static final boolean DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING =
+    private static final boolean USE_LEGACY_ROUTE_DECORATOR_ORDERING =
             getValue(FlagsProvider::useLegacyRouteDecoratorOrdering, "useLegacyRouteDecoratorOrdering");
 
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
@@ -1182,7 +1182,7 @@ public final class Flags {
      * {@code -Dcom.linecorp.armeria.tlsAllowUnsafeCiphers=true} JVM option to enable it.
      */
     public static boolean tlsAllowUnsafeCiphers() {
-        return DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS;
+        return TLS_ALLOW_UNSAFE_CIPHERS;
     }
 
     /**
@@ -1233,7 +1233,7 @@ public final class Flags {
      * {@code request -> loggingDecorator -> authDecorator -> traceDecorator -> userService}
      */
     public static boolean useLegacyRouteDecoratorOrdering() {
-        return DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+        return USE_LEGACY_ROUTE_DECORATOR_ORDERING;
     }
 
     /**
