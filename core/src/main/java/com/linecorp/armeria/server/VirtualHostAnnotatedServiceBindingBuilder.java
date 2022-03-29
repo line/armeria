@@ -29,7 +29,6 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
@@ -73,7 +72,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
 
     @Nullable
-    private String queryDelimiter = Flags.queryDelimiter();
+    private String queryDelimiter;
     private boolean useBlockingTaskExecutor;
     private String pathPrefix = "/";
     @Nullable
@@ -170,8 +169,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
-     * Sets the query parameter delimiter. By default, this {@link VirtualHostAnnotatedServiceBindingBuilder}
-     * uses {@link Flags#queryDelimiter()}.
+     * Sets the query parameter delimiter. It is disabled by default.
      *
      * <p>Note that this delimiter works only when the resolve target class type is collection and the number
      * of values of the query parameter is one.</p>
