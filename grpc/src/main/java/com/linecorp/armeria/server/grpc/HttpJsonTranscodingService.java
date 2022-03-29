@@ -169,9 +169,14 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final Map<String, Field> fields =
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of());
 
+                final List<FieldDescriptor> topLevelFields = methodDesc.getOutputType().getFields();
+                final boolean needExtractResponseBody = needExtractResponseBody(
+                        topLevelFields, httpRule.getResponseBody());
+
                 int order = 0;
                 builder.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
-                                                       serviceDesc, methodDesc, fields, pathVariables));
+                                                       serviceDesc, methodDesc, fields, pathVariables,
+                                                        needExtractResponseBody));
 
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
                     @Nullable
@@ -181,7 +186,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         builder.put(additionalRouteAndVariables.getKey(),
                                     new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
                                                         serviceDesc, methodDesc, fields,
-                                                        additionalRouteAndVariables.getValue()));
+                                                        additionalRouteAndVariables.getValue(),
+                                                        needExtractResponseBody));
                     }
                 }
             }
@@ -421,31 +427,41 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return file.findMessageTypeByName(messageType.getName());
     }
 
+    // to make it more efficient, we calculate whether extract response body one time
+    private static boolean needExtractResponseBody(List<FieldDescriptor> topLevelFields, String responseBody) {
+        if (StringUtil.isNullOrEmpty(responseBody)) {
+            return false;
+        }
+        for (FieldDescriptor fieldDescriptor: topLevelFields) {
+            if (fieldDescriptor.getName().equals(responseBody)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Nullable
     private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
-        // convert abc_def to abcDef to match json key
-        final String responseBody =
-                CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,spec.httpRule.getResponseBody());
-        if (StringUtil.isNullOrEmpty(responseBody)) {
+        final String responseBody = spec.httpRule.getResponseBody();
+        if (!spec.needExtractResponseBody) {
             return null;
         } else {
             return httpData -> {
-                final byte[] array = httpData.array();
-                final ObjectMapper om = new ObjectMapper();
-                final ObjectReader reader = om.reader();
-                try {
-                    final JsonNode jsonNode = reader.readTree(array);
-                    if (jsonNode.has(responseBody)) {
-                        final JsonNode responseBodyJsonNode = jsonNode.get(responseBody);
+                try (HttpData body = httpData) {
+                    final byte[] array = body.array();
+                    final ObjectMapper om = new ObjectMapper();
+                    final ObjectReader reader = om.reader();
+                    try {
+                        final JsonNode jsonNode = reader.readTree(array);
+                        final String responseBodyJsonKey =
+                                CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
+                        final JsonNode responseBodyJsonNode = jsonNode.get(responseBodyJsonKey);
                         final ObjectWriter writer = om.writer();
                         final byte[] bytes = writer.writeValueAsBytes(responseBodyJsonNode);
-                        httpData.close();
                         return HttpData.copyOf(bytes);
-                    } else {
-                        return httpData;
+                    } catch (IOException e) {
+                        return HttpData.ofAscii("null");
                     }
-                } catch (IOException e) {
-                    return httpData;
                 }
             };
         }
@@ -760,6 +776,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final Descriptors.MethodDescriptor methodDescriptor;
         private final Map<String, Field> fields;
         private final List<PathVariable> pathVariables;
+        private final boolean needExtractResponseBody;
 
         private TranscodingSpec(int order,
                                 HttpRule httpRule,
@@ -767,7 +784,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 ServiceDescriptor serviceDescriptor,
                                 MethodDescriptor methodDescriptor,
                                 Map<String, Field> fields,
-                                List<PathVariable> pathVariables) {
+                                List<PathVariable> pathVariables,
+                                boolean needExtractResponseBody) {
             this.order = order;
             this.httpRule = httpRule;
             this.method = method;
@@ -775,6 +793,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             this.methodDescriptor = methodDescriptor;
             this.fields = fields;
             this.pathVariables = pathVariables;
+            this.needExtractResponseBody = needExtractResponseBody;
         }
     }
 
