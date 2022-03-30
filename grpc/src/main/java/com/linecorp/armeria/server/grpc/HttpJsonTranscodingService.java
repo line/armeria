@@ -453,15 +453,19 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final byte[] array = httpData.array();
                 try {
                     final JsonNode jsonNode = JacksonUtil.readValue(array, JsonNode.class);
-                    final String responseBodyJsonKey =
-                            CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
+                    // we try to convert lower snake case response body to camel case
+                    final String lowerCamelCaseResponseBody =
+                            CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
                     final Iterator<String> fieldNames = jsonNode.fieldNames();
                     while (fieldNames.hasNext()) {
                         final String fieldName = fieldNames.next();
-                        if (CaseFormat.UPPER_UNDERSCORE.to(
-                                CaseFormat.LOWER_CAMEL, responseBody).equalsIgnoreCase(fieldName)) {
+                        final JsonNode responseBodyJsonNode = jsonNode.get(fieldName);
+                        // try to match field name and response body
+                        // 1. by default the marshaller would use lowerCamelCase in json field
+                        // 2. when the marshaller use original name in .proto file when serializing messages
+                        if (fieldName.equals(lowerCamelCaseResponseBody) ||
+                            fieldName.equals(responseBody)) {
                             httpData.close();
-                            final JsonNode responseBodyJsonNode = jsonNode.get(responseBodyJsonKey);
                             final byte[] bytes = JacksonUtil.writeValueAsBytes(responseBodyJsonNode);
                             return HttpData.copyOf(bytes);
                         }
