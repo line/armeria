@@ -304,7 +304,6 @@ class HttpJsonTranscodingTest {
     final WebClient webClientPreservingProtoFieldNames =
             WebClient.builder(serverPreservingProtoFieldNames.httpUri()).build();
 
-
     @Test
     void shouldGetMessageV1ByGrpcClient() {
         final Message message = grpcClient.getMessageV1(

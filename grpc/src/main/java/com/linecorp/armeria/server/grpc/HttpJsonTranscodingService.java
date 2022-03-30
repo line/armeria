@@ -457,8 +457,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
                     final Iterator<Entry<String, JsonNode>> fields = jsonNode.fields();
                     while (fields.hasNext()) {
-                        final String fieldName = fields.next().getKey();
-                        final JsonNode responseBodyJsonNode = fields.next().getValue();
+                        final Entry<String, JsonNode> entry = fields.next();
+                        final String fieldName = entry.getKey();
+                        final JsonNode responseBodyJsonNode = entry.getValue();
                         // try to match field name and response body
                         // 1. by default the marshaller would use lowerCamelCase in json field
                         // 2. when the marshaller use original name in .proto file when serializing messages
