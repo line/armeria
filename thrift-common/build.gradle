@@ -1,0 +1,6 @@
+// This module is the shared module between thrift* and thrifty
+
+dependencies {
+
+
+}

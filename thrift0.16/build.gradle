@@ -3,6 +3,9 @@
 final def THRIFT_VERSION = '0.16.0'
 
 dependencies {
+    // Common thrift classes
+    api project(':thrift-common')
+
     api("org.apache.thrift:libthrift") {
         version {
             // Will fail the build if the override doesn't work

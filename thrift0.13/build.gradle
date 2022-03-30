@@ -1,6 +1,9 @@
 final def THRIFT_VERSION = '0.13.0'
 
 dependencies {
+    // Common thrift classes
+    api project(':thrift-common')
+
     // Thrift
     api("org.apache.thrift:libthrift") {
         version {
