@@ -170,7 +170,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
                 final List<FieldDescriptor> topLevelFields = methodDesc.getOutputType().getFields();
 
-                @Nullable
                 final String responseBody = calculateResponseBody(
                         topLevelFields, httpRule.getResponseBody());
 
@@ -456,10 +455,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     // we try to convert lower snake case response body to camel case
                     final String lowerCamelCaseResponseBody =
                             CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
-                    final Iterator<String> fieldNames = jsonNode.fieldNames();
-                    while (fieldNames.hasNext()) {
-                        final String fieldName = fieldNames.next();
-                        final JsonNode responseBodyJsonNode = jsonNode.get(fieldName);
+                    final Iterator<Entry<String, JsonNode>> fields = jsonNode.fields();
+                    while (fields.hasNext()) {
+                        final String fieldName = fields.next().getKey();
+                        final JsonNode responseBodyJsonNode = fields.next().getValue();
                         // try to match field name and response body
                         // 1. by default the marshaller would use lowerCamelCase in json field
                         // 2. when the marshaller use original name in .proto file when serializing messages
@@ -470,7 +469,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             return HttpData.copyOf(bytes);
                         }
                     }
-                    return httpData;
+                    httpData.close();
+                    return HttpData.ofUtf8("null");
                 } catch (IOException e) {
                     return httpData;
                 }
@@ -561,7 +561,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     responseFuture.completeExceptionally(t);
                 } else {
                     try {
-
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                       convertToJson(ctx, clientRequest, spec),
@@ -797,8 +796,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 MethodDescriptor methodDescriptor,
                                 Map<String, Field> fields,
                                 List<PathVariable> pathVariables,
-                                @Nullable
-                                String responseBody) {
+                                @Nullable String responseBody) {
             this.order = order;
             this.httpRule = httpRule;
             this.method = method;

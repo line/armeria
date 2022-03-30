@@ -147,6 +147,12 @@ service HttpJsonTranscodingTestService {
     option (google.api.http) = {
       get: "/v1/echo/response_body/repeated"
       response_body: "array_field"
+
+      additional_bindings {
+        post: "/v1/echo/response_body/repeated"
+        response_body: "array_field"
+        body: "*"
+      }
     };
   }
 
