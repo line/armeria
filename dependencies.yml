@@ -147,6 +147,11 @@ com.guardsquare:
 com.lightbend.akka.grpc:
   akka-grpc-runtime_2.13: { version: '1.0.3' }
 
+
+com.microsoft.thrifty:
+  thrifty-runtime:
+    version: &THRIFTY_VERSION "3.0.0"
+
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
   eureka-client: { version: &EUREKA_VERSION '1.10.17' }
