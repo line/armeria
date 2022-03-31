@@ -695,7 +695,7 @@ class HttpJsonTranscodingTest {
 
     @Test
     void shouldAcceptResponseBodyValueStructPreservingProtoFieldNames() throws JsonProcessingException {
-        final String jsonContent = "{\"value\":\"value\",\"struct_body\":{\"structBody\":\"struct_value\"}," +
+        final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}," +
                                    "\"arrayField\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClientPreservingProtoFieldNames,
                                                                 "/v1/echo/response_body/struct", jsonContent);
