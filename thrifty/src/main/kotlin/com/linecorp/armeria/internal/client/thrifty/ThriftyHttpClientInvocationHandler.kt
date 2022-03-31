@@ -1,21 +1,17 @@
 package com.linecorp.armeria.internal.client.thrifty
 
 import com.linecorp.armeria.client.ClientBuilderParams
-import com.linecorp.armeria.client.ClientOptions
-import com.linecorp.armeria.client.endpoint.EndpointGroup
 import com.linecorp.armeria.client.thrift.THttpClient
-import com.linecorp.armeria.common.Scheme
 import com.linecorp.armeria.common.util.AbstractUnwrappable
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
-import java.net.URI
 
 class ThriftyHttpClientInvocationHandler internal constructor(
-    val params: ClientBuilderParams,
+    private val params: ClientBuilderParams,
     thriftClient: THttpClient
 ) :
     AbstractUnwrappable<THttpClient>(thriftClient), InvocationHandler,
-    ClientBuilderParams {
+    ClientBuilderParams by params {
     override fun invoke(proxy: Any, method: Method, args: Array<Any>): Any {
         val declaringClass = method.declaringClass
         if (declaringClass == Any::class.java) {
@@ -23,7 +19,7 @@ class ThriftyHttpClientInvocationHandler internal constructor(
             return invokeObjectMethod(proxy, method, args)
         }
 
-        assert(declaringClass == params.clientType())
+        require(declaringClass == params.clientType())
         // Handle the methods in the interface.
         // Handle the methods in the interface.
         return invokeClientMethod(method, args)
@@ -41,11 +37,4 @@ class ThriftyHttpClientInvocationHandler internal constructor(
             else -> throw Error("unknown method: $methodName")
         }
     }
-
-    override fun scheme(): Scheme = params.scheme()
-    override fun endpointGroup(): EndpointGroup = params.endpointGroup()
-    override fun absolutePathRef(): String = params.absolutePathRef()
-    override fun uri(): URI = params.uri()
-    override fun clientType(): Class<*> = params.clientType()
-    override fun options(): ClientOptions = params.options()
 }

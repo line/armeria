@@ -51,6 +51,5 @@ class ThriftyHttpClientFactory internal constructor(httpClientFactory: ClientFac
             clientType.classLoader, arrayOf(clientType),
             ThriftyHttpClientInvocationHandler(params, thriftClient)
         )
-
     }
 }
