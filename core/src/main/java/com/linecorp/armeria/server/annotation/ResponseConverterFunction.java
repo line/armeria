@@ -42,10 +42,12 @@ public interface ResponseConverterFunction {
     /**
      * Returns whether an {@link HttpResponse} of an annotated service should be streamed.
      * {@code null} if this converter cannot convert the {@code responseType} to an {@link HttpResponse}.
+     * This method is used for a performance optimization hint.
+     * If the {@code returnType} and {@code produceType} are not a streaming response,
+     * it is recommended to return {@code false} for the better performance.
      *
-     * <p>Note that this method is used for a performance optimization hint.
-     * Therefore, you may want to return {@code false}, if the {@code returnType} and {@code produceType} are
-     * not a streaming response.
+     * <p>Note that you should never return {@code false} for a streaming response.
+     * The non-streaming response is aggregated before being sent.
      *
      * @param returnType the return type of the annotated service.
      * @param produceType the negotiated producible media type of the annotated service.
