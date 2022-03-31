@@ -81,7 +81,7 @@ public class UnframedGrpcErrorHandlerTest {
 
     @Test
     void withoutStackTrace() {
-        final WebClient client = WebClient.of(nonVerboseServer.httpUri());
+        final WebClient client = nonVerboseServer.webClient();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
@@ -95,7 +95,7 @@ public class UnframedGrpcErrorHandlerTest {
 
     @Test
     void plainTextWithStackTrace() {
-        final WebClient client = WebClient.of(verbosePlainTextResServer.httpUri());
+        final WebClient client = verbosePlainTextResServer.webClient();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
@@ -103,14 +103,14 @@ public class UnframedGrpcErrorHandlerTest {
                       .execute().aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         final String content = response.contentUtf8();
-        assertThat(content).startsWith("grpc-code: UNKNOWN, grpc error message"
-                                       + "\nstack-trace:\nio.grpc.StatusException");
+        assertThat(content).startsWith("grpc-code: UNKNOWN, grpc error message" +
+                                       "\nstack-trace:\nio.grpc.StatusException");
         assertThat(response.trailers()).isEmpty();
     }
 
     @Test
     void jsonWithStackTrace() {
-        final WebClient client = WebClient.of(verboseJsonResServer.httpUri());
+        final WebClient client = verboseJsonResServer.webClient();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
@@ -118,8 +118,8 @@ public class UnframedGrpcErrorHandlerTest {
                       .execute().aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         final String content = response.contentUtf8();
-        assertThat(content).startsWith("{\"grpc-code\":\"UNKNOWN\",\"message\":\"grpc error message\","
-                                       + "\"stack-trace\":\"io.grpc.StatusException");
+        assertThat(content).startsWith("{\"grpc-code\":\"UNKNOWN\",\"message\":\"grpc error message\"," +
+                                       "\"stack-trace\":\"io.grpc.StatusException");
         assertThat(response.trailers()).isEmpty();
     }
 }

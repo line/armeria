@@ -111,7 +111,7 @@ public interface UnframedGrpcErrorHandler {
             if (grpcMessage != null) {
                 messageBuilder.put("message", grpcMessage);
             }
-            if (cause != null && ctx.config().verboseResponses() && !status.isOk()) {
+            if (cause != null && ctx.config().verboseResponses()) {
                 messageBuilder.put("stack-trace", Exceptions.traceText(cause));
             }
             return HttpResponse.ofJson(responseHeaders, messageBuilder.build());
@@ -157,7 +157,7 @@ public interface UnframedGrpcErrorHandler {
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
             }
-            if (cause != null && ctx.config().verboseResponses() && !status.isOk()) {
+            if (cause != null && ctx.config().verboseResponses()) {
                 message.append("\nstack-trace:\n").append(Exceptions.traceText(cause));
             }
             return HttpResponse.of(responseHeaders, HttpData.ofUtf8(message.toString()));
