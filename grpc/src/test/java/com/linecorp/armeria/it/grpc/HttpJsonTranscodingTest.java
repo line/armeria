@@ -262,10 +262,10 @@ class HttpJsonTranscodingTest {
         return new ServerExtension() {
             @Override
             protected void configure(ServerBuilder sb) throws Exception {
-                final GrpcServiceBuilder grpcServiceBuilder = GrpcService.builder()
-                                                                         .addService(
-                                                                                 new HttpJsonTranscodingTestService())
-                                                                         .enableHttpJsonTranscoding(true);
+                final GrpcServiceBuilder grpcServiceBuilder =
+                        GrpcService.builder()
+                                   .addService(new HttpJsonTranscodingTestService())
+                                   .enableHttpJsonTranscoding(true);
                 if (preservingProtoFieldNames) {
                     grpcServiceBuilder.jsonMarshallerFactory(service -> GrpcJsonMarshaller
                             .builder()
@@ -292,7 +292,6 @@ class HttpJsonTranscodingTest {
 
     @RegisterExtension
     static final ServerExtension serverPreservingProtoFieldNames = createServer(true);
-
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
