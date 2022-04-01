@@ -258,6 +258,7 @@ abstract class HttpResponseDecoder {
 
         @Override
         public boolean tryWrite(Supplier<? extends HttpObject> o) {
+            assert state != State.INIT;
             return delegate.tryWrite(o);
         }
 

@@ -336,6 +336,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     /**
      * Returns the {@link BlockingWebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
      */
+    @UnstableApi
     public BlockingWebClient blockingWebClient() {
         return delegate.webClient().blocking();
     }
@@ -344,6 +345,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      * Returns a newly created {@link BlockingWebClient} configured by
      * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
      */
+    @UnstableApi
     public BlockingWebClient blockingWebClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
         return delegate.webClient(webClientCustomizer).blocking();
