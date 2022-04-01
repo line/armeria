@@ -280,6 +280,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public DependencyInjector dependencyInjector() {
+        return delegate.dependencyInjector();
+    }
+
+    @Override
     public String toString() {
         return delegate.toString();
     }

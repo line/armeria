@@ -188,6 +188,8 @@ public final class ArmeriaConfigurationUtil {
                                                       compression.getExcludedUserAgents(),
                                                       minBytesToForceChunkedAndEncoding));
         }
+
+        server.dependencyInjector(SpringDependencyInjector.of(beanFactory));
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,

@@ -276,4 +276,9 @@ public interface ServerConfig {
      * supports case sensitive HTTP/1 headers.
      */
     Http1HeaderNaming http1HeaderNaming();
+
+    /**
+     * Returns the {@link DependencyInjector} that injects dependencies in annotated services.
+     */
+    DependencyInjector dependencyInjector();
 }

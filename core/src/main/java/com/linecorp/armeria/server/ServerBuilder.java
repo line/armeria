@@ -202,6 +202,8 @@ public final class ServerBuilder {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
+    @Nullable
+    private DependencyInjector dependencyInjector;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1707,6 +1709,19 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
+     */
+    public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector) {
+        requireNonNull(dependencyInjector, "dependencyInjector");
+        if (this.dependencyInjector == null) {
+            this.dependencyInjector = dependencyInjector;
+        } else {
+            this.dependencyInjector = this.dependencyInjector.orElse(dependencyInjector);
+        }
+        return this;
+    }
+
+    /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
      * case sensitive HTTP/1 headers.
@@ -1733,14 +1748,14 @@ public final class ServerBuilder {
     private DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
-
         assert extensions != null;
+        final DependencyInjector dependencyInjector = dependencyInjectorWithFallback();
 
         final VirtualHost defaultVirtualHost =
-                defaultVirtualHostBuilder.build(virtualHostTemplate);
+                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
-                                   .map(vhb -> vhb.build(virtualHostTemplate))
+                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -1850,7 +1865,7 @@ public final class ServerBuilder {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming);
+                http1HeaderNaming, dependencyInjector);
     }
 
     /**
@@ -1883,6 +1898,13 @@ public final class ServerBuilder {
             }
         }
         return Collections.unmodifiableList(distinctPorts);
+    }
+
+    private DependencyInjector dependencyInjectorWithFallback() {
+        if (dependencyInjector != null) {
+            return dependencyInjector.orElse(FallbackDependencyInjector.INSTANCE);
+        }
+        return FallbackDependencyInjector.INSTANCE;
     }
 
     private static VirtualHost setSslContextIfAbsent(VirtualHost h,

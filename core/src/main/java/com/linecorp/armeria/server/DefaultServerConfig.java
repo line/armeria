@@ -110,6 +110,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Supplier<RequestId> requestIdGenerator;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
+    private final DependencyInjector dependencyInjector;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -139,7 +140,8 @@ final class DefaultServerConfig implements ServerConfig {
             Supplier<? extends RequestId> requestIdGenerator,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
-            Http1HeaderNaming http1HeaderNaming) {
+            Http1HeaderNaming http1HeaderNaming,
+            DependencyInjector dependencyInjector) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -253,6 +255,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -636,6 +639,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public Http1HeaderNaming http1HeaderNaming() {
         return http1HeaderNaming;
+    }
+
+    @Override
+    public DependencyInjector dependencyInjector() {
+        return dependencyInjector;
     }
 
     @Override

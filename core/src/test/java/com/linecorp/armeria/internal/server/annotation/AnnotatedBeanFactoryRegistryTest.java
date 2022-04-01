@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.find;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.register;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactoryTest.dependencyInjector;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -42,45 +43,54 @@ public class AnnotatedBeanFactoryRegistryTest {
 
     @Test
     public void shouldFailToRegister() {
-        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor01.class, vars, resolvers))
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor01.class, vars, resolvers,
+                                          dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("too many annotated constructors");
-        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor02.class, vars, resolvers))
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor02.class, vars, resolvers,
+                                          dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("too many annotated constructors");
-        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor03.class, vars, resolvers))
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOnConstructor03.class, vars, resolvers,
+                                          dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("too many annotated constructors");
 
         // error: annotation used in constructor param
-        assertThatThrownBy(() -> register(BadRequestBeanAnnotationInConstructorParam.class, vars, resolvers))
+        assertThatThrownBy(() -> register(BadRequestBeanAnnotationInConstructorParam.class, vars, resolvers,
+                                          dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Both a method and parameter are annotated");
 
         // error: annotation used in method param
-        assertThatThrownBy(() -> register(BadRequestBeanAnnotationInMethodParam.class, vars, resolvers))
+        assertThatThrownBy(() -> register(BadRequestBeanAnnotationInMethodParam.class, vars, resolvers,
+                                          dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Both a method and parameter are annotated");
 
         // error: more than one params for annotated constructor
-        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOneConstructorParam.class, vars, resolvers))
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOneConstructorParam.class, vars, resolvers,
+                                          dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only one parameter is allowed to an annotated method");
 
         // error: more than one params for annotated method
-        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOneMethodParam.class, vars, resolvers))
+        assertThatThrownBy(() -> register(BadRequestBeanMoreThanOneMethodParam.class, vars, resolvers,
+                                          dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only one parameter is allowed to an annotated method");
 
         // error: some constructor params not annotated
         assertThatThrownBy(
-                () -> register(BadRequestBeanSomeConstructorParamWithoutAnnotation.class, vars, resolvers))
+                () -> register(BadRequestBeanSomeConstructorParamWithoutAnnotation.class, vars, resolvers,
+                               dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported parameter exists");
 
         // error: some method params not annotated
         assertThatThrownBy(
-                () -> register(BadRequestBeanSomeMethodParamWithoutAnnotation.class, vars, resolvers))
+                () -> register(BadRequestBeanSomeMethodParamWithoutAnnotation.class, vars, resolvers,
+                               dependencyInjector))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported parameter exists");
     }
@@ -89,10 +99,10 @@ public class AnnotatedBeanFactoryRegistryTest {
     public void shouldBeRegisteredAsUnsupported() {
         BeanFactoryId id;
 
-        id = register(InnerClass.class, vars, resolvers);
+        id = register(InnerClass.class, vars, resolvers, dependencyInjector);
         assertThat(find(id)).isNull();
 
-        id = register(NotARequestBeanBecauseOfInnerClass.class, vars, resolvers);
+        id = register(NotARequestBeanBecauseOfInnerClass.class, vars, resolvers, dependencyInjector);
         assertThat(find(id)).isNull();
     }
 

@@ -161,7 +161,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("foo.com")
                 .hostnamePattern("foo.com")
-                .build(template);
+                .build(template, FallbackDependencyInjector.INSTANCE);
         assertThat(h.hostnamePattern()).isEqualTo("foo.com");
         assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
@@ -171,7 +171,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
-                .build(template);
+                .build(template, FallbackDependencyInjector.INSTANCE);
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
@@ -182,14 +182,14 @@ class VirtualHostBuilderTest {
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
-                .build(template);
+                .build(template, FallbackDependencyInjector.INSTANCE);
         assertThat(h1.accessLogger().getName()).isEqualTo("customize.test");
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(LoggerFactory.getLogger("com.foo.test"))
-                .build(template);
+                .build(template, FallbackDependencyInjector.INSTANCE);
         assertThat(h2.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 
@@ -250,10 +250,12 @@ class VirtualHostBuilderTest {
 
         switch (expectedOutcome) {
             case "success":
-                virtualHostBuilder.build(serverBuilder.virtualHostTemplate);
+                virtualHostBuilder.build(serverBuilder.virtualHostTemplate,
+                                         FallbackDependencyInjector.INSTANCE);
                 break;
             case "failure":
-                assertThatThrownBy(() -> virtualHostBuilder.build(serverBuilder.virtualHostTemplate))
+                assertThatThrownBy(() -> virtualHostBuilder.build(serverBuilder.virtualHostTemplate,
+                                                                  FallbackDependencyInjector.INSTANCE))
                         .isInstanceOf(IllegalStateException.class)
                         .hasMessageContaining("TLS with a bad cipher suite");
                 break;
@@ -294,7 +296,7 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("foo.com")
-                    .build(template);
+                    .build(template, FallbackDependencyInjector.INSTANCE);
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -304,7 +306,7 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("*.foo.com")
-                    .build(template);
+                    .build(template, FallbackDependencyInjector.INSTANCE);
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -315,7 +317,7 @@ class VirtualHostBuilderTest {
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), true)
                 .service(routeA, (ctx, req) -> HttpResponse.of(OK))
                 .service(routeB, (ctx, req) -> HttpResponse.of(OK))
-                .build(template);
+                .build(template, FallbackDependencyInjector.INSTANCE);
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),

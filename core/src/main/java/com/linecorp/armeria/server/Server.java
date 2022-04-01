@@ -708,6 +708,11 @@ public final class Server implements ListenableAsyncCloseable {
 
             CompletableFutures.successfulAsList(completionFutures, cause -> null)
                               .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            try {
+                config.dependencyInjector().close();
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception while closing {}", config.dependencyInjector());
+            }
         }
 
         @Override
