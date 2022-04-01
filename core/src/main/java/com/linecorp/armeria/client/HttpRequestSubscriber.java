@@ -203,6 +203,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         logBuilder.requestHeaders(merged);
         final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, isEmpty);
         future.addListener(this);
+        responseWrapper.prepare();
         ch.flush();
     }
 

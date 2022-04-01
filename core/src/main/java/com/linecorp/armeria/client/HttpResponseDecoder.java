@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -158,6 +157,7 @@ abstract class HttpResponseDecoder {
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
         enum State {
+            INIT,
             WAIT_NON_INFORMATIONAL,
             WAIT_DATA_OR_TRAILERS,
             DONE
@@ -172,7 +172,7 @@ abstract class HttpResponseDecoder {
 
         private boolean loggedResponseFirstBytesTransferred;
 
-        private State state = State.WAIT_NON_INFORMATIONAL;
+        private State state = State.INIT;
         @Nullable
         private ResponseHeaders headers;
 
@@ -210,6 +210,21 @@ abstract class HttpResponseDecoder {
             }
         }
 
+        /**
+         * Prepares to receive a response.
+         */
+        void prepare() {
+            if (state == State.DONE) {
+                return;
+            }
+            assert state == State.INIT;
+            state = State.WAIT_NON_INFORMATIONAL;
+        }
+
+        boolean isPrepared() {
+            return state != State.INIT;
+        }
+
         @Override
         public boolean isOpen() {
             return delegate.isOpen();
@@ -224,6 +239,7 @@ abstract class HttpResponseDecoder {
          */
         @Override
         public boolean tryWrite(HttpObject o) {
+            assert state != State.INIT;
             boolean wrote = false;
             switch (state) {
                 case WAIT_NON_INFORMATIONAL:
@@ -301,23 +317,22 @@ abstract class HttpResponseDecoder {
         }
 
         void onSubscriptionCancelled(@Nullable Throwable cause) {
-            close(cause, this::cancelAction);
+            close(cause, true);
         }
 
         @Override
         public void close() {
-            close(null, this::closeAction);
+            close(null, false);
         }
 
         @Override
         public void close(Throwable cause) {
-            close(cause, this::closeAction);
+            close(cause, false);
         }
 
-        private void close(@Nullable Throwable cause,
-                           Consumer<Throwable> actionOnNotTimedOut) {
+        private void close(@Nullable Throwable cause, boolean cancel) {
             state = State.DONE;
-            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
+            cancelTimeoutOrLog(cause, cancel);
             if (ctx != null) {
                 if (cause == null) {
                     ctx.request().abort();
@@ -353,8 +368,7 @@ abstract class HttpResponseDecoder {
             }
         }
 
-        private void cancelTimeoutOrLog(@Nullable Throwable cause,
-                                        Consumer<Throwable> actionOnNotTimedOut) {
+        private void cancelTimeoutOrLog(@Nullable Throwable cause, boolean cancel) {
 
             CancellationScheduler responseCancellationScheduler = null;
             if (ctx instanceof DefaultClientRequestContext) {
@@ -367,7 +381,11 @@ abstract class HttpResponseDecoder {
                     responseCancellationScheduler.clearTimeout(false);
                 }
                 // There's no timeout or the response has not been timed out.
-                actionOnNotTimedOut.accept(cause);
+                if (cancel) {
+                    cancelAction(cause);
+                } else {
+                    closeAction(cause);
+                }
                 return;
             }
 

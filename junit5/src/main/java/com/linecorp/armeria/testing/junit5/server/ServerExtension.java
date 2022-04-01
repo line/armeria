@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
@@ -330,6 +331,22 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
         return delegate.webClient(webClientCustomizer);
+    }
+
+    /**
+     * Returns the {@link BlockingWebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    public BlockingWebClient blockingWebClient() {
+        return delegate.webClient().blocking();
+    }
+
+    /**
+     * Returns a newly created {@link BlockingWebClient} configured by
+     * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
+     */
+    public BlockingWebClient blockingWebClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return delegate.webClient(webClientCustomizer).blocking();
     }
 
     /**
