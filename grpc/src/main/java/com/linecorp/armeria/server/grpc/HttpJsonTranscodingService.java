@@ -479,8 +479,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
     }
 
-    private static final ObjectMapper mapper = JacksonUtil.newDefaultObje:q
-    ctMapper();
+    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;
