@@ -170,7 +170,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
                 final List<FieldDescriptor> topLevelFields = methodDesc.getOutputType().getFields();
 
-                final String responseBody = calculateResponseBody(
+                final String responseBody = validateResponseBody(
                         topLevelFields, httpRule.getResponseBody());
 
                 int order = 0;
@@ -430,7 +430,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     // to make it more efficient, we calculate whether extract response body one time
     // if there is no matching toplevel field, we set it to null
     @Nullable
-    private static String calculateResponseBody(List<FieldDescriptor> topLevelFields, String responseBody) {
+    private static String validateResponseBody(List<FieldDescriptor> topLevelFields, String responseBody) {
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         }
@@ -449,37 +449,38 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return null;
         } else {
             return httpData -> {
-                final byte[] array = httpData.array();
-                try {
-                    final JsonNode jsonNode = JacksonUtil.readValue(array, JsonNode.class);
-                    // we try to convert lower snake case response body to camel case
-                    final String lowerCamelCaseResponseBody =
-                            CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
-                    final Iterator<Entry<String, JsonNode>> fields = jsonNode.fields();
-                    while (fields.hasNext()) {
-                        final Entry<String, JsonNode> entry = fields.next();
-                        final String fieldName = entry.getKey();
-                        final JsonNode responseBodyJsonNode = entry.getValue();
-                        // try to match field name and response body
-                        // 1. by default the marshaller would use lowerCamelCase in json field
-                        // 2. when the marshaller use original name in .proto file when serializing messages
-                        if (fieldName.equals(lowerCamelCaseResponseBody) ||
-                            fieldName.equals(responseBody)) {
-                            httpData.close();
-                            final byte[] bytes = JacksonUtil.writeValueAsBytes(responseBodyJsonNode);
-                            return HttpData.copyOf(bytes);
+                try (HttpData data = httpData) {
+                    final byte[] array = data.array();
+                    try {
+                        final JsonNode jsonNode = mapper.readValue(array, JsonNode.class);
+                        // we try to convert lower snake case response body to camel case
+                        final String lowerCamelCaseResponseBody =
+                                CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
+                        final Iterator<Entry<String, JsonNode>> fields = jsonNode.fields();
+                        while (fields.hasNext()) {
+                            final Entry<String, JsonNode> entry = fields.next();
+                            final String fieldName = entry.getKey();
+                            final JsonNode responseBodyJsonNode = entry.getValue();
+                            // try to match field name and response body
+                            // 1. by default the marshaller would use lowerCamelCase in json field
+                            // 2. when the marshaller use original name in .proto file when serializing messages
+                            if (fieldName.equals(lowerCamelCaseResponseBody) ||
+                                fieldName.equals(responseBody)) {
+                                final byte[] bytes = mapper.writeValueAsBytes(responseBodyJsonNode);
+                                return HttpData.wrap(bytes);
+                            }
                         }
+                        return HttpData.ofUtf8("null");
+                    } catch (IOException e) {
+                        return HttpData.wrap(array);
                     }
-                    httpData.close();
-                    return HttpData.ofUtf8("null");
-                } catch (IOException e) {
-                    return httpData;
                 }
             };
         }
     }
 
-    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+    private static final ObjectMapper mapper = JacksonUtil.newDefaultObje:q
+    ctMapper();
 
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;

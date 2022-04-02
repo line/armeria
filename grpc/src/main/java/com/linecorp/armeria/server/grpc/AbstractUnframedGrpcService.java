@@ -190,10 +190,9 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
-    static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
-                                                        CompletableFuture<HttpResponse> res,
-                                                        @Nullable Function<HttpData, HttpData>
-                                                                responseBodyConverter) {
+    static Subscriber<DeframedMessage> singleSubscriber(
+            ResponseHeadersBuilder unframedHeaders, CompletableFuture<HttpResponse> res,
+            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
         return new Subscriber<DeframedMessage>() {
 
             @Override
