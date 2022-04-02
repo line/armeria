@@ -261,10 +261,12 @@ class HttpRequestBuilderTest {
         }
 
         final HttpRequest req = builder.get("/")
-                                           .queryParam("foo", "bar")
-                                           .queryParams(QueryParams.of("from", 0, "limit", 10))
-                                           .build();
-        assertThat(req.path()).isEqualTo("/?foo=bar&from=0&limit=10");
+                                       .queryParam("name", "foo")
+                                       .queryParam("name", "bar")
+                                       .queryParams(QueryParams.of("from", "foo", "limit", 10))
+                                       .queryParams(QueryParams.of("from", "bar", "limit", 20))
+                                       .build();
+        assertThat(req.path()).isEqualTo("/?name=foo&name=bar&from=foo&limit=10&from=bar&limit=20");
         assertThat(req).isInstanceOf(EmptyFixedHttpRequest.class);
     }
 
