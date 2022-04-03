@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.internal.server.annotation.DecoratorUtil.DecoratorAndOrder;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -45,13 +45,13 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryF
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
 
-class DecoratorUtilTest {
+class DecoratorAnnotationUtilTest {
 
     @Test
     void ofNoOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                DecoratorUtil.collectDecorators(TestClass.class,
-                                                TestClass.class.getMethod("noOrdering"));
+                DecoratorAnnotationUtil.collectDecorators(TestClass.class,
+                                                          TestClass.class.getMethod("noOrdering"));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  LoggingDecoratorFactoryFunction.class,
@@ -67,8 +67,8 @@ class DecoratorUtilTest {
     @Test
     void ofMethodScopeOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                DecoratorUtil.collectDecorators(TestClass.class,
-                                                TestClass.class.getMethod("methodScopeOrdering"));
+                DecoratorAnnotationUtil.collectDecorators(TestClass.class,
+                                                          TestClass.class.getMethod("methodScopeOrdering"));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  RateLimitingDecoratorFactoryFunction.class,
@@ -88,8 +88,8 @@ class DecoratorUtilTest {
     @Test
     void ofGlobalScopeOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                DecoratorUtil.collectDecorators(TestClass.class,
-                                                TestClass.class.getMethod("globalScopeOrdering"));
+                DecoratorAnnotationUtil.collectDecorators(TestClass.class,
+                                                          TestClass.class.getMethod("globalScopeOrdering"));
         assertThat(values(list)).containsExactly(LoggingDecoratorFactoryFunction.class,
                                                  Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
@@ -105,8 +105,9 @@ class DecoratorUtilTest {
     @Test
     void ofUserDefinedRepeatableDecorator() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                DecoratorUtil.collectDecorators(TestClass.class,
-                                                TestClass.class.getMethod("userDefinedRepeatableDecorator"));
+                DecoratorAnnotationUtil.collectDecorators(TestClass.class,
+                                                          TestClass.class.getMethod(
+                                                                  "userDefinedRepeatableDecorator"));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  UserDefinedRepeatableDecoratorFactory.class,

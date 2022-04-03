@@ -74,7 +74,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
-import com.linecorp.armeria.internal.server.annotation.DecoratorUtil.DecoratorAndOrder;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
@@ -529,7 +529,7 @@ public final class AnnotatedServiceFactory {
     private static Function<? super HttpService, ? extends HttpService> decorator(
             Method method, Class<?> clazz) {
 
-        final List<DecoratorAndOrder> decorators = DecoratorUtil.collectDecorators(clazz, method);
+        final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
 
         Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
         for (int i = decorators.size() - 1; i >= 0; i--) {

@@ -30,10 +30,10 @@ import com.google.common.collect.Iterables;
 /**
  * A utility class for getting cached annotated objects.
  */
-public final class AnnotatedObjectFactory {
+final class AnnotatedObjectFactory {
 
     /**
-     * An instance map for reusing from {@link AnnotatedServiceFactory} and {@link DecoratorUtil}.
+     * An instance map for reusing from {@link AnnotatedServiceFactory} and {@link DecoratorAnnotationUtil}.
      */
     private static final ClassValue<Object> instanceCache = new ClassValue<Object>() {
         @Override

@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.annotation.Decorators;
 /**
  * A utility class for {@link Decorator}.
  */
-public final class DecoratorUtil {
+public final class DecoratorAnnotationUtil {
 
     /**
      * Returns the list of {@link Decorator} annotated methods.
@@ -204,7 +204,7 @@ public final class DecoratorUtil {
                 AnnotatedObjectFactory.getInstance(decorator, DecoratingHttpServiceFunction.class));
     }
 
-    private DecoratorUtil() {}
+    private DecoratorAnnotationUtil() {}
 
     /**
      * An internal class to hold a decorator with its order.

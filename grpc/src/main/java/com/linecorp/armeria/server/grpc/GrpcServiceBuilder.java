@@ -62,8 +62,8 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.server.annotation.DecoratorUtil;
-import com.linecorp.armeria.internal.server.annotation.DecoratorUtil.DecoratorAndOrder;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -105,7 +105,8 @@ public final class GrpcServiceBuilder {
         return mp.entrySet()
                  .stream()
                  .collect(toImmutableMap(Map.Entry::getKey,
-                                         e -> DecoratorUtil.applyDecorators(e.getValue(), grpcService)));
+                                         e -> DecoratorAnnotationUtil.applyDecorators(e.getValue(),
+                                                                                      grpcService)));
     }
 
     static {
@@ -830,7 +831,8 @@ public final class GrpcServiceBuilder {
                 continue;
             }
             for (Method method : foundMethods) {
-                final List<DecoratorAndOrder> decorators = DecoratorUtil.collectDecorators(clazz, method);
+                final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz,
+                                                                                                     method);
                 if (!decorators.isEmpty()) {
                     final String key = serviceName + '/' + targetMethodName;
                     if (methodDecorators.containsKey(key)) {
