@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
  */
 final class DefaultFlagsProvider implements FlagsProvider {
 
-    public static final DefaultFlagsProvider INSTANCE = new DefaultFlagsProvider();
+    static final DefaultFlagsProvider INSTANCE = new DefaultFlagsProvider();
 
     private DefaultFlagsProvider() {}
 
