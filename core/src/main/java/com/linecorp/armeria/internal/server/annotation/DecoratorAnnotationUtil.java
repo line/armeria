@@ -16,15 +16,11 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.getMethods;
-import static org.reflections.ReflectionUtils.withModifier;
 import static org.reflections.ReflectionUtils.withName;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -35,7 +31,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -47,20 +42,6 @@ import com.linecorp.armeria.server.annotation.Decorators;
  * A utility class for {@link Decorator}.
  */
 public final class DecoratorAnnotationUtil {
-
-    /**
-     * Returns the list of {@link Decorator} annotated methods.
-     */
-    public static List<Method> decoratorMethods(Class<?> clazz) {
-        return getAllMethods(clazz, withModifier(Modifier.PUBLIC))
-                .stream()
-                // Lookup super classes just in case if the object is a proxy.
-                .filter(m -> AnnotationUtil.getAnnotations(m, FindOption.LOOKUP_SUPER_CLASSES)
-                                           .stream()
-                                           .map(Annotation::annotationType)
-                                           .anyMatch(a -> a == Decorator.class || a == Decorators.class))
-                .collect(toImmutableList());
-    }
 
     /**
      * Returns a decorator list which is specified by {@link Decorator} annotations and user-defined
@@ -75,18 +56,6 @@ public final class DecoratorAnnotationUtil {
 
         // Sort decorators by "order" attribute values.
         decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
-        return decorators;
-    }
-
-    public static List<DecoratorAndOrder> collectDecorators(Class<?> clazz) {
-        final List<DecoratorAndOrder> decorators = new ArrayList<>();
-
-        // Class-level decorators are applied before method-level decorators.
-        collectDecorators(decorators, AnnotationUtil.getAllAnnotations(clazz));
-
-        // Sort decorators by "order" attribute values.
-        decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
-
         return decorators;
     }
 
