@@ -901,6 +901,7 @@ public final class GrpcServiceBuilder {
             statusFunction = this.statusFunction;
         }
 
+        final boolean lookupMethodFromAttribute = enableUnframedRequests || enableHttpJsonTranscoding;
         GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 handlerRegistry
@@ -919,7 +920,7 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                enableUnframedRequests || enableHttpJsonTranscoding,
+                lookupMethodFromAttribute,
                 grpcHealthCheckService);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
@@ -927,18 +928,18 @@ public final class GrpcServiceBuilder {
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
         }
+        if (!methodDecorators.isEmpty()) {
+            final Map<String, HttpService> composedMethodDecorators = applyGrpcServiceToDecorators(
+                    methodDecorators, grpcService);
+            grpcService = new GrpcDecoratingService(grpcService, composedMethodDecorators,
+                                                    lookupMethodFromAttribute);
+        }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
                     grpcService,
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson());
         }
-        if (methodDecorators.isEmpty()) {
-            return grpcService;
-        } else {
-            final Map<String, HttpService> composedMethodDecorators = applyGrpcServiceToDecorators(
-                    methodDecorators, grpcService);
-            return new GrpcDecoratingService(grpcService, composedMethodDecorators);
-        }
+        return grpcService;
     }
 }

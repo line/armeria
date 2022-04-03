@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.FramedGrpcService.RESOLVED_GRPC_METHOD;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +30,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
+import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 
 /**
@@ -43,15 +46,27 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
      */
     private final Map<String, HttpService> methodDecorators;
 
-    GrpcDecoratingService(GrpcService delegate, Map<String, HttpService> methodDecorators) {
+    private final boolean lookupMethodFromAttribute;
+
+    GrpcDecoratingService(GrpcService delegate, Map<String, HttpService> methodDecorators,
+                          boolean lookupMethodFromAttribute) {
         super(delegate);
         this.delegate = delegate;
         this.methodDecorators = methodDecorators;
+        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpService methodDecorator = methodDecorators.get(req.path());
+        final ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD)
+                                                                              : null;
+        final String path;
+        if (method != null && method.getMethodDescriptor() != null) {
+            path = '/' + method.getMethodDescriptor().getFullMethodName();
+        } else {
+            path = req.path();
+        }
+        final HttpService methodDecorator = methodDecorators.get(path);
         if (methodDecorator != null) {
             return methodDecorator.serve(ctx, req);
         }
