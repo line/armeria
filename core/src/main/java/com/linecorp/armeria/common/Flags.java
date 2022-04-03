@@ -98,6 +98,7 @@ public final class Flags {
                              .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
                              .collect(Collectors.toList());
         flagsProviders.add(0, SystemPropertyFlagsProvider.INSTANCE);
+        flagsProviders.add(DefaultFlagsProvider.INSTANCE);
         FLAGS_PROVIDERS = ImmutableList.copyOf(flagsProviders);
     }
 
@@ -1344,30 +1345,31 @@ public final class Flags {
     private static <T> T getValue(Function<FlagsProvider, @Nullable T> method,
                                   String flagName, Predicate<T> validator) {
         for (FlagsProvider provider : FLAGS_PROVIDERS) {
-            T value = null;
             try {
-                value = method.apply(provider);
+                final T value = method.apply(provider);
+                if (provider instanceof DefaultFlagsProvider) {
+                    logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
+                    return value;
+                }
+
+                if (value == null) {
+                    continue;
+                }
+
+                if (!validator.test(value)) {
+                    logger.warn("{}: {} ({}) fail validation",
+                                flagName, value, provider.getClass().getSimpleName());
+                    continue;
+                }
+
+                logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
+                return value;
             } catch (Exception ex) {
                 logger.warn("{}: ({}) fail to get value, {}", flagName, provider.getClass().getSimpleName(),
                             ex.getMessage());
             }
-
-            if (value == null) {
-                continue;
-            }
-
-            if (!validator.test(value)) {
-                logger.warn("{}: {} ({}) fail validation",
-                            flagName, value, provider.getClass().getSimpleName());
-                continue;
-            }
-
-            logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
-            return value;
         }
-        final T defaultValue = method.apply(DefaultFlagsProvider.INSTANCE);
-        logger.info("{}: {} ({})", flagName, defaultValue, DefaultFlagsProvider.class.getSimpleName());
-        return defaultValue;
+        throw new IllegalStateException(String.format("Cannot initial flag value : %s", flagName));
     }
 
     private Flags() {}
