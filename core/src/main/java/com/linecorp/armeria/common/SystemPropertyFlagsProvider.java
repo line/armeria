@@ -47,6 +47,8 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     private static final String PREFIX = "com.linecorp.armeria.";
     private static final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
+    private SystemPropertyFlagsProvider() {}
+
     @Override
     public int priority() {
         return Integer.MAX_VALUE;
@@ -414,6 +416,4 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
         return value;
     }
-
-    private SystemPropertyFlagsProvider() {}
 }

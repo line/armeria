@@ -37,6 +37,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     public static final DefaultFlagsProvider INSTANCE = new DefaultFlagsProvider();
 
+    private DefaultFlagsProvider() {}
+
     @Override
     public int priority() {
         return Integer.MIN_VALUE;
@@ -321,6 +323,4 @@ final class DefaultFlagsProvider implements FlagsProvider {
                          File.separatorChar + "armeria" +
                          File.separatorChar + "multipart-uploads");
     }
-
-    private DefaultFlagsProvider() {}
 }
