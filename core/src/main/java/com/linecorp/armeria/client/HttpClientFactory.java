@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -49,7 +48,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
-import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
@@ -78,10 +76,6 @@ final class HttpClientFactory implements ClientFactory {
             Arrays.stream(SessionProtocol.values())
                   .map(p -> Scheme.of(SerializationFormat.NONE, p))
                   .collect(toImmutableSet());
-
-    private static final ThreadFactory THREAD_FACTORY = ThreadFactories
-            .builder("armeria-http-client-factory-shutdown-hook")
-            .build();
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
@@ -395,7 +389,7 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
+        final Runnable task = () -> {
             if (whenClosing != null) {
                 try {
                     whenClosing.run();
@@ -413,7 +407,8 @@ final class HttpClientFactory implements ClientFactory {
                 }
                 return null;
             }).join();
-        }));
+        };
+        DefaultClientFactory.addCloseOnShutdown(this, task);
         return future;
     }
 

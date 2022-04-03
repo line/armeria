@@ -19,12 +19,15 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadFactory;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -42,7 +45,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
-import com.linecorp.armeria.common.util.ThreadFactories;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -76,9 +78,18 @@ final class DefaultClientFactory implements ClientFactory {
     static final DefaultClientFactory INSECURE =
             (DefaultClientFactory) ClientFactory.builder().tlsNoVerify().build();
 
-    private static final ThreadFactory THREAD_FACTORY = ThreadFactories
-            .builder("armeria-client-factory-shutdown-hook")
-            .build();
+    static final Map<ClientFactory, Queue<Runnable>> factoriesToCloseOnShutdown = new LinkedHashMap<>();
+
+    static void addCloseOnShutdown(ClientFactory clientFactory, Runnable runnable) {
+        final Queue<Runnable> onShutdown;
+        if (factoriesToCloseOnShutdown.containsKey(clientFactory)) {
+            onShutdown = factoriesToCloseOnShutdown.get(clientFactory);
+        } else {
+            onShutdown = new ArrayDeque<Runnable>();
+        }
+        onShutdown.add(runnable);
+        factoriesToCloseOnShutdown.put(clientFactory, onShutdown);
+    }
 
     static {
         if (DefaultClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
@@ -88,6 +99,14 @@ final class DefaultClientFactory implements ClientFactory {
                 }
             }));
         }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            factoriesToCloseOnShutdown.forEach((factory, queue) -> {
+                while (!queue.isEmpty()) {
+                    final Runnable onShutdown = queue.poll();
+                    onShutdown.run();
+                }
+            });
+        }));
     }
 
     static void disableShutdownHook0() {
@@ -284,7 +303,7 @@ final class DefaultClientFactory implements ClientFactory {
     @Override
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
+        final Runnable task = () -> {
             if (whenClosing != null) {
                 try {
                     whenClosing.run();
@@ -292,7 +311,7 @@ final class DefaultClientFactory implements ClientFactory {
                     logger.warn("whenClosing failed", e);
                 }
             }
-            closeAsync().handle((unused, cause) -> {
+            closeAsync(false).handle((unused, cause) -> {
                 if (cause != null) {
                     logger.warn("Unexpected exception while closing a ClientFactory.", cause);
                     future.completeExceptionally(cause);
@@ -302,7 +321,8 @@ final class DefaultClientFactory implements ClientFactory {
                 }
                 return null;
             }).join();
-        }));
+        };
+        addCloseOnShutdown(this, task);
         return future;
     }
 
