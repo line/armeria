@@ -2,7 +2,6 @@ package example.armeria.server.saml.sp;
 
 import static com.linecorp.armeria.server.saml.SamlUtil.getNameId;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import org.opensaml.messaging.context.MessageContext;
@@ -23,6 +22,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.saml.SamlNameIdFormat;
@@ -46,12 +46,12 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
     public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest data) {
         final String cookie = data.headers().get(HttpHeaderNames.COOKIE);
         if (cookie == null) {
-            return CompletableFuture.completedFuture(false);
+            return UnmodifiableFuture.completedFuture(false);
         }
 
         final boolean authenticated = Cookie.fromCookieHeader(cookie).stream().anyMatch(
                 c -> "username".equals(c.name()) && !Strings.isNullOrEmpty(c.value()));
-        return CompletableFuture.completedFuture(authenticated);
+        return UnmodifiableFuture.completedFuture(authenticated);
     }
 
     /**

@@ -17,7 +17,6 @@ package com.linecorp.armeria.server.throttling;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.concurrent.CompletionStage;
 
@@ -26,6 +25,7 @@ import com.google.common.util.concurrent.RateLimiter;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -66,6 +66,6 @@ final class RateLimitingThrottlingStrategy<T extends Request> extends Throttling
 
     @Override
     public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {
-        return completedFuture(rateLimiter.tryAcquire());
+        return UnmodifiableFuture.completedFuture(rateLimiter.tryAcquire());
     }
 }

@@ -1,4 +1,4 @@
-final def TOMCAT_VERSION = '8.5.73'
+final def TOMCAT_VERSION = '8.5.77'
 
 dependencies {
     // Tomcat

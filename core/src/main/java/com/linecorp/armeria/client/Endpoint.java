@@ -271,7 +271,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     @Override
     public CompletableFuture<List<Endpoint>> whenReady() {
         if (whenReadyFuture == null) {
-            whenReadyFuture = CompletableFuture.completedFuture(endpoints);
+            whenReadyFuture = UnmodifiableFuture.completedFuture(endpoints);
         }
         return whenReadyFuture;
     }

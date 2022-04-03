@@ -17,7 +17,7 @@
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { ChangeEvent } from 'react';
+import React from 'react';
 
 import jsonPrettify from '../../lib/json-prettify';
 
@@ -27,7 +27,7 @@ interface Props {
   requestBodyOpen: boolean;
   requestBody: string;
   onEditRequestBodyClick: React.Dispatch<unknown>;
-  onDebugFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onDebugFormChange: (value: string) => void;
 }
 
 const RequestBody: React.FunctionComponent<Props> = (props) => (
@@ -45,7 +45,9 @@ const RequestBody: React.FunctionComponent<Props> = (props) => (
           rows={15}
           value={props.requestBody}
           placeholder={jsonPlaceHolder}
-          onChange={props.onDebugFormChange}
+          onChange={(e) => {
+            return props.onDebugFormChange(e.target.value as string);
+          }}
           inputProps={{
             className: 'code',
           }}

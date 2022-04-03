@@ -47,6 +47,7 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -54,14 +55,17 @@ import java.io.InputStream;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
-import com.linecorp.armeria.common.stream.HttpDecoderInput;
-import com.linecorp.armeria.common.stream.HttpDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
+import com.linecorp.armeria.common.stream.StreamDecoderOutput;
+import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 
@@ -88,6 +92,8 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
     private static final int UNINITIALIZED_TYPE = -1;
 
     private final int maxMessageLength;
+    @Nullable
+    private final Base64Decoder base64Decoder;
 
     private int currentType = UNINITIALIZED_TYPE;
     private int requiredLength = HEADER_LENGTH;
@@ -102,10 +108,34 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
      */
     public ArmeriaMessageDeframer(int maxMessageLength) {
         this.maxMessageLength = maxMessageLength > 0 ? maxMessageLength : Integer.MAX_VALUE;
+        base64Decoder = null;
+    }
+
+    /**
+     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or
+     * response with the specified parameters.
+     */
+    public ArmeriaMessageDeframer(int maxMessageLength, ByteBufAllocator alloc, boolean grpcWebText) {
+        this.maxMessageLength = maxMessageLength > 0 ? maxMessageLength : Integer.MAX_VALUE;
+        requireNonNull(alloc, "alloc");
+        if (grpcWebText) {
+            base64Decoder = new Base64Decoder(alloc);
+        } else {
+            base64Decoder = null;
+        }
     }
 
     @Override
-    public void process(HttpDecoderInput in, HttpDecoderOutput<DeframedMessage> out) throws Exception {
+    public ByteBuf toByteBuf(HttpData in) {
+        if (base64Decoder != null) {
+            return base64Decoder.decode(in.byteBuf());
+        } else {
+            return in.byteBuf();
+        }
+    }
+
+    @Override
+    public void process(StreamDecoderInput in, StreamDecoderOutput<DeframedMessage> out) throws Exception {
         startedDeframing = true;
         int readableBytes = in.readableBytes();
         while (readableBytes >= requiredLength) {
@@ -123,7 +153,7 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
      * Processes the gRPC compression header which is composed of the compression flag and the outer
      * frame length.
      */
-    private void readHeader(HttpDecoderInput in) {
+    private void readHeader(StreamDecoderInput in) {
         final int type = in.readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw new ArmeriaStatusException(
@@ -149,7 +179,7 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
      * Processes the body of the gRPC compression frame. A single compression frame may contain
      * several gRPC messages within it.
      */
-    private DeframedMessage readBody(HttpDecoderInput in) {
+    private DeframedMessage readBody(StreamDecoderInput in) {
         final ByteBuf buf;
         if (requiredLength == 0) {
             buf = Unpooled.EMPTY_BUFFER;

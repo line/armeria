@@ -31,27 +31,28 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.stream.HttpDecoder;
-import com.linecorp.armeria.common.stream.HttpDecoderInput;
-import com.linecorp.armeria.common.stream.HttpDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamDecoder;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
+import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
-import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
+import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.SubscriberUtil;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<BodyPart> {
+final class MultipartDecoder implements StreamMessage<BodyPart>, StreamDecoder<HttpData, BodyPart> {
 
     private static final AtomicReferenceFieldUpdater<MultipartDecoder, MultipartSubscriber>
             delegatedSubscriberUpdater = AtomicReferenceFieldUpdater.newUpdater(MultipartDecoder.class,
                                                                                 MultipartSubscriber.class,
                                                                                 "delegatedSubscriber");
 
-    private final DecodedHttpStreamMessage<BodyPart> decoded;
+    private final DecodedStreamMessage<HttpData, BodyPart> decoded;
     private final String boundary;
 
     @Nullable
@@ -67,11 +68,16 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
 
     MultipartDecoder(StreamMessage<? extends HttpData> upstream, String boundary, ByteBufAllocator alloc) {
         this.boundary = boundary;
-        decoded = new DecodedHttpStreamMessage<>(upstream, this, alloc);
+        decoded = new DecodedStreamMessage<>(upstream, this, alloc);
     }
 
     @Override
-    public void process(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out) throws Exception {
+    public ByteBuf toByteBuf(HttpData in) {
+        return in.byteBuf();
+    }
+
+    @Override
+    public void process(StreamDecoderInput in, StreamDecoderOutput<BodyPart> out) throws Exception {
         if (parser == null) {
             parser = new MimeParser(in, out, boundary, this);
         }
@@ -79,7 +85,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     }
 
     @Override
-    public void processOnComplete(HttpDecoderOutput<BodyPart> out) {
+    public void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<BodyPart> out) {
         if (parser != null) {
             parser.close();
         }

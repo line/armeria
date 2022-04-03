@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -35,6 +36,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -46,6 +48,7 @@ import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -428,6 +431,11 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     @Override
+    public EurekaUpdatingListenerBuilder successFunction(SuccessFunction successFunction) {
+        return (EurekaUpdatingListenerBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
     public EurekaUpdatingListenerBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (EurekaUpdatingListenerBuilder) super.endpointRemapper(endpointRemapper);
@@ -500,5 +508,11 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     @Override
     public EurekaUpdatingListenerBuilder auth(AuthToken token) {
         return (EurekaUpdatingListenerBuilder) super.auth(token);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (EurekaUpdatingListenerBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

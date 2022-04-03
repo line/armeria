@@ -101,6 +101,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.user.localcert.dev
 *.usercontent.goog
 *.vps.myjino.ru
 *.vultrobjects.com
@@ -297,6 +298,9 @@ airbus
 aircraft.aero
 airforce
 airguard.museum
+airkitapps-au.com
+airkitapps.com
+airkitapps.eu
 airline.aero
 airport.aero
 airtel
@@ -1943,6 +1947,7 @@ digick.jp
 digital
 dinosaur.museum
 direct
+direct.quickconnect.cn
 direct.quickconnect.to
 directory
 discordsays.com
@@ -2295,6 +2300,8 @@ emr.it
 en-root.fr
 en.it
 ena.gifu.jp
+encoreapi.com
+encr.app
 encyclopedic.museum
 endofinternet.net
 endofinternet.org

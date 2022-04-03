@@ -1,9 +1,15 @@
 import { RouteComponentProps } from '@reach/router';
+import { Link } from 'gatsby';
 import React from 'react';
 
 import recentNews from '../../gen-src/news-recent.json';
 import recentReleases from '../../gen-src/release-notes-recent.json';
+import { Tip } from '../components/alert';
 import MdxLayout from './mdx';
+import getPagePath from './page-path';
+
+const latestNewsHref = Object.keys(recentNews)[0];
+const latestVersionHref = Object.keys(recentReleases)[0];
 
 interface NewsLayoutProps extends RouteComponentProps {
   pageContext: any;
@@ -32,6 +38,8 @@ const NewsLayout: React.FC<NewsLayoutProps> = (props) => {
     releaseLinks[pageTitle] = pagePath;
   });
 
+  const path = getPagePath(props.location);
+
   return (
     <MdxLayout
       {...props}
@@ -41,6 +49,20 @@ const NewsLayout: React.FC<NewsLayoutProps> = (props) => {
       pageTitle={props.pageTitle}
       pageTitleSuffix="Armeria news"
     >
+      <Tip>
+        {path !== latestNewsHref ? (
+          <>
+            You&apos;re seeing an old newsletter. Check out{' '}
+            <Link to={latestNewsHref}>the latest news</Link> from our community!
+          </>
+        ) : (
+          <>
+            Check out the new features and fixes in{' '}
+            <Link to={latestVersionHref}>the release notes</Link>!
+          </>
+        )}
+      </Tip>
+
       {props.children}
     </MdxLayout>
   );

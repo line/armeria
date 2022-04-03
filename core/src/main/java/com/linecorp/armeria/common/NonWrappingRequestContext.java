@@ -61,7 +61,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @Nullable
     private volatile RpcRequest rpcReq;
     @Nullable // Updated via `contextHookUpdater`
-    private volatile Supplier<SafeCloseable> contextHook;
+    private volatile Supplier<AutoCloseable> contextHook;
 
     /**
      * Creates a new instance.
@@ -224,7 +224,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
 
     /**
      * Adds a hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
-     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by {@code contextHook} will be called
+     * {@link RequestContextStorage}. The {@link AutoCloseable} returned by {@code contextHook} will be called
      * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
      * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
      *
@@ -232,17 +232,17 @@ public abstract class NonWrappingRequestContext implements RequestContext {
      * it's not a good idea to run a time-consuming task.
      */
     @UnstableApi
-    public void hook(Supplier<? extends SafeCloseable> contextHook) {
+    public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         for (;;) {
-            final Supplier<? extends SafeCloseable> oldContextHook = this.contextHook;
-            final Supplier<? extends SafeCloseable> newContextHook;
+            final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
+            final Supplier<? extends AutoCloseable> newContextHook;
             if (oldContextHook == null) {
                 newContextHook = contextHook;
             } else {
                 newContextHook = () -> {
-                    final SafeCloseable oldHook = oldContextHook.get();
-                    final SafeCloseable newHook = contextHook.get();
+                    final AutoCloseable oldHook = oldContextHook.get();
+                    final AutoCloseable newHook = contextHook.get();
                     return () -> {
                         oldHook.close();
                         newHook.close();
@@ -263,7 +263,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
      */
     @UnstableApi
     @Nullable
-    public Supplier<SafeCloseable> hook() {
+    public Supplier<AutoCloseable> hook() {
         return contextHook;
     }
 }

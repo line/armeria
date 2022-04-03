@@ -359,19 +359,19 @@ public interface RetryRule {
      * <pre>{@code
      * CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
      *     if (cause != null) {
-     *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
+     *         return UnmodifiableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }
      *
      *     ResponseHeaders responseHeaders = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
      *                                          .responseHeaders();
      *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
-     *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
+     *         return UnmodifiableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }
      *     if (responseHeaders.status() == HttpStatus.TOO_MANY_REQUESTS) {
-     *         return CompletableFuture.completedFuture(RetryDecision.noRetry());
+     *         return UnmodifiableFuture.completedFuture(RetryDecision.noRetry());
      *     }
      *
-     *     return CompletableFuture.completedFuture(RetryDecision.next());
+     *     return UnmodifiableFuture.completedFuture(RetryDecision.next());
      * }
      * }</pre>
      *

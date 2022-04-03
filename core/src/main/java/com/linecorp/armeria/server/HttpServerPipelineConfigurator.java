@@ -121,7 +121,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             new Http2FrameLogger(LogLevel.TRACE, "com.linecorp.armeria.logging.traffic.server.http2");
 
     private final ServerPort port;
-    private final ServerConfigHolder configHolder;
     private final ServerConfig config;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -134,8 +133,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             ServerConfig config, ServerPort port,
             @Nullable Mapping<String, SslContext> sslContexts,
             GracefulShutdownSupport gracefulShutdownSupport) {
-
-        configHolder = new ServerConfigHolder(requireNonNull(config, "config"));
         this.config = config;
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
@@ -210,7 +207,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        p.addLast(new HttpServerHandler(configHolder,
+        p.addLast(new HttpServerHandler(config,
                                         gracefulShutdownSupport,
                                         responseEncoder,
                                         H1C, proxiedAddresses));
@@ -277,11 +274,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         settings.put((char) 0x8, (Long) 1L);
 
         return settings;
-    }
-
-    void updateConfig(ServerConfig config) {
-        requireNonNull(config, "config");
-        configHolder.replace(config);
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
@@ -474,7 +466,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(configHolder,
+            p.addLast(new HttpServerHandler(config,
                                             gracefulShutdownSupport,
                                             null, H2, proxiedAddresses));
         }
@@ -506,7 +498,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder));
-            p.addLast(new HttpServerHandler(configHolder,
+            p.addLast(new HttpServerHandler(config,
                                             gracefulShutdownSupport,
                                             encoder, H1, proxiedAddresses));
         }

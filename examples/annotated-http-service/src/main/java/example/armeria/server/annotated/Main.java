@@ -40,6 +40,7 @@ public class Main {
     static void configureServices(ServerBuilder sb) {
         sb.annotatedService("/pathPattern", new PathPatternService())
           .annotatedService("/injection", new InjectionService())
+          .annotatedService("/file", new FileUploadService())
           .annotatedService("/messageConverter", new MessageConverterService())
           .annotatedService("/exception", new ExceptionHandlerService())
           .serviceUnder("/docs",
