@@ -45,6 +45,8 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
@@ -161,9 +163,9 @@ class UnaryGrpcClientTest {
     @ArgumentsSource(GrpcWebUnaryGrpcSerializationFormatArgumentsProvider.class)
     void errorHandlingForGrpcWeb(SerializationFormat serializationFormat) {
         final UnaryGrpcClient client = Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class);
-        final SimpleRequest request = buildRequest("two ice creams");
+        final StreamingOutputCallRequest request = StreamingOutputCallRequest.getDefaultInstance();
         assertThatThrownBy(
-                () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                () -> client.execute("/armeria.grpc.testing.TestService/StreamingOutputCall",
                                      request.toByteArray()).join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ArmeriaStatusException.class)
@@ -188,14 +190,19 @@ class UnaryGrpcClientTest {
                 responseObserver.onError(
                         new StatusException(Status.INTERNAL.withDescription("no more ice cream"))
                 );
-            } else if ("two ice creams".equals(payload)) {
-                responseObserver.onNext(response);
-                responseObserver.onNext(response);
-                responseObserver.onCompleted();
             } else {
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             }
+        }
+
+
+        @Override
+        public void streamingOutputCall(StreamingOutputCallRequest request,
+                                        StreamObserver<StreamingOutputCallResponse> responseObserver) {
+            responseObserver.onNext(StreamingOutputCallResponse.getDefaultInstance());
+            responseObserver.onNext(StreamingOutputCallResponse.getDefaultInstance());
+            responseObserver.onCompleted();
         }
     }
 

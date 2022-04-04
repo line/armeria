@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -130,13 +129,8 @@ class GrpcMeterIdPrefixFunctionTest {
             assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance())).isExactlyInstanceOf(
                     StatusRuntimeException.class);
             final ClientRequestContext ctx = captor.get();
-            final HttpHeaders trailers;
-            if (GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
-                trailers = GrpcWebTrailers.get(ctx);
-            } else {
-                await().until(() -> ctx.log().isAvailable(RequestLogProperty.RESPONSE_TRAILERS));
-                trailers = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_TRAILERS).responseTrailers();
-            }
+            // A failed call returns a trailers-only response.
+            final HttpHeaders trailers = ctx.log().whenComplete().join().responseHeaders();
             assertThat(trailers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo("13");
         }
 
@@ -155,8 +149,9 @@ class GrpcMeterIdPrefixFunctionTest {
 
         assertThat(findClientMeter(registry, "UnaryCall", "response.length", COUNT, "grpc.status", "13"))
                 .isEqualTo(1.0);
+        // The Trailers-Only response won't contain data.
         assertThat(findClientMeter(registry, "UnaryCall", "response.length", TOTAL, "grpc.status", "13"))
-                .isGreaterThan(0.0);
+                .isEqualTo(0.0);
     }
 
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.linecorp.armeria.internal.common.grpc.TestServiceImpl.EXTRA_HEADER_KEY;
 import static com.linecorp.armeria.internal.common.grpc.TestServiceImpl.EXTRA_HEADER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
@@ -26,12 +27,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -71,48 +72,42 @@ import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
-import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.Status;
+import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.util.AsciiString;
 
-// TODO(anuraag): Currently only grpc-protobuf has been published so we only test proto here.
-// Once grpc-thrift is published, add tests for thrift stubs which will not go through the
-// optimized protobuf marshalling paths.
-class ArmeriaServerCallTest {
+class UnaryServerCallTest {
 
     private static final int MAX_MESSAGE_BYTES = 1024;
     private static final AsciiString EXTRA_HEADER_NAME1 = HttpHeaderNames.of("extra-header-1");
     private static final Key<String> EXTRA_HEADER_KEY1 = Key.of(EXTRA_HEADER_NAME1.toString(),
                                                                 Metadata.ASCII_STRING_MARSHALLER);
 
-    @Mock
-    private HttpResponseWriter res;
+    private HttpResponse res;
 
     @Mock
-    private ServerCall.Listener<SimpleRequest> listener;
+    private Listener<SimpleRequest> listener;
 
     private ServiceRequestContext ctx;
 
     @Mock
     private IdentityHashMap<Object, ByteBuf> buffersAttr;
 
-    private ArmeriaServerCall<SimpleRequest, SimpleResponse> call;
-
-    private CompletableFuture<Void> completionFuture;
+    private UnaryServerCall<SimpleRequest, SimpleResponse> call;
 
     @BeforeEach
     void setUp() {
-        completionFuture = new CompletableFuture<>();
-        when(res.whenComplete()).thenReturn(completionFuture);
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        res = HttpResponse.from(responseFuture);
 
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))
                                    .eventLoop(EventLoopGroups.directEventLoop())
                                    .build();
 
-        call = newServerCall(res, false);
+        call = newServerCall(res, responseFuture, false);
         call.setListener(listener);
 
         ctx.setAttr(GrpcUnsafeBufferUtil.BUFFERS, buffersAttr);
@@ -130,14 +125,14 @@ class ArmeriaServerCallTest {
         call.close(Status.ABORTED, new Metadata());
 
         // messageRead is always called from the event loop.
-        call.onNext(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
+        call.onRequestMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0), true);
         verify(listener, never()).onMessage(any());
     }
 
     @Test
     void messageRead_notWrappedByteBuf() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        call.onNext(new DeframedMessage(buf, 0));
+        call.onRequestMessage(new DeframedMessage(buf, 0), true);
 
         verifyNoMoreInteractions(buffersAttr);
     }
@@ -146,12 +141,12 @@ class ArmeriaServerCallTest {
     void messageRead_wrappedByteBuf() {
         tearDown();
 
-        call = newServerCall(res, true);
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        call = newServerCall(res, responseFuture, true);
 
         call.setListener(mock(Listener.class));
-        call.startDeframing();
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
-        call.onNext(new DeframedMessage(buf, 0));
+        call.onRequestMessage(new DeframedMessage(buf, 0), true);
 
         verify(buffersAttr).put(any(), same(buf));
     }
@@ -160,8 +155,8 @@ class ArmeriaServerCallTest {
     void messageReadAfterClose_stream() {
         call.close(Status.ABORTED, new Metadata());
 
-        call.onNext(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
-                                        0));
+        call.onRequestMessage(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
+                                                  0), true);
 
         verify(listener, never()).onMessage(any());
     }
@@ -182,14 +177,28 @@ class ArmeriaServerCallTest {
     @Test
     void closedIfCancelled() {
         assertThat(call.isCancelled()).isFalse();
-        completionFuture.completeExceptionally(ClosedSessionException.get());
+        res.abort(ClosedSessionException.get());
         await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
     }
 
     @Test
+    void duplicateRequestMessage() {
+        call.onRequestMessage(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
+                                                  0), true);
+        call.onRequestMessage(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
+                                                  0), true);
+        await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
+        assertThatThrownBy(() -> res.whenComplete().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(StatusException.class)
+                .hasMessageContaining("More than one request messages for unary call");
+    }
+
+    @Test
     void deferResponseHeaders() {
-        final HttpResponseWriter response = HttpResponse.streaming();
-        call = newServerCall(response, false);
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse response = HttpResponse.from(responseFuture);
+        call = newServerCall(response, responseFuture, false);
 
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
         final List<HttpObject> received = new ArrayList<>();
@@ -216,10 +225,11 @@ class ArmeriaServerCallTest {
         metadata.put(EXTRA_HEADER_KEY, "dog");
         call.sendHeaders(metadata);
         subscriptionRef.get().request(1);
-        // Headers are deferred until the first response is received.
+        // Headers are deferred until the call is closed.
         assertThat(received).isEmpty();
 
         call.sendMessage(SimpleResponse.getDefaultInstance());
+        call.close(Status.OK, new Metadata());
         assertThat(received).hasSize(1);
         final ResponseHeaders headers = (ResponseHeaders) received.get(0);
         assertThat(headers.get(EXTRA_HEADER_NAME)).isEqualTo("dog");
@@ -231,8 +241,9 @@ class ArmeriaServerCallTest {
 
     @Test
     void deferResponseHeaders_unary_nonResponseMessage() {
-        final HttpResponseWriter response = HttpResponse.streaming();
-        call = newServerCall(response, false);
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse response = HttpResponse.from(responseFuture);
+        call = newServerCall(response, responseFuture, false);
 
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
         final List<HttpObject> received = new ArrayList<>();
@@ -269,10 +280,10 @@ class ArmeriaServerCallTest {
         closingMetadata.put(EXTRA_HEADER_KEY1, "cat");
         call.close(Status.INTERNAL, closingMetadata);
 
-        // The headers will be ignored and the response will complete with Trailers-Only.
         assertThat(received).hasSize(1);
         final ResponseHeaders headers = (ResponseHeaders) received.get(0);
-        assertThat(headers.get(EXTRA_HEADER_NAME)).isNull();
+        // The headers will be merged into Trailers-Only.
+        assertThat(headers.get(EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(headers.get(EXTRA_HEADER_NAME1)).isEqualTo("cat");
         assertThat(completed).isTrue();
     }
@@ -280,8 +291,8 @@ class ArmeriaServerCallTest {
     @Test
     void deferResponseHeaders_streaming_nonResponseMessage() {
         final HttpResponseWriter response = HttpResponse.streaming();
-        final ArmeriaServerCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
-                new ArmeriaServerCall<>(
+        final StreamingServerCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
+                new StreamingServerCall<>(
                         HttpRequest.of(HttpMethod.GET, "/"),
                         TestServiceGrpc.getStreamingOutputCallMethod(),
                         TestServiceGrpc.getStreamingOutputCallMethod().getBareMethodName(),
@@ -347,15 +358,18 @@ class ArmeriaServerCallTest {
         assertThat(completed).isTrue();
     }
 
-    private ArmeriaServerCall<SimpleRequest, SimpleResponse> newServerCall(HttpResponseWriter response,
-                                                                           boolean unsafeWrapRequestBuffers) {
-        return new ArmeriaServerCall<>(
+    private UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(
+            HttpResponse response,
+            CompletableFuture<HttpResponse> resFuture,
+            boolean unsafeWrapRequestBuffers) {
+        return new UnaryServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
                 TestServiceGrpc.getUnaryCallMethod().getBareMethodName(),
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
                 response,
+                resFuture,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
                 ctx,

@@ -37,6 +37,7 @@ import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Codec.Gzip;
@@ -53,6 +54,7 @@ class GrpcClientCompressionTest {
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
                                   .build());
+            sb.decorator(LoggingService.newDecorator());
         }
     };
 
@@ -64,7 +66,9 @@ class GrpcClientCompressionTest {
                                                         .build(TestServiceBlockingStub.class);
 
         final Payload payload = Payload.newBuilder().setBody(ByteString.copyFromUtf8("Hello")).build();
-        stub.unaryCall(SimpleRequest.newBuilder().setPayload(payload).build());
+        stub.unaryCall(SimpleRequest.newBuilder()
+                                    .setPayload(payload)
+                                    .build());
         ServiceRequestContext ctx = server.requestContextCaptor().take();
         RequestLog log = ctx.log().whenComplete().join();
         String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
