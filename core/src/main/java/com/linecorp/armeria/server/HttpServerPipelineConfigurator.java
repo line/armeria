@@ -547,7 +547,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     logger.warn("{} TLS handshake failed: {}", ch, cause.getCause().getMessage());
                     if (logger.isDebugEnabled()) {
                         // Print the stack trace only at DEBUG level because it can be noisy.
-                        logger.debug("{} Stack trace for the TLS handshake:", ch, cause);
+                        logger.debug("{} Stack trace for the TLS handshake failure:", ch, cause);
                     }
                     return;
                 }
