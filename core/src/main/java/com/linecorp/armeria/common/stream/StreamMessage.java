@@ -348,6 +348,20 @@ public interface StreamMessage<T> extends Publisher<T> {
     CompletableFuture<Void> whenComplete();
 
     /**
+     * Requests to start streaming data to {@link NoopSubscriber}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of();
+     * CompletableFuture<Void> future = source.peek(x-> {}).subscribe();
+     * assert future.isDone().equals(true);
+     * }</pre>
+     */
+    default CompletableFuture<Void> subscribe() {
+        subscribe(new NoopSubscriber<>());
+        return whenComplete();
+    }
+
+    /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
      * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
      * <ul>

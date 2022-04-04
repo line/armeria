@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -304,6 +305,13 @@ class StreamMessageTest {
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
         }
+    }
+
+    @Test
+    void noopSubscribe() {
+        final StreamMessage<Integer> source = StreamMessage.of();
+        final CompletableFuture<Void> future = source.peek(i -> {}).subscribe();
+        await().untilAsserted(() -> assertThat(future.isDone()).isTrue());
     }
 
     private static class StreamProvider implements ArgumentsProvider {
