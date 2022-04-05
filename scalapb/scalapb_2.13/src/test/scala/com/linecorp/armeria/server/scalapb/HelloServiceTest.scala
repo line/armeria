@@ -13,7 +13,9 @@ import com.linecorp.armeria.server.scalapb.HelloServiceImpl.toMessage
 import com.linecorp.armeria.server.scalapb.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import io.grpc.stub.StreamObserver
+import java.time
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.stream
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -55,15 +57,15 @@ class HelloServiceTest {
   @ArgumentsSource(classOf[GrpcSerializationProvider])
   @ParameterizedTest
   def lotsOfReplies(serializationFormat: SerializationFormat): Unit = {
-    var completed = false
+    val completed = new AtomicBoolean()
     val helloService = newClient[HelloServiceStub](serializationFormat)
+    val sequence = new AtomicInteger()
 
     helloService.lotsOfReplies(
       HelloRequest("Armeria"),
       new StreamObserver[HelloReply]() {
-        private var sequence = 0
         override def onNext(value: HelloReply): Unit = {
-          sequence += 1
+          sequence.incrementAndGet()
           assertThat(value.message).isEqualTo(s"Hello, Armeria! (sequence: $sequence)")
         }
 
@@ -72,19 +74,19 @@ class HelloServiceTest {
           throw new Error(t)
 
         override def onCompleted(): Unit = {
-          assertThat(sequence).isEqualTo(5)
-          completed = true
+          assertThat(sequence).overridingErrorMessage(() => s"sequence is $sequence").hasValue(5)
+          completed.set(true)
         }
       }
     )
-    await().untilAsserted(() => assertThat(completed).isTrue())
+    await().atMost(time.Duration.ofSeconds(15)).untilAsserted(() => assertThat(completed).isTrue())
   }
 
   @ArgumentsSource(classOf[GrpcSerializationProvider])
   @ParameterizedTest
   def sendLotsOfGreetings(serializationFormat: SerializationFormat): Unit = {
     val names = List("Armeria", "Grpc", "Streaming")
-    var completed = false
+    val completed = new AtomicBoolean()
     val helloService = newClient[HelloServiceStub](serializationFormat)
 
     val request = helloService.lotsOfGreetings(new StreamObserver[HelloReply]() {
@@ -102,7 +104,7 @@ class HelloServiceTest {
 
       override def onCompleted(): Unit = {
         assertThat(received).isTrue()
-        completed = true
+        completed.set(true)
       }
     })
 
@@ -117,7 +119,7 @@ class HelloServiceTest {
   @ParameterizedTest
   def bidirectionalHello(serializationFormat: SerializationFormat): Unit = {
     val names = List("Armeria", "Grpc", "Streaming")
-    var completed = false
+    val completed = new AtomicBoolean()
     val helloService = newClient[HelloServiceStub](serializationFormat)
 
     val request = helloService.bidiHello(new StreamObserver[HelloReply]() {
@@ -134,7 +136,7 @@ class HelloServiceTest {
 
       override def onCompleted(): Unit = {
         assertThat(received).isEqualTo(names.length)
-        completed = true
+        completed.set(true)
       }
     })
 

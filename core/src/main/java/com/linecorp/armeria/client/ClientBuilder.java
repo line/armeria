@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -28,7 +29,9 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -182,6 +185,12 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    @UnstableApi
+    public ClientBuilder successFunction(SuccessFunction successFunction) {
+        return (ClientBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
     public ClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (ClientBuilder) super.endpointRemapper(endpointRemapper);
@@ -264,5 +273,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder followRedirects(RedirectConfig redirectConfig) {
         return (ClientBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public ClientBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (ClientBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

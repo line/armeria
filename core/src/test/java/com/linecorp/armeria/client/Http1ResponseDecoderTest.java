@@ -40,7 +40,7 @@ class Http1ResponseDecoderTest {
             final HttpHeaders httpHeaders = new DefaultHttpHeaders();
             httpHeaders.add(HttpHeaderNames.CONNECTION, "close");
             final DefaultHttpResponse response = new DefaultHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_TIMEOUT, httpHeaders);
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(408, "custom reason"), httpHeaders);
 
             channel.writeOneInbound(response);
             assertThat(channel.isOpen()).isFalse();

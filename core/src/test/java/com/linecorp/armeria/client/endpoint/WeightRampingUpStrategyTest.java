@@ -134,6 +134,27 @@ final class WeightRampingUpStrategyTest {
     }
 
     @Test
+    void endpointsAreAddedToNewEntry_IfAllTheEntryAreRemoved() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 10);
+
+        ticker.addAndGet(1);
+
+        addSecondEndpoints(endpointGroup, selector);
+
+        ticker.addAndGet(1);
+
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("baz.com"), Endpoint.of("baz1.com")));
+
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps1 = selector.endpointsRampingUp.peek().endpointAndSteps();
+        assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                     .containsExactlyInAnyOrder(
+                                             endpointAndStep(Endpoint.of("baz.com"), 1, 100),
+                                             endpointAndStep(Endpoint.of("baz1.com"), 1, 100));
+    }
+
+    @Test
     void endpointsAreAddedToNextEntry_IfTheyAreAddedWithinWindow() {
         final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 10);

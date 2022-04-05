@@ -392,7 +392,7 @@ public final class VirtualHost {
                 }
                 break;
             case CORS_PREFLIGHT:
-                assert routingCtx.isCorsPreflight();
+                assert routingCtx.status() == RoutingStatus.CORS_PREFLIGHT;
                 if (routed.value().handlesCorsPreflight()) {
                     // CorsService will handle the preflight request
                     // even if the service does not handle an OPTIONS method.

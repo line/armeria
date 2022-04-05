@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -50,6 +55,8 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
 final class Http2RequestDecoder extends Http2EventAdapter {
+
+    private static final Logger logger = LoggerFactory.getLogger(Http2RequestDecoder.class);
 
     private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
@@ -151,26 +158,41 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            final EventLoop eventLoop = ctx.channel().eventLoop();
-            final int id = ++nextId;
-            if (endOfStream) {
-                // Close the request early when it is sure that there will be neither content nor trailers.
-                req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, true);
+            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
+            final Routed<ServiceConfig> routed;
+            if (routingCtx.status().routeMustExist()) {
+                try {
+                    // Find the service that matches the path.
+                    routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                } catch (Throwable cause) {
+                    logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
+                    writeErrorResponse(streamId, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+                    return;
+                }
+                assert routed.isPresent();
             } else {
-                req = new DefaultDecodedHttpRequest(eventLoop, id, streamId, headers, true,
-                                                    inboundTrafficController,
-                                                    // FIXME(trustin): Use a different maxRequestLength for
-                                                    //                 a different host.
-                                                    cfg.defaultVirtualHost().maxRequestLength());
+                routed = null;
             }
 
+            final int id = ++nextId;
+            final EventLoop eventLoop = ctx.channel().eventLoop();
+            req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
+                                        inboundTrafficController, routingCtx, routed);
             requests.put(streamId, req);
-            ctx.fireChannelRead(req);
+            // An aggregating request will be fired later after all objects are collected.
+            if (!req.isAggregated()) {
+                ctx.fireChannelRead(req);
+            }
         } else {
-            final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+            final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
+            final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
-                decodedReq.write(ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream));
+                decodedReq.write(trailers);
+                if (req.isAggregated()) {
+                    // An aggregated request can be fired now.
+                    ctx.fireChannelRead(req);
+                }
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
@@ -212,7 +234,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         goAwayHandler.onStreamClosed(channel, stream);
 
         final DecodedHttpRequest req = requests.remove(stream.id());
-        if (req != null) {
+        if (req != null && !req.isComplete()) {
             // Ignored if the stream has already been closed.
             req.close(ClosedStreamException.get());
         }
@@ -235,11 +257,14 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Received an empty DATA frame
             if (endOfStream) {
                 req.close();
+                if (req.isAggregated()) {
+                    ctx.fireChannelRead(req);
+                }
             }
             return padding;
         }
 
-        final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+        final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
         decodedReq.increaseTransferredBytes(dataLength);
 
         final long maxContentLength = decodedReq.maxRequestLength();
@@ -268,6 +293,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
+                if (endOfStream && decodedReq.isAggregated()) {
+                    // An aggregated request is now ready to be fired.
+                    ctx.fireChannelRead(req);
+                }
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");

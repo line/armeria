@@ -30,6 +30,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -77,6 +78,26 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     @Override
     public Set<Route> routes() {
         return delegate.routes();
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        final MediaType contentType = headers.contentType();
+        if (contentType == null) {
+            return ExchangeType.BIDI_STREAMING;
+        }
+
+        for (SerializationFormat format : GrpcSerializationFormats.values()) {
+            if (format.isAccepted(contentType)) {
+                return ((HttpService) unwrap()).exchangeType(headers, route);
+            }
+        }
+
+        if (contentType.is(MediaType.PROTOBUF) || contentType.is(MediaType.JSON_UTF_8)) {
+            return ExchangeType.UNARY;
+        }
+        // Unsupported Content-Type
+        return ExchangeType.BIDI_STREAMING;
     }
 
     @Override

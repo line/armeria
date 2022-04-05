@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -237,5 +239,47 @@ class FuseableStreamMessageTest {
                     .expectNext(3, 4)
                     .expectErrorMatches(cause -> cause == third)
                     .verify();
+    }
+
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void mapWithPooledObjects_collect(boolean withPooledObjects) {
+        final ByteBuf byteBuf = Unpooled.wrappedBuffer("hello".getBytes());
+        final StreamMessage<HttpData> transformed = StreamMessage.of("foo")
+                                                                 .map(x -> HttpData.wrap(byteBuf));
+        if (withPooledObjects) {
+            final HttpData httpData = transformed.collect(SubscriptionOption.WITH_POOLED_OBJECTS).join().get(0);
+            assertThat(httpData.isPooled()).isTrue();
+            assertThat(byteBuf.refCnt()).isOne();
+            byteBuf.release();
+        } else {
+            final HttpData httpData = transformed.collect().join().get(0);
+            assertThat(httpData.isPooled()).isFalse();
+            assertThat(byteBuf.refCnt()).isZero();
+        }
+    }
+
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void mapWithPooledObjects_subscribe(boolean withPooledObjects) {
+        final ByteBuf byteBuf = Unpooled.wrappedBuffer("hello".getBytes());
+        final StreamMessage<HttpData> transformed = StreamMessage.of("foo")
+                                                                 .map(x -> HttpData.wrap(byteBuf));
+
+        if (withPooledObjects) {
+            final StreamMessageCollector<HttpData> collector =
+                    new StreamMessageCollector<>(SubscriptionOption.WITH_POOLED_OBJECTS);
+            transformed.subscribe(collector, SubscriptionOption.WITH_POOLED_OBJECTS);
+            final HttpData httpData = collector.collect().join().get(0);
+            assertThat(httpData.isPooled()).isTrue();
+            assertThat(byteBuf.refCnt()).isOne();
+            byteBuf.release();
+        } else {
+            final StreamMessageCollector<HttpData> collector = new StreamMessageCollector<>();
+            transformed.subscribe(collector);
+            final HttpData httpData = collector.collect().join().get(0);
+            assertThat(httpData.isPooled()).isFalse();
+            assertThat(byteBuf.refCnt()).isZero();
+        }
     }
 }

@@ -20,9 +20,11 @@ import java.util.function.Function;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 
 /**
@@ -56,5 +58,16 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
      */
     default HttpService decorate(DecoratingHttpServiceFunction function) {
         return new FunctionalDecoratingHttpService(this, function);
+    }
+
+    /**
+     * Determines an {@link ExchangeType} for this {@link HttpService} from the given {@link RequestHeaders}
+     * and {@link Route}. By default, {@link ExchangeType#BIDI_STREAMING} is set.
+     *
+     * <p>Note that an {@link HttpRequest} will be aggregated before serving the {@link HttpService} if
+     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
+     */
+    default ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        return ExchangeType.BIDI_STREAMING;
     }
 }

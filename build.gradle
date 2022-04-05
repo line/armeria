@@ -220,7 +220,7 @@ allprojects {
 }
 
 // Require to use JDK 17 when releasing.
-tasks.release.doFirst {
+tasks.closeAndReleaseStagingRepository.doFirst {
     if (JavaVersion.current() != JavaVersion.VERSION_17) {
         throw new IllegalStateException("You must release using JDK 17.");
     }

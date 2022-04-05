@@ -17,12 +17,14 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -166,6 +168,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientOptionsBuilder successFunction(SuccessFunction successFunction) {
+        return (ClientOptionsBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
     public ClientOptionsBuilder auth(BasicToken token) {
         return (ClientOptionsBuilder) super.auth(token);
     }
@@ -193,5 +200,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {
         return (ClientOptionsBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public ClientOptionsBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (ClientOptionsBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

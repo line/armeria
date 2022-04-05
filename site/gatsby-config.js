@@ -9,18 +9,27 @@ module.exports = {
     shortUrls: [
       {
         name: 'slack',
-        href:
-          'https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk',
+        href: 'https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk',
       },
     ],
   },
   plugins: [
     {
-      resolve: 'gatsby-plugin-build-date',
+      resolve: 'gatsby-source-build-date',
       options: {
-        formatting: {
-          format: 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]',
-          utc: true,
+        // Generate ISO8601 date.
+        // See: https://stackoverflow.com/a/58633686/55808
+        locales: 'sv-SE',
+        options: {
+          timeZone: 'Asia/Seoul',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZoneName: 'short',
         },
       },
     },
@@ -31,6 +40,7 @@ module.exports = {
         trackingId: 'UA-145425527-1',
       },
     },
+    'gatsby-plugin-image',
     {
       resolve: 'gatsby-plugin-import',
       options: {
@@ -148,7 +158,7 @@ module.exports = {
     {
       resolve: 'gatsby-plugin-sitemap',
       options: {
-        exclude: ['/s/*'],
+        excludes: ['/s/*'],
       },
     },
     'gatsby-plugin-react-helmet',

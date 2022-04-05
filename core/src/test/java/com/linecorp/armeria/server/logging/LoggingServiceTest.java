@@ -16,7 +16,6 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -72,6 +71,14 @@ class LoggingServiceTest {
 
     private final AtomicReference<Throwable> capturedCause = new AtomicReference<>();
 
+    private static Stream<Arguments> expectedException() {
+        return Stream.of(HttpStatusException.of(500),
+                         HttpStatusException.of(500, new IllegalStateException("status")),
+                         HttpResponseException.of(HttpResponse.of("OK")),
+                         HttpResponseException.of(HttpResponse.of("OK"), new IllegalStateException("body")))
+                     .map(Arguments::of);
+    }
+
     @AfterEach
     void tearDown() {
         LoggingTestUtil.throwIfCaptured(capturedCause);
@@ -105,7 +112,6 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
 
-        verify(logger, times(2)).isDebugEnabled();
         verify(logger).isWarnEnabled();
         verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
                             matches(".*headers=\\[:method=GET, :path=/].*"));
@@ -143,14 +149,6 @@ class LoggingServiceTest {
             verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
                                 matches(".*cause=" + cause.getClass().getName() + ".*"), same(cause));
         }
-    }
-
-    private static Stream<Arguments> expectedException() {
-        return Stream.of(HttpStatusException.of(500),
-                         HttpStatusException.of(500, new IllegalStateException("status")),
-                         HttpResponseException.of(HttpResponse.of("OK")),
-                         HttpResponseException.of(HttpResponse.of("OK"), new IllegalStateException("body")))
-                     .map(Arguments::of);
     }
 
     @Test
@@ -244,54 +242,6 @@ class LoggingServiceTest {
                             matches(".*headers=\\[:method=GET, :path=/].*"));
         verify(logger).info(eq(RESPONSE_FORMAT), same(ctx), anyString());
         verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void duplicateSetRequestLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .requestLogLevel(LogLevel.INFO)
-                                               .requestLogLevelMapper(log -> LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void reversedDuplicateSetRequestLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .requestLogLevelMapper(log -> LogLevel.INFO)
-                                               .requestLogLevel(LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void duplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .successfulResponseLogLevel(LogLevel.INFO)
-                                               .responseLogLevelMapper(log -> LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void reversedDuplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .responseLogLevelMapper(log -> LogLevel.INFO)
-                                               .successfulResponseLogLevel(LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void duplicateSetFailureResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .failureResponseLogLevel(LogLevel.INFO)
-                                               .responseLogLevelMapper(log -> LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void reversedDuplicateSetFailureResponseLogLevelAndMapper() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .responseLogLevelMapper(log -> LogLevel.INFO)
-                                               .failureResponseLogLevel(LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -507,6 +457,47 @@ class LoggingServiceTest {
                               .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
+                              .samplingRate(0.0f)
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, ctx.request());
+        verifyNoInteractions(logger);
+    }
+
+    @Test
+    void shouldLogFailedRequestWhenFailureSamplingRateIsAlways() throws Exception {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final IllegalStateException cause = new IllegalStateException("Failed");
+        ctx.logBuilder().endResponse(cause);
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isDebugEnabled()).thenReturn(false);
+        when(logger.isWarnEnabled()).thenReturn(true);
+
+        final LoggingService service =
+                LoggingService.builder()
+                              .logger(logger)
+                              .successSamplingRate(0.0f)
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, ctx.request());
+        verify(logger).isWarnEnabled();
+        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
+                            matches(".*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
+                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
+                            same(cause));
+    }
+
+    @Test
+    void shouldNotLogFailedRequestWhenSamplingRateIsZero() throws Exception {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final IllegalStateException cause = new IllegalStateException("Failed");
+        ctx.logBuilder().endResponse(cause);
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+
+        final LoggingService service =
+                LoggingService.builder()
+                              .logger(logger)
                               .samplingRate(0.0f)
                               .newDecorator().apply(delegate);
 

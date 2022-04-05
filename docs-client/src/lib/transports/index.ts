@@ -20,10 +20,12 @@ import AnnotatedHttpTransport from './annotated-http';
 import GrpcUnframedTransport from './grpc-unframed';
 import ThriftTransport from './thrift';
 import Transport from './transport';
+import GraphqlHttpTransport from './grahpql-http';
 
 const grpcUnframedTransport = new GrpcUnframedTransport();
 const thriftTransport = new ThriftTransport();
 const annotatedHttpTransport = new AnnotatedHttpTransport();
+const graphqlHttpTransport = new GraphqlHttpTransport();
 
 export class Transports {
   public getDebugTransport(method: Method): Transport | undefined {
@@ -42,6 +44,9 @@ export class Transports {
       }
       if (annotatedHttpTransport.supportsMimeType(mimeType)) {
         return annotatedHttpTransport;
+      }
+      if (graphqlHttpTransport.supportsMimeType(mimeType)) {
+        return graphqlHttpTransport;
       }
     }
     return undefined;

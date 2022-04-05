@@ -30,6 +30,9 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.CompositeException;
+import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;

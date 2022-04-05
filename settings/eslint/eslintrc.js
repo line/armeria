@@ -6,14 +6,12 @@ const commonParserOptions = {
 const commonRules = {
   'class-methods-use-this': 'off',
   'eslint-comments/no-unused-disable': 'error',
+  'func-names': [ 'error', 'never' ],
   'import/export': 'off',
   'import/no-cycle': 'off',
   'import/no-named-as-default': 'off',
   'import/no-useless-path-segments': 'off',
   'import/prefer-default-export': 'off',
-  'prefer-destructuring': 'off',
-  'react/destructuring-assignment': 'off',
-  'react/jsx-props-no-spreading': 'off',
   'no-continue': 'off',
   'no-restricted-syntax': [
     'error',
@@ -29,7 +27,18 @@ const commonRules = {
       selector: 'WithStatement',
       message: '`with` is disallowed in strict mode because it makes code impossible to predict and optimize.',
     },
-  ]
+  ],
+  'prefer-destructuring': 'off',
+  'react/destructuring-assignment': 'off',
+  'react/function-component-definition': [
+    'error',
+    {
+      namedComponents: 'arrow-function',
+      unnamedComponents: 'arrow-function',
+    },
+  ],
+  'react/jsx-props-no-spreading': 'off',
+  'react/require-default-props': 'off',
 };
 
 module.exports = {
@@ -50,7 +59,6 @@ module.exports = {
     'plugin:eslint-comments/recommended',
     'plugin:json/recommended',
     'plugin:prettier/recommended',
-    'prettier/react',
   ],
   rules: {
     ...commonRules,
@@ -70,8 +78,6 @@ module.exports = {
         'plugin:@typescript-eslint/eslint-recommended',
         'plugin:eslint-comments/recommended',
         'plugin:prettier/recommended',
-        'prettier/react',
-        'prettier/@typescript-eslint',
       ],
       rules: {
         ...commonRules,

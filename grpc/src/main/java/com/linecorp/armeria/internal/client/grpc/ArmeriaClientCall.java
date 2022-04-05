@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -84,7 +83,6 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -242,11 +240,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        final HttpStreamDeframer deframer =
-                new HttpStreamDeframer(decompressorRegistry, ctx, this, null, maxInboundMessageSizeBytes);
-        final ByteBufAllocator alloc = ctx.alloc();
-        final StreamMessage<DeframedMessage> deframed =
-                res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        final HttpStreamDeframer deframer = new HttpStreamDeframer(decompressorRegistry, ctx, this, null,
+                                                                   maxInboundMessageSizeBytes, grpcWebText);
+        final StreamMessage<DeframedMessage> deframed = res.decode(deframer, ctx.alloc());
         deframer.setDeframedStreamMessage(deframed);
 
         if (endpointInitialized) {

@@ -43,8 +43,10 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
 
     private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
             Sets.immutableEnumSet(
-                    ImmutableList.<SessionProtocol>builder().addAll(SessionProtocol.httpValues())
-                                                            .addAll(SessionProtocol.httpsValues()).build());
+                    ImmutableList.<SessionProtocol>builder()
+                                 .addAll(SessionProtocol.httpValues())
+                                 .addAll(SessionProtocol.httpsValues())
+                                 .build());
 
     @Nullable
     private final URI uri;
@@ -160,7 +162,10 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     /**
      * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
      * HTTP-level decorators.
+     *
+     * @deprecated RPC decorator cannot be added to the web client builder.
      */
+    @Deprecated
     @Override
     public AbstractWebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
@@ -169,7 +174,10 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     /**
      * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
      * HTTP-level decorators.
+     *
+     * @deprecated RPC decorator cannot be added to the web client builder.
      */
+    @Deprecated
     @Override
     public AbstractWebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");

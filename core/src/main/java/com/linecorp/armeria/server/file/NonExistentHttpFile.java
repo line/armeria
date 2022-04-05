@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
 
@@ -28,12 +29,17 @@ import io.netty.buffer.ByteBufAllocator;
 
 final class NonExistentHttpFile implements HttpFile {
 
-    static final NonExistentHttpFile INSTANCE = new NonExistentHttpFile();
+    static final NonExistentHttpFile INSTANCE = new NonExistentHttpFile(null);
 
     private static final CompletableFuture<AggregatedHttpFile> AGGREGATED_FUTURE =
             UnmodifiableFuture.completedFuture(NonExistentAggregatedHttpFile.INSTANCE);
 
-    private NonExistentHttpFile() {}
+    @Nullable
+    private final String location;
+
+    NonExistentHttpFile(@Nullable String location) {
+        this.location = location;
+    }
 
     @Override
     public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
@@ -56,7 +62,11 @@ final class NonExistentHttpFile implements HttpFile {
             switch (req.method()) {
                 case HEAD:
                 case GET:
-                    return HttpResponse.of(HttpStatus.NOT_FOUND);
+                    if (location == null) {
+                        return HttpResponse.of(HttpStatus.NOT_FOUND);
+                    } else {
+                        return HttpResponse.ofRedirect(location);
+                    }
                 default:
                     return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }

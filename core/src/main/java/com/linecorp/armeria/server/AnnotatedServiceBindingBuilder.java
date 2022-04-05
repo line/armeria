@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -29,6 +30,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
@@ -247,6 +249,18 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
                                                                   .numThreads(numThreads)
                                                                   .build();
         return blockingTaskExecutor(executor, true);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        defaultServiceConfigSetters.successFunction(successFunction);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
     }
 
     /**
