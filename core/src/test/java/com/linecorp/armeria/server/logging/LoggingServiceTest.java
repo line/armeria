@@ -45,12 +45,12 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
@@ -506,24 +506,6 @@ class LoggingServiceTest {
     }
 
     @Test
-    void duplicateSetResponseLogLevelMapperAndExpectedExceptions() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .responseLogLevelMapper(log -> LogLevel.INFO)
-                                               .addExpectedException(ClosedStreamException.class,
-                                                                     LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void reversedDuplicateSetResponseLogLevelMapperAndExpectedExceptions() throws Exception {
-        assertThatThrownBy(() -> LoggingService.builder()
-                                               .addExpectedException(ClosedStreamException.class,
-                                                                     LogLevel.INFO)
-                                               .responseLogLevelMapper(log -> LogLevel.INFO))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
     void expectedExceptions() throws Exception {
         final ServiceRequestContext ctx = ServiceRequestContext.of(
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/")));
@@ -536,6 +518,7 @@ class LoggingServiceTest {
                 LoggingService.builder()
                               .logger(logger)
                               .addExpectedException(IllegalStateException.class, LogLevel.INFO)
+                              .responseLogLevel(HttpStatus.SERVICE_UNAVAILABLE, LogLevel.ERROR)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());

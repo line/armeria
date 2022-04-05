@@ -54,7 +54,6 @@ public abstract class LoggingDecoratorBuilder {
     private RequestLogLevelMapper requestLogLevelMapper;
     @Nullable
     private ResponseLogLevelMapper responseLogLevelMapper;
-    private boolean isExpectedExceptionsSet;
 
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -211,6 +210,23 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link ResponseLogLevelMapper} to use when logging response logs.
      */
     protected final ResponseLogLevelMapper responseLogLevelMapper() {
+        if (!expectedExceptions.isEmpty()) {
+            final ResponseLogLevelMapper expectedExceptionsResponseLogLevelMapper = log -> {
+                final Throwable t = log.responseCause();
+                if (t == null) {
+                    return null;
+                }
+                final Class<? extends Throwable> clazz = t.getClass();
+                if (expectedExceptions.containsKey(clazz)) {
+                    return expectedExceptions.get(clazz);
+                }
+                return null;
+            };
+            if (responseLogLevelMapper == null) {
+                responseLogLevelMapper = expectedExceptionsResponseLogLevelMapper;
+            }
+            responseLogLevelMapper = expectedExceptionsResponseLogLevelMapper.orElse(responseLogLevelMapper);
+        }
         if (responseLogLevelMapper == null) {
             return ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
         }
@@ -220,12 +236,11 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Adds an expected exception and the {@link LogLevel} which will be used when the exception occurred.
      */
-    public LoggingDecoratorBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel logLevel) {
-        if (isResponseLogLevelMapperSet) {
-            throw new IllegalStateException("responseLogLevelMapper has been set already.");
-        }
+    public LoggingDecoratorBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel
+            logLevel) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(logLevel, "logLevel");
         expectedExceptions.put(clazz, logLevel);
-        isExpectedExceptionsSet = true;
         return this;
     }
 

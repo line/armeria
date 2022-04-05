@@ -344,6 +344,8 @@ class LoggingClientTest {
                                                          .logger(logger)
                                                          .addExpectedException(IllegalStateException.class,
                                                                                LogLevel.INFO)
+                                                         .responseLogLevel(HttpStatus.SERVICE_UNAVAILABLE,
+                                                                           LogLevel.ERROR)
                                                          .build(delegate);
         loggingClient.execute(ctx, req);
         verify(logger, never()).isWarnEnabled();
