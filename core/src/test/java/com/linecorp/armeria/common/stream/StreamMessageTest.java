@@ -309,9 +309,12 @@ class StreamMessageTest {
 
     @Test
     void noopSubscribe() {
-        final StreamMessage<Integer> source = StreamMessage.of();
-        final CompletableFuture<Void> future = source.peek(i -> {}).subscribe();
-        await().untilAsserted(() -> assertThat(future.isDone()).isTrue());
+        final StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+        final List<Integer> collected = new ArrayList<>();
+        final StreamMessage<Integer> peeked = source.peek(collected::add);
+        final CompletableFuture<Void> cf = peeked.subscribe();
+        await().untilAsserted(() -> assertThat(collected).isEqualTo(ImmutableList.of(1, 2, 3)));
+        await().untilAsserted(() -> assertThat(cf.isDone()).isTrue());
     }
 
     private static class StreamProvider implements ArgumentsProvider {
