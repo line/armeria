@@ -1090,124 +1090,39 @@ public final class ServerBuilder {
 
     /**
      * Binds the specified {@link HttpService} under the specified directory of the default {@link VirtualHost}.
+     * If the specified {@link HttpService} is an {@link HttpServiceWithRoutes}, the {@code pathPrefix} is added
+     * to each {@link Route} of {@link HttpServiceWithRoutes#routes()}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      */
     public ServerBuilder serviceUnder(String pathPrefix, HttpService service) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
-        warnIfServiceHasMultipleRoutes(pathPrefix, service);
+        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
+        if (serviceWithRoutes != null) {
+            serviceWithRoutes.routes()
+                             .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
+                                                      .addMappedRoute(route)
+                                                      .build(service));
+            return this;
+        }
         return route().addRoute(Route.builder().pathPrefix(pathPrefix).build()).build(service);
-    }
-
-    /**
-     * Binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
-     * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
-     * {@code serviceWithRoutes} in the following code will be bound to
-     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
-     * <pre>{@code
-     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
-     * >     @Override
-     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
-     * >
-     * >     @Override
-     * >     public Set<Route> routes() {
-     * >         return Set.of(Route.builder().path("/bar").build(),
-     * >                       Route.builder().path("/baz").build());
-     * >     }
-     * > };
-     * >
-     * > Server.builder()
-     * >       .serviceUnder("/foo", serviceWithRoutes)
-     * >       .build();
-     * }</pre>
-     */
-    public ServerBuilder serviceUnder(String pathPrefix, HttpServiceWithRoutes serviceWithRoutes) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
-        serviceWithRoutes.routes()
-                         .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
-                                                  .addMappedRoute(route)
-                                                  .build(serviceWithRoutes));
-        return this;
-    }
-
-    /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
-     * with the specified {@code pathPrefix} prepended to each {@link Route}. For example, the
-     * {@code serviceWithRoutes} in the following code will be bound to
-     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
-     * <pre>{@code
-     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
-     * >     @Override
-     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
-     * >
-     * >     @Override
-     * >     public Set<Route> routes() {
-     * >         return Set.of(Route.builder().path("/bar").build(),
-     * >                       Route.builder().path("/baz").build());
-     * >     }
-     * > };
-     * >
-     * > Server.builder()
-     * >       .serviceUnder("/foo", serviceWithRoutes)
-     * >       .build();
-     * }</pre>
-     *
-     * @param pathPrefix the prefix which is prepended to each {@link Route}
-     *                   from {@link HttpServiceWithRoutes#routes()}
-     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
-     * @param decorators the decorator functions, which will be applied in the order specified.
-     */
-    public ServerBuilder serviceUnder(
-            String pathPrefix, HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
-        requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
-        requireNonNull(decorators, "decorators");
-
-        final HttpService decorated = decorate(serviceWithRoutes, decorators);
-        serviceWithRoutes.routes()
-                         .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
-                                                  .addMappedRoute(route)
-                                                  .build(decorated));
-        return this;
-    }
-
-    /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}. The {@link Route}s are from {@link HttpServiceWithRoutes#routes()}
-     * with the specified {@code pathPrefix} added to each {@link Route}. For example, the
-     * {@code serviceWithRoutes} in the following code will be bound to
-     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
-     * <pre>{@code
-     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
-     * >     @Override
-     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
-     * >
-     * >     @Override
-     * >     public Set<Route> routes() {
-     * >         return Set.of(Route.builder().path("/bar").build(),
-     * >                       Route.builder().path("/baz").build());
-     * >     }
-     * > };
-     * >
-     * > Server.builder()
-     * >       .serviceUnder("/foo", serviceWithRoutes)
-     * >       .build();
-     * }</pre>
-     *
-     * @param pathPrefix the prefix which is prepended to each {@link Route}
-     *                   from {@link HttpServiceWithRoutes#routes()}
-     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
-     * @param decorators the decorator functions, which will be applied in the order specified.
-     */
-    @SafeVarargs
-    public final ServerBuilder serviceUnder(
-            String pathPrefix, HttpServiceWithRoutes serviceWithRoutes,
-            Function<? super HttpService, ? extends HttpService>... decorators) {
-        return serviceUnder(pathPrefix, serviceWithRoutes,
-                            ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
     /**

@@ -296,8 +296,8 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
      */
     public ServerBuilder build(HttpService service) {
         if (mappedRoute != null) {
-            // mappedRoute is only set via serviceUnder(pathPrefix, httpServiceWithRoutes).
-            assert service instanceof HttpServiceWithRoutes;
+            // mappedRoute is only set when the service is an HttpServiceWithRoutes
+            assert service.as(HttpServiceWithRoutes.class) != null;
             build0(service, mappedRoute);
         } else {
             build0(service);

@@ -198,6 +198,15 @@ public interface Route {
 
     /**
      * Returns a newly-created {@link Route} which adds the specified {@code prefix} to this {@link Route}.
+     * These are examples of created {@link Route}s when the prefix is {@code foo}:
+     *
+     * <ul>
+     *   <li>{@code /login} -> {@code /foo/login}</li>
+     *   <li>{@code /users/{userId}} -> {@code /foo/users/{userId}}</li>
+     *   <li>{@code prefix:/files} -> {@code prefix:/foo/files} (prefix match)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} ->
+     *       {@code regex:^/foo/files/(?<filePath>.*)$} (regular expression) </li>
+     * </ul>
      */
     Route withPrefix(String prefix);
 }

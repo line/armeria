@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
@@ -161,7 +160,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
     final void build0(HttpService service, Route mappedRoute) {
         final List<Route> routes = buildRouteList(ImmutableSet.of());
-        checkState(routes.size() == 1, "routes.size() = %s (expected: 1)");
+        assert routes.size() == 1; // Only one route is set via addRoute().
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         final ServiceConfigBuilder serviceConfigBuilder =
                 defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), decoratedService);
