@@ -44,14 +44,16 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return Integer.MIN_VALUE;
     }
 
+    static final String VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limit=10";
+
     @Override
     public Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
-        return new ExceptionSampler("rate-limit=10");
+        return new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
     }
 
     @Override
     public String verboseExceptionSamplerSpec() {
-        return "rate-limit=10";
+        return VERBOSE_EXCEPTION_SAMPLER_SPEC;
     }
 
     @Override
@@ -89,9 +91,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return false;
     }
 
+    static final Integer MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
+
     @Override
     public Integer maxNumConnections() {
-        return Integer.MAX_VALUE;
+        return MAX_NUM_CONNECTIONS;
     }
 
     @Override
@@ -100,64 +104,88 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return defaultNumCpuCores * 2;
     }
 
+    static final Integer NUM_COMMON_BLOCKING_TASK_THREADS = 200; // from Tomcat default maxThreads
+
     @Override
     public Integer numCommonBlockingTaskThreads() {
-        return 200; // from Tomcat default maxThreads
+        return NUM_COMMON_BLOCKING_TASK_THREADS;
     }
+
+    static final long DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MiB
 
     @Override
     public Long defaultMaxRequestLength() {
-        return Long.valueOf(10 * 1024 * 1024); // 10 MiB
+        return DEFAULT_MAX_REQUEST_LENGTH;
     }
+
+    static final long DEFAULT_MAX_RESPONSE_LENGTH = 10 * 1024 * 1024; // 10 MiB
 
     @Override
     public Long defaultMaxResponseLength() {
-        return Long.valueOf(10 * 1024 * 1024); // 10 MiB
+        return DEFAULT_MAX_RESPONSE_LENGTH;
     }
+
+    static final long DEFAULT_REQUEST_TIMEOUT_MILLIS = 10 * 1000; // 10 seconds
 
     @Override
     public Long defaultRequestTimeoutMillis() {
-        return Long.valueOf(10 * 1000); // 10 seconds
+        return DEFAULT_REQUEST_TIMEOUT_MILLIS;
     }
+
+    static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS = 15 * 1000; // 15 seconds
 
     @Override
     public Long defaultResponseTimeoutMillis() {
-        return Long.valueOf(15 * 1000); // 15 seconds
+        return DEFAULT_RESPONSE_TIMEOUT_MILLIS;
     }
+
+    static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
 
     @Override
     public Long defaultConnectTimeoutMillis() {
-        return 3200L; // 3.2 seconds
+        return DEFAULT_CONNECT_TIMEOUT_MILLIS;
     }
+
+    static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
 
     @Override
     public Long defaultWriteTimeoutMillis() {
-        return 1000L; // 1 second
+        return DEFAULT_WRITE_TIMEOUT_MILLIS;
     }
+
+    static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
 
     @Override
     public Long defaultServerIdleTimeoutMillis() {
-        return 15000L; // 15 seconds
+        return DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS;
     }
+
+    static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
 
     @Override
     public Long defaultClientIdleTimeoutMillis() {
-        return 10000L; // 10 seconds
+        return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
     }
+
+    static final int DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH = 4096; // from Netty
 
     @Override
     public Integer defaultHttp1MaxInitialLineLength() {
-        return 4096; // from Netty
+        return DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH;
     }
+
+    static final int DEFAULT_HTTP1_MAX_HEADER_SIZE = 8192; // from Netty
 
     @Override
     public Integer defaultHttp1MaxHeaderSize() {
         return 8192; // from Netty
     }
 
+    static final int DEFAULT_HTTP1_MAX_CHUNK_SIZE = 8192; // from Netty
+
     @Override
     public Integer defaultHttp1MaxChunkSize() {
-        return 8192; // from Netty
+        return DEFAULT_HTTP1_MAX_CHUNK_SIZE;
     }
 
     @Override
@@ -170,106 +198,148 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return false;
     }
 
+    static final long DEFAULT_PING_INTERVAL_MILLIS = 0; // Disabled
+
     @Override
     public Long defaultPingIntervalMillis() {
-        return 0L; // Disabled
+        return DEFAULT_PING_INTERVAL_MILLIS;
     }
+
+    static final int DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION = 0; // Disabled
 
     @Override
     public Integer defaultMaxServerNumRequestsPerConnection() {
-        return 0; // Disabled
+        return DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION;
     }
+
+    static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION = 0; // Disabled
 
     @Override
     public Integer defaultMaxClientNumRequestsPerConnection() {
-        return 0; // Disabled
+        return DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION;
     }
+
+    static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
 
     @Override
     public Long defaultMaxServerConnectionAgeMillis() {
-        return 0L; // Disabled
+        return DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS;
     }
+
+    static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS = 0; // Disabled
 
     @Override
     public Long defaultMaxClientConnectionAgeMillis() {
-        return 0L; // Disabled
+        return DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS;
     }
+
+    static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
 
     @Override
     public Long defaultServerConnectionDrainDurationMicros() {
-        return 1000000L;
+        return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
     }
+
+    static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
 
     @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
-        return 1024 * 1024; // 1MiB
+        return DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE;
     }
+
+    static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
 
     @Override
     public Integer defaultHttp2InitialStreamWindowSize() {
-        return 1024 * 1024; // 1MiB
+        return DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE;
     }
+
+    static final int DEFAULT_HTTP2_MAX_FRAME_SIZE = 16384; // From HTTP/2 specification
 
     @Override
     public Integer defaultHttp2MaxFrameSize() {
-        return 16384; // From HTTP/2 specification
+        return DEFAULT_HTTP2_MAX_FRAME_SIZE;
     }
+
+    // Can't use 0xFFFFFFFFL because some implementations use a signed 32-bit integer to store HTTP/2 SETTINGS
+    // parameter values, thus anything greater than 0x7FFFFFFF will break them or make them unhappy.
+    static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
 
     @Override
     public Long defaultHttp2MaxStreamsPerConnection() {
-        return Long.valueOf(Integer.MAX_VALUE);
+        return DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION;
     }
+
+    static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192L; // from Netty default maxHeaderSize
 
     @Override
     public Long defaultHttp2MaxHeaderListSize() {
-        return 8192L; // from Netty default maxHeaderSize
+        return DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE;
     }
+
+    static final String DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
 
     @Override
     public String defaultBackoffSpec() {
-        return "exponential=200:10000,jitter=0.2";
+        return DEFAULT_BACKOFF_SPEC;
     }
+
+    static final int DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
 
     @Override
     public Integer defaultMaxTotalAttempts() {
-        return 10;
+        return DEFAULT_MAX_TOTAL_ATTEMPTS;
     }
+
+    static final String ROUTE_CACHE_SPEC = "maximumSize=4096";
 
     @Override
     public String routeCacheSpec() {
-        return "maximumSize=4096";
+        return ROUTE_CACHE_SPEC;
     }
+
+    static final String ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
 
     @Override
     public String routeDecoratorCacheSpec() {
-        return "maximumSize=4096";
+        return ROUTE_DECORATOR_CACHE_SPEC;
     }
+
+    static final String PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
 
     @Override
     public String parsedPathCacheSpec() {
-        return "maximumSize=4096";
+        return PARSED_PATH_CACHE_SPEC;
     }
+
+    static final String HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
 
     @Override
     public String headerValueCacheSpec() {
-        return "maximumSize=4096";
+        return HEADER_VALUE_CACHE_SPEC;
     }
+
+    static final String CACHED_HEADERS = ":authority,:scheme,:method,accept-encoding,content-type";
 
     @Override
     public List<String> cachedHeaders() {
         return Splitter.on(',').trimResults()
                        .omitEmptyStrings()
-                       .splitToList(":authority,:scheme,:method,accept-encoding,content-type");
+                       .splitToList(CACHED_HEADERS);
     }
+
+    static final String FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
 
     @Override
     public String fileServiceCacheSpec() {
-        return "maximumSize=1024";
+        return FILE_SERVICE_CACHE_SPEC;
     }
+
+    static final String DNS_CACHE_SPEC = "maximumSize=4096";
 
     @Override
     public String dnsCacheSpec() {
-        return "maximumSize=4096";
+        return DNS_CACHE_SPEC;
     }
 
     @Override

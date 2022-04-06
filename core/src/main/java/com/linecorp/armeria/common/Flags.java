@@ -395,8 +395,8 @@ public final class Flags {
      * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
      * trace.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#verboseExceptionSamplerSpec}, which
-     * retains the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER_SPEC},
+     * which retains the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
      * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
      * the default. See {@link Sampler#of(String)} for the specification string format.</p>
      */
@@ -567,7 +567,7 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#maxNumConnections(int)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#maxNumConnections}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#MAX_NUM_CONNECTIONS}. Specify the
      * {@code -Dcom.linecorp.armeria.maxNumConnections=<integer>} JVM option to override
      * the default value.
      */
@@ -593,7 +593,7 @@ public final class Flags {
      * threads. Note that this flag has no effect if a user specified the blocking task executor explicitly
      * via {@link ServerBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#numCommonBlockingTaskThreads}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#NUM_COMMON_BLOCKING_TASK_THREADS}.
      * Specify the {@code -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<integer>} JVM option
      * to override the default value.
      */
@@ -605,8 +605,8 @@ public final class Flags {
      * Returns the default server-side maximum length of a request. Note that this flag has no effect if a user
      * specified the value explicitly via {@link ServerBuilder#maxRequestLength(long)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxRequestLength}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultMaxRequestLength=<long>} to override the default value.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_REQUEST_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxRequestLength=<long>} to override the default value.
      * {@code 0} disables the length limit.
      */
     public static long defaultMaxRequestLength() {
@@ -617,8 +617,8 @@ public final class Flags {
      * Returns the default client-side maximum length of a response. Note that this flag has no effect if a user
      * specified the value explicitly via {@link ClientBuilder#maxResponseLength(long)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxResponseLength}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultMaxResponseLength=<long>} to override the default value.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_RESPONSE_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxResponseLength=<long>} to override the default value.
      * {@code 0} disables the length limit.
      */
     public static long defaultMaxResponseLength() {
@@ -629,7 +629,7 @@ public final class Flags {
      * Returns the default server-side timeout of a request in milliseconds. Note that this flag has no effect
      * if a user specified the value explicitly via {@link ServerBuilder#requestTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultRequestTimeoutMillis}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_REQUEST_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>} to override
      * the default value. {@code 0} disables the timeout.
      */
@@ -641,7 +641,7 @@ public final class Flags {
      * Returns the default client-side timeout of a response in milliseconds. Note that this flag has no effect
      * if a user specified the value explicitly via {@link ClientBuilder#responseTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultResponseTimeoutMillis}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultResponseTimeoutMillis=<long>} to override
      * the default value. {@code 0} disables the timeout.
      */
@@ -654,7 +654,7 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#channelOption(ChannelOption, Object)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultConnectTimeoutMillis}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CONNECT_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>} JVM option to override
      * the default value.
      */
@@ -667,8 +667,8 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientBuilder#writeTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultWriteTimeoutMillis}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>} JVM option to override
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>} JVM option to override
      * the default value. {@code 0} disables the timeout.
      */
     public static long defaultWriteTimeoutMillis() {
@@ -680,7 +680,7 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#idleTimeout(Duration)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultServerIdleTimeoutMillis}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} JVM option to
      * override the default value.
      */
@@ -693,7 +693,7 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
      *
-     * <p>This default value of this flag is {@link DefaultFlagsProvider#defaultClientIdleTimeoutMillis}.
+     * <p>This default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} JVM option to
      * override the default value.
      */
@@ -707,7 +707,8 @@ public final class Flags {
      * {@link ServerBuilder#http1MaxInitialLineLength(int)} or
      * {@link ClientFactoryBuilder#http1MaxInitialLineLength(int)}.
      *
-     * <p>This default value of this flag is {@link DefaultFlagsProvider#defaultHttp1MaxInitialLineLength}.
+     * <p>This default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxInitialLineLength=<integer>} JVM option
      * to override the default value.
      */
@@ -721,7 +722,7 @@ public final class Flags {
      * {@link ServerBuilder#http1MaxHeaderSize(int)} or
      * {@link ClientFactoryBuilder#http1MaxHeaderSize(int)}.
      *
-     * <p>This default value of this flag is {@link DefaultFlagsProvider#defaultHttp1MaxHeaderSize}.
+     * <p>This default value of this flag is {@value DefaultFlagsProvider#DEFAULT_HTTP1_MAX_HEADER_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxHeaderSize=<integer>} JVM option
      * to override the default value.
      */
@@ -737,7 +738,7 @@ public final class Flags {
      * {@link ServerBuilder#http1MaxChunkSize(int)} or
      * {@link ClientFactoryBuilder#http1MaxChunkSize(int)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp1MaxChunkSize}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_HTTP1_MAX_CHUNK_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp1MaxChunkSize=<integer>} JVM option
      * to override the default value.
      */
@@ -785,9 +786,10 @@ public final class Flags {
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
      * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultPingIntervalMillis} milliseconds.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultPingIntervalMillis=<integer>} JVM option to override
-     * the default value. If the specified value was smaller than 10 seconds, bumps PING interval to 10 seconds.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_PING_INTERVAL_MILLIS}
+     * milliseconds. Specify the {@code -Dcom.linecorp.armeria.defaultPingIntervalMillis=<integer>} JVM option
+     * to override the default value. If the specified value was smaller than 10 seconds, bumps PING
+     * interval to 10 seconds.
      */
     public static long defaultPingIntervalMillis() {
         return DEFAULT_PING_INTERVAL_MILLIS;
@@ -800,7 +802,7 @@ public final class Flags {
      * {@link ServerBuilder#maxNumRequestsPerConnection(int)}.
      *
      * <p>The default value of this flag is
-     * {@link DefaultFlagsProvider#defaultMaxServerNumRequestsPerConnection}.
+     * {@value DefaultFlagsProvider#DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerNumRequestsPerConnection=<integer>} JVM option
      * to override the default value. {@code 0} disables the limit.
      */
@@ -815,7 +817,7 @@ public final class Flags {
      * {@link ClientFactoryBuilder#maxNumRequestsPerConnection(int)}.
      *
      * <p>The default value of this flag is
-     * {@link DefaultFlagsProvider#defaultMaxClientNumRequestsPerConnection}.
+     * {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientNumRequestsPerConnection=<integer>} JVM option
      * to override the default value. {@code 0} disables the limit.
      */
@@ -828,7 +830,8 @@ public final class Flags {
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxServerConnectionAgeMillis}.
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerConnectionAgeMillis=<integer>} JVM option
      * to override the default value. If the specified value was smaller than 1 second,
      * bumps the max connection age to 1 second.
@@ -844,7 +847,8 @@ public final class Flags {
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxClientConnectionAgeMillis}.
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientConnectionAgeMillis=<integer>} JVM option
      * to override the default value. If the specified value was smaller than 1 second,
      * bumps the max connection age to 1 second.
@@ -861,7 +865,7 @@ public final class Flags {
      * when client will be notified about the shutdown, but in flight requests will still be accepted.
      *
      * <p>The default value of this flag is
-     * {@link DefaultFlagsProvider#defaultServerConnectionDrainDurationMicros}.
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
      * JVM option to override the default value.
      *
@@ -892,7 +896,7 @@ public final class Flags {
      * {@link ClientFactoryBuilder#http2InitialConnectionWindowSize(int)}.
      *
      * <p>The default value of this flag is
-     * {@link DefaultFlagsProvider#defaultHttp2InitialConnectionWindowSize}.
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2InitialConnectionWindowSize=<integer>} JVM option
      * to override the default value.
      */
@@ -907,7 +911,8 @@ public final class Flags {
      * {@link ServerBuilder#http2InitialStreamWindowSize(int)} or
      * {@link ClientFactoryBuilder#http2InitialStreamWindowSize(int)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2InitialStreamWindowSize}.
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2InitialStreamWindowSize=<integer>} JVM option
      * to override the default value.
      */
@@ -922,7 +927,7 @@ public final class Flags {
      * {@link ServerBuilder#http2MaxFrameSize(int)} or {@link ClientFactoryBuilder#http2MaxFrameSize(int)}.
      *
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2MaxFrameSize}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_FRAME_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxFrameSize=<integer>} JVM option
      * to override the default value.
      */
@@ -935,7 +940,8 @@ public final class Flags {
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#http2MaxStreamsPerConnection(long)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2MaxStreamsPerConnection}.
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxStreamsPerConnection=<integer>} JVM option
      * to override the default value.
      */
@@ -950,7 +956,7 @@ public final class Flags {
      * {@link ServerBuilder#http2MaxHeaderListSize(long)} or
      * {@link ClientFactoryBuilder#http2MaxHeaderListSize(long)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultHttp2MaxHeaderListSize}.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxHeaderListSize=<integer>} JVM option
      * to override the default value.
      */
@@ -963,7 +969,7 @@ public final class Flags {
      * returned by {@link Backoff#ofDefault()}. Note that this flag has no effect if a user specified the
      * {@link Backoff} explicitly.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultBackoffSpec}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_BACKOFF_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultBackoffSpec=<spec>} JVM option to override the default value.
      */
     public static String defaultBackoffSpec() {
@@ -974,8 +980,8 @@ public final class Flags {
      * Returns the default maximum number of total attempts. Note that this flag has no effect if a user
      * specified the value explicitly when creating a {@link RetryingClient} or a {@link RetryingRpcClient}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#defaultMaxTotalAttempts}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>} JVM option to
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_TOTAL_ATTEMPTS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>} JVM option to
      * override the default value.
      */
     public static int defaultMaxTotalAttempts() {
@@ -986,7 +992,7 @@ public final class Flags {
      * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
      * request routing history for all {@link Service}s.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#routeCacheSpec}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#ROUTE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.routeCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.routeCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeCache=off} JVM option to disable it.
@@ -1000,8 +1006,8 @@ public final class Flags {
      * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
      * request routing history for all route decorators.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#routeDecoratorCacheSpec}. Specify the
-     * {@code -Dcom.linecorp.armeria.routeDecoratorCache=<spec>} JVM option to override the default value.
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#ROUTE_DECORATOR_CACHE_SPEC}. Specify
+     * the {@code -Dcom.linecorp.armeria.routeDecoratorCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.routeDecoratorCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeDecoratorCache=off} JVM option to disable it.
      */
@@ -1014,7 +1020,7 @@ public final class Flags {
      * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
      * results for parsing a raw HTTP path into a decoded pair of path and query string.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#parsedPathCacheSpec}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#PARSED_PATH_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.parsedPathCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.parsedPathCache=off} JVM option to disable it.
@@ -1029,7 +1035,7 @@ public final class Flags {
      * results for converting a raw HTTP ASCII header value into a {@link String}. Only the header values
      * whose corresponding header name is listed in {@link #cachedHeaders()} will be cached.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#headerValueCacheSpec}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#HEADER_VALUE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.headerValueCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.headerValueCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.headerValueCache=off} JVM option to disable it.
@@ -1045,7 +1051,7 @@ public final class Flags {
      * flag will be cached. It is not recommended to specify a header with high cardinality, which will defeat
      * the purpose of caching.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#cachedHeaders}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#CACHED_HEADERS}. Specify the
      * {@code -Dcom.linecorp.armeria.cachedHeaders=<comma separated list>} JVM option to override the default.
      */
     public static List<String> cachedHeaders() {
@@ -1057,7 +1063,7 @@ public final class Flags {
      * of the {@link HttpFile}s read by a {@link FileService}. This value is used as the default of
      * {@link FileServiceBuilder#entryCacheSpec(String)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#fileServiceCacheSpec}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#FILE_SERVICE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.fileServiceCache=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.fileServiceCache=maximumSize=1024,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.fileServiceCache=off} JVM option to disable it.
@@ -1072,7 +1078,7 @@ public final class Flags {
      * domain names and their resolved addresses. This value is used as the default of
      * {@link DnsResolverGroupBuilder#cacheSpec(String)}.
      *
-     * <p>The default value of this flag is {@link DefaultFlagsProvider#dnsCacheSpec}. Specify the
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DNS_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.dnsCacheSpec=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.dnsCacheSpec=maximumSize=1024,expireAfterAccess=600s}.
      *
