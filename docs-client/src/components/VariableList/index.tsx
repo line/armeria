@@ -161,6 +161,7 @@ const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
     colSpanLength += 1;
   }
   return (
+    // eslint-disable-next-line react/jsx-no-useless-fragment
     <>
       {!isEmpty ? (
         props.variables.map((variable, index) => (

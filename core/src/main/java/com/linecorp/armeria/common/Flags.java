@@ -1,26 +1,29 @@
 /*
- *  Copyright 2017 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
- *  LINE Corporation licenses this file to you under the Apache License,
- *  version 2.0 (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at:
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- *  License for the specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -282,7 +285,7 @@ public final class Flags {
     private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
             getInt("defaultMaxClientNumRequestsPerConnection",
                    DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
-                    value -> value >= 0);
+                   value -> value >= 0);
 
     private static final long DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
@@ -429,16 +432,17 @@ public final class Flags {
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             Sets.immutableEnumSet(
                     Streams.stream(CSV_SPLITTER.split(getNormalized(
-                            "transientServiceOptions", "", val -> {
-                                try {
-                                    Streams.stream(CSV_SPLITTER.split(val))
-                                           .forEach(feature -> TransientServiceOption
-                                                   .valueOf(Ascii.toUpperCase(feature)));
-                                    return true;
-                                } catch (Exception e) {
-                                    return false;
-                                }
-                            }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
+                                   "transientServiceOptions", "", val -> {
+                                       try {
+                                           Streams.stream(CSV_SPLITTER.split(val))
+                                                  .forEach(feature -> TransientServiceOption
+                                                          .valueOf(Ascii.toUpperCase(feature)));
+                                           return true;
+                                       } catch (Exception e) {
+                                           return false;
+                                       }
+                                   }))).map(feature -> TransientServiceOption.valueOf(
+                                   Ascii.toUpperCase(feature)))
                            .collect(toImmutableSet()));
 
     private static final boolean
@@ -447,6 +451,9 @@ public final class Flags {
     private static final boolean DEFAULT_USE_DEFAULT_SOCKET_OPTIONS = true;
     private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
             getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
+
+    private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
+            getBoolean("allowDoubleDotsInQueryString", false);
 
     static {
         TransportType type = null;
@@ -485,6 +492,16 @@ public final class Flags {
                 break;
         }
         TRANSPORT_TYPE = type;
+    }
+
+    private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION;
+
+    static {
+        DEFAULT_MULTIPART_UPLOADS_LOCATION = Paths.get(get("defaultMultipartUploadsLocation",
+                                                           System.getProperty("java.io.tmpdir") +
+                                                           File.separatorChar + "armeria" +
+                                                           File.separatorChar + "multipart-uploads",
+                                                           ignore -> true));
     }
 
     /**
@@ -1365,6 +1382,28 @@ public final class Flags {
      */
     public static boolean useLegacyRouteDecoratorOrdering() {
         return DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
+    }
+
+    /**
+     * Returns the {@link Path} that is used to store the files uploaded from {@code multipart/form-data}
+     * requests.
+     */
+    public static Path defaultMultipartUploadsLocation() {
+        return DEFAULT_MULTIPART_UPLOADS_LOCATION;
+    }
+
+    /**
+     * Returns whether to allow double dots ({@code ..}) in a request path query string.
+     *
+     * <p>Note that double dots in a query string can lead to a vulnerability if a query param value contains
+     * an improper path such as {@code /download?path=../../secrets.txt}. Therefore, extra caution should be
+     * taken when enabling this option, and you may need additional validations at the application level.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowDoubleDotsInQueryString=true} JVM option to enable it.
+     */
+    public static boolean allowDoubleDotsInQueryString() {
+        return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
     }
 
     @Nullable

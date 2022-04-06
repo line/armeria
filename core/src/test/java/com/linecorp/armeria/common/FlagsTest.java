@@ -62,7 +62,7 @@ class FlagsTest {
     @Test
     void openSslAvailable() {
         assumeThat(osName.startsWith("linux") || osName.startsWith("windows") ||
-                   osName.startsWith("macosx") || osName.startsWith("osx")).isTrue();
+                   osName.startsWith("mac") || osName.startsWith("osx")).isTrue();
         assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isNull();
 
         assertThat(Flags.useOpenSsl()).isTrue();
@@ -96,11 +96,11 @@ class FlagsTest {
 
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
-            if (!name.startsWith("com.linecorp.armeria.common")) {
+            if (!name.startsWith("com.linecorp.armeria")) {
                 return super.loadClass(name);
             }
 
-            // Reload every class in common package.
+            // Reload every class in armeria package.
             try {
                 // Classes do not have an inner class.
                 final String replaced = name.replace('.', '/') + ".class";

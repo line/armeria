@@ -3,7 +3,7 @@ import { Typography } from 'antd';
 import { Link } from 'gatsby';
 import React from 'react';
 
-import styles from './list-all.module.less';
+import * as styles from './list-all.module.less';
 
 const { Title } = Typography;
 

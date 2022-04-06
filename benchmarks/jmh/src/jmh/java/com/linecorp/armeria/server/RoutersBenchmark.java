@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -24,10 +25,12 @@ import org.slf4j.helpers.NOPLogger;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class RoutersBenchmark {
@@ -49,20 +52,22 @@ public class RoutersBenchmark {
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
         final Route route1 = Route.builder().exact("/grpc.package.Service/Method1").build();
         final Route route2 = Route.builder().exact("/grpc.package.Service/Method2").build();
+        final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
         SERVICES = ImmutableList.of(
                 new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true),
+                                  true, SuccessFunction.always(), multipartUploadsLocation),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true)
+                                  true, SuccessFunction.always(), multipartUploadsLocation)
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
-                                             false, CommonPools.blockingTaskExecutor(), true);
+                                             false, CommonPools.blockingTaskExecutor(), true,
+                                             SuccessFunction.always(), multipartUploadsLocation);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
@@ -73,7 +78,7 @@ public class RoutersBenchmark {
     @Benchmark
     public Routed<ServiceConfig> exactMatch() {
         final RoutingContext ctx = DefaultRoutingContext.of(HOST, "localhost", METHOD1_HEADERS.path(),
-                                                            null, METHOD1_HEADERS, false);
+                                                            null, METHOD1_HEADERS, RoutingStatus.OK);
         final Routed<ServiceConfig> routed = ROUTER.find(ctx);
         if (routed.value() != SERVICES.get(0)) {
             throw new IllegalStateException("Routing error");
@@ -85,7 +90,7 @@ public class RoutersBenchmark {
     public Routed<ServiceConfig> exactMatch_wrapped() {
         final RoutingContext ctx = new RoutingContextWrapper(
                 DefaultRoutingContext.of(HOST, "localhost", METHOD1_HEADERS.path(),
-                                         null, METHOD1_HEADERS, false));
+                                         null, METHOD1_HEADERS, RoutingStatus.OK));
         final Routed<ServiceConfig> routed = ROUTER.find(ctx);
         if (routed.value() != SERVICES.get(0)) {
             throw new IllegalStateException("Routing error");

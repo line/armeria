@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -60,6 +61,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AttributeMap;
 
+@FlakyTest
 class HttpServerKeepAliveHandlerTest {
 
     private static final ch.qos.logback.classic.Logger rootLogger =
@@ -232,7 +234,7 @@ class HttpServerKeepAliveHandlerTest {
     }
 
     private ClientFactory newClientFactory(long clientIdleTimeout, boolean useHttp2Preface) {
-        return newClientFactory(clientIdleTimeout,  Flags.defaultPingIntervalMillis(), useHttp2Preface);
+        return newClientFactory(clientIdleTimeout, Flags.defaultPingIntervalMillis(), useHttp2Preface);
     }
 
     private ClientFactory newClientFactory(long clientIdleTimeout, long pingIntervalMillis,

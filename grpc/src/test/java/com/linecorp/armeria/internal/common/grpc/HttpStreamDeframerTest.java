@@ -27,20 +27,18 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
-import io.netty.buffer.ByteBufAllocator;
 import reactor.test.StepVerifier;
 
 class HttpStreamDeframerTest {
@@ -59,14 +57,13 @@ class HttpStreamDeframerTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
         deframer = new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, statusListener,
-                                          null, Integer.MAX_VALUE);
+                                          null, Integer.MAX_VALUE, false);
     }
 
     @Test
     void onHeaders() {
-        final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS);
-        final StreamMessage<DeframedMessage> deframed =
-                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
+        final HttpResponse source = HttpResponse.of(HEADERS);
+        final StreamMessage<DeframedMessage> deframed = source.decode(deframer);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -76,9 +73,8 @@ class HttpStreamDeframerTest {
 
     @Test
     void onTrailers() {
-        final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS, TRAILERS);
-        final StreamMessage<DeframedMessage> deframed =
-                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
+        final HttpResponse source = HttpResponse.of(HEADERS, TRAILERS);
+        final StreamMessage<DeframedMessage> deframed = source.decode(deframer);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -89,9 +85,8 @@ class HttpStreamDeframerTest {
     @Test
     void onMessage() throws Exception {
         final DeframedMessage deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
-        final StreamMessage<HttpObject> source = StreamMessage.of(DATA);
-        final StreamMessage<DeframedMessage> deframed =
-                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
+        final HttpResponse source = HttpResponse.of(HEADERS, DATA);
+        final StreamMessage<DeframedMessage> deframed = source.decode(deframer);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -106,9 +101,8 @@ class HttpStreamDeframerTest {
 
     @Test
     void onMessage_deframeError() throws Exception {
-        final StreamMessage<HttpData> malformed = StreamMessage.of(HttpData.ofUtf8("foobar"));
-        final StreamMessage<DeframedMessage> deframed =
-                new DecodedHttpStreamMessage<>(malformed, deframer, ByteBufAllocator.DEFAULT);
+        final HttpResponse malformed = HttpResponse.of(HEADERS, HttpData.ofUtf8("foobar"));
+        final StreamMessage<DeframedMessage> deframed = malformed.decode(deframer);
         deframer.setDeframedStreamMessage(deframed);
 
         StepVerifier.create(deframed)
@@ -121,10 +115,8 @@ class HttpStreamDeframerTest {
 
     @Test
     void httpNotOk() {
-        final StreamMessage<ResponseHeaders> source =
-                StreamMessage.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
-        final StreamMessage<DeframedMessage> deframed =
-                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
+        final HttpResponse source = HttpResponse.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
+        final StreamMessage<DeframedMessage> deframed = source.decode(deframer);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)

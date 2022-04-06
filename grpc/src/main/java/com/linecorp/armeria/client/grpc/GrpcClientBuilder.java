@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -58,6 +59,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -92,7 +94,7 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private URI uri;
     @Nullable
-    private String path;
+    private String prefix;
     private Scheme scheme;
 
     GrpcClientBuilder(URI uri) {
@@ -162,14 +164,41 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      *           .path("/grpc")
      *           .build(MyGrpcServiceGrpc.XXXStub.class)
      * }</pre>
+     *
+     * @deprecated Use {@link #pathPrefix(String)} instead.
      */
-    public GrpcClientBuilder path(String path) {
-        requireNonNull(path, "path");
-        checkArgument(!path.isEmpty(), "path is empty.");
-        if (path.charAt(0) != '/') {
-            throw new IllegalArgumentException("Path must start with / character");
+    @Deprecated
+    public GrpcClientBuilder path(String prefix) {
+        return pathPrefix(prefix);
+    }
+
+    /**
+     * Sets the context path for the gRPC endpoint.
+     * This method will be useful if your gRPC service is bound to a context path.
+     * For example:
+     * <pre>{@code
+     * // A gRPC service is bound to "/grpc/com.example.MyGrpcService/"
+     * Server.builder()
+     *       .serviceUnder("/grpc", GrpcService.builder()
+     *                                         .addService(new MyGrpcService())
+     *                                         .build())
+     *       .build();
+     *
+     * // Prefix "/grpc" to the gRPC service path.
+     * GrpcClient.builder("https://api.example.com")
+     *           .pathPrefix("/grpc")
+     *           .build(MyGrpcServiceGrpc.XXXStub.class)
+     * }</pre>
+     */
+    public GrpcClientBuilder pathPrefix(String prefix) {
+        requireNonNull(prefix, "prefix");
+        checkArgument(!prefix.isEmpty(), "prefix is empty.");
+        checkArgument(prefix.charAt(0) == '/', "prefix: %s (must start with '/')", prefix);
+
+        if (!prefix.endsWith("/")) {
+            prefix += '/';
         }
-        this.path = path;
+        this.prefix = prefix;
         return this;
     }
 
@@ -362,14 +391,14 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         final ClientFactory factory = options.factory();
         URI uri = this.uri;
         if (uri != null) {
-            if (path != null) {
-                uri = uri.resolve(path);
+            if (prefix != null) {
+                uri = uri.resolve(prefix);
             }
             client = factory.newClient(ClientBuilderParams.of(uri, clientType, options));
         } else {
             assert endpointGroup != null;
             client = factory.newClient(ClientBuilderParams.of(scheme, endpointGroup,
-                                                              path, clientType, options));
+                                                              prefix, clientType, options));
         }
 
         @SuppressWarnings("unchecked")
@@ -437,6 +466,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public GrpcClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (GrpcClientBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public GrpcClientBuilder successFunction(SuccessFunction successFunction) {
+        return (GrpcClientBuilder) super.successFunction(successFunction);
     }
 
     @Override
@@ -508,5 +542,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public GrpcClientBuilder followRedirects(RedirectConfig redirectConfig) {
         return (GrpcClientBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public GrpcClientBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

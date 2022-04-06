@@ -342,6 +342,10 @@
       margin-bottom: 0;
     }
 
+    > :global(.ant-alert):last-child {
+      margin-bottom: @margin-sm;
+    }
+
     > p + ul,
     > p + ol {
       margin-top: -1em;
@@ -414,7 +418,8 @@
     padding-bottom: @padding-sm;
 
     > :global(.ant-alert-icon) {
-      padding-top: @padding-xss;
+      padding-top: @padding-xs * 0.6;
+      margin-bottom: auto; // to place at the top
     }
   }
 

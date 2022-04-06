@@ -1,19 +1,12 @@
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-
 /* eslint-disable import/no-extraneous-dependencies */
 // Installed by gatsby-remark-draw
-const urljoin = require('url-join');
 const visit = require('unist-util-visit');
 /* eslint-enable import/no-extraneous-dependencies */
 
 // TODO(trustin): Use svgbob-wasm or something similar so that we don't have to install svgbob_cli manually.
-const Draw = require('gatsby-remark-draw/lib/draw');
+const Draw = require('./lib/draw-patched');
 
-const DEPLOY_DIR = 'public';
-
-module.exports = ({ markdownAST, pathPrefix }, pluginOptions = {}) => {
+module.exports = ({ markdownAST }, pluginOptions = {}) => {
   visit(markdownAST, 'code', (node, index, parent) => {
     const draw = new Draw();
     const lang = node.lang || '';
@@ -24,38 +17,31 @@ module.exports = ({ markdownAST, pathPrefix }, pluginOptions = {}) => {
 
     let svg;
     try {
-      svg = draw
-        .render(lang, node.value, pluginOptions)
-        .value.replace(
-          /(<style[^>]*>)/,
-          "$1\n@import url('https://cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack-subset.css');\n* { font-family: Hack; font-size: 13px; }\n",
-        );
+      svg = draw.render(lang, node.value, pluginOptions).value.replace(
+        /(<\/style>)/,
+        `.remark-draw-bob-svg * {
+            font-family: Hack;
+            font-size: 13px;
+          }
+          .remark-draw-bob-svg rect.backdrop,
+          .remark-draw-bob-svg .nofill {
+            fill: none;
+          }
+          $1`,
+      );
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn('Failed to render a diagram:', node.value, e);
       return;
     }
 
-    if (!svg.includes('hack-subset.css')) {
+    if (!svg.includes('font-family: Hack')) {
       throw new Error(`Failed to inject the font CSS: ${svg}`);
     }
 
-    const hash = crypto
-      .createHmac('sha1', 'gatsby-remark-draw')
-      .update(svg)
-      .digest('hex');
-    const fileName = `${hash}.svg`;
-    const fullPath = path.join(DEPLOY_DIR, fileName);
-    fs.writeFileSync(fullPath, svg);
-
     const image = {
       type: 'html',
-      value: `<span class="${draw.className} ${
-        draw.className
-      }-${lang}"><object data="${urljoin(
-        pathPrefix,
-        fileName,
-      )}" role="img" aria-label="" /></span>`,
+      value: `<span class="${draw.className} ${draw.className}-${lang}">${svg}</span>`,
     };
 
     parent.children.splice(index, 1, image);

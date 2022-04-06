@@ -543,7 +543,7 @@ public class StartStopSupportTest {
 
                     @Override
                     protected CompletionStage<Void> doStop(@Nullable Void arg) throws Exception {
-                        return CompletableFuture.completedFuture(null);
+                        return UnmodifiableFuture.completedFuture(null);
                     }
                 };
 
@@ -561,7 +561,7 @@ public class StartStopSupportTest {
                 new StartStopSupport<Void, Void, String, Void>(rule.get()) {
                     @Override
                     protected CompletionStage<String> doStart(@Nullable Void arg) throws Exception {
-                        return CompletableFuture.completedFuture("started");
+                        return UnmodifiableFuture.completedFuture("started");
                     }
 
                     @Override
@@ -586,12 +586,12 @@ public class StartStopSupportTest {
                 new StartStopSupport<Void, Void, String, Void>(executor) {
                     @Override
                     protected CompletionStage<String> doStart(@Nullable Void arg) throws Exception {
-                        return CompletableFuture.completedFuture("started");
+                        return UnmodifiableFuture.completedFuture("started");
                     }
 
                     @Override
                     protected CompletionStage<Void> doStop(@Nullable Void arg) throws Exception {
-                        return CompletableFuture.completedFuture(null);
+                        return UnmodifiableFuture.completedFuture(null);
                     }
                 };
 

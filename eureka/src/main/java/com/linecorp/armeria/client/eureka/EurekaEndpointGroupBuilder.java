@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -36,6 +37,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -49,6 +51,7 @@ import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -317,6 +320,11 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public EurekaEndpointGroupBuilder successFunction(SuccessFunction successFunction) {
+        return (EurekaEndpointGroupBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
     public EurekaEndpointGroupBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (EurekaEndpointGroupBuilder) super.endpointRemapper(endpointRemapper);
@@ -398,5 +406,11 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     @Override
     public EurekaEndpointGroupBuilder followRedirects(RedirectConfig redirectConfig) {
         return (EurekaEndpointGroupBuilder) super.followRedirects(redirectConfig);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        return (EurekaEndpointGroupBuilder) super.contextCustomizer(contextCustomizer);
     }
 }

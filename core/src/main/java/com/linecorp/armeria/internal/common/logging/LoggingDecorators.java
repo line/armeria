@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.common.logging;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 
@@ -28,7 +27,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientServiceOption;
@@ -41,34 +42,21 @@ public final class LoggingDecorators {
     private static final String RESPONSE_FORMAT = "{} Response: {}";
     private static final String RESPONSE_FORMAT2 = "{} Response: {}, cause: {}";
 
-    private LoggingDecorators() {}
-
     /**
      * Logs request and response using the specified {@code requestLogger} and {@code responseLogger}.
      */
-    public static void logWhenComplete(
-            Logger logger, RequestContext ctx,
+    public static void log(
+            Logger logger, RequestContext ctx, RequestLog requestLog,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
-        ctx.log().whenRequestComplete().thenAccept(log -> {
-            try {
-                requestLogger.accept(log);
-            } catch (Throwable t) {
-                logException(logger, ctx, "request", t);
-            }
-        });
-        ctx.log().whenComplete().thenAccept(log -> {
-            try {
-                responseLogger.accept(log);
-            } catch (Throwable t) {
-                logException(logger, ctx, "response", t);
-            }
-        });
-    }
-
-    private static void logException(Logger logger, RequestContext ctx,
-                                     String requestOrResponse, Throwable cause) {
-        try (SafeCloseable ignored = ctx.push()) {
-            logger.warn("{} Unexpected exception while logging {}: ", ctx, requestOrResponse, cause);
+        try {
+            requestLogger.accept(requestLog);
+        } catch (Throwable t) {
+            logException(logger, ctx, "request", t);
+        }
+        try {
+            responseLogger.accept(requestLog);
+        } catch (Throwable t) {
+            logException(logger, ctx, "response", t);
         }
     }
 
@@ -77,7 +65,7 @@ public final class LoggingDecorators {
      */
     public static void logRequest(
             Logger logger, RequestOnlyLog log,
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
+            RequestLogLevelMapper requestLogLevelMapper,
             BiFunction<? super RequestContext, ? super RequestHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, Object,
@@ -86,6 +74,7 @@ public final class LoggingDecorators {
                     ? extends @Nullable Object> requestTrailersSanitizer) {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
+        assert requestLogLevel != null;
         if (requestLogLevel.isEnabled(logger)) {
             final RequestContext ctx = log.context();
             if (log.requestCause() == null && isTransientService(ctx)) {
@@ -107,8 +96,8 @@ public final class LoggingDecorators {
      */
     public static void logResponse(
             Logger logger, RequestLog log,
-            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            RequestLogLevelMapper requestLogLevelMapper,
+            ResponseLogLevelMapper responseLogLevelMapper,
             BiFunction<? super RequestContext, ? super RequestHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, Object,
@@ -125,6 +114,7 @@ public final class LoggingDecorators {
                     ? extends @Nullable Object> responseCauseSanitizer) {
 
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
+        assert responseLogLevel != null;
         final Throwable responseCause = log.responseCause();
 
         if (responseLogLevel.isEnabled(logger)) {
@@ -145,6 +135,7 @@ public final class LoggingDecorators {
                 }
 
                 final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
+                assert requestLogLevel != null;
                 if (!requestLogLevel.isEnabled(logger)) {
                     // Request wasn't logged, but this is an unsuccessful response,
                     // so we log the request too to help debugging.
@@ -168,6 +159,15 @@ public final class LoggingDecorators {
                                          responseStr, sanitizedResponseCause);
                 }
             }
+        }
+    }
+
+    private LoggingDecorators() {}
+
+    private static void logException(Logger logger, RequestContext ctx,
+                                     String requestOrResponse, Throwable cause) {
+        try (SafeCloseable ignored = ctx.push()) {
+            logger.warn("{} Unexpected exception while logging {}: ", ctx, requestOrResponse, cause);
         }
     }
 

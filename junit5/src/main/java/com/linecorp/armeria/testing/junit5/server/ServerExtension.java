@@ -324,7 +324,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Returna a newly created {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}
+     * Returns a newly created {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}
      * and then the specified customizer.
      */
     public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {

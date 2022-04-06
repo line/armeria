@@ -23,7 +23,10 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterThanOrEqual;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
@@ -32,6 +35,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -66,6 +70,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -213,6 +218,8 @@ public final class ServerBuilder {
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
+        virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -492,7 +499,7 @@ public final class ServerBuilder {
      * Sets the maximum allowed number of open connections.
      */
     public ServerBuilder maxNumConnections(int maxNumConnections) {
-        this.maxNumConnections = ServerConfig.validateMaxNumConnections(maxNumConnections);
+        this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         return this;
     }
 
@@ -517,7 +524,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
-        idleTimeoutMillis = ServerConfig.validateIdleTimeoutMillis(idleTimeout.toMillis());
+        idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
         return this;
     }
 
@@ -775,8 +782,20 @@ public final class ServerBuilder {
         requireNonNull(timeout, "timeout");
         gracefulShutdownQuietPeriod = validateNonNegative(quietPeriod, "quietPeriod");
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
-        ServerConfig.validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
-                                                gracefulShutdownQuietPeriod, "timeout");
+        validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
+                                   gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     *
+     * @param path the path of the directory stores the file.
+     */
+    @UnstableApi
+    public ServerBuilder multipartUploadsLocation(Path path) {
+        requireNonNull(path, "path");
+        virtualHostTemplate.multipartUploadsLocation(path);
         return this;
     }
 
@@ -807,6 +826,16 @@ public final class ServerBuilder {
                                                                   .numThreads(numThreads)
                                                                   .build();
         return blockingTaskExecutor(executor, true);
+    }
+
+    /**
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder successFunction(SuccessFunction successFunction) {
+        virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
+        return this;
     }
 
     /**
@@ -1814,11 +1843,11 @@ public final class ServerBuilder {
         return server;
     }
 
-    ServerConfig buildServerConfig(ServerConfig existingConfig) {
+    DefaultServerConfig buildServerConfig(ServerConfig existingConfig) {
         return buildServerConfig(existingConfig.ports());
     }
 
-    private ServerConfig buildServerConfig(List<ServerPort> serverPorts) {
+    private DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1926,7 +1955,7 @@ public final class ServerBuilder {
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         final boolean shutdownOnStop = defaultVirtualHost.shutdownBlockingTaskExecutorOnStop();
 
-        return new ServerConfig(
+        return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
@@ -2016,7 +2045,7 @@ public final class ServerBuilder {
 
     @Override
     public String toString() {
-        return ServerConfig.toString(
+        return DefaultServerConfig.toString(
                 getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,

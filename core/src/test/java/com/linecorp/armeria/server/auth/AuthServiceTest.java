@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.auth;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;

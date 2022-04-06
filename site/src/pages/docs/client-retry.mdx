@@ -69,18 +69,18 @@ new RetryRule() {
                 cause instanceof UnprocessedRequestException) {
                 // The response timed out or the request has not been handled
                 // by the server.
-                return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
+                return UnmodifiableFuture.completedFuture(RetryDecision.retry(backoff));
             }
         }
 
         ResponseHeaders responseHeaders = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
                                              .responseHeaders();
         if (responseHeaders.status() == HttpStatus.TOO_MANY_REQUESTS) {
-            return CompletableFuture.completedFuture(RetryDecision.stop());
+            return UnmodifiableFuture.completedFuture(RetryDecision.stop());
         }
 
         // Return 'next()' to lookup other rules.
-        return CompletableFuture.completedFuture(RetryDecision.next());
+        return UnmodifiableFuture.completedFuture(RetryDecision.next());
     }
 };
 ```
@@ -173,7 +173,7 @@ public CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx,
             cause instanceof UnprocessedRequestException) {
             // The response timed out or the request has not been handled
             // by the server.
-            return CompletableFuture.completedFuture(backoff);
+            return UnmodifiableFuture.completedFuture(backoff);
         }
 
         Throwable peeled = Exceptions.peel(cause);
