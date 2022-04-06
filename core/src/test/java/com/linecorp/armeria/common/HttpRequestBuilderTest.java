@@ -432,7 +432,7 @@ class HttpRequestBuilderTest {
                       .cookie(Cookie.ofSecure("cookie", "value"))
                       .content(MediaType.PLAIN_TEXT_UTF_8, "test");
         request = requestBuilder.build();
-        assertThat(request.path()).isEqualTo("/resource1/resource2/resource4/foo-2/3?q=bar&f=10");
+        assertThat(request.path()).isEqualTo("/resource1/resource2/resource4/foo-2/3?q=foo&q=bar&f=10");
         assertThat(request.headers().contains("x-header-1", "5678")).isTrue();
         assertThat(request.headers().contains("x-header-2", "value")).isTrue();
         assertThat(request.headers().contains(COOKIE, "cookie=value")).isTrue();
