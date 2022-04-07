@@ -393,7 +393,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     private static Boolean stickyParseBoolean(String val) {
         if (!val.equals(Boolean.TRUE.toString()) && !val.equals(Boolean.FALSE.toString())) {
-            throw new IllegalArgumentException(String.format("%s in not \"true\" or \"false\"", val));
+            throw new IllegalArgumentException(String.format("%s not in \"true\" or \"false\"", val));
         }
         return Boolean.valueOf(val);
     }
