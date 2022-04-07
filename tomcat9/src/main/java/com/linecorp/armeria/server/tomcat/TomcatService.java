@@ -465,6 +465,10 @@ public abstract class TomcatService implements HttpService {
 
         coyoteReq.scheme().setString(req.scheme());
 
+        // Set the start time which is used by Tomcat access logging
+        coyoteReq.setStartTime(ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
+                                  .requestStartTimeMillis());
+
         // Set the remote host/address.
         final InetSocketAddress remoteAddr = ctx.remoteAddress();
         coyoteReq.remoteAddr().setString(remoteAddr.getAddress().getHostAddress());
@@ -517,9 +521,6 @@ public abstract class TomcatService implements HttpService {
         final HttpData content = req.content();
         coyoteReq.setInputBuffer((InputBuffer) INPUT_BUFFER_CONSTRUCTOR.invoke(content));
 
-        // Set the start time which is used by Tomcat access logging
-        coyoteReq.setStartTime(ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
-                                  .requestStartTimeMillis());
         return coyoteReq;
     }
 
