@@ -44,7 +44,7 @@ class TomcatServiceAccessLogTest {
 
     private static final FakeAccessLogValve accessLogValve = FakeAccessLogValve.create();
 
-    public static class FakeAccessLogValve extends AbstractAccessLogValve {
+    public static final class FakeAccessLogValve extends AbstractAccessLogValve {
         static FakeAccessLogValve create() {
             final FakeAccessLogValve fakeAccessLogValve = new FakeAccessLogValve();
             fakeAccessLogValve.setPattern("%D");
