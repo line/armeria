@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;
@@ -152,15 +153,20 @@ public interface UnframedGrpcErrorHandler {
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
                                                                            grpcCode.value())
                                                                    .build();
-            final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());
-            final String grpcMessage = status.getDescription();
-            if (grpcMessage != null) {
-                message.append(", ").append(grpcMessage);
+            final HttpData content;
+            try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+                final StringBuilder msg = ttl.stringBuilder();
+                msg.append("grpc-code: ").append(grpcCode.name());
+                final String grpcMessage = status.getDescription();
+                if (grpcMessage != null) {
+                    msg.append(", ").append(grpcMessage);
+                }
+                if (cause != null && ctx.config().verboseResponses()) {
+                    msg.append("\nstack-trace:\n").append(Exceptions.traceText(cause));
+                }
+                content = HttpData.ofUtf8(msg);
             }
-            if (cause != null && ctx.config().verboseResponses()) {
-                message.append("\nstack-trace:\n").append(Exceptions.traceText(cause));
-            }
-            return HttpResponse.of(responseHeaders, HttpData.ofUtf8(message.toString()));
+            return HttpResponse.of(responseHeaders, content);
         };
     }
 
