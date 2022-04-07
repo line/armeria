@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,6 +142,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     @Override
     protected void initChannel(Channel ch) throws Exception {
+        // Make sure that `Channel` caches its remote address by calling `Channel.remoteAddress()`
+        // at least once, so that `Channel.remoteAddress()` doesn't return `null` even if it's called
+        // after disconnection. This works thanks to the implementation detail of `AbstractChannel`
+        // which caches the remote address once its underlying transport returns a non-null address.
+        ch.remoteAddress();
+
+        // Disable the write buffer watermark notification because we manage backpressure by ourselves.
         ChannelUtil.disableWriterBufferWatermark(ch);
 
         final ChannelPipeline p = ch.pipeline();
@@ -442,6 +450,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         @Nullable
         private final ProxiedAddresses proxiedAddresses;
+        private boolean loggedHandshakeFailure;
 
         Http2OrHttpHandler(@Nullable ProxiedAddresses proxiedAddresses) {
             super(ApplicationProtocolNames.HTTP_1_1);
@@ -505,9 +514,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         @Override
         protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            if (!Exceptions.isExpected(cause)) {
-                logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
-            }
+            logIfUnexpected(ctx, cause);
             ctx.close();
 
             // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
@@ -515,21 +522,38 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                    if (cause instanceof DecoderException &&
-                        cause.getCause() instanceof SSLException) {
-                        // Swallow an SSLException raised after handshake failure.
-                        return;
-                    }
-
-                    Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+                    logIfUnexpected(ctx, cause);
                 }
             });
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+            logIfUnexpected(ctx, cause);
             ctx.close();
+        }
+
+        private void logIfUnexpected(ChannelHandlerContext ctx, Throwable cause) {
+            final Channel ch = ctx.channel();
+            if (cause instanceof DecoderException) {
+                if (loggedHandshakeFailure) {
+                    if (cause.getCause() instanceof SSLException) {
+                        // Swallow the SSLExceptions raised after handshake failure
+                        // because we logged the root cause (= the handshake failure).
+                        return;
+                    }
+                } else if (cause.getCause() instanceof SSLHandshakeException) {
+                    loggedHandshakeFailure = true;
+                    logger.warn("{} TLS handshake failed: {}", ch, cause.getCause().getMessage());
+                    if (logger.isDebugEnabled()) {
+                        // Print the stack trace only at DEBUG level because it can be noisy.
+                        logger.debug("{} Stack trace for the TLS handshake failure:", ch, cause);
+                    }
+                    return;
+                }
+            }
+
+            Exceptions.logIfUnexpected(logger, ch, cause);
         }
     }
 
