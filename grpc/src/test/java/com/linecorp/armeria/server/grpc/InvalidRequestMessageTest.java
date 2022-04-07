@@ -120,7 +120,6 @@ class InvalidRequestMessageTest {
             assertThat(log.requestCause())
                     .isInstanceOfAny(StatusException.class, StatusRuntimeException.class)
                     .hasMessageContaining("exceeds maximum: 100.");
-
         }
     }
 }

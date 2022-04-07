@@ -196,7 +196,6 @@ class UnaryGrpcClientTest {
             }
         }
 
-
         @Override
         public void streamingOutputCall(StreamingOutputCallRequest request,
                                         StreamObserver<StreamingOutputCallResponse> responseObserver) {
