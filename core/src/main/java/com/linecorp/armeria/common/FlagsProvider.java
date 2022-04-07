@@ -43,8 +43,8 @@ import com.linecorp.armeria.server.TransientServiceOption;
 public interface FlagsProvider {
 
     /**
-     * Return a priority of {@code FlagsProvider} to determine which implementation to use first.
-     * The {@code FlagsProvider} with the highest priority would be used at first. The value could be
+     * Return a priority of {@link FlagsProvider} to determine which implementation to use first.
+     * The {@link FlagsProvider} with the highest priority would be used at first. The value could be
      * specified between {@value Integer#MIN_VALUE} and {@value Integer#MAX_VALUE}.
      */
     int priority();
