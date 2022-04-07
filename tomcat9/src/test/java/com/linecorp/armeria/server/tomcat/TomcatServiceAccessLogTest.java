@@ -68,7 +68,6 @@ class TomcatServiceAccessLogTest {
         void reset() {
             logs.clear();
         }
-
     }
 
     @RegisterExtension
