@@ -344,7 +344,7 @@ final class MimeParser {
 
             state = State.END_PART;
             done = true;
-            final ByteBuf body = in.readBytes(bodyLength);
+            final ByteBuf body = safeReadBytes(in, bodyLength);
 
             // Discard a closing boundary
             in.skipBytes(boundaryLength + 2);
