@@ -18,7 +18,9 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.OutputStream;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.reactivestreams.Subscriber;
@@ -133,4 +135,34 @@ public interface StreamWriter<T> {
      * signal that the {@link Subscriber} did not consume the stream completely.
      */
     void close(Throwable cause);
+
+    /**
+     * Adapts this {@link StreamWriter} to {@link OutputStream}.
+     *
+     * <p>For example:<pre>{@code
+     * DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
+     * int maxBufferSize = 128;
+     * OutputStream outputStream = writer.toOutputStream(x -> {
+     *     byte[] data = new byte[x.byteBuf().readableBytes()];
+     *     x.byteBuf().readBytes(data);
+     *     return new String(data);
+     * }, maxBufferSize);
+     *
+     * List<String> strings = List.of("foo", "bar", "baz");
+     * for (String string : strings) {
+     *     for (byte b : string.getBytes()) {
+     *         outputStream.write(b);
+     *     }
+     *     outputStream.flush();
+     * }
+     * outputStream.close();
+     *
+     * assert writer.collect().join().equals(List.of("foo", "bar", "baz"));
+     * }</pre>
+     */
+    default OutputStream toOutputStream(Function<? super HttpData, ? extends T> httpDataConverter,
+                                        int maxBufferSize) {
+        requireNonNull(httpDataConverter, "httpDataConverter");
+        return new StreamWriterOutputStream<>(this, httpDataConverter, maxBufferSize);
+    }
 }
