@@ -16,6 +16,7 @@
 package com.linecorp.armeria.it.grpc;
 
 import static com.linecorp.armeria.it.grpc.HttpJsonTranscodingTest.HttpJsonTranscodingTestService.testBytesValue;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.withPrecision;
 
@@ -647,8 +648,7 @@ class HttpJsonTranscodingTest {
                 .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.isArray()).isTrue();
-        assertThat(root.get(0).asText()).isEqualTo("value1");
-        assertThat(root.get(1).asText()).isEqualTo("value2");
+        assertThatJson(root).isEqualTo("[\"value1\",\"value2\"]");
     }
 
     @Test
@@ -679,9 +679,9 @@ class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/nomatch", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
-        assertThat(root.has("value")).isTrue();
-        assertThat(root.has("structBody")).isTrue();
-        assertThat(root.has("arrayField")).isTrue();
+        assertThatJson(root).isEqualTo("{\"value\":\"value\"," +
+                                       "\"structBody\":{\"structBody\":\"struct_value\"}," +
+                                       "\"arrayField\":[\"value1\",\"value2\"]}");
     }
 
     @Test
