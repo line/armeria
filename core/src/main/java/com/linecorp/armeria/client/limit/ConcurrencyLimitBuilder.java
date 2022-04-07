@@ -27,6 +27,7 @@ import java.util.function.Predicate;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * Builds a {@link ConcurrencyLimit}.
@@ -35,7 +36,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 public final class ConcurrencyLimitBuilder {
 
     static final CompletableFuture<SafeCloseable> noLimitFuture =
-            CompletableFuture.completedFuture(() -> { /* no-op */ });
+            UnmodifiableFuture.completedFuture(() -> { /* no-op */ });
 
     private static final ConcurrencyLimit noLimit = ctx -> noLimitFuture;
 

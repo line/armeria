@@ -3,6 +3,9 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
+env:
+  LC_ALL: "en_US.UTF-8"
+
 jobs:
   update-psl:
     if: github.repository == 'line/armeria'

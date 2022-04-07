@@ -29,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpObject;
 import com.linecorp.armeria.common.ContentDisposition;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 public class MultipartTest {
     @TempDir
@@ -88,7 +89,7 @@ public class MultipartTest {
                             "hello4")
         ).collect(bodyPart -> {
             if (bodyPart.name() == null) {
-                return CompletableFuture.completedFuture(null);
+                return UnmodifiableFuture.completedFuture(null);
             }
             if (bodyPart.filename() != null) {
                 final Path path = tempDir.resolve(bodyPart.name());
@@ -133,5 +134,28 @@ public class MultipartTest {
                     .hasCauseInstanceOf(NullPointerException.class)
                     .hasMessageContaining("foo");
         });
+    }
+
+    @Test
+    void collectContentIsEmpty() {
+        final CompletableFuture<List<Object>> collect =
+                Multipart.of(
+                        BodyPart.of(ContentDisposition.of("form-data", "name1"),
+                                    ""),
+                        BodyPart.of(ContentDisposition.of("form-data", "name2", "hello.txt"),
+                                    "")
+                ).collect(bodyPart -> {
+                    if (bodyPart.filename() != null) {
+                        final Path path = tempDir.resolve(bodyPart.name());
+                        return bodyPart.writeTo(path).thenApply(ignore -> path);
+                    }
+                    return bodyPart.aggregate().thenApply(AggregatedHttpObject::contentUtf8);
+                });
+
+        final List<Object> bodyParts = collect.join();
+        assertThat(bodyParts.get(0)).isEqualTo("");
+        final Path path = (Path) bodyParts.get(1);
+        assertThat(path).isEqualTo(tempDir.resolve("name2"));
+        assertThat(path).content().isEqualTo("");
     }
 }

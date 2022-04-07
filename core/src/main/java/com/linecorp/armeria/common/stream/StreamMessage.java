@@ -586,7 +586,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <p>Example:<pre>{@code
      * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
      * StreamMessage<Integer> transformed =
-     *     streamMessage.mapAsync(x -> CompletableFuture.completedFuture(x + 1));
+     *     streamMessage.mapAsync(x -> UnmodifiableFuture.completedFuture(x + 1));
      * }</pre>
      */
     default <U> StreamMessage<U> mapAsync(
@@ -608,7 +608,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <p>Example:<pre>{@code
      * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
      * StreamMessage<Integer> transformed =
-     *     streamMessage.mapParallel(x -> CompletableFuture.completedFuture(x + 1));
+     *     streamMessage.mapParallel(x -> UnmodifiableFuture.completedFuture(x + 1));
      * }</pre>
      */
     @UnstableApi
@@ -632,7 +632,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <p>Example:<pre>{@code
      * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
      * StreamMessage<Integer> transformed =
-     *     streamMessage.mapParallel(x -> CompletableFuture.completedFuture(x + 1), 20);
+     *     streamMessage.mapParallel(x -> UnmodifiableFuture.completedFuture(x + 1), 20);
      * }</pre>
      */
     @UnstableApi

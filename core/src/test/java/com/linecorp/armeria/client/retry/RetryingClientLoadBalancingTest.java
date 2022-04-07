@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -37,6 +36,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -106,9 +106,9 @@ class RetryingClientLoadBalancingTest {
 
             // Retry only once on failure.
             if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
-                return CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
+                return UnmodifiableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
             } else {
-                return CompletableFuture.completedFuture(RetryDecision.noRetry());
+                return UnmodifiableFuture.completedFuture(RetryDecision.noRetry());
             }
         };
         final WebClient c = WebClient.builder(SessionProtocol.H2C, group)

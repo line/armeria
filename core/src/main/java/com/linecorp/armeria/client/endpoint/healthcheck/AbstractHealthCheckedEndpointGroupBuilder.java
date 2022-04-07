@@ -195,7 +195,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
     }
 
     @Override
-    protected AbstractHealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+    public AbstractHealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         return (AbstractHealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 

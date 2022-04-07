@@ -19,15 +19,20 @@ package com.linecorp.armeria.internal.common.stream;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
+import io.netty.util.ReferenceCountUtil;
+
 public final class StreamMessageUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(StreamMessageUtil.class);
 
     public static void closeOrAbort(Object obj, @Nullable Throwable cause) {
         if (obj instanceof StreamMessage) {
@@ -55,9 +60,16 @@ public final class StreamMessageUtil {
             return;
         }
 
-        if (obj instanceof SafeCloseable) {
-            ((SafeCloseable) obj).close();
+        if (obj instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) obj).close();
+            } catch (Exception e) {
+                logger.warn("Unexpected exception while closing {}", obj);
+            }
+            return;
         }
+
+        ReferenceCountUtil.release(obj);
     }
 
     public static void closeOrAbort(Object obj) {

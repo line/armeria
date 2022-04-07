@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.client;
+package com.linecorp.armeria.internal.client.dns;
 
 import static java.util.Objects.requireNonNull;
 
@@ -29,16 +29,37 @@ import io.netty.handler.codec.dns.DnsRecordType;
  */
 public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
 
+    private final String originalName;
     private final String name;
     private final DnsRecordType type;
+    private final int hashCode;
 
     public static DnsQuestionWithoutTrailingDot of(String name, DnsRecordType type) {
-        return new DnsQuestionWithoutTrailingDot(name, type);
+        return new DnsQuestionWithoutTrailingDot(name, name, type);
     }
 
-    private DnsQuestionWithoutTrailingDot(String name, DnsRecordType type) {
+    /**
+     * Creates a new instance.
+     * @param originalName the original name set when querying the initial DNS question
+     * @param name the name to resolve
+     * @param type the {@link DnsRecordType}
+     */
+    public static DnsQuestionWithoutTrailingDot of(String originalName, String name, DnsRecordType type) {
+        return new DnsQuestionWithoutTrailingDot(originalName, name, type);
+    }
+
+    private DnsQuestionWithoutTrailingDot(String originalName, String name, DnsRecordType type) {
+        this.originalName = requireNonNull(originalName, "originalName");
         this.name = IDN.toASCII(requireNonNull(name, "name"));
         this.type = requireNonNull(type, "type");
+        int hashCode = originalName.hashCode();
+        hashCode = hashCode * 31 + name.hashCode();
+        hashCode = hashCode * 31 + type.hashCode();
+        this.hashCode = hashCode;
+    }
+
+    public String originalName() {
+        return originalName;
     }
 
     @Override
@@ -70,12 +91,12 @@ public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
             return false;
         }
         final DnsQuestionWithoutTrailingDot that = (DnsQuestionWithoutTrailingDot) o;
-        return type.equals(that.type) && name.equals(that.name);
+        return type.equals(that.type) && originalName.equals(that.originalName) && name.equals(that.name);
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode() * 31 + type.hashCode();
+        return hashCode;
     }
 
     @Override

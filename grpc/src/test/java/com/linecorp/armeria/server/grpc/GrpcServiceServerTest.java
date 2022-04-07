@@ -997,7 +997,7 @@ class GrpcServiceServerTest {
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
-                new byte[]{ TRAILERS_FRAME_HEADER },
+                new byte[] { TRAILERS_FRAME_HEADER },
                 Ints.toByteArray(serializedStatusHeader.length),
                 serializedStatusHeader);
         assertThat(response.content().array()).containsExactly(
@@ -1033,7 +1033,7 @@ class GrpcServiceServerTest {
 
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
-                new byte[]{ TRAILERS_FRAME_HEADER },
+                new byte[] { TRAILERS_FRAME_HEADER },
                 Ints.toByteArray(serializedStatusHeader.length),
                 serializedStatusHeader);
         assertThat(response.content().array()).containsExactly(

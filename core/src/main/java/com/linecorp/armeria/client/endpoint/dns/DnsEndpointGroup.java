@@ -17,54 +17,49 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
+import com.linecorp.armeria.client.DnsCacheListener;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
-import com.linecorp.armeria.internal.client.DnsUtil;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.resolver.dns.DnsServerAddressStreamProvider;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS queries. This is useful for environments
  * where service discovery is handled using DNS, e.g. Kubernetes uses SkyDNS for service discovery.
  */
-abstract class DnsEndpointGroup extends DynamicEndpointGroup {
+abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCacheListener {
 
     private final EventLoop eventLoop;
-    private final int minTtl;
-    private final int maxTtl;
     private final Backoff backoff;
-    private final List<DnsQuestion> questions;
-    private final DefaultDnsNameResolver resolver;
+    private final List<DnsQuestionWithoutTrailingDot> questions;
+    private final DefaultDnsResolver resolver;
     private final Logger logger;
     private final String logPrefix;
+    private final int minTtl;
+    private final int maxTtl;
 
     private boolean started;
     @Nullable
@@ -72,39 +67,26 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     int attemptsSoFar;
 
-    DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                     EventLoop eventLoop, int minTtl, int maxTtl, long queryTimeoutMillis,
-                     DnsServerAddressStreamProvider serverAddressStreamProvider,
-                     Backoff backoff, Iterable<DnsQuestion> questions,
-                     Consumer<DnsNameResolverBuilder> resolverConfigurator) {
+    DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                     DefaultDnsResolver resolver, EventLoop eventLoop,
+                     List<DnsQuestionWithoutTrailingDot> questions,
+                     Backoff backoff, int minTtl, int maxTtl) {
 
-        super(selectionStrategy);
+        super(selectionStrategy, allowEmptyEndpoints);
 
+        this.resolver = resolver;
         this.eventLoop = eventLoop;
+        this.backoff = backoff;
+        this.questions = questions;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
-        this.backoff = backoff;
-        this.questions = ImmutableList.copyOf(questions);
         assert !this.questions.isEmpty();
         logger = LoggerFactory.getLogger(getClass());
         logPrefix = this.questions.stream()
                                   .map(DnsQuestion::name)
                                   .distinct()
                                   .collect(Collectors.joining(", "));
-
-        final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop)
-                .channelType(TransportType.datagramChannelType(eventLoop.parent()))
-                .ttl(minTtl, maxTtl)
-                .traceEnabled(true)
-                .nameServerProvider(serverAddressStreamProvider);
-        if (queryTimeoutMillis == 0) {
-            resolverBuilder.queryTimeoutMillis(Long.MAX_VALUE);
-        } else {
-            resolverBuilder.queryTimeoutMillis(queryTimeoutMillis);
-        }
-
-        resolverConfigurator.accept(resolverBuilder);
-        resolver = new DefaultDnsNameResolver(resolverBuilder.build(), eventLoop, queryTimeoutMillis);
+        resolver.dnsCache().addListener(this);
     }
 
     final Logger logger() {
@@ -124,41 +106,58 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         eventLoop.execute(() -> sendQueries(questions));
     }
 
-    private void sendQueries(List<DnsQuestion> questions) {
-        if (isClosing()) {
+    @Override
+    public final void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                @Nullable UnknownHostException cause) {
+        if (cause != null) {
+            // A failed query will be retried with the backoff.
             return;
         }
 
-        final Future<List<DnsRecord>> future = resolver.sendQueries(questions, logPrefix);
-        attemptsSoFar++;
-        future.addListener(this::onDnsRecords);
+        assert question instanceof DnsQuestionWithoutTrailingDot;
+        final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
+
+        final boolean matched = questions.stream()
+                                         .anyMatch(q -> q.originalName().equals(cast.originalName()) &&
+                                                        q.type().equals(cast.type()));
+        if (matched) {
+            // The TTL of DnsRecords associated the 'questions' has expired. Refresh the old Endpoints.
+            eventLoop.execute(() -> sendQueries(questions));
+        }
     }
 
-    private void onDnsRecords(Future<? super List<DnsRecord>> future) {
+    private void sendQueries(List<DnsQuestionWithoutTrailingDot> questions) {
         if (isClosing()) {
-            if (future.isSuccess()) {
-                @SuppressWarnings("unchecked")
-                final List<DnsRecord> result = (List<DnsRecord>) future.getNow();
-                result.forEach(ReferenceCountUtil::safeRelease);
-            }
             return;
         }
+        final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(false);
+        }
 
-        if (!future.isSuccess()) {
+        final CompletableFuture<List<DnsRecord>> future = resolver.resolve(questions, logPrefix);
+        attemptsSoFar++;
+        future.handle(this::onDnsRecords);
+    }
+
+    private Void onDnsRecords(@Nullable List<DnsRecord> records, @Nullable Throwable cause) {
+        if (isClosing()) {
+            return null;
+        }
+
+        if (cause != null) {
             // Failed. Try again with the delay given by Backoff.
             final long delayMillis = backoff.nextDelayMillis(attemptsSoFar);
             logger.warn("{} DNS query failed; retrying in {} ms (attempts so far: {}):",
-                        logPrefix, delayMillis, attemptsSoFar, future.cause());
+                        logPrefix, delayMillis, attemptsSoFar, cause);
             scheduledFuture = eventLoop.schedule(() -> sendQueries(questions),
                                                  delayMillis, TimeUnit.MILLISECONDS);
-            return;
+            return null;
         }
 
         // Reset the counter so that Backoff is reset.
         attemptsSoFar = 0;
 
-        @SuppressWarnings("unchecked")
-        final List<DnsRecord> records = (List<DnsRecord>) future.getNow();
         final long serverTtl = records.stream().mapToLong(DnsRecord::timeToLive).min().orElse(minTtl);
         final int effectiveTtl = (int) Math.max(Math.min(serverTtl, maxTtl), minTtl);
 
@@ -167,9 +166,9 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
         } catch (Throwable t) {
             logger.warn("{} Failed to process the DNS query result: {}", logPrefix, records, t);
         } finally {
-            records.forEach(ReferenceCountUtil::safeRelease);
             scheduledFuture = eventLoop.schedule(() -> sendQueries(questions), effectiveTtl, TimeUnit.SECONDS);
         }
+        return null;
     }
 
     /**
@@ -193,17 +192,17 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     /**
      * Logs a warning message about an invalid record.
      */
-    final void warnInvalidRecord(DnsRecordType type, ByteBuf content) {
-        DnsUtil.warnInvalidRecord(logger(), logPrefix(), type, content);
+    final void warnInvalidRecord(DnsRecordType type, byte[] content) {
+        DnsUtil.warnInvalidRecord(logger(), logPrefix, type, content);
     }
 
     final void logDnsResolutionResult(Collection<Endpoint> endpoints, int ttl) {
         if (endpoints.isEmpty()) {
-            logger().warn("{} Resolved to empty endpoints (TTL: {})", logPrefix(), ttl);
+            logger().warn("{} Resolved to empty endpoints (TTL: {})", logPrefix, ttl);
         } else {
             if (logger().isDebugEnabled()) {
                 logger().debug("{} Resolved: {} (TTL: {})",
-                               logPrefix(),
+                               logPrefix,
                                endpoints.stream().map(Object::toString).collect(Collectors.joining(", ")),
                                ttl);
             }

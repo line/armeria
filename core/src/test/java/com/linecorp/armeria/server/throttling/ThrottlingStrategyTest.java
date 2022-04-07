@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.throttling;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletionStage;

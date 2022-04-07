@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A skeletal builder implementation for a {@link DynamicEndpointGroup} and its subtypes.
  */
 @UnstableApi
-public abstract class AbstractDynamicEndpointGroupBuilder {
+public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndpointGroupSetters {
 
     private boolean allowEmptyEndpoints = true;
 
@@ -35,11 +35,8 @@ public abstract class AbstractDynamicEndpointGroupBuilder {
     // thus they use the `EndpointSelectionStrategy` of the delegate.
     // See: AbstractHealthCheckedEndpointGroupBuilder
 
-    /**
-     * Sets whether to allow an empty {@link Endpoint} list.
-     * If unspecified, an empty {@link Endpoint} list is allowed.
-     */
-    protected AbstractDynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+    @Override
+    public AbstractDynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         this.allowEmptyEndpoints = allowEmptyEndpoints;
         return this;
     }
@@ -47,7 +44,7 @@ public abstract class AbstractDynamicEndpointGroupBuilder {
     /**
      * Returns whether an empty {@link Endpoint} list should be allowed.
      */
-    protected final boolean shouldAllowEmptyEndpoints() {
+    protected boolean shouldAllowEmptyEndpoints() {
         return allowEmptyEndpoints;
     }
 }
