@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,6 +26,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
@@ -36,6 +40,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.Route;
@@ -55,6 +60,9 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};
+
+    private static final TypeReference<Map<String, List<String>>> MAP_PARAM =
+            new TypeReference<Map<String, List<String>>>() {};
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -91,6 +99,52 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             return unsupportedMediaType();
         }
 
+        // See https://github.com/jaydenseric/graphql-multipart-request-spec/blob/master/readme.md
+        if (contentType.is(MediaType.MULTIPART_FORM_DATA)) {
+            return HttpResponse.from(FileAggregatedMultipart.aggregateMultipart(ctx, request)
+                                                            .thenApply(multipart -> {
+                try {
+                    final String operationsParam = toStringFromMultipartParam("operations", multipart.params());
+                    final String mapParam = toStringFromMultipartParam("map", multipart.params());
+
+                    final Map<String, Object> operation = parseJsonString(operationsParam, JSON_MAP);
+                    final Map<String, List<String>> map = parseJsonString(mapParam, MAP_PARAM);
+                    final String query = toStringFromJson("query", operation.get("query"));
+                    if (Strings.isNullOrEmpty(query)) {
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                               "Missing query");
+                    }
+                    final String operationName =
+                            toStringFromJson("operationName", operation.get("operationName"));
+                    final Map<String, Object> variables = toMapFromJson(operation.get("variables"));
+                    final Map<String, Object> extensions = toMapFromJson(operation.get("extensions"));
+                    for (Map.Entry<String, List<String>> entry : map.entrySet()) {
+                        final String key = entry.getKey();
+                        final List<String> value = entry.getValue();
+                        final List<Path> paths = multipart.files().get(key);
+                        if (!paths.isEmpty()) {
+                            for (int i = 0; i < value.size(); i++) {
+                                MultipartVariableMapper.mapVariable(value.get(i), variables, paths.get(i));
+                            }
+                        }
+                    }
+
+                    return executeGraphql(ctx, GraphqlRequest.of(query, operationName,
+                                                                 variables, extensions));
+                } catch (JsonProcessingException ex) {
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                           "Failed to parse a JSON document");
+                } catch (IllegalArgumentException ex) {
+                    final HttpResponse response = HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                                                  MediaType.PLAIN_TEXT, ex.getMessage());
+                    final HttpResponseException cause = HttpResponseException.of(response, ex);
+                    return HttpResponse.ofFailure(cause);
+                } catch (Exception ex) {
+                    return HttpResponse.ofFailure(ex);
+                }
+            }));
+        }
+
         if (contentType.isJson()) {
             return HttpResponse.from(request.aggregate(ctx.eventLoop()).thenApply(req -> {
                 try (SafeCloseable ignored = ctx.push()) {
@@ -100,9 +154,8 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                                "Missing request body");
                     }
 
-                    final Map<String, Object> requestMap;
                     try {
-                        requestMap = parseJsonString(body);
+                        final Map<String, Object> requestMap = parseJsonString(body, JSON_MAP);
                         final String query = toStringFromJson("query", requestMap.get("query"));
                         if (Strings.isNullOrEmpty(query)) {
                             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
@@ -167,7 +220,19 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         if (Strings.isNullOrEmpty(value)) {
             return ImmutableMap.of();
         }
-        return parseJsonString(value);
+        return parseJsonString(value, JSON_MAP);
+    }
+
+    private static String toStringFromMultipartParam(String name, ListMultimap<String, String> params) {
+        final List<String> list = params.get(name);
+        if (list.isEmpty()) {
+            throw new IllegalArgumentException("Missing request BodyPart[name=" + name + ']');
+        }
+        final String param = list.get(0);
+        if (Strings.isNullOrEmpty(param)) {
+            throw new IllegalArgumentException("Missing request BodyPart[name=" + name + ']');
+        }
+        return param;
     }
 
     @Nullable
@@ -190,13 +255,13 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
         if (maybeMap == null) {
-            return ImmutableMap.of();
+            return new HashMap<>();
         }
 
         if (maybeMap instanceof Map) {
             final Map<?, ?> map = (Map<?, ?>) maybeMap;
             if (map.isEmpty()) {
-                return ImmutableMap.of();
+                return new HashMap<>();
             }
             return (Map<String, Object>) map;
         } else {
@@ -204,8 +269,9 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         }
     }
 
-    private static Map<String, Object> parseJsonString(String content) throws JsonProcessingException {
-        return mapper.readValue(content, JSON_MAP);
+    private static <T> T parseJsonString(String content, TypeReference<T> typeReference)
+            throws JsonProcessingException {
+        return (T) mapper.readValue(content, typeReference);
     }
 
     private static HttpResponse unsupportedMediaType() {

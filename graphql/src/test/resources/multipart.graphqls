@@ -1,0 +1,10 @@
+scalar Path
+
+type Query {
+    foo: String
+}
+
+type Mutation {
+    fileUpload(path: Path): String
+    fileUploads(path: [Path]): [String]
+}

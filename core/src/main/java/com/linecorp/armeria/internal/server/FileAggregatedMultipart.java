@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.annotation;
+package com.linecorp.armeria.internal.server;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-final class FileAggregatedMultipart {
+public final class FileAggregatedMultipart {
     private final ListMultimap<String, String> params;
     private final ListMultimap<String, Path> files;
 
@@ -44,16 +44,16 @@ final class FileAggregatedMultipart {
         this.files = files;
     }
 
-    ListMultimap<String, String> params() {
+    public ListMultimap<String, String> params() {
         return params;
     }
 
-    ListMultimap<String, Path> files() {
+    public ListMultimap<String, Path> files() {
         return files;
     }
 
-    static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
-                                                                         HttpRequest req) {
+    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
+                                                                                HttpRequest req) {
         final Path multipartUploadsLocation = ctx.config().multipartUploadsLocation();
         return Multipart.from(req).collect(bodyPart -> {
             if (bodyPart.filename() != null) {
