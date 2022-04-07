@@ -132,6 +132,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return DEFAULT_REQUEST_TIMEOUT_MILLIS;
     }
 
+    // Use slightly greater value than the default request timeout so that clients have a higher chance of
+    // getting proper 503 Service Unavailable response when server-side timeout occurs.
     static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS = 15 * 1000; // 15 seconds
 
     @Override
@@ -153,6 +155,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return DEFAULT_WRITE_TIMEOUT_MILLIS;
     }
 
+    // Use slightly greater value than the client-side default so that clients close the connection more often.
     static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
 
     @Override
