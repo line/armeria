@@ -18,12 +18,14 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -55,7 +57,9 @@ public class ServiceTest {
                                                     /* defaultServiceName */ null,
                                                     ServiceNaming.of("FooService"), 1, 1, true,
                                                     AccessLogWriter.disabled(), false,
-                                                    CommonPools.blockingTaskExecutor(), true);
+                                                    CommonPools.blockingTaskExecutor(), true,
+                                                    SuccessFunction.always(),
+                                                    Files.newTemporaryFolder().toPath());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

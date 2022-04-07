@@ -515,6 +515,7 @@ public final class CancellationScheduler {
     }
 
     private static class CancellationFuture extends UnmodifiableFuture<Throwable> {
+        @Override
         protected void doComplete(@Nullable Throwable cause) {
             super.doComplete(cause);
         }

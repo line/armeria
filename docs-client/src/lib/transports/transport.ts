@@ -98,8 +98,10 @@ export default abstract class Transport {
     const targetEndpoints = this.listDebugMimeTypeEndpoint(method);
     if (targetEndpoints.length === 1) {
       if (endpointPath) {
-        const errorMsg = this.validatePath(targetEndpoints[0], endpointPath)
-          .error;
+        const errorMsg = this.validatePath(
+          targetEndpoints[0],
+          endpointPath,
+        ).error;
         if (errorMsg) {
           throw new Error(errorMsg);
         }

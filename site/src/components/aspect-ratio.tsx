@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './aspect-ratio.module.less';
+import * as styles from './aspect-ratio.module.less';
 
 interface AspectRatioProps {
   width: number;

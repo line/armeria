@@ -23,11 +23,15 @@ import org.slf4j.Logger;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -56,7 +60,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
                                     responseContentSanitizer(),
                                     responseTrailersSanitizer(),
                                     responseCauseSanitizer(),
-                                    sampler());
+                                    successSampler(),
+                                    failureSampler());
     }
 
     /**
@@ -69,13 +74,33 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     // Override the return type of the chaining methods in the superclass.
 
     @Override
+    public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingRpcClientBuilder) super.sampler(sampler);
+    }
+
+    @Override
     public LoggingRpcClientBuilder samplingRate(float samplingRate) {
         return (LoggingRpcClientBuilder) super.samplingRate(samplingRate);
     }
 
     @Override
-    public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
-        return (LoggingRpcClientBuilder) super.sampler(sampler);
+    public LoggingRpcClientBuilder successSampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingRpcClientBuilder) super.successSampler(sampler);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder successSamplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.successSamplingRate(samplingRate);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder failureSampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingRpcClientBuilder) super.failureSampler(sampler);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder failureSamplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.failureSamplingRate(samplingRate);
     }
 
     // Override the return type of the chaining methods in the super-superclass.
@@ -95,16 +120,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.requestLogLevel(requestLogLevel);
     }
 
-    @Override
-    public LoggingRpcClientBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
-        return (LoggingRpcClientBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
-    }
-
-    @Override
-    public LoggingRpcClientBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        return (LoggingRpcClientBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
-    }
-
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder requestLogLevelMapper(
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
@@ -112,8 +128,39 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
+    public LoggingRpcClientBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
+        return (LoggingRpcClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
+        return (LoggingRpcClientBuilder) super.responseLogLevel(status, logLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
+        return (LoggingRpcClientBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+        return (LoggingRpcClientBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
+        return (LoggingRpcClientBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
+    }
+
+    @Deprecated
+    @Override
     public LoggingRpcClientBuilder responseLogLevelMapper(
             Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 

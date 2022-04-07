@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
@@ -117,12 +118,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Creates a new instance.
      */
     HealthCheckedEndpointGroup(
-            EndpointGroup delegate, SessionProtocol protocol, int port,
+            EndpointGroup delegate, boolean allowEmptyEndpoints, SessionProtocol protocol, int port,
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy) {
 
-        super(requireNonNull(delegate, "delegate").selectionStrategy());
+        super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
         this.delegate = delegate;
         this.protocol = requireNonNull(protocol, "protocol");
@@ -277,9 +278,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         final List<Endpoint> endpoints = endpoints();
         final List<Endpoint> delegateEndpoints = delegate.endpoints();
         return MoreObjects.toStringHelper(this)
-                          .add("endpoints", truncatedEndpoints(endpoints))
+                          .add("endpoints", truncate(endpoints, 10))
                           .add("numEndpoints", endpoints.size())
-                          .add("candidates", truncatedEndpoints(delegateEndpoints))
+                          .add("candidates", truncate(delegateEndpoints, 10))
                           .add("numCandidates", delegateEndpoints.size())
                           .add("selectionStrategy", selectionStrategy().getClass())
                           .add("initialized", whenReady().isDone())

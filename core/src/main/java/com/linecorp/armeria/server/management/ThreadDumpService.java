@@ -21,11 +21,14 @@ import java.lang.management.ThreadInfo;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 enum ThreadDumpService implements HttpService {
@@ -48,5 +51,10 @@ enum ThreadDumpService implements HttpService {
                                             .collect(Collectors.joining());
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, threadDump);
         }
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        return ExchangeType.UNARY;
     }
 }

@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
@@ -206,5 +208,118 @@ class LoggingClientTest {
                             any(AnticipatedException.class));
         verifyNoMoreInteractions(logger);
         clearInvocations(logger);
+    }
+
+    @Test
+    void internalServerError() throws Exception {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isDebugEnabled()).thenReturn(true);
+
+        // use custom logger
+        final LoggingClient customLoggerClient =
+                LoggingClient.builder()
+                             .logger(logger)
+                             .build(delegate);
+
+        customLoggerClient.execute(ctx, req);
+
+        verify(logger, times(2)).isDebugEnabled();
+
+        // verify request log
+        verify(logger).debug(eq("{} Request: {}"), eq(ctx),
+                             argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+
+        // verify response log
+        verify(logger).debug(eq("{} Response: {}"), eq(ctx),
+                             argThat((String actLog) -> actLog.endsWith("headers=[:status=500]}")));
+    }
+
+    @Test
+    void defaultsError() throws Exception {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final IllegalStateException cause = new IllegalStateException("Failed");
+        ctx.logBuilder().endResponse(cause);
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isWarnEnabled()).thenReturn(true);
+        when(logger.isDebugEnabled()).thenReturn(true);
+
+        // use custom logger
+        final LoggingClient customLoggerClient =
+                LoggingClient.builder()
+                             .logger(logger)
+                             .build(delegate);
+
+        customLoggerClient.execute(ctx, req);
+
+        verify(logger, times(2)).isDebugEnabled();
+        verify(logger, times(1)).isWarnEnabled();
+
+        // verify request log
+        verify(logger).debug(eq("{} Request: {}"), eq(ctx),
+                             argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+
+        // verify response log
+        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
+                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")),
+                            same(cause));
+    }
+
+    @Test
+    void shouldLogFailedResponseWhenFailureSamplingRateIsAlways() throws Exception {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final IllegalStateException cause = new IllegalStateException("Failed");
+        ctx.logBuilder().endResponse(cause);
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isDebugEnabled()).thenReturn(false);
+        when(logger.isWarnEnabled()).thenReturn(true);
+
+        // use custom logger
+        final LoggingClient customLoggerClient =
+                LoggingClient.builder()
+                             .logger(logger)
+                             .successSamplingRate(0.0f)
+                             .build(delegate);
+
+        customLoggerClient.execute(ctx, req);
+
+        verify(logger, times(1)).isWarnEnabled();
+
+        // verify request log
+        verify(logger).warn(eq("{} Request: {}"), eq(ctx),
+                            argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+
+        // verify response log
+        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
+                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")),
+                            same(cause));
+    }
+
+    @Test
+    void shouldNotLogFailedResponseWhenSamplingRateIsZero() throws Exception {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final IllegalStateException cause = new IllegalStateException("Failed");
+        ctx.logBuilder().endResponse(cause);
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+
+        // use custom logger
+        final LoggingClient customLoggerClient =
+                LoggingClient.builder()
+                             .logger(logger)
+                             .samplingRate(0.0f)
+                             .build(delegate);
+
+        customLoggerClient.execute(ctx, req);
+
+        verifyNoInteractions(logger);
     }
 }
