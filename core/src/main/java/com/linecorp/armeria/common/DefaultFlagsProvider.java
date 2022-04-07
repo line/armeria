@@ -91,7 +91,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return false;
     }
 
-    static final Integer MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
+    static final int MAX_NUM_CONNECTIONS = 1;
 
     @Override
     public Integer maxNumConnections() {
@@ -104,7 +104,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return defaultNumCpuCores * 2;
     }
 
-    static final Integer NUM_COMMON_BLOCKING_TASK_THREADS = 200; // from Tomcat default maxThreads
+    static final int NUM_COMMON_BLOCKING_TASK_THREADS = 200; // from Tomcat default maxThreads
 
     @Override
     public Integer numCommonBlockingTaskThreads() {
