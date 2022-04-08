@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
@@ -128,8 +129,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                     // share the cache key.
                     return newQuestion(orignalName + '.');
                 } else {
-                    final String searchDomain = searchDomains.get(0);
-                    return newQuestion(orignalName + '.' + searchDomain + '.');
+                    return newQuestion(orignalName + searchDomain(0) + '.');
                 }
             }
 
@@ -139,7 +139,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
             }
 
             if (nextSearchDomainPos < searchDomains.size()) {
-                return newQuestion(orignalName + '.' + searchDomains.get(nextSearchDomainPos) + '.');
+                return newQuestion(orignalName + searchDomain(nextSearchDomainPos) + '.');
             }
             if (nextSearchDomainPos == searchDomains.size() && !shouldStartWithHostname) {
                 // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
@@ -151,6 +151,18 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
 
         private DnsQuestion newQuestion(String hostname) {
             return DnsQuestionWithoutTrailingDot.of(orignalName, hostname, original.type());
+        }
+
+        private String searchDomain(int index) {
+            final String searchDomain = searchDomains.get(index);
+            if (Strings.isNullOrEmpty(searchDomain)) {
+                return "";
+            }
+
+            if (searchDomain.charAt(0) == '.') {
+                return searchDomain;
+            }
+            return '.' + searchDomain;
         }
     }
 }
