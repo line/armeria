@@ -59,9 +59,9 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                                 }
                                 final String normalized;
                                 if (searchDomain.charAt(0) != '.') {
-                                    normalized = '.' + searchDomain;
+                                    normalized = '.' + searchDomain + '.';
                                 } else {
-                                    normalized = searchDomain;
+                                    normalized = searchDomain + '.';
                                 }
                                 try {
                                     // Try to create a sample DnsQuestion to validate the search domain.
@@ -163,8 +163,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                     // share the cache key.
                     return newQuestion(orignalName + '.');
                 } else {
-                    final String searchDomain = searchDomains.get(0);
-                    return newQuestion(orignalName + searchDomain + '.');
+                    return newQuestion(orignalName + searchDomains.get(0));
                 }
             }
 
@@ -174,7 +173,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
             }
 
             if (nextSearchDomainPos < searchDomains.size()) {
-                return newQuestion(orignalName + searchDomains.get(nextSearchDomainPos) + '.');
+                return newQuestion(orignalName + searchDomains.get(nextSearchDomainPos));
             }
             if (nextSearchDomainPos == searchDomains.size() && !shouldStartWithHostname) {
                 // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver

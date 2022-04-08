@@ -62,8 +62,7 @@ class SearchDomainDnsResolverTest {
             public void close() {}
         };
 
-        final ImmutableList<String> searchDomains = ImmutableList.of("armeria.io", "..invalid.com",
-                                                                     ".armeria.dev");
+        final List<String> searchDomains = ImmutableList.of(".", "armeria.io", "..invalid.com", ".armeria.dev");
         final DnsQuestionContext context = new DnsQuestionContext(eventLoop.get(), 10000);
         final DnsQuestionWithoutTrailingDot question =
                 DnsQuestionWithoutTrailingDot.of("example.com", DnsRecordType.A);
