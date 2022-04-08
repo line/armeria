@@ -73,7 +73,6 @@ class SearchDomainDnsResolverTest {
         assertThat(result.join()).contains(record);
         assertThat(questions).hasSize(3);
         // Should not send a search domain query with '..invalid.com'
-        System.out.println(questions);
         assertThat(questions).containsExactly(
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.armeria.io.", DnsRecordType.A),
                 DnsQuestionWithoutTrailingDot.of("example.com", "example.com.armeria.dev.", DnsRecordType.A),
