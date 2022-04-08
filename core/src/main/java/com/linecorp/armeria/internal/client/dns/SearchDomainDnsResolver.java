@@ -54,21 +54,24 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
     private static List<String> validateSearchDomain(List<String> searchDomains) {
         return searchDomains.stream()
                             .map(searchDomain -> {
-                                if (Strings.isNullOrEmpty(searchDomain)) {
+                                // '.' search domain could be removed because the hostname itself is queried
+                                // anyway.
+                                if (Strings.isNullOrEmpty(searchDomain) || ".".equals(searchDomain)) {
                                     return null;
                                 }
-                                final String normalized;
+                                String normalized = searchDomain;
                                 if (searchDomain.charAt(0) != '.') {
-                                    normalized = '.' + searchDomain + '.';
-                                } else {
-                                    normalized = searchDomain + '.';
+                                    normalized = '.' + searchDomain;
+                                }
+                                if (searchDomain.charAt(searchDomain.length() - 1) != '.') {
+                                    normalized += '.';
                                 }
                                 try {
                                     // Try to create a sample DnsQuestion to validate the search domain.
                                     DnsQuestionWithoutTrailingDot.of("localhost" + normalized, DnsRecordType.A);
                                     return normalized;
                                 } catch (Exception ex) {
-                                    logger.warn("Ignore a malformed search domain: '{}'", searchDomain, ex);
+                                    logger.warn("Ignoring a malformed search domain: '{}'", searchDomain, ex);
                                     return null;
                                 }
                             })
