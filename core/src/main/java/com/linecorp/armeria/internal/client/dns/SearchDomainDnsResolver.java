@@ -16,9 +16,15 @@
 
 package com.linecorp.armeria.internal.client.dns;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -29,8 +35,11 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 
 final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> implements DnsResolver {
+
+    private static final Logger logger = LoggerFactory.getLogger(SearchDomainDnsResolver.class);
 
     private final List<String> searchDomains;
     private final int ndots;
@@ -38,8 +47,33 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
 
     SearchDomainDnsResolver(DnsResolver delegate, List<String> searchDomains, int ndots) {
         super(delegate);
-        this.searchDomains = searchDomains;
+        this.searchDomains = validateSearchDomain(searchDomains);
         this.ndots = ndots;
+    }
+
+    private static List<String> validateSearchDomain(List<String> searchDomains) {
+        return searchDomains.stream()
+                            .map(searchDomain -> {
+                                if (Strings.isNullOrEmpty(searchDomain)) {
+                                    return null;
+                                }
+                                final String normalized;
+                                if (searchDomain.charAt(0) != '.') {
+                                    normalized = '.' + searchDomain;
+                                } else {
+                                    normalized = searchDomain;
+                                }
+                                try {
+                                    // Try to create a sample DnsQuestion to validate the search domain.
+                                    DnsQuestionWithoutTrailingDot.of("localhost" + normalized, DnsRecordType.A);
+                                    return normalized;
+                                } catch (Exception ex) {
+                                    logger.warn("Ignore a malformed search domain: '{}'", searchDomain, ex);
+                                    return null;
+                                }
+                            })
+                            .filter(Objects::nonNull)
+                            .collect(toImmutableList());
     }
 
     @Override
@@ -129,7 +163,8 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
                     // share the cache key.
                     return newQuestion(orignalName + '.');
                 } else {
-                    return newQuestion(orignalName + searchDomain(0) + '.');
+                    final String searchDomain = searchDomains.get(0);
+                    return newQuestion(orignalName + searchDomain + '.');
                 }
             }
 
@@ -139,7 +174,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
             }
 
             if (nextSearchDomainPos < searchDomains.size()) {
-                return newQuestion(orignalName + searchDomain(nextSearchDomainPos) + '.');
+                return newQuestion(orignalName + searchDomains.get(nextSearchDomainPos) + '.');
             }
             if (nextSearchDomainPos == searchDomains.size() && !shouldStartWithHostname) {
                 // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
@@ -150,19 +185,9 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
         }
 
         private DnsQuestion newQuestion(String hostname) {
+            // As the search domain is validated already,
+            // DnsQuestionWithoutTrailingDot should not raise an exception.
             return DnsQuestionWithoutTrailingDot.of(orignalName, hostname, original.type());
-        }
-
-        private String searchDomain(int index) {
-            final String searchDomain = searchDomains.get(index);
-            if (Strings.isNullOrEmpty(searchDomain)) {
-                return "";
-            }
-
-            if (searchDomain.charAt(0) == '.') {
-                return searchDomain;
-            }
-            return '.' + searchDomain;
         }
     }
 }

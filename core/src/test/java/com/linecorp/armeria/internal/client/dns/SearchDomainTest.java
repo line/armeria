@@ -35,14 +35,14 @@ class SearchDomainTest {
     @ParameterizedTest
     void startsWithHostname(String hostname, int ndots) {
         final DnsQuestion original = DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.A);
-        final ImmutableList<String> searchDomains = ImmutableList.of("armeria.io", "armeria.com",
-                                                                     "armeria.org", "armeria.dev");
+        final ImmutableList<String> searchDomains = ImmutableList.of(".armeria.io", ".armeria.com",
+                                                                     ".armeria.org", ".armeria.dev");
         final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, ndots);
         final DnsQuestion firstQuestion = ctx.nextQuestion();
         assertThat(firstQuestion.name()).isEqualTo(hostname + '.');
         for (String searchDomain : searchDomains) {
             final DnsQuestion expected =
-                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + '.' + searchDomain + '.',
+                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + searchDomain + '.',
                                                      DnsRecordType.A);
             assertThat(ctx.nextQuestion()).isEqualTo(expected);
         }
@@ -53,36 +53,20 @@ class SearchDomainTest {
     @ParameterizedTest
     void endsWithHostname(String hostname, int ndots) {
         final DnsQuestion original = DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.A);
-        final ImmutableList<String> searchDomains = ImmutableList.of("armeria.io", "armeria.com",
-                                                                     "armeria.org", "armeria.dev");
-        final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, ndots);
-        for (String searchDomain : searchDomains) {
-            final DnsQuestion expected =
-                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + '.' + searchDomain + '.',
-                                                     DnsRecordType.A);
-            assertThat(ctx.nextQuestion()).isEqualTo(expected);
-        }
-
-        final DnsQuestion lastQuestion = ctx.nextQuestion();
-        assertThat(lastQuestion.name()).isEqualTo(hostname + '.');
-        assertThat(ctx.nextQuestion()).isNull();
-    }
-
-    @Test
-    void startsWithDot() {
-        final String hostname = "foo.com";
-        final DnsQuestion original = DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.A);
+        // Since a dot is prepended to search domains by `SearchDomainDnsResolver`, should use a search
+        // domain starting with a dot for testing `SearchDomainQuestionContext`.
         final ImmutableList<String> searchDomains = ImmutableList.of(".armeria.io", ".armeria.com",
                                                                      ".armeria.org", ".armeria.dev");
-        final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, 1);
-        final DnsQuestion firstQuestion = ctx.nextQuestion();
-        assertThat(firstQuestion.name()).isEqualTo(hostname + '.');
+        final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, ndots);
         for (String searchDomain : searchDomains) {
             final DnsQuestion expected =
                     DnsQuestionWithoutTrailingDot.of(hostname, hostname + searchDomain + '.',
                                                      DnsRecordType.A);
             assertThat(ctx.nextQuestion()).isEqualTo(expected);
         }
+
+        final DnsQuestion lastQuestion = ctx.nextQuestion();
+        assertThat(lastQuestion.name()).isEqualTo(hostname + '.');
         assertThat(ctx.nextQuestion()).isNull();
     }
 
