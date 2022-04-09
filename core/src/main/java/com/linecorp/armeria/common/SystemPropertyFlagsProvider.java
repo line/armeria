@@ -388,10 +388,10 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     @Nullable
     private static Boolean getBoolean(String name) {
-        return getAndParse(name, SystemPropertyFlagsProvider::stickyParseBoolean);
+        return getAndParse(name, SystemPropertyFlagsProvider::strictlyParseBoolean);
     }
 
-    private static Boolean stickyParseBoolean(String val) {
+    private static Boolean strictlyParseBoolean(String val) {
         if (!val.equals(Boolean.TRUE.toString()) && !val.equals(Boolean.FALSE.toString())) {
             throw new IllegalArgumentException(String.format("%s not in \"true\" or \"false\"", val));
         }
