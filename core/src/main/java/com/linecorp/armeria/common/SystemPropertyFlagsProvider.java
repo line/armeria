@@ -15,16 +15,20 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
@@ -44,6 +48,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     static final SystemPropertyFlagsProvider INSTANCE = new SystemPropertyFlagsProvider();
 
+    private static final Logger logger = LoggerFactory.getLogger(SystemPropertyFlagsProvider.class);
     private static final String PREFIX = "com.linecorp.armeria.";
     private static final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
@@ -315,12 +320,31 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         final List<Predicate<InetAddress>> preferredIpV4Addresses =
                 CSV_SPLITTER.splitToList(val)
                             .stream()
-                            .map(InetAddressPredicates::ofCidr)
-                            .collect(toImmutableList());
-        if (preferredIpV4Addresses.isEmpty()) {
-            return null;
+                            .map(cidr -> {
+                                try {
+                                    return InetAddressPredicates.ofCidr(cidr);
+                                } catch (Exception e) {
+                                    logger.warn("Failed to parse a preferred IPv4: {}", cidr);
+                                }
+                                return null;
+                            })
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toList());
+        switch (preferredIpV4Addresses.size()) {
+            case 0:
+                return null;
+            case 1:
+                return preferredIpV4Addresses.get(0);
+            default:
+                return inetAddress -> {
+                    for (Predicate<InetAddress> preferredIpV4Addr : preferredIpV4Addresses) {
+                        if (preferredIpV4Addr.test(inetAddress)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
         }
-        return preferredIpV4Addresses.stream().reduce(p -> true, Predicate::and);
     }
 
     @Override

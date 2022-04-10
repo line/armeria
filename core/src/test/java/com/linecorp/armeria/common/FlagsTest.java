@@ -26,10 +26,12 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.ObjectAssert;
@@ -167,6 +169,36 @@ class FlagsTest {
     @SetSystemProperty(key = "com.linecorp.armeria.useDefaultSocketOptions", value = "falze")
     void invalidBooleanSystemPropertyFlag() throws Throwable {
         assertFlags("useDefaultSocketOptions").isEqualTo(true);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "211.111.111.111,10.0.0.0/8,192.168.1.0/24")
+    void preferredIpV4Addresses() throws Throwable {
+        final Lookup lookup = MethodHandles.publicLookup();
+        final MethodHandle method =
+                lookup.findStatic(flags, "preferredIpV4Addresses", MethodType.methodType(
+                        Flags.class.getMethod("preferredIpV4Addresses").getReturnType()));
+        final Predicate<InetAddress> preferredIpV4Addresses = (Predicate) method.invoke();
+        assertThat(preferredIpV4Addresses).accepts(InetAddress.getByName("192.168.1.1"),
+                                                   InetAddress.getByName("10.255.255.255"),
+                                                   InetAddress.getByName("211.111.111.111"));
+        assertThat(preferredIpV4Addresses).rejects(InetAddress.getByName("192.168.2.1"),
+                                                   InetAddress.getByName("11.0.0.0"),
+                                                   InetAddress.getByName("211.111.111.110"));
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "211.111.111.111,10.0.0.0/40")
+    void someOfPreferredIpV4AddressesIsInvalid() throws Throwable {
+        // 10.0.0.0/40 is invalid cidr
+        final Lookup lookup = MethodHandles.publicLookup();
+        final MethodHandle method =
+                lookup.findStatic(flags, "preferredIpV4Addresses", MethodType.methodType(
+                        Flags.class.getMethod("preferredIpV4Addresses").getReturnType()));
+        final Predicate<InetAddress> preferredIpV4Addresses = (Predicate) method.invoke();
+        assertThat(preferredIpV4Addresses).accepts(InetAddress.getByName("211.111.111.111"));
+        assertThat(preferredIpV4Addresses).rejects(InetAddress.getByName("10.0.0.0"),
+                                                   InetAddress.getByName("10.0.0.1"));
     }
 
     @Test
