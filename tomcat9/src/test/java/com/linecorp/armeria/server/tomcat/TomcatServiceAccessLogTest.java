@@ -21,21 +21,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.CharArrayWriter;
 import java.io.File;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.valves.AbstractAccessLogValve;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -51,7 +49,7 @@ class TomcatServiceAccessLogTest {
             return fakeAccessLogValve;
         }
 
-        private List<String> logs = Collections.synchronizedList(new ArrayList<>());
+        private final BlockingQueue<String> logs = new ArrayBlockingQueue<>(100);
 
         private FakeAccessLogValve() {
         }
@@ -61,8 +59,9 @@ class TomcatServiceAccessLogTest {
             logs.add(message.toString());
         }
 
+        @Nullable
         String popLog() {
-            return logs.remove(0);
+            return logs.poll();
         }
 
         void reset() {
@@ -104,11 +103,8 @@ class TomcatServiceAccessLogTest {
 
     @Test
     void haveCorrectProcessingTime() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse ignored = hc.execute(new HttpGet(server.httpUri() + "/no-webapp/"))) {
-                final String log = accessLogValve.popLog();
-                assertThat(Long.parseLong(log)).isLessThan(Duration.ofSeconds(10).toMillis());
-            }
-        }
+        final BlockingWebClient client = WebClient.of(server.httpUri()).blocking();
+        client.get("/no-webapp/");
+        assertThat(Long.parseLong(accessLogValve.popLog())).isLessThan(Duration.ofSeconds(10).toMillis());
     }
 }
