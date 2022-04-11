@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.client.dns;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -35,14 +37,17 @@ class SearchDomainTest {
     @ParameterizedTest
     void startsWithHostname(String hostname, int ndots) {
         final DnsQuestion original = DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.A);
-        final ImmutableList<String> searchDomains = ImmutableList.of(".armeria.io", ".armeria.com",
-                                                                     ".armeria.org", ".armeria.dev");
+        // Since `SearchDomainDnsResolver` normalizes search domains while being initialized,
+        // `SearchDomainQuestionContext` should use a normalized search domain that
+        // starts and ends with a dot for testing .
+        final List<String> searchDomains = ImmutableList.of(".armeria.io.", ".armeria.com.",
+                                                            ".armeria.org.", ".armeria.dev.");
         final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, ndots);
         final DnsQuestion firstQuestion = ctx.nextQuestion();
         assertThat(firstQuestion.name()).isEqualTo(hostname + '.');
         for (String searchDomain : searchDomains) {
             final DnsQuestion expected =
-                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + searchDomain + '.',
+                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + searchDomain,
                                                      DnsRecordType.A);
             assertThat(ctx.nextQuestion()).isEqualTo(expected);
         }
@@ -53,14 +58,12 @@ class SearchDomainTest {
     @ParameterizedTest
     void endsWithHostname(String hostname, int ndots) {
         final DnsQuestion original = DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.A);
-        // Since a dot is prepended to search domains by `SearchDomainDnsResolver`, should use a search
-        // domain starting with a dot for testing `SearchDomainQuestionContext`.
-        final ImmutableList<String> searchDomains = ImmutableList.of(".armeria.io", ".armeria.com",
-                                                                     ".armeria.org", ".armeria.dev");
+        final List<String> searchDomains = ImmutableList.of(".armeria.io.", ".armeria.com.",
+                                                            ".armeria.org.", ".armeria.dev.");
         final SearchDomainQuestionContext ctx = new SearchDomainQuestionContext(original, searchDomains, ndots);
         for (String searchDomain : searchDomains) {
             final DnsQuestion expected =
-                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + searchDomain + '.',
+                    DnsQuestionWithoutTrailingDot.of(hostname, hostname + searchDomain,
                                                      DnsRecordType.A);
             assertThat(ctx.nextQuestion()).isEqualTo(expected);
         }
