@@ -125,6 +125,7 @@ final class MultipartVariableMapper {
    interface Mapper<T> {
       @Nullable
       Object set(T location, String target, Path path);
+
       @Nullable
       Object recurse(T location, String target);
    }
