@@ -172,7 +172,8 @@ class FlagsTest {
     }
 
     @Test
-    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "211.111.111.111,10.0.0.0/8,192.168.1.0/24")
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses",
+            value = "211.111.111.111,10.0.0.0/8,192.168.1.0/24")
     void preferredIpV4Addresses() throws Throwable {
         final Lookup lookup = MethodHandles.publicLookup();
         final MethodHandle method =
@@ -188,7 +189,8 @@ class FlagsTest {
     }
 
     @Test
-    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "211.111.111.111,10.0.0.0/40")
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses",
+            value = "211.111.111.111,10.0.0.0/40")
     void someOfPreferredIpV4AddressesIsInvalid() throws Throwable {
         // 10.0.0.0/40 is invalid cidr
         final Lookup lookup = MethodHandles.publicLookup();
