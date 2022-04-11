@@ -79,9 +79,9 @@ public interface HealthCheckerContext {
      *               A value greater than {@code 1.0} will be set equal to {@code 1.0}.
      * @param ctx the {@link ClientRequestContext} of the health check request.
      * @param headers the {@link ResponseHeaders} of the health check request.
-     *                {@code null} if the request is failed with an {@link Throwable}.
+     *                {@code null} if the request is failed with the {@code cause}.
      * @param cause the cause of the failed health check request.
-     *              {@code null} if the health checked request received an {@link ResponseHeaders}.
+     *              {@code null} if the health checked request received the {@code headers}.
      */
     default void updateHealth(double health, ClientRequestContext ctx,
                               @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
