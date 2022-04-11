@@ -172,7 +172,8 @@ final class DefaultHealthCheckerContext
             } else {
                 if (cause != null) {
                     initialCheckFuture.completeExceptionally(cause);
-                } else if (headers != null) {
+                } else {
+                    assert headers != null;
                     initialCheckFuture.completeExceptionally(new InvalidResponseException(
                             ctx + " Received an unhealthy check response. headers: " + headers));
                 }
