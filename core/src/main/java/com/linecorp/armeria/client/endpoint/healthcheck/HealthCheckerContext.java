@@ -20,8 +20,11 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Provides the properties and operations required for sending health check requests.
@@ -62,6 +65,27 @@ public interface HealthCheckerContext {
      * @param health {@code 0.0} indicates the {@link Endpoint} is not able to handle any requests.
      *               A positive value indicates the {@link Endpoint} is able to handle requests.
      *               A value greater than {@code 1.0} will be set equal to {@code 1.0}.
+     *
+     * @deprecated Use {@link #updateHealth(double, ClientRequestContext, ResponseHeaders, Throwable)} instead.
      */
+    @Deprecated
     void updateHealth(double health);
+
+    /**
+     * Updates the health of the {@link Endpoint} being checked.
+     *
+     * @param health {@code 0.0} indicates the {@link Endpoint} is not able to handle any requests.
+     *               A positive value indicates the {@link Endpoint} is able to handle requests.
+     *               A value greater than {@code 1.0} will be set equal to {@code 1.0}.
+     * @param ctx the {@link ClientRequestContext} of the health check request.
+     * @param headers the {@link ResponseHeaders} of the health check request.
+     *                {@code null} if the request is failed with an {@link Throwable}.
+     * @param cause the cause of the failed health check request.
+     *              {@code null} if the health checked request received an {@link ResponseHeaders}.
+     */
+    default void updateHealth(double health, ClientRequestContext ctx,
+                              @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
+        // TODO(ikhoon): Make this method abstract in Armeria 2.0
+        updateHealth(health);
+    }
 }
