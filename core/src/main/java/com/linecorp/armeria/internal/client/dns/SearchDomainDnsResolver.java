@@ -124,7 +124,7 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
     static final class SearchDomainQuestionContext {
 
         private final DnsQuestion original;
-        private final String orignalName;
+        private final String originalName;
         private final List<String> searchDomains;
         private final boolean shouldStartWithHostname;
         private volatile int numAttemptsSoFar;
@@ -132,8 +132,8 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
         SearchDomainQuestionContext(DnsQuestion original, List<String> searchDomains, int ndots) {
             this.original = original;
             this.searchDomains = searchDomains;
-            orignalName = original.name();
-            shouldStartWithHostname = hasNDots(orignalName, ndots);
+            originalName = original.name();
+            shouldStartWithHostname = hasNDots(originalName, ndots);
         }
 
         private static boolean hasNDots(String hostname, int ndots) {
@@ -158,15 +158,13 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
         private DnsQuestion nextQuestion0() {
             final int numAttemptsSoFar = this.numAttemptsSoFar;
             if (numAttemptsSoFar == 0) {
-                if (orignalName.endsWith(".") || searchDomains.isEmpty()) {
+                if (originalName.endsWith(".") || searchDomains.isEmpty()) {
                     return original;
                 }
                 if (shouldStartWithHostname) {
-                    // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
-                    // share the cache key.
-                    return newQuestion(orignalName + '.');
+                    return newQuestion(originalName + '.');
                 } else {
-                    return newQuestion(orignalName + searchDomains.get(0));
+                    return newQuestion(originalName + searchDomains.get(0));
                 }
             }
 
@@ -176,20 +174,20 @@ final class SearchDomainDnsResolver extends AbstractUnwrappable<DnsResolver> imp
             }
 
             if (nextSearchDomainPos < searchDomains.size()) {
-                return newQuestion(orignalName + searchDomains.get(nextSearchDomainPos));
+                return newQuestion(originalName + searchDomains.get(nextSearchDomainPos));
             }
             if (nextSearchDomainPos == searchDomains.size() && !shouldStartWithHostname) {
-                // Use hostname as is so that RefreshingAddressResolver and CachingDnsResolver
-                // share the cache key.
-                return newQuestion(orignalName + '.');
+                return newQuestion(originalName + '.');
             }
             return null;
         }
 
         private DnsQuestion newQuestion(String hostname) {
-            // As the search domain is validated already,
-            // DnsQuestionWithoutTrailingDot should not raise an exception.
-            return DnsQuestionWithoutTrailingDot.of(orignalName, hostname, original.type());
+            // - As the search domain is validated already, DnsQuestionWithoutTrailingDot should not raise an
+            //   exception.
+            // - Use originalName to delete the cache value in RefreshingAddressResolver when the DnsQuestion
+            //   is evicted from CachingDnsResolver.
+            return DnsQuestionWithoutTrailingDot.of(originalName, hostname, original.type());
         }
     }
 }
