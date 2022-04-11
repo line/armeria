@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.graphql.Graphql;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -85,9 +86,11 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
             builder.operationName(operationName);
         }
 
-        final ExecutionInput executionInput = builder.context(ctx)
-                                                     .dataLoaderRegistry(dataLoaderRegistry)
-                                                     .build();
+        final ExecutionInput executionInput =
+                builder.context(ctx)
+                       .graphQLContext(b -> b.of(Graphql.graphqlContextKey(), ctx))
+                       .dataLoaderRegistry(dataLoaderRegistry)
+                       .build();
         return execute(ctx, executionInput, produceType);
     }
 
