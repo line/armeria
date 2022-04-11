@@ -102,38 +102,6 @@ public final class Flags {
         FLAGS_PROVIDERS = ImmutableList.copyOf(flagsProviders);
     }
 
-    private static final Predicate<String> SPEC_VALIDATOR = val -> {
-        if ("true".equals(val) || "false".equals(val)) {
-            return true;
-        }
-        try {
-            Sampler.of(val);
-            return true;
-        } catch (Exception e) {
-            // Invalid sampler specification
-            return false;
-        }
-    };
-
-    private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
-
-    static {
-        final String spec = getValue(FlagsProvider::verboseExceptionSamplerSpec,
-                                     "verboseExceptionSamplerSpec", SPEC_VALIDATOR);
-        switch (spec) {
-            case "true":
-            case "always":
-                VERBOSE_EXCEPTION_SAMPLER_SPEC = "always";
-                break;
-            case "false":
-            case "never":
-                VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
-                break;
-            default:
-                VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
-        }
-    }
-
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER =
             getValue(FlagsProvider::verboseExceptionSampler, "verboseExceptionSampler");
 
@@ -380,29 +348,18 @@ public final class Flags {
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
 
     /**
-     * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
-     * that are thrown frequently by Armeria.
-     *
-     * @see #verboseExceptionSamplerSpec()
-     */
-    public static Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
-        return VERBOSE_EXCEPTION_SAMPLER;
-    }
-
-    /**
-     * Returns the specification string of the {@link Sampler} that determines whether to retain the stack
+     * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
      * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
      * trace.
      *
-     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER_SPEC},
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER},
      * which retains the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
      * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
      * the default. See {@link Sampler#of(String)} for the specification string format.</p>
      */
-    public static String verboseExceptionSamplerSpec() {
-        // XXX(trustin): Is it worth allowing to specify different specs for different exception types?
-        return VERBOSE_EXCEPTION_SAMPLER_SPEC;
+    public static Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
+        return VERBOSE_EXCEPTION_SAMPLER;
     }
 
     /**

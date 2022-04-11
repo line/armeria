@@ -81,29 +81,18 @@ public interface FlagsProvider {
     int priority();
 
     /**
-     * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
-     * that are thrown frequently by Armeria.
-     *
-     * @see #verboseExceptionSamplerSpec()
-     */
-    @Nullable
-    default Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
-        return null;
-    }
-
-    /**
-     * Returns the specification string of the {@link Sampler} that determines whether to retain the stack
+     * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
      * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
      * trace.
      *
-     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER_SPEC},
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER},
      * which retains the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
      * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
      * the default. See {@link Sampler#of(String)} for the specification string format.</p>
      */
     @Nullable
-    default String verboseExceptionSamplerSpec() {
+    default Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
         return null;
     }
 

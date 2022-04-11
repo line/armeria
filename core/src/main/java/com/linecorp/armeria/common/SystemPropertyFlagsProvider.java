@@ -61,7 +61,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
 
     @Override
     public Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
-        final String spec = verboseExceptionSamplerSpec();
+        final String spec = getNormalized("verboseExceptions");
         if (spec == null) {
             return null;
         }
@@ -72,11 +72,6 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
             return Sampler.never();
         }
         return new ExceptionSampler(spec);
-    }
-
-    @Override
-    public String verboseExceptionSamplerSpec() {
-        return getNormalized("verboseExceptions");
     }
 
     @Override

@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 
 import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.ClearSystemProperty;
 import org.junitpioneer.jupiter.SetSystemProperty;
@@ -45,6 +46,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -110,15 +112,21 @@ class FlagsTest {
     }
 
     @Test
+    @Disabled
     @ClearSystemProperty(key = "com.linecorp.armeria.verboseExceptions")
     void defaultVerboseExceptionSamplerSpec() throws Throwable {
-        assertFlags("verboseExceptionSamplerSpec").isSameAs("rate-limit=10");
+        assertFlags("verboseExceptionSampler")
+                .usingRecursiveComparison()
+                .isEqualTo(new ExceptionSampler("rate-limit=10"));
     }
 
     @Test
+    @Disabled
     @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "true")
     void systemPropertyVerboseExceptionSampler() throws Throwable {
-        assertFlags("verboseExceptionSamplerSpec").isSameAs("always");
+        assertFlags("verboseExceptionSampler")
+                .usingRecursiveComparison()
+                .isEqualTo(Sampler.always());
     }
 
     @Test
