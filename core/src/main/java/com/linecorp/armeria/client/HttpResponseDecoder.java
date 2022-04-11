@@ -157,7 +157,6 @@ abstract class HttpResponseDecoder {
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
         enum State {
-            INIT,
             WAIT_NON_INFORMATIONAL,
             WAIT_DATA_OR_TRAILERS,
             DONE
@@ -172,7 +171,7 @@ abstract class HttpResponseDecoder {
 
         private boolean loggedResponseFirstBytesTransferred;
 
-        private State state = State.INIT;
+        private State state = State.WAIT_NON_INFORMATIONAL;
         @Nullable
         private ResponseHeaders headers;
 
@@ -210,21 +209,6 @@ abstract class HttpResponseDecoder {
             }
         }
 
-        /**
-         * Prepares to receive a response.
-         */
-        void prepare() {
-            if (state == State.DONE) {
-                return;
-            }
-            assert state == State.INIT;
-            state = State.WAIT_NON_INFORMATIONAL;
-        }
-
-        boolean isPrepared() {
-            return state != State.INIT;
-        }
-
         @Override
         public boolean isOpen() {
             return delegate.isOpen();
@@ -239,7 +223,6 @@ abstract class HttpResponseDecoder {
          */
         @Override
         public boolean tryWrite(HttpObject o) {
-            assert state != State.INIT;
             boolean wrote = false;
             switch (state) {
                 case WAIT_NON_INFORMATIONAL:
@@ -258,7 +241,6 @@ abstract class HttpResponseDecoder {
 
         @Override
         public boolean tryWrite(Supplier<? extends HttpObject> o) {
-            assert state != State.INIT;
             return delegate.tryWrite(o);
         }
 

@@ -26,11 +26,13 @@ import java.util.function.Consumer;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.testing.ServerRuleDelegate;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -304,5 +306,23 @@ public abstract class ServerRule extends ExternalResource {
     public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
         return delegate.webClient(webClientCustomizer);
+    }
+
+    /**
+     * Returns the {@link BlockingWebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    @UnstableApi
+    public BlockingWebClient blockingWebClient() {
+        return delegate.webClient().blocking();
+    }
+
+    /**
+     * Returns a newly created {@link BlockingWebClient} configured by
+     * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
+     */
+    @UnstableApi
+    public BlockingWebClient blockingWebClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return delegate.webClient(webClientCustomizer).blocking();
     }
 }

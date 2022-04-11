@@ -159,11 +159,8 @@ class HttpResponseWrapperTest {
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
-        final HttpResponseWrapper response =
-                decoder.addResponse(1, res, cctx, cctx.eventLoop(), cctx.responseTimeoutMillis(),
-                                    cctx.maxResponseLength());
-        response.prepare();
-        return response;
+        return decoder.addResponse(1, res, cctx, cctx.eventLoop(), cctx.responseTimeoutMillis(),
+                                   cctx.maxResponseLength());
     }
 
     private static class TestHttpResponseDecoder extends HttpResponseDecoder {

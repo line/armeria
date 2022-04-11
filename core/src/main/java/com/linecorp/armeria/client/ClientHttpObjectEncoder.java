@@ -23,6 +23,7 @@ import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 
 /**
  * Converts an {@link HttpObject} into a protocol-specific object and writes it into a {@link Channel}.
@@ -32,17 +33,20 @@ interface ClientHttpObjectEncoder extends HttpObjectEncoder {
     /**
      * Writes a {@link RequestHeaders}.
      */
-    default ChannelFuture writeHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
+    default ChannelFuture writeHeaders(int id, int streamId, RequestHeaders headers, boolean endStream,
+                                       ChannelPromise promise) {
         assert eventLoop().inEventLoop();
         if (isClosed()) {
-            return newFailedFuture(UnprocessedRequestException.of(ClosedSessionException.get()));
+            promise.setFailure(UnprocessedRequestException.of(ClosedSessionException.get()));
+            return promise;
         }
 
-        return doWriteHeaders(id, streamId, headers, endStream);
+        return doWriteHeaders(id, streamId, headers, endStream, promise);
     }
 
     /**
      * Writes a {@link RequestHeaders}.
      */
-    ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream);
+    ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream,
+                                 ChannelPromise promise);
 }

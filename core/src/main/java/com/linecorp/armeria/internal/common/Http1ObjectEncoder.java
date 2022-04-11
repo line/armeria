@@ -106,14 +106,14 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         return ch;
     }
 
-    protected final ChannelFuture writeNonInformationalHeaders(int id, HttpObject converted,
-                                                               boolean endStream) {
+    protected final ChannelFuture writeNonInformationalHeaders(
+            int id, HttpObject converted, boolean endStream, ChannelPromise promise) {
         ChannelFuture f;
         if (converted instanceof LastHttpContent) {
             assert endStream;
-            f = write(id, converted, true);
+            f = write(id, converted, true, promise);
         } else {
-            f = write(id, converted, false);
+            f = write(id, converted, false, promise);
             if (endStream) {
                 final ChannelFuture lastFuture = write(id, LastHttpContent.EMPTY_LAST_CONTENT, true);
                 if (Flags.verboseExceptionSampler().isSampled(Http1VerboseWriteException.class)) {
@@ -243,11 +243,16 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     }
 
     protected final ChannelFuture write(int id, HttpObject obj, boolean endStream) {
+        return write(id, obj, endStream, ch.newPromise());
+    }
+
+    final ChannelFuture write(int id, HttpObject obj, boolean endStream, ChannelPromise promise) {
         if (id < currentId) {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
             ReferenceCountUtil.release(obj);
-            return newFailedFuture(ClosedStreamException.get());
+            promise.setFailure(ClosedStreamException.get());
+            return promise;
         }
 
         final PendingWrites currentPendingWrites = pendingWritesMap.get(id);
@@ -257,7 +262,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 flushPendingWrites(currentPendingWrites);
             }
 
-            final ChannelFuture future = ch.write(obj);
+            final ChannelFuture future = ch.write(obj, promise);
             if (!isPing(id)) {
                 keepAliveHandler().onReadOrWrite();
             }
@@ -283,7 +288,6 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
             return future;
         } else {
-            final ChannelPromise promise = ch.newPromise();
             final Entry<HttpObject, ChannelPromise> entry = new SimpleImmutableEntry<>(obj, promise);
             final PendingWrites pendingWrites;
             if (currentPendingWrites == null) {

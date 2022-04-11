@@ -139,21 +139,6 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             return;
         }
 
-        if (res.isPrepared()) {
-            closeResponse(stream, res);
-        } else {
-            // A headers write directly failed before `HttpResponseWrapper` attaches a listener to the returned
-            // `ChannelFuture`. Reschedule the close of the response so that `HttpResponseWrapper` propagates
-            // the cause of the ChannelFuture to the RequestLog first.
-            channel().eventLoop().execute(() -> closeResponse(stream, res));
-        }
-
-        if (shouldSendGoAway()) {
-            channel().close();
-        }
-    }
-
-    private void closeResponse(Http2Stream stream, HttpResponseWrapper res) {
         if (res.isOpen()) {
             if (!goAwayHandler.receivedGoAway()) {
                 res.close(ClosedStreamException.get());
@@ -166,6 +151,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             } else {
                 res.close(ClosedStreamException.get());
             }
+        }
+
+        if (shouldSendGoAway()) {
+            channel().close();
         }
     }
 
