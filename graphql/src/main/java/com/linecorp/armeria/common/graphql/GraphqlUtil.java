@@ -30,7 +30,8 @@ public final class GraphqlUtil {
     private static final String GRAPHQL_CONTEXT_KEY = "com.linecorp.armeria.graphql.context.key";
 
     /**
-     * Returns a key to put {@link ServiceRequestContext} in {@link GraphQLContext}:
+     * Returns a key to put {@link ServiceRequestContext} in {@link GraphQLContext}.
+     * <h2>Examples</h2>
      * <pre>{@code
      * new DataFetcher<>() {
      *     @Override
@@ -39,7 +40,8 @@ public final class GraphqlUtil {
      *                                                      .get(GraphqlUtil.graphqlContextKey());
      *         // ...
      *     }
-     * };</pre>
+     * };
+     * }</pre>
      */
     public static String graphqlContextKey() {
         return GRAPHQL_CONTEXT_KEY;
