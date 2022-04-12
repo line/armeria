@@ -1710,7 +1710,11 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
+     *
+     * <p>The dependencies are injected through bean definition automatically, if the Spring integration module
+     * such as {@code armeria-spring-boot2-autoconfigure} is added.
      */
+    @UnstableApi
     public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector) {
         requireNonNull(dependencyInjector, "dependencyInjector");
         if (this.dependencyInjector == null) {

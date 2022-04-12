@@ -17,7 +17,11 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
+import java.util.function.Supplier;
+
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
@@ -26,12 +30,25 @@ import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 /**
- * Injects dependencies that are specified in {@link RequestConverter}, {@link ResponseConverter},
- * {@link ExceptionHandler}, {@link Decorator} and {@link DecoratorFactory}.
+ * Injects dependencies that are specified in {@link RequestConverter#value()},
+ * {@link ResponseConverter#value()}, {@link ExceptionHandler#value()}, {@link Decorator#value()} and
+ * {@link DecoratorFactory#value()}.
  * If the dependencies are not injected by this {@link DependencyInjector}, they are created via the default
  * constructor, which does not have a parameter, of the classes.
+ *
+ * <p>The dependencies are injected through bean definition automatically, if the Spring integration module
+ * such as {@code armeria-spring-boot2-autoconfigure} is added.
  */
+@UnstableApi
 public interface DependencyInjector extends SafeCloseable {
+
+    /**
+     * Returns a {@link DependencyInjector} that injects dependencies using the specified {@link Map}.
+     */
+    static DependencyInjector ofSingletons(Map<Class<?>, Supplier<?>> singletons) {
+        requireNonNull(singletons, "singletons");
+        return builder().singletons(singletons).build();
+    }
 
     /**
      * Returns a newly-created {@link DependencyInjectorBuilder}.

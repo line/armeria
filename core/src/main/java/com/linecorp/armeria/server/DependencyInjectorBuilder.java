@@ -24,9 +24,12 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Builds a {@link DependencyInjector}.
  */
+@UnstableApi
 public final class DependencyInjectorBuilder {
 
     private final Map<Class<?>, Supplier<?>> singletons = new HashMap<>();
