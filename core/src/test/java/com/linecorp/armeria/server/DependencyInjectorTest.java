@@ -67,8 +67,8 @@ class DependencyInjectorTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final DependencyInjectorBuilder builder = DependencyInjector.builder();
-            builder.singleton(FooRequestConverter.class, () -> new FooRequestConverter(requestCounter))
-                   .singleton(FooResponseConverter.class, () -> new FooResponseConverter(responseCounter))
+            builder.singletons(new FooRequestConverter(requestCounter),
+                               new FooResponseConverter(responseCounter))
                    .singleton(FooExceptionHandler.class, () -> new FooExceptionHandler(exceptionCounter))
                    .singleton(FooDecoratorFactory.class, () -> new FooDecoratorFactory(factoryCounter))
                    .prototype(FooDecorator.class, () -> new FooDecorator(decoratorCounter));

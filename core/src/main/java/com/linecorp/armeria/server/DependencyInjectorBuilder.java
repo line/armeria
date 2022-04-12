@@ -106,7 +106,8 @@ public final class DependencyInjectorBuilder {
      * Returns a newly-created {@link DependencyInjector} based on the properties set so far.
      */
     public DependencyInjector build() {
-        return new DefaultDependencyInjector(ImmutableMap.copyOf(singletonSuppliers),
+        return new DefaultDependencyInjector(ImmutableMap.copyOf(singletons),
+                                             ImmutableMap.copyOf(singletonSuppliers),
                                              ImmutableMap.copyOf(prototypes));
     }
 }

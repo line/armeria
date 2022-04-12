@@ -36,12 +36,14 @@ final class DefaultDependencyInjector implements DependencyInjector {
 
     private final Map<Class<?>, Object> singletons;
     private final Map<Class<?>, Supplier<?>> singletonSuppliers;
-    private final List<AutoCloseable> closeablePrototypes = new ArrayList<>();
     private final Map<Class<?>, Supplier<?>> prototypes;
+    private final List<AutoCloseable> closeablePrototypes = new ArrayList<>();
 
-    DefaultDependencyInjector(Map<Class<?>, Supplier<?>> singletonSuppliers,
+    DefaultDependencyInjector(Map<Class<?>, Object> singletons,
+                              Map<Class<?>, Supplier<?>> singletonSuppliers,
                               Map<Class<?>, Supplier<?>> prototypes) {
-        singletons = new HashMap<>(singletonSuppliers.size());
+        this.singletons = new HashMap<>(singletons.size() + singletonSuppliers.size());
+        this.singletons.putAll(singletons);
         this.singletonSuppliers = singletonSuppliers;
         this.prototypes = prototypes;
     }
@@ -108,9 +110,9 @@ final class DefaultDependencyInjector implements DependencyInjector {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("singletons", singletons)
-                          .add("closeablePrototypes", closeablePrototypes)
                           .add("singletonSuppliers", singletonSuppliers)
                           .add("prototypes", prototypes)
+                          .add("closeablePrototypes", closeablePrototypes)
                           .toString();
     }
 }
