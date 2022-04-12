@@ -71,6 +71,14 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         if ("false".equals(spec) || "never".equals(spec)) {
             return Sampler.never();
         }
+
+        try {
+            Sampler.of(spec);
+        } catch (Exception e) {
+            // Invalid sampler specification
+            throw new IllegalArgumentException(String.format("%s is invalid specification", spec), e);
+        }
+
         return new ExceptionSampler(spec);
     }
 

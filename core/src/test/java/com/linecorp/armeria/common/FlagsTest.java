@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -189,6 +190,33 @@ class FlagsTest {
         assertThat(preferredIpV4Addresses).accepts(InetAddress.getByName("211.111.111.111"));
         assertThat(preferredIpV4Addresses).rejects(InetAddress.getByName("10.0.0.0"),
                                                    InetAddress.getByName("10.0.0.1"));
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.verboseExceptions")
+    void defaultVerboseExceptionSamplerSpec() throws Throwable {
+        final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(new ExceptionSampler("rate-limit=10"));
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "true")
+    void systemPropertyVerboseExceptionSampler() throws Throwable {
+        final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(Sampler.always());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "invalid-sampler-spec")
+    void InvalidSystemPropertyVerboseExceptionSampler() throws Throwable {
+        final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(new ExceptionSampler("rate-limit=10"));
     }
 
     @Test
