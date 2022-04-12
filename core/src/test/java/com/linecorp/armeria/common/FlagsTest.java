@@ -212,7 +212,7 @@ class FlagsTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "invalid-sampler-spec")
-    void InvalidSystemPropertyVerboseExceptionSampler() throws Throwable {
+    void invalidSystemPropertyVerboseExceptionSampler() throws Throwable {
         final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
