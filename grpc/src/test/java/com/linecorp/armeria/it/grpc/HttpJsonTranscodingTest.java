@@ -280,14 +280,14 @@ class HttpJsonTranscodingTest {
             @Override
             protected void configure(ServerBuilder sb) throws Exception {
                 final GrpcServiceBuilder grpcServiceBuilder =
-                    GrpcService.builder()
-                               .addService(new HttpJsonTranscodingTestService())
-                               .enableHttpJsonTranscoding(true);
+                        GrpcService.builder()
+                                   .addService(new HttpJsonTranscodingTestService())
+                                   .enableHttpJsonTranscoding(true);
                 if (preservingProtoFieldNames) {
                     grpcServiceBuilder.jsonMarshallerFactory(service -> GrpcJsonMarshaller
-                        .builder()
-                        .jsonMarshallerCustomizer(m -> m.preservingProtoFieldNames(true))
-                        .build(service));
+                            .builder()
+                            .jsonMarshallerCustomizer(m -> m.preservingProtoFieldNames(true))
+                            .build(service));
                 }
                 final GrpcService grpcService = grpcServiceBuilder.build();
 
