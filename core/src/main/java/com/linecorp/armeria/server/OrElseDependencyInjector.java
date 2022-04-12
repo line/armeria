@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class OrElseDependencyInjector implements DependencyInjector {
@@ -56,5 +58,13 @@ final class OrElseDependencyInjector implements DependencyInjector {
         } catch (Throwable t) {
             logger.warn("Unexpected exception while closing {}", injector);
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("first", first)
+                          .add("second", second)
+                          .toString();
     }
 }

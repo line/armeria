@@ -17,8 +17,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
-import java.util.function.Supplier;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -43,10 +42,20 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 public interface DependencyInjector extends SafeCloseable {
 
     /**
-     * Returns a {@link DependencyInjector} that injects dependencies using the specified {@link Map}.
+     * Returns a {@link DependencyInjector} that injects dependencies using the specified singleton instances.
+     * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
+     * when the {@linkplain Server#stop() server is stopped}.
      */
-    static DependencyInjector ofSingletons(Map<Class<?>, Supplier<?>> singletons) {
-        requireNonNull(singletons, "singletons");
+    static DependencyInjector ofSingletons(Object... singletons) {
+        return ofSingletons(ImmutableList.copyOf(requireNonNull(singletons, "singletons")));
+    }
+
+    /**
+     * Returns a {@link DependencyInjector} that injects dependencies using the specified singleton instances.
+     * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
+     * when the {@linkplain Server#stop() server is stopped}.
+     */
+    static DependencyInjector ofSingletons(Iterable<Object> singletons) {
         return builder().singletons(singletons).build();
     }
 
@@ -69,6 +78,9 @@ public interface DependencyInjector extends SafeCloseable {
      */
     default DependencyInjector orElse(DependencyInjector other) {
         requireNonNull(other, "other");
+        if (this == other) {
+            return this;
+        }
         return new OrElseDependencyInjector(this, other);
     }
 }

@@ -19,9 +19,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.function.Supplier;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -32,7 +32,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class DependencyInjectorBuilder {
 
-    private final Map<Class<?>, Supplier<?>> singletons = new HashMap<>();
+    private final Map<Class<?>, Object> singletons = new HashMap<>();
+    private final Map<Class<?>, Supplier<?>> singletonSuppliers = new HashMap<>();
     private final Map<Class<?>, Supplier<?>> prototypes = new HashMap<>();
 
     DependencyInjectorBuilder() {}
@@ -46,26 +47,36 @@ public final class DependencyInjectorBuilder {
     public <T> DependencyInjectorBuilder singleton(Class<T> type, Supplier<T> supplier) {
         requireNonNull(type, "type");
         requireNonNull(supplier, "supplier");
+        checkDuplicateType(singletons, "singletons", type);
         checkDuplicateType(prototypes, "prototype", type);
-        singletons.put(type, supplier);
+        singletonSuppliers.put(type, supplier);
         return this;
     }
 
     /**
-     * Sets the {@link Supplier}s to inject the singleton instance of the corresponding {@link Class}.
-     * {@link Supplier#get()} is called only once for a {@link Class} and the supplied instance is reused.
-     * The instance is {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
+     * Sets the singleton instances to inject.
+     * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
      * when the {@linkplain Server#stop() server is stopped}.
      */
-    public DependencyInjectorBuilder singletons(Map<Class<?>, Supplier<?>> singletons) {
+    public DependencyInjectorBuilder singletons(Object... singletons) {
+        return singletons(ImmutableList.copyOf(requireNonNull(singletons, "singletons")));
+    }
+
+    /**
+     * Sets the singleton instances to inject.
+     * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
+     * when the {@linkplain Server#stop() server is stopped}.
+     */
+    public DependencyInjectorBuilder singletons(Iterable<Object> singletons) {
         requireNonNull(singletons, "singletons");
-        for (Entry<Class<?>, Supplier<?>> entry : singletons.entrySet()) {
-            requireNonNull(entry.getValue(), "singletons contains null.");
-        }
-        for (Class<?> type : singletons.keySet()) {
+        for (Object singleton : singletons) {
+            final Class<?> type = singleton.getClass();
+            checkDuplicateType(singletonSuppliers, "singleton", type);
             checkDuplicateType(prototypes, "prototype", type);
         }
-        this.singletons.putAll(singletons);
+        for (Object singleton : singletons) {
+            this.singletons.put(singleton.getClass(), singleton);
+        }
         return this;
     }
 
@@ -79,31 +90,13 @@ public final class DependencyInjectorBuilder {
     public <T> DependencyInjectorBuilder prototype(Class<T> type, Supplier<T> supplier) {
         requireNonNull(type, "type");
         requireNonNull(supplier, "supplier");
-        checkDuplicateType(singletons, "singleton", type);
+        checkDuplicateType(singletons, "singletons", type);
+        checkDuplicateType(singletonSuppliers, "singleton", type);
         prototypes.put(type, supplier);
         return this;
     }
 
-    /**
-     * Sets the {@link Supplier}s to inject the prototype instance of the corresponding {@link Class}.
-     * Unlike {@link #singletons(Map)}, {@link Supplier#get()} is called every time when an
-     * instance of the corresponding {@link Class} is needed.
-     * The {@linkplain Supplier#get() supplied instance} is {@linkplain AutoCloseable#close() closed}
-     * if it implements {@link AutoCloseable} when the {@linkplain Server#stop() server is stopped}.
-     */
-    public DependencyInjectorBuilder prototypes(Map<Class<?>, Supplier<?>> prototypes) {
-        requireNonNull(prototypes, "prototypes");
-        for (Entry<Class<?>, Supplier<?>> entry : prototypes.entrySet()) {
-            requireNonNull(entry.getValue(), "prototypes contains null.");
-        }
-        for (Class<?> type : prototypes.keySet()) {
-            checkDuplicateType(singletons, "singleton", type);
-        }
-        this.prototypes.putAll(prototypes);
-        return this;
-    }
-
-    private static void checkDuplicateType(Map<Class<?>, Supplier<?>> map, String methodName, Class<?> type) {
+    private static void checkDuplicateType(Map<Class<?>, ?> map, String methodName, Class<?> type) {
         if (map.containsKey(type)) {
             throw new IllegalArgumentException(type.getName() + " is already set via " + methodName + "().");
         }
@@ -113,7 +106,7 @@ public final class DependencyInjectorBuilder {
      * Returns a newly-created {@link DependencyInjector} based on the properties set so far.
      */
     public DependencyInjector build() {
-        return new DefaultDependencyInjector(ImmutableMap.copyOf(singletons),
+        return new DefaultDependencyInjector(ImmutableMap.copyOf(singletonSuppliers),
                                              ImmutableMap.copyOf(prototypes));
     }
 }

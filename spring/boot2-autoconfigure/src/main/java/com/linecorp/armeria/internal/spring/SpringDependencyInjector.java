@@ -18,6 +18,9 @@ package com.linecorp.armeria.internal.spring;
 import static java.util.Objects.requireNonNull;
 
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.server.DependencyInjector;
 
@@ -38,7 +41,7 @@ final class SpringDependencyInjector implements DependencyInjector {
     public <T> T getInstance(Class<T> type) {
         try {
             return beanFactory.getBean(type);
-        } catch (Throwable t) {
+        } catch (NoSuchBeanDefinitionException t) {
             // Return null in order to apply the FallbackDependencyInjector.
             return null;
         }
@@ -47,5 +50,12 @@ final class SpringDependencyInjector implements DependencyInjector {
     @Override
     public void close() {
         // The lifecycle of the beanFactory is managed by Spring.
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("beanFactory", beanFactory)
+                          .toString();
     }
 }

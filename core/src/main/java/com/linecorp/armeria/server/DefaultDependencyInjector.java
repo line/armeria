@@ -26,19 +26,22 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultDependencyInjector implements DependencyInjector {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultDependencyInjector.class);
 
-    private final Map<Class<?>, Object> singletons = new HashMap<>();
-    private final List<AutoCloseable> closeablePrototypes = new ArrayList<>();
+    private final Map<Class<?>, Object> singletons;
     private final Map<Class<?>, Supplier<?>> singletonSuppliers;
+    private final List<AutoCloseable> closeablePrototypes = new ArrayList<>();
     private final Map<Class<?>, Supplier<?>> prototypes;
 
     DefaultDependencyInjector(Map<Class<?>, Supplier<?>> singletonSuppliers,
                               Map<Class<?>, Supplier<?>> prototypes) {
+        singletons = new HashMap<>(singletonSuppliers.size());
         this.singletonSuppliers = singletonSuppliers;
         this.prototypes = prototypes;
     }
@@ -99,5 +102,15 @@ final class DefaultDependencyInjector implements DependencyInjector {
         } catch (Exception e) {
             logger.warn("Unexpected exception while closing {}", closeable);
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("singletons", singletons)
+                          .add("closeablePrototypes", closeablePrototypes)
+                          .add("singletonSuppliers", singletonSuppliers)
+                          .add("prototypes", prototypes)
+                          .toString();
     }
 }

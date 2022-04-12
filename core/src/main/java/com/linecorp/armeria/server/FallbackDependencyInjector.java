@@ -25,6 +25,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
 enum FallbackDependencyInjector implements DependencyInjector {
@@ -77,5 +78,12 @@ enum FallbackDependencyInjector implements DependencyInjector {
             }
         }
         instances.clear();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("instances", instances)
+                          .toString();
     }
 }
