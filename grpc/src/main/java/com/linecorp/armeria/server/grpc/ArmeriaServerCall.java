@@ -564,7 +564,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             assert listener != null;
             listener.onHalfClose();
         } catch (Throwable t) {
-            close(t, new Metadata());
+            close(t, generateMetadataFromThrowable(t));
         }
     }
 
@@ -687,6 +687,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         // Should start deframing after a listener is set.
         assert listener != null;
         deframedRequest.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+    }
+
+    private static Metadata generateMetadataFromThrowable(Throwable throwable) {
+        @Nullable final Metadata metadata = Status.trailersFromThrowable(throwable);
+        return metadata != null ? metadata : new Metadata();
     }
 
     @Nullable
