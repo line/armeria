@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
@@ -153,7 +154,7 @@ public interface Multipart {
      * HttpResponse response = ...;
      * SplitHttpResponse splitResponse = response.split();
      * ResponseHeaders responseHeaders = splitResponse.headers().join();
-     * StreamMessage<HttpData> responseContents = splitResponse.body();
+     * ByteStreamMessage responseContents = splitResponse.body();
      * MediaType contentType = responseHeaders.contentType();
      * if (contentType != null && contentType.isMultipart()) {
      *     String boundary = Multiparts.getBoundary(contentType);
@@ -270,7 +271,7 @@ public interface Multipart {
      * Returns a {@link StreamMessage} that emits the {{@link #bodyParts()}} as a stream of {@link HttpData}.
      */
     @CheckReturnValue
-    StreamMessage<HttpData> toStreamMessage();
+    ByteStreamMessage toStreamMessage();
 
     /**
      * Returns the boundary string.

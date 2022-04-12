@@ -47,15 +47,14 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.buffer.ByteBufAllocator;
-
 class PathStreamMessageTest {
 
     @ArgumentsSource(SubscriptionOptionsProvider.class)
     @ParameterizedTest
     void readFile(SubscriptionOption[] options) {
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final StreamMessage<HttpData> publisher = StreamMessage.of(path, ByteBufAllocator.DEFAULT, 12);
+        final ByteStreamMessage publisher = StreamMessage.of(path)
+                                                         .bufferSize(12);
         final AtomicBoolean completed = new AtomicBoolean();
         final StringBuilder stringBuilder = new StringBuilder();
         publisher.subscribe(new Subscriber<HttpData>() {
@@ -92,7 +91,7 @@ class PathStreamMessageTest {
     @ParameterizedTest
     void differentBufferSize(int bufferSize) {
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final StreamMessage<HttpData> publisher = StreamMessage.of(path, ByteBufAllocator.DEFAULT, bufferSize);
+        final ByteStreamMessage publisher = StreamMessage.of(path).bufferSize(bufferSize);
 
         final StringBuilder stringBuilder = new StringBuilder();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -134,11 +133,14 @@ class PathStreamMessageTest {
             "10, 20, 0\\nB1234567, 1"
     })
     @ParameterizedTest
-    void differentPosition(long start, long end, String expected, int bufferSize) {
+    void differentPosition(int start, int end, String expected, int bufferSize) {
         expected = expected.replaceAll("\\\\n", "\n");
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final StreamMessage<HttpData> publisher =
-                StreamMessage.of(path, null, ByteBufAllocator.DEFAULT, bufferSize, start, end);
+        final ByteStreamMessage publisher =
+                StreamMessage.of(path)
+                             .bufferSize(bufferSize)
+                             .skipBytes(start)
+                             .takeBytes(end - start);
 
         final int maxChunkSize = Math.min(Ints.saturatedCast(end - start), bufferSize);
         final StringBuilder stringBuilder = new StringBuilder();
@@ -172,7 +174,10 @@ class PathStreamMessageTest {
     @Test
     void zeroRange() {
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final StreamMessage<HttpData> publisher = StreamMessage.of(path, 10, 10);
+        final ByteStreamMessage publisher = StreamMessage.of(path)
+                                                         .skipBytes(10)
+                                                         .takeBytes(0);
+        // TODO(ikhoon): Fix the assertions
         assertThat(publisher.isEmpty()).isTrue();
         assertThat(publisher.collect().join()).isEmpty();
     }
@@ -194,7 +199,7 @@ class PathStreamMessageTest {
     void defaultBlockingTaskExecutor_withServiceRequestContext() {
         final ServiceRequestContext sctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final StreamMessage<HttpData> publisher = StreamMessage.of(path, ByteBufAllocator.DEFAULT, 1);
+        final ByteStreamMessage publisher = StreamMessage.of(path).bufferSize(1);
         final StringAggregator stringAggregator = new StringAggregator();
         try (SafeCloseable ignored = sctx.push()) {
             publisher.subscribe(stringAggregator);
@@ -207,7 +212,7 @@ class PathStreamMessageTest {
     void nullBlockingTaskExecutor_withClientRequestContext() {
         final ClientRequestContext cctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final StreamMessage<HttpData> publisher = StreamMessage.of(path, ByteBufAllocator.DEFAULT, 1);
+        final ByteStreamMessage publisher = StreamMessage.of(path).bufferSize(1);
         final StringAggregator stringAggregator = new StringAggregator();
         try (SafeCloseable ignored = cctx.push()) {
             publisher.subscribe(stringAggregator);

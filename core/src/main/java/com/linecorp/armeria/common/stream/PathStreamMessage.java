@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
@@ -51,7 +53,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.concurrent.EventExecutor;
 
-final class PathStreamMessage implements StreamMessage<HttpData> {
+final class PathStreamMessage implements ByteStreamMessage {
 
     private static final Logger logger = LoggerFactory.getLogger(PathStreamMessage.class);
 
@@ -65,26 +67,58 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     private final Path path;
-    private final ByteBufAllocator alloc;
     @Nullable
     private final ExecutorService blockingTaskExecutor;
-    private final int bufferSize;
-    private final long start;
-    private final long end;
+
+    private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
+    private int bufferSize = DEFAULT_FILE_BUFFER_SIZE;
+    private long offset;
+    private long length = Long.MAX_VALUE;
 
     private volatile int subscribed;
 
     @Nullable
     private volatile PathSubscription pathSubscription;
 
-    PathStreamMessage(Path path, ByteBufAllocator alloc,
-                      @Nullable ExecutorService blockingTaskExecutor, int bufferSize, long start, long end) {
+    PathStreamMessage(Path path, @Nullable ExecutorService blockingTaskExecutor) {
         this.path = requireNonNull(path, "path");
-        this.alloc = requireNonNull(alloc, "alloc");
         this.blockingTaskExecutor = blockingTaskExecutor;
-        this.bufferSize = Math.min(Ints.saturatedCast(end - start), bufferSize);
-        this.start = start;
-        this.end = end;
+    }
+
+    @Override
+    public ByteStreamMessage alloc(ByteBufAllocator alloc) {
+        requireNonNull(alloc, "alloc");
+        ensureUnsubscribed("alloc");
+        this.alloc = alloc;
+        return this;
+    }
+
+    @Override
+    public ByteStreamMessage skipBytes(int numBytes) {
+        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        ensureUnsubscribed("numBytes");
+        offset = numBytes;
+        return this;
+    }
+
+    @Override
+    public ByteStreamMessage takeBytes(int numBytes) {
+        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        ensureUnsubscribed("numBytes");
+        length = numBytes;
+        return this;
+    }
+
+    @Override
+    public ByteStreamMessage bufferSize(int numBytes) {
+        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        ensureUnsubscribed("numBytes");
+        bufferSize = numBytes;
+        return this;
+    }
+
+    private void ensureUnsubscribed(String name) {
+        checkState(subscribed == 0, "cannot specify %s after this StreamMessage is subscribed", name);
     }
 
     @Override
@@ -184,8 +218,9 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
             }
         }
 
+        final int bufferSize = Math.min(Ints.saturatedCast(length), this.bufferSize);
         final PathSubscription pathSubscription =
-                new PathSubscription(fileChannel, subscriber, executor, start, end, bufferSize,
+                new PathSubscription(fileChannel, subscriber, executor, offset, length, bufferSize,
                                      containsNotifyCancellation(options), containsWithPooledObjects(options));
         this.pathSubscription = pathSubscription;
         subscriber.onSubscribe(pathSubscription);
@@ -225,17 +260,17 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         private volatile long position;
 
         private PathSubscription(AsynchronousFileChannel fileChannel, Subscriber<? super HttpData> downstream,
-                                 EventExecutor executor, long start, long end, int bufferSize,
+                                 EventExecutor executor, long offset, long length, int bufferSize,
                                  boolean notifyCancellation, boolean withPooledObjects) {
             this.fileChannel = fileChannel;
             this.downstream = downstream;
             this.executor = executor;
             this.bufferSize = bufferSize;
-            this.end = end;
+            end = offset + length;
 
             this.notifyCancellation = notifyCancellation;
             this.withPooledObjects = withPooledObjects;
-            position = start;
+            position = offset;
         }
 
         @Override

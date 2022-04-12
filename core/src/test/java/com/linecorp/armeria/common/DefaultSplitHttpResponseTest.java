@@ -22,20 +22,26 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.instanceOf;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.testng.util.Strings;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -44,6 +50,20 @@ import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 class DefaultSplitHttpResponseTest {
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/", (ctx, req) -> {
+                final String body1 = Strings.repeat("a", Integer.parseInt(ctx.queryParam("size")));
+                final String body2 = Strings.repeat("b", Integer.parseInt(ctx.queryParam("size")));
+                return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+                                       HttpData.ofUtf8(body1),
+                                       HttpData.ofUtf8(body2));
+            });
+        }
+    };
 
     @Test
     void emptyBody() {
@@ -276,5 +296,54 @@ class DefaultSplitHttpResponseTest {
             assertThat(httpDataRef.get().isPooled()).isFalse();
             assertThat(httpDataRef.get().toStringUtf8()).isEqualTo("ABC");
         });
+    }
+
+    @Test
+    void skipBytes() {
+        final WebClient client = server.webClient();
+        final HttpResponse response = client.get("/?size=200");
+        final String string = response.split()
+                                      .body()
+                                      .skipBytes(199)
+                                      .collect()
+                                      .join()
+                                      .stream()
+                                      .map(HttpData::toStringUtf8)
+                                      .reduce("", (x, y) -> x + y);
+        assertThat(string).isEqualTo(Strings.repeat("a", 1) + Strings.repeat("b", 200));
+    }
+
+    @Test
+    void takeBytes() {
+        final WebClient client = server.webClient();
+        final HttpResponse response = client.get("/?size=200");
+        final String string = response.split()
+                                      .body()
+                                      .takeBytes(201)
+                                      .collect()
+                                      .join()
+                                      .stream()
+                                      .map(HttpData::toStringUtf8)
+                                      .reduce("", (x, y) -> x + y);
+        assertThat(string).isEqualTo(Strings.repeat("a", 200) + Strings.repeat("b", 1));
+    }
+
+    @Test
+    void bufferSize() {
+        final WebClient client = server.webClient();
+        final HttpResponse response = client.get("/?size=200");
+        final List<HttpData> httpData = response.split()
+                                                .body()
+                                                .bufferSize(100)
+                                                .collect()
+                                                .join();
+        for (HttpData data : httpData) {
+            assertThat(data.length()).isLessThanOrEqualTo(100);
+        }
+
+        final String string = httpData.stream()
+                                      .map(HttpData::toStringUtf8)
+                                      .reduce("", (x, y) -> x + y);
+        assertThat(string).isEqualTo(Strings.repeat("a", 200) + Strings.repeat("b", 200));
     }
 }

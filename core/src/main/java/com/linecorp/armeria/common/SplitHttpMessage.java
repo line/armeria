@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
@@ -32,7 +33,7 @@ public interface SplitHttpMessage {
      * Returns a {@link StreamMessage} publishes HTTP payloads as a stream of {@link HttpData}.
      */
     @CheckReturnValue
-    StreamMessage<HttpData> body();
+    ByteStreamMessage body();
 
     /**
      * Returns a {@link CompletableFuture} completed with a {@linkplain HttpHeaders trailers}.
