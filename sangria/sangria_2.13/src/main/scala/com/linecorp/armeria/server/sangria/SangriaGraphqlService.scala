@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest
 import com.linecorp.armeria.common.{HttpHeaderNames, HttpHeaders, HttpResponse, HttpStatus, MediaType}
 import com.linecorp.armeria.internal.common.JacksonUtil
-import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil
+import com.linecorp.armeria.internal.server.graphql.protocol.InternalGraphqlUtil
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService
@@ -35,6 +35,7 @@ import sangria.parser.{QueryParser, SyntaxError}
 import sangria.schema.Schema
 import sangria.slowlog.SlowLog
 import sangria.validation.QueryValidator
+
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
@@ -58,7 +59,7 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
 ) extends AbstractGraphqlService {
 
   override def executeGraphql(ctx: ServiceRequestContext, req: GraphqlRequest): HttpResponse = {
-    val produceType = GraphqlUtil.produceType(ctx.request().headers())
+    val produceType = InternalGraphqlUtil.produceType(ctx.request().headers())
     if (produceType == null) {
       return HttpResponse.of(
         HttpStatus.NOT_ACCEPTABLE,

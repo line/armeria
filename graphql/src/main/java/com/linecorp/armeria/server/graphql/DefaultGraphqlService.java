@@ -30,9 +30,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.graphql.Graphql;
+import com.linecorp.armeria.common.graphql.GraphqlUtil;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
-import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
+import com.linecorp.armeria.internal.server.graphql.protocol.InternalGraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 
@@ -63,7 +63,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     @Override
     protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
-        final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
+        final MediaType produceType = InternalGraphqlUtil.produceType(ctx.request().headers());
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
                                    "Only application/graphql+json and application/json compatible " +
@@ -88,7 +88,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
         final ExecutionInput executionInput =
                 builder.context(ctx)
-                       .graphQLContext(b -> b.of(Graphql.graphqlContextKey(), ctx))
+                       .graphQLContext(b -> b.of(GraphqlUtil.graphqlContextKey(), ctx))
                        .dataLoaderRegistry(dataLoaderRegistry)
                        .build();
         return execute(ctx, executionInput, produceType);

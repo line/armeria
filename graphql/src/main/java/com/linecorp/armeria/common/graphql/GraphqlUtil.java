@@ -25,16 +25,25 @@ import graphql.GraphQLContext;
  * Utility for handling the GraphQL.
  */
 @UnstableApi
-public final class Graphql {
+public final class GraphqlUtil {
 
-    private static final String GRAPHQL_CONTEXT_KEY = "com.linecorp.armeria";
+    private static final String GRAPHQL_CONTEXT_KEY = "com.linecorp.armeria.graphql.context.key";
 
     /**
-     * Returns a key to put {@link ServiceRequestContext} in {@link GraphQLContext}.
+     * Returns a key to put {@link ServiceRequestContext} in {@link GraphQLContext}:
+     * <pre>{@code
+     * new DataFetcher<>() {
+     *     @Override
+     *     public String get(DataFetchingEnvironment environment) throws Exception {
+     *         final ServiceRequestContext ctx = environment.getGraphQlContext()
+     *                                                      .get(GraphqlUtil.graphqlContextKey());
+     *         // ...
+     *     }
+     * };</pre>
      */
     public static String graphqlContextKey() {
         return GRAPHQL_CONTEXT_KEY;
     }
 
-    private Graphql() {}
+    private GraphqlUtil() {}
 }

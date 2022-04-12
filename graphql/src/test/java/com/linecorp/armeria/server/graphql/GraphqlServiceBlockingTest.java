@@ -27,12 +27,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.graphql.Graphql;
+import com.linecorp.armeria.common.graphql.GraphqlUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
 
 class GraphqlServiceBlockingTest {
 
@@ -57,12 +58,16 @@ class GraphqlServiceBlockingTest {
     };
 
     private static DataFetcher<String> dataFetcher(String value) {
-        return environment -> {
-            final ServiceRequestContext ctx = environment.getGraphQlContext().get(Graphql.graphqlContextKey());
-            assertThat(ctx.eventLoop().inEventLoop()).isFalse();
-            // Make sure that a ServiceRequestContext is available
-            assertThat(ServiceRequestContext.current()).isSameAs(ctx);
-            return value;
+        return new DataFetcher<String>() {
+            @Override
+            public String get(DataFetchingEnvironment environment) throws Exception {
+                final ServiceRequestContext ctx = environment.getGraphQlContext()
+                                                             .get(GraphqlUtil.graphqlContextKey());
+                assertThat(ctx.eventLoop().inEventLoop()).isFalse();
+                // Make sure that a ServiceRequestContext is available
+                assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+                return value;
+            }
         };
     }
 

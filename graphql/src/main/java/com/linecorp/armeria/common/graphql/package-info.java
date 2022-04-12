@@ -15,7 +15,7 @@
  */
 
 /**
- * GraphQL-related internal common classes.
+ * GraphQL-related common classes.
  */
 @NonNullByDefault
 @UnstableApi

@@ -46,7 +46,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
+import com.linecorp.armeria.internal.server.graphql.protocol.InternalGraphqlUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -197,7 +197,7 @@ class AbstractGraphqlServiceTest {
         @Override
         protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
             graphqlRequest = req;
-            produceType = GraphqlUtil.produceType(ctx.request().headers());
+            produceType = InternalGraphqlUtil.produceType(ctx.request().headers());
             return HttpResponse.of(HttpStatus.OK);
         }
     }
