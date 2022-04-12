@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
@@ -82,7 +83,7 @@ public class GrpcStatusCauseTest {
     @Test
     public void normal() {
         // These two properties are set in build.gradle.
-        assumeTrue("always".equals(Flags.verboseExceptionSamplerSpec()));
+        assumeTrue(Sampler.always().equals(Flags.verboseExceptionSampler()));
         assumeTrue(Flags.verboseResponses());
 
         assertThatThrownBy(() -> stub.unaryCall(SimpleRequest.getDefaultInstance()))
