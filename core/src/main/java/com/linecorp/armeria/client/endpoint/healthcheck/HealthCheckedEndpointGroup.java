@@ -164,7 +164,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             contextGroup.whenInitialized().handle((unused, cause) -> {
                 if (cause != null && !initialized) {
                     if (logger.isWarnEnabled()) {
-                        logger.warn("Failed to initialize the first health check. " +
+                        logger.warn("The first health check failed for all endpoints. " +
                                     "numCandidates: {} candidates: {}",
                                     candidates.size(), truncate(candidates, 10), cause);
                     }
