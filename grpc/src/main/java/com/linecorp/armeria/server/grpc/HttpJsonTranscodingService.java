@@ -170,7 +170,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
                 final List<FieldDescriptor> topLevelFields = methodDesc.getOutputType().getFields();
 
-                final String responseBody = validateResponseBody(topLevelFields, httpRule.getResponseBody());
+                final String responseBody = getResponseBody(topLevelFields, httpRule.getResponseBody());
 
                 int order = 0;
                 builder.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
@@ -429,8 +429,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     // to make it more efficient, we calculate whether extract response body one time
     // if there is no matching toplevel field, we set it to null
     @Nullable
-    private static String validateResponseBody(List<FieldDescriptor> topLevelFields,
-                                               @Nullable String responseBody) {
+    private static String getResponseBody(List<FieldDescriptor> topLevelFields,
+                                          @Nullable String responseBody) {
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         }

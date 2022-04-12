@@ -259,35 +259,6 @@ class HttpJsonTranscodingTest {
         }
     }
 
-    static ServerExtension createServer(boolean preservingProtoFieldNames) {
-        return new ServerExtension() {
-            @Override
-            protected void configure(ServerBuilder sb) throws Exception {
-                final GrpcServiceBuilder grpcServiceBuilder =
-                        GrpcService.builder()
-                                   .addService(new HttpJsonTranscodingTestService())
-                                   .enableHttpJsonTranscoding(true);
-                if (preservingProtoFieldNames) {
-                    grpcServiceBuilder.jsonMarshallerFactory(service -> GrpcJsonMarshaller
-                            .builder()
-                            .jsonMarshallerCustomizer(m -> m.preservingProtoFieldNames(true))
-                            .build(service));
-                }
-                final GrpcService grpcService = grpcServiceBuilder.build();
-
-                // gRPC transcoding will not work under '/foo'.
-                // You may get the following log messages when calling the following 'serviceUnder' method:
-                //   [main] WARN  c.l.armeria.server.ServerBuilder - The service has self-defined routes
-                //   but the routes will be ignored. It will be served at the route you specified: path=/foo,
-                //   service=...
-                sb.service(grpcService)
-                  .requestTimeout(Duration.ZERO)
-                  .serviceUnder("/foo", grpcService)
-                  .serviceUnder("/docs", DocService.builder().build());
-            }
-        };
-    }
-
     @RegisterExtension
     static final ServerExtension server = createServer(false);
 
@@ -303,6 +274,35 @@ class HttpJsonTranscodingTest {
 
     final WebClient webClientPreservingProtoFieldNames =
             WebClient.builder(serverPreservingProtoFieldNames.httpUri()).build();
+
+    static ServerExtension createServer(boolean preservingProtoFieldNames) {
+        return new ServerExtension() {
+            @Override
+            protected void configure(ServerBuilder sb) throws Exception {
+                final GrpcServiceBuilder grpcServiceBuilder =
+                    GrpcService.builder()
+                               .addService(new HttpJsonTranscodingTestService())
+                               .enableHttpJsonTranscoding(true);
+                if (preservingProtoFieldNames) {
+                    grpcServiceBuilder.jsonMarshallerFactory(service -> GrpcJsonMarshaller
+                        .builder()
+                        .jsonMarshallerCustomizer(m -> m.preservingProtoFieldNames(true))
+                        .build(service));
+                }
+                final GrpcService grpcService = grpcServiceBuilder.build();
+
+                // gRPC transcoding will not work under '/foo'.
+                // You may get the following log messages when calling the following 'serviceUnder' method:
+                //   [main] WARN  c.l.armeria.server.ServerBuilder - The service has self-defined routes
+                //   but the routes will be ignored. It will be served at the route you specified: path=/foo,
+                //   service=...
+                sb.service(grpcService)
+                  .requestTimeout(Duration.ZERO)
+                  .serviceUnder("/foo", grpcService)
+                  .serviceUnder("/docs", DocService.builder().build());
+            }
+        };
+    }
 
     @Test
     void shouldGetMessageV1ByGrpcClient() {

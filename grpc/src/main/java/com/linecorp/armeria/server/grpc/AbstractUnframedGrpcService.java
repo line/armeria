@@ -224,9 +224,9 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             @Override
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
-                HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
+                HttpData unframedContent = HttpData.wrap(message.buf());
                 if (responseBodyConverter != null) {
-                    unframedContent = responseBodyConverter.apply(unframedContent).withEndOfStream();
+                    unframedContent = responseBodyConverter.apply(unframedContent);
                 }
                 unframedHeaders.contentLength(unframedContent.length());
                 res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
