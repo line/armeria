@@ -22,11 +22,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
+import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.rpc.ErrorInfo;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -45,6 +50,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import io.grpc.BindableService;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.grpc.protobuf.StatusProto;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -68,6 +74,12 @@ class UnframedGrpcServiceTest {
 
     private static ServiceRequestContext ctx;
     private static HttpRequest request;
+
+    private static com.google.rpc.Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
+            throws InvalidProtocolBufferException {
+        final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
+        return com.google.rpc.Status.parseFrom(result);
+    }
 
     @BeforeEach
     void setUp() {
@@ -98,6 +110,29 @@ class UnframedGrpcServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
         assertThat(res.contentUtf8())
                 .isEqualTo("grpc-code: CANCELLED, grpc error message");
+    }
+
+    @Test
+    void throwGrpcStatus() throws Exception {
+        final TestService spyTestService = spy(testService);
+        final ErrorInfo errorInfo = ErrorInfo.newBuilder()
+                                             .setDomain("test")
+                                             .setReason("Unknown Exception").build();
+        final com.google.rpc.Status
+                status = com.google.rpc.Status.newBuilder()
+                                              .setCode(2)
+                                              .setMessage("Unknown Exceptions Test")
+                                              .addDetails(
+                                                      Any.pack(errorInfo))
+                                              .build();
+        doThrow(StatusProto.toStatusRuntimeException(status))
+                .when(spyTestService)
+                .emptyCall(any(), any());
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(spyTestService);
+        final HttpResponse response = unframedGrpcService.serve(ctx, request);
+        final AggregatedHttpResponse res = response.aggregate().get();
+        final String grpcStatusDetailsBin = res.headers().get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
+        assertThat(decodeGrpcStatusDetailsBin(grpcStatusDetailsBin)).isEqualTo(status);
     }
 
     @Test

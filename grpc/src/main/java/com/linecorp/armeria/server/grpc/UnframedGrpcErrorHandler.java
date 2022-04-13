@@ -19,14 +19,17 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -109,12 +112,18 @@ public interface UnframedGrpcErrorHandler {
                 cause = null;
             }
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
-            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
-                                                                   .contentType(MediaType.JSON_UTF_8)
-                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
-                                                                           grpcCode.value())
-                                                                   .build();
-            return HttpResponse.ofJson(responseHeaders, message);
+            final ResponseHeadersBuilder responseHeadersBuilder =
+                ResponseHeaders.builder(httpStatus)
+                    .contentType(MediaType.JSON_UTF_8)
+                    .addInt(GrpcHeaderNames.GRPC_STATUS,
+                        grpcCode.value());
+            final HttpHeaders trailers = !response.trailers().isEmpty() ?
+                response.trailers() : response.headers();
+            final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
+            if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
+                responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
+            }
+            return HttpResponse.ofJson(responseHeadersBuilder.build(), message);
         };
     }
 
@@ -152,12 +161,18 @@ public interface UnframedGrpcErrorHandler {
                 cause = null;
             }
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
-            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
-                                                                   .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
-                                                                           grpcCode.value())
-                                                                   .build();
-            return HttpResponse.of(responseHeaders, HttpData.ofUtf8(message.toString()));
+            final ResponseHeadersBuilder responseHeadersBuilder =
+                ResponseHeaders.builder(httpStatus)
+                    .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                    .addInt(GrpcHeaderNames.GRPC_STATUS,
+                        grpcCode.value());
+            final HttpHeaders trailers = !response.trailers().isEmpty() ?
+                response.trailers() : response.headers();
+            final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
+            if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
+                responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
+            }
+            return HttpResponse.of(responseHeadersBuilder.build(), HttpData.ofUtf8(message.toString()));
         };
     }
 

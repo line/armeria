@@ -51,6 +51,10 @@ public final class GrpcHeaderNames {
      */
     public static final AsciiString ARMERIA_GRPC_THROWABLEPROTO_BIN =
             HttpHeaderNames.of("armeria.grpc.ThrowableProto-bin");
+    /**
+     * {@code "grpc-accept-encoding"}.
+     */
+    public static final AsciiString GRPC_STATUS_DETAILS_BIN = HttpHeaderNames.of("grpc-status-details-bin");
 
     private GrpcHeaderNames() {}
 }
