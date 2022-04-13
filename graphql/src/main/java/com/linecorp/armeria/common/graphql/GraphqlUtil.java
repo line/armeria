@@ -31,7 +31,7 @@ public final class GraphqlUtil {
 
     /**
      * Returns a key to put {@link ServiceRequestContext} in {@link GraphQLContext}.
-     * <h2>Examples</h2>
+     * For example:
      * <pre>{@code
      * new DataFetcher<>() {
      *     @Override
