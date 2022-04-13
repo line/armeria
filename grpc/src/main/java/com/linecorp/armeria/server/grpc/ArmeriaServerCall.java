@@ -327,7 +327,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 maybeCancel();
             }
         } catch (Throwable e) {
-            close(e, new Metadata());
+            close(e);
         }
     }
 
@@ -337,7 +337,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(t, new Metadata());
+            close(t);
         }
     }
 
@@ -349,6 +349,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         close0(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
+    }
+
+    private void close(Throwable exception) {
+        final Metadata metadata = generateMetadataFromThrowable(exception);
+        close(exception, metadata);
     }
 
     private void close(Throwable exception, Metadata metadata) {
@@ -525,7 +530,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 invokeOnMessage(request);
             }
         } catch (Throwable cause) {
-            close(cause, new Metadata());
+            close(cause);
         }
     }
 
@@ -534,7 +539,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             assert listener != null;
             listener.onMessage(request);
         } catch (Throwable cause) {
-            close(cause, new Metadata());
+            close(cause);
         }
     }
 
@@ -555,7 +560,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void onError(Throwable t) {
         if (!closeCalled && !(t instanceof AbortedStreamException)) {
-            close(t, new Metadata());
+            close(t);
         }
     }
 
@@ -652,7 +657,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(t, new Metadata());
+                close(t);
             }
         }
     }
@@ -689,8 +694,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         deframedRequest.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
-    private static Metadata generateMetadataFromThrowable(Throwable throwable) {
-        @Nullable final Metadata metadata = Status.trailersFromThrowable(throwable);
+    private static Metadata generateMetadataFromThrowable(Throwable exception) {
+        @Nullable final Metadata metadata = Status.trailersFromThrowable(exception);
         return metadata != null ? metadata : new Metadata();
     }
 
