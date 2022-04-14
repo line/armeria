@@ -205,7 +205,7 @@ public final class ServiceConfig {
 
     /**
      * Returns the {@link Route} whose prefix is removed when an {@link HttpServiceWithRoutes} is added
-     * via {@link ServerBuilder#serviceUnder(String, HttpServiceWithRoutes)}.
+     * via {@link ServerBuilder#serviceUnder(String, HttpService)}.
      * For example, in the following code, the path of the {@link #mappedRoute()} will be ({@code "/bar"})
      * whereas the path of the {@link #route()} will be ({@code "/foo/bar"}):
      * <pre>{@code

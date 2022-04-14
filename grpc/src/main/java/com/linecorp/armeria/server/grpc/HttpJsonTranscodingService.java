@@ -166,6 +166,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of());
 
                 if (specs.containsKey(route)) {
+                    logger.warn("{} is not added because the route is duplicate: {}", httpRule, route);
                     continue;
                 }
                 int order = 0;

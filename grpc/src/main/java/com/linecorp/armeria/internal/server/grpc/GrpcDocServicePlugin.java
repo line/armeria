@@ -160,6 +160,9 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
             if (grpcService instanceof HttpEndpointSupport) {
                 // grpcService is a HttpJsonTranscodingService.
+                // There are two routes for a method in HttpJsonTranscodingService:
+                // - The HTTP route is added below using the spec.
+                // - The auto generated route(e.g. /package.name/MethodName) is added using EndpointInfo.
                 final HttpEndpointSpecification spec =
                         ((HttpEndpointSupport) grpcService).httpEndpointSpecification(
                                 serviceConfig.mappedRoute()); // Use mappedRoute to find the specification.

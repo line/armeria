@@ -1118,7 +1118,7 @@ public final class ServerBuilder {
         if (serviceWithRoutes != null) {
             serviceWithRoutes.routes()
                              .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
-                                                      .addMappedRoute(route)
+                                                      .mappedRoute(route)
                                                       .build(service));
             return this;
         }

@@ -90,6 +90,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
+// The public Static methods in this class are used by the classes in other packages.
 public class HttpJsonTranscodingTest {
 
     static class HttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceImplBase {

@@ -468,7 +468,7 @@ public final class VirtualHostBuilder {
         if (serviceWithRoutes != null) {
             serviceWithRoutes.routes().forEach(route -> {
                 final ServiceConfigBuilder serviceConfigBuilder =
-                        new ServiceConfigBuilder(route.withPrefix(pathPrefix), serviceWithRoutes);
+                        new ServiceConfigBuilder(route.withPrefix(pathPrefix), service);
                 serviceConfigBuilder.addMappedRoute(route);
                 addServiceConfigSetters(serviceConfigBuilder);
             });

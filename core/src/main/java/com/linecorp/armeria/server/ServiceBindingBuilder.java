@@ -189,7 +189,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.addRoute(route);
     }
 
-    ServiceBindingBuilder addMappedRoute(Route mappedRoute) {
+    ServiceBindingBuilder mappedRoute(Route mappedRoute) {
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
         return this;
     }
