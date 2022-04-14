@@ -113,12 +113,12 @@ public interface UnframedGrpcErrorHandler {
             }
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final ResponseHeadersBuilder responseHeadersBuilder =
-                ResponseHeaders.builder(httpStatus)
-                    .contentType(MediaType.JSON_UTF_8)
-                    .addInt(GrpcHeaderNames.GRPC_STATUS,
-                        grpcCode.value());
+                    ResponseHeaders.builder(httpStatus)
+                                   .contentType(MediaType.JSON_UTF_8)
+                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                           grpcCode.value());
             final HttpHeaders trailers = !response.trailers().isEmpty() ?
-                response.trailers() : response.headers();
+                                         response.trailers() : response.headers();
             final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
             if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
                 responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
@@ -162,12 +162,12 @@ public interface UnframedGrpcErrorHandler {
             }
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final ResponseHeadersBuilder responseHeadersBuilder =
-                ResponseHeaders.builder(httpStatus)
-                    .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                    .addInt(GrpcHeaderNames.GRPC_STATUS,
-                        grpcCode.value());
+                    ResponseHeaders.builder(httpStatus)
+                                   .contentType(MediaType.JSON_UTF_8)
+                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                           grpcCode.value());
             final HttpHeaders trailers = !response.trailers().isEmpty() ?
-                response.trailers() : response.headers();
+                                         response.trailers() : response.headers();
             final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
             if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
                 responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
