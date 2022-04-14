@@ -163,7 +163,7 @@ public interface UnframedGrpcErrorHandler {
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final ResponseHeadersBuilder responseHeadersBuilder =
                     ResponseHeaders.builder(httpStatus)
-                                   .contentType(MediaType.JSON_UTF_8)
+                                   .contentType(MediaType.PLAIN_TEXT)
                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
                                            grpcCode.value());
             final HttpHeaders trailers = !response.trailers().isEmpty() ?
