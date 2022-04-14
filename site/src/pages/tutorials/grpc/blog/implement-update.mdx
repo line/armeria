@@ -1,0 +1,149 @@
+---
+menuTitle: "Implement UPDATE"
+order: 5
+category: grpc
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing UPDATE operation
+
+Previously, we've created and read blog posts. Now, let's implement and make a call to update a blog post.
+
+<TutorialSteps current={5} />
+
+## What you need
+
+You need to have the files obtained from previous steps:
+
+- [Generated Java code]
+  (/tutorials/grpc/blog/define-service#compile-proto
+  -file)
+- Main.java
+- BlogService.java
+- BlogClient.java
+
+## 1. Implement service
+
+In the BlogService.java file we've been working on, add a method for 
+updating a blog post, `updateBlogPost()`. Unlike what we did for retrieving 
+a blog post, we will return the not found status instead of throwing an 
+exception.
+```java filename=BlogService.java
+import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
+
+public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  @Override
+  public void updateBlogPost(UpdateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+    final BlogPost oldBlogPost = blogPosts.get(request.getId());
+    if (oldBlogPost == null) {
+      responseObserver.onError(
+        Status.NOT_FOUND.withDescription("The blog post does not exist. ID: " + request.getId())
+                        .asRuntimeException());
+    } else {
+        final BlogPost newBlogPost = oldBlogPost.toBuilder()
+                                                .setTitle(request.getTitle())
+                                                .setContent(request.getContent())
+                                                .setModifiedAt(Instant.now().toEpochMilli())
+                                                .build();
+        blogPosts.put(request.getId(), newBlogPost);
+        responseObserver.onNext(newBlogPost);
+        responseObserver.onCompleted();
+    }
+  }
+}
+```
+
+## 2. Implement client
+
+We'll continue using the `cb` instance with a decorator as the client. Add a method `updateBlogPost()` to send a request to update a blog post.
+
+```java filename=BlogClient.java
+import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
+
+class BlogClient {
+  static void updateBlogPost(Integer id, String newTitle, String newContent){
+    final UpdateBlogPostRequest request = UpdateBlogPostRequest.newBuilder()
+                                                               .setId(id)
+                                                               .setTitle(newTitle)
+                                                               .setContent(newContent)
+                                                               .build();
+    final BlogPost updated = cb.updateBlogPost(request);
+  }
+}
+```
+
+## 3. Test run
+
+Let's test updating a blog post. Since we know we are giving an incremental index to blog posts, we'll update the post at index 1.
+
+1. Add a method to test run the update method we just implemented. 
+  ```java filename=BlogClient.java
+  static void testRun(){
+    // This guarantees a blog post with ID equal to 1
+    createBlogPost("Second blog", "This is my second attempt");
+    // Check the existing title and content
+    getBlogPost(1);
+    // Update the blog with the ID, 1
+    updateBlogPost(1, "Updated title", "Updated content.");
+    // Check the updated blog detail
+    getBlogPost(1);
+  }
+  ```
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service).
+3. Run the client and check that the blog information before updating.
+   ```bash
+   [main] INFO  e.a.client.blog.grpc.BlogClient - [Create response] Title: Second blog Content: This is my second attempt
+   {id: 1
+   title: "Second blog"
+   content: "This is my second attempt"
+   createdAt: 1649120472799
+   modifiedAt: 1649120472799
+   }
+   ...
+   DEBUG c.l.a.client.logging.LoggingClient - [...][http://127.0.0.1:8080/example.armeria.server.blog.grpc.BlogService/GetBlogPost#POST] 
+   Response: {startTime=..., content=CompletableRpcResponse{id: 1
+   title: "Second blog"
+   content: "This is my second attempt"
+   createdAt: 1649723835871
+   modifiedAt: 1649723835871
+   }, trailers=[EOS, grpc-status=0]}
+   ```
+4. Check that you see log for the update request followed by the response.
+   ```bash
+   ...
+   Request: {startTime= ... method=UpdateBlogPost, params=[id: 1
+   title: "New title"
+   content: "New content"
+   ]}}
+   ...
+   Response: {startTime=2022 ... content=CompletableRpcResponse{id: 1
+   title: "New title"
+   content: "New content"
+   createdAt: 1649120472799
+   modifiedAt: 1649120472848
+   }, trailers=[EOS, grpc-status=0]}
+   ```
+ 5. Double-check that the updated information is stored properly by checking 
+    the response to the `getBlogPost()`.
+  ```bash
+  ...
+  Request: {startTime= ... method=GetBlogPost, params=[id: 1
+  ]}}
+  ...
+  Response: {startTime= ... content=CompletableRpcResponse{id: 1
+  title: "New title"
+  content: "New content"
+  createdAt: 1649120472799
+  modifiedAt: 1649120472848
+  }, trailers=[EOS, grpc-status=0]}
+  ```
+
+## What's next
+
+Here, we've implemented a service method and client method for updating a 
+blog post. Next, let's [implement a DELETE operation](/tutorials/grpc/blog/implement-delete).
+
+<TutorialSteps current={5} />
