@@ -45,14 +45,14 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     // Use slightly greater value than the client-side default so that clients close the connection more often.
     static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
-    static final long DEFAULT_REQUEST_TIMEOUT_MILLIS = 10 * 1000; // 10 seconds
+    static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
+    static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
+    static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
 
     // Use slightly greater value than the default request timeout so that clients have a higher chance of
     // getting proper 503 Service Unavailable response when server-side timeout occurs.
     static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS = 15 * 1000; // 15 seconds
-    static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
-    static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
-    static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
+    static final long DEFAULT_REQUEST_TIMEOUT_MILLIS = 10 * 1000; // 10 seconds
     static final int DEFAULT_HTTP1_MAX_INITIAL_LINE_LENGTH = 4096; // from Netty
     static final int DEFAULT_HTTP1_MAX_HEADER_SIZE = 8192; // from Netty
     static final int DEFAULT_HTTP1_MAX_CHUNK_SIZE = 8192; // from Netty
