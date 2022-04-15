@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -81,12 +81,12 @@ public class UnframedGrpcErrorHandlerTest {
 
     @Test
     void withoutStackTrace() {
-        final WebClient client = nonVerboseServer.webClient();
+        final BlockingWebClient client = nonVerboseServer.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
                       .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
-                      .execute().aggregate().join();
+                      .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         final String content = response.contentUtf8();
         assertThat(content).isEqualTo("grpc-code: UNKNOWN, grpc error message");
@@ -95,12 +95,12 @@ public class UnframedGrpcErrorHandlerTest {
 
     @Test
     void plainTextWithStackTrace() {
-        final WebClient client = verbosePlainTextResServer.webClient();
+        final BlockingWebClient client = verbosePlainTextResServer.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
                       .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
-                      .execute().aggregate().join();
+                      .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         final String content = response.contentUtf8();
         assertThat(content).startsWith("grpc-code: UNKNOWN, grpc error message" +
@@ -110,12 +110,12 @@ public class UnframedGrpcErrorHandlerTest {
 
     @Test
     void jsonWithStackTrace() {
-        final WebClient client = verboseJsonResServer.webClient();
+        final BlockingWebClient client = verboseJsonResServer.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
                       .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
-                      .execute().aggregate().join();
+                      .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         final String content = response.contentUtf8();
         assertThat(content).startsWith("{\"grpc-code\":\"UNKNOWN\",\"message\":\"grpc error message\"," +
