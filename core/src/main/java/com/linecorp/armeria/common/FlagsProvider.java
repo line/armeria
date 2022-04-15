@@ -59,13 +59,13 @@ import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 
 /**
- * A Java SPI (Service Provider Interface) for the {@link Flags} value. Returning null to indicates that this
- * FlagsProvider doesn't provide the flag. 2 Implementations already provided by default.
+ * A Java SPI (Service Provider Interface) for the {@link Flags} values. Returning null to indicates that this
+ * FlagsProvider doesn't provide the flag.
  *
+ * <p>Two {@link FlagsProvider}s are provided by default.
  * <ul>
- *     <li>{@link SystemPropertyFlagsProvider} which provides value from JVM option</li>
- *     <li>{@link DefaultFlagsProvider} which provides the default values when flag isn't provides or fail
- *     to validated</li>
+ *     <li>The system property {@link FlagsProvider} which provides value from JVM option</li>
+ *     <li>The default {@link FlagsProvider} which provides the default values when flag isn't provides or fail
  * </ul>
  *
  */
@@ -74,7 +74,7 @@ import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 public interface FlagsProvider {
 
     /**
-     * Return a priority of {@link FlagsProvider} to determine which implementation to use first.
+     * Returns a priority of {@link FlagsProvider} to determine which implementation to use first.
      * The {@link FlagsProvider} with the highest priority would be used at first. The value could be
      * specified between {@value Integer#MIN_VALUE} and {@value Integer#MAX_VALUE}.
      */
