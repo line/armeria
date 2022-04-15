@@ -1367,7 +1367,8 @@ public final class Flags {
                             ex.getMessage());
             }
         }
-        throw new IllegalStateException(String.format("Cannot initial flag value : %s", flagName));
+        // Should never reach here because DefaultFlagsProvider always returns a normal value.
+        throw new Error();
     }
 
     private Flags() {}
