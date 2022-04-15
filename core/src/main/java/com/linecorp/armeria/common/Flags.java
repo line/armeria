@@ -363,6 +363,41 @@ public final class Flags {
     }
 
     /**
+     * Returns the specification string of the {@link Sampler} that determines whether to retain the
+     * stack trace of the exceptions that are thrown frequently by Armeria.
+     *
+     * @see #verboseExceptionSampler()
+     *
+     * @deprecated Use {@link #verboseExceptionSampler()} and
+     *             {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>}.
+     */
+    @Deprecated
+    public static String verboseExceptionSamplerSpec() {
+        // XXX(trustin): Is it worth allowing to specify different specs for different exception types?
+        final String strSpec = getNormalized("verboseExceptions",
+                                             DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER, val -> {
+            if ("true".equals(val) || "false".equals(val)) {
+                return true;
+            }
+
+            try {
+                Sampler.of(val);
+                return true;
+            } catch (Exception e) {
+                // Invalid sampler specification
+                return false;
+            }
+        });
+        if ("true".equals(strSpec)) {
+            return "always";
+        }
+        if ("false".equals(strSpec)) {
+            return "never";
+        }
+        return strSpec;
+    }
+
+    /**
      * Returns whether to log the socket exceptions which are mostly harmless. If enabled, the following
      * exceptions will be logged:
      * <ul>
