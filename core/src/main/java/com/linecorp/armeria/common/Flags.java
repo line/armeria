@@ -1292,10 +1292,10 @@ public final class Flags {
 
         if (value != null) {
             if (validator.test(value)) {
-                logger.info("{}: {} (jvm option)", fullName, value);
+                logger.info("{}: {} (JVM option)", fullName, value);
                 return value;
             }
-            logger.warn("{}: {} (jvm option) fail validation", fullName, value);
+            logger.warn("{}: {} (JVM option) fail validation", fullName, value);
         }
         logger.info("{}: {} (default)", fullName, defaultValue);
         return defaultValue;
