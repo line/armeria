@@ -18,16 +18,16 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 final class WebClientUtil {
 
     /**
      * Appends query params to the current path and returns the modified path.
      */
-    static String addQueryParams(String path, QueryParams params) {
+    static String addQueryParams(String path, @Nullable QueryParams params) {
         requireNonNull(path, "path");
-        requireNonNull(params, "params");
-        if (params.isEmpty()) {
+        if (params == null || params.isEmpty()) {
             return path;
         }
 

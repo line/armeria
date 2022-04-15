@@ -53,7 +53,7 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
      * Creates an {@link ArmeriaClientHttpConnector} with the specified
      * {@link ArmeriaClientConfigurator} and the default {@link DataBufferFactoryWrapper}.
      *
-     * @param configurator the configurator to be used to build an {@link WebClient}
+     * @param configurator the configurator to be used to build a {@link WebClient}
      */
     @VisibleForTesting
     ArmeriaClientHttpConnector(ArmeriaClientConfigurator configurator) {

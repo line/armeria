@@ -62,6 +62,13 @@ public abstract class WebAppContainerMutualTlsTest {
      */
     protected abstract ServerExtension server();
 
+    /**
+     * Returns the expected return value of {@code ServletRequest.getRemoteHost()}.
+     */
+    protected String expectedRemoteHost() {
+        return "127.0.0.1";
+    }
+
     @ParameterizedTest
     @CsvSource({ "H1", "H2" })
     public void mutualTlsAttrs(SessionProtocol sessionProtocol) throws Exception {
@@ -87,6 +94,7 @@ public abstract class WebAppContainerMutualTlsTest {
             }
 
             assertThatJson(res.contentUtf8())
+                    .node("remoteHost").isStringEqualTo(expectedRemoteHost())
                     .node("sessionId").isStringEqualTo(expectedId)
                     .node("cipherSuite").isStringEqualTo(sslSession.getCipherSuite())
                     .node("keySize").matches(greaterThan(BigDecimal.ZERO))

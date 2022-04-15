@@ -129,7 +129,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         final Deque<EndpointsRampingUpEntry> endpointsRampingUp = new ArrayDeque<>();
 
         @Nullable
-        private List<Endpoint> unhandledNewEndpoints;
+        private Set<EndpointAndStep> unhandledNewEndpoints;
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
@@ -184,11 +184,11 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         // Only executed by the executor.
         private void updateEndpoints(List<Endpoint> newEndpoints) {
             unhandledNewEndpoints = null;
+            final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
             if (rampingUpTaskWindowNanos > 0) {
                 // Check whether we can ramp up with the previous ramped up endpoints which are at the last
                 // of the rampingUpEndpointsEntries.
                 if (shouldRampUpWithPreviousRampedUpEntry()) {
-                    final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
                     if (!newlyAddedEndpoints.isEmpty()) {
                         updateWeightAndStep(newlyAddedEndpoints);
                         endpointsRampingUp.getLast().addEndpoints(newlyAddedEndpoints);
@@ -200,12 +200,11 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 // Check whether we can ramp up with the next scheduled endpointsRampingUpEntry.
                 if (shouldRampUpWithNextScheduledEntry()) {
                     // unhandledNewEndpoints will be ramped up when updateWeightAndStep() is executed.
-                    unhandledNewEndpoints = newEndpoints;
+                    unhandledNewEndpoints = newlyAddedEndpoints;
                     return;
                 }
             }
 
-            final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
             if (newlyAddedEndpoints.isEmpty()) {
                 // newlyAddedEndpoints is empty which means that endpointsFinishedRampingUp are changed.
                 // So rebuild the endpoint selector.
@@ -254,7 +253,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         /**
          * Removes endpoints in endpointsFinishedRampingUp and endpointsRampingUp that
          * newEndpoints do not contain.
-         * This also returns the {@link Set} of {@link EndpointAndStep}s whose endpoints are not in
+         * This also returns the {@link Set} of {@link EndpointAndStep}s whose endpoints are not
          * in endpointsFinishedRampingUp and endpointsRampingUp.
          */
         private Set<EndpointAndStep> filterOldEndpoints(List<Endpoint> newEndpoints) {
@@ -348,11 +347,9 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         private void updateWeightAndStep() {
             if (unhandledNewEndpoints != null) {
-                final Set<EndpointAndStep> newlyAddedEndpoints =
-                        filterOldEndpoints(unhandledNewEndpoints);
                 final EndpointsRampingUpEntry entry = endpointsRampingUp.peek();
                 assert entry != null;
-                entry.addEndpoints(newlyAddedEndpoints);
+                entry.addEndpoints(unhandledNewEndpoints);
                 unhandledNewEndpoints = null;
             }
             final EndpointsRampingUpEntry entry = endpointsRampingUp.poll();

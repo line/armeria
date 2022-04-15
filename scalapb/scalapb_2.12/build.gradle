@@ -15,6 +15,7 @@ dependencies {
 //     will confuse IDEs such as IntelliJ IDEA.
 def scalapb213ProjectDir = "${rootProject.projectDir}/scalapb/scalapb_2.13"
 tasks.compileScala.source "${scalapb213ProjectDir}/src/main/scala"
+tasks.compileScala.source "${scalapb213ProjectDir}/src/main/scala_2"
 tasks.processResources.from "${scalapb213ProjectDir}/src/main/resources"
 // Uncomment the following three lines once we have src/main/proto in :scalapb_2.13.
 //// Use the source code generated from :scalapb_2.13/src/main/proto/*.proto.
@@ -28,5 +29,7 @@ tasks.compileTestScala.dependsOn(":scalapb_2.13:generateTestProto")
 tasks.compileTestScala.source "${scalapb213ProjectDir}/gen-src/test/scalapb"
 
 tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/scala"
+tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/scala_2"
 tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/resources"
 tasks.scaladoc.source "${scalapb213ProjectDir}/src/main/scala"
+tasks.scaladoc.source "${scalapb213ProjectDir}/src/main/scala_2"

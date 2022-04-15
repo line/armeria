@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,6 +27,7 @@ import java.util.function.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -60,9 +62,12 @@ public final class ServiceConfig {
     private final boolean shutdownAccessLogWriterOnStop;
     private final Set<TransientServiceOption> transientServiceOptions;
     private final boolean handlesCorsPreflight;
+    private final SuccessFunction successFunction;
 
     private final ScheduledExecutorService blockingTaskExecutor;
     private final boolean shutdownBlockingTaskExecutorOnStop;
+
+    private final Path multipartUploadsLocation;
 
     /**
      * Creates a new instance.
@@ -73,11 +78,14 @@ public final class ServiceConfig {
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   boolean shutdownAccessLogWriterOnStop,
                   ScheduledExecutorService blockingTaskExecutor,
-                  boolean shutdownBlockingTaskExecutorOnStop) {
+                  boolean shutdownBlockingTaskExecutorOnStop,
+                  SuccessFunction successFunction,
+                  Path multipartUploadsLocation) {
         this(null, route, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service),
-             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+             multipartUploadsLocation);
     }
 
     /**
@@ -90,7 +98,9 @@ public final class ServiceConfig {
                           boolean shutdownAccessLogWriterOnStop,
                           Set<TransientServiceOption> transientServiceOptions,
                           ScheduledExecutorService blockingTaskExecutor,
-                          boolean shutdownBlockingTaskExecutorOnStop) {
+                          boolean shutdownBlockingTaskExecutorOnStop,
+                          SuccessFunction successFunction,
+                          Path multipartUploadsLocation) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -105,6 +115,8 @@ public final class ServiceConfig {
         this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        this.multipartUploadsLocation = multipartUploadsLocation;
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -141,7 +153,8 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+                                 multipartUploadsLocation);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -150,7 +163,8 @@ public final class ServiceConfig {
                                  defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+                                 multipartUploadsLocation);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -158,7 +172,8 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+                                 multipartUploadsLocation);
     }
 
     /**
@@ -321,6 +336,21 @@ public final class ServiceConfig {
         return shutdownBlockingTaskExecutorOnStop;
     }
 
+    /**
+     * Returns the {@link SuccessFunction} that determines whether a request was
+     * handled successfully or not.
+     */
+    public SuccessFunction successFunction() {
+        return successFunction;
+    }
+
+    /**
+     * Returns the {@link Path} that is used to store uploaded file through multipart/form-data.
+     */
+    public Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
+    }
+
     @Override
     public String toString() {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
@@ -338,6 +368,8 @@ public final class ServiceConfig {
                              .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                              .add("blockingTaskExecutor", blockingTaskExecutor)
                              .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
+                             .add("successFunction", successFunction)
+                             .add("multipartUploadsLocation", multipartUploadsLocation)
                              .toString();
     }
 }

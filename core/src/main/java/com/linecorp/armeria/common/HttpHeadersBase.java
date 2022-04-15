@@ -468,8 +468,8 @@ class HttpHeadersBase
             cache.put(HttpHeaderNames.CONTENT_LENGTH, parsed);
             return parsed;
         } else {
-            cache.put(HttpHeaderNames.CONTENT_LENGTH, -1);
-            return -1;
+            cache.put(HttpHeaderNames.CONTENT_LENGTH, -1L);
+            return -1L;
         }
     }
 

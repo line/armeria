@@ -12,8 +12,10 @@ interface Dependency {
 }
 
 interface RequiredDependenciesProps {
+  /* eslint-disable react/no-unused-prop-types */
   boms?: Dependency[];
   dependencies: Dependency[];
+  /* eslint-enable react/no-unused-prop-types */
 }
 
 function gradleBom(boms: Dependency[]) {
@@ -41,6 +43,36 @@ function gradleDependency(props: RequiredDependenciesProps) {
   return `
 dependencies {
 ${props.boms == null ? '' : gradleBom(props.boms)}    ...
+${statements}
+}
+`;
+}
+
+function gradleKotlinBom(boms: Dependency[]) {
+  return `${boms
+    .map((bom) => {
+      const key = `${bom.groupId}:${bom.artifactId}`;
+      let version;
+      if (bom.version != null) {
+        version = bom.version;
+      } else {
+        version = versions[key];
+      }
+      return `    implementation(platform("${key}:${version}"))`;
+    })
+    .join('\n')}\n\n`;
+}
+
+function gradleKotlinDependency(props: RequiredDependenciesProps) {
+  const statements: string = props.dependencies
+    .map(
+      (dependency) =>
+        `    implementation("${dependency.groupId}:${dependency.artifactId}")`,
+    )
+    .join('\n');
+  return `
+dependencies {
+${props.boms == null ? '' : gradleKotlinBom(props.boms)}    ...
 ${statements}
 }
 `;
@@ -95,6 +127,11 @@ const RequiredDependencies: React.FC<RequiredDependenciesProps> = (props) => {
       <AntdTabs.TabPane tab="Gradle" key="gradle">
         <CodeBlock language="groovy" filename="build.gradle">
           {gradleDependency(props)}
+        </CodeBlock>
+      </AntdTabs.TabPane>
+      <AntdTabs.TabPane tab="Gradle (Kotlin)" key="gradle_kotlin">
+        <CodeBlock language="kotlin" filename="build.gradle.kts">
+          {gradleKotlinDependency(props)}
         </CodeBlock>
       </AntdTabs.TabPane>
       <AntdTabs.TabPane tab="Maven" key="maven">

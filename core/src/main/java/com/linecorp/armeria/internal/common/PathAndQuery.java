@@ -133,13 +133,19 @@ public final class PathAndQuery {
      */
     @Nullable
     public static PathAndQuery parse(@Nullable String rawPath) {
+        return parse(rawPath, Flags.allowDoubleDotsInQueryString());
+    }
+
+    @VisibleForTesting
+    @Nullable
+    static PathAndQuery parse(@Nullable String rawPath, boolean allowDoubleDotsInQueryString) {
         if (CACHE != null && rawPath != null) {
             final PathAndQuery parsed = CACHE.getIfPresent(rawPath);
             if (parsed != null) {
                 return parsed;
             }
         }
-        return splitPathAndQuery(rawPath);
+        return splitPathAndQuery(rawPath, allowDoubleDotsInQueryString);
     }
 
     /**
@@ -202,7 +208,8 @@ public final class PathAndQuery {
     }
 
     @Nullable
-    private static PathAndQuery splitPathAndQuery(@Nullable final String pathAndQuery) {
+    private static PathAndQuery splitPathAndQuery(@Nullable String pathAndQuery,
+                                                  boolean allowDoubleDotsInQueryString) {
         final Bytes path;
         final Bytes query;
 
@@ -235,11 +242,24 @@ public final class PathAndQuery {
         }
 
         // Reject the prohibited patterns.
-        if (pathContainsDoubleDots(path) || queryContainsDoubleDots(query)) {
+        if (pathContainsDoubleDots(path)) {
+            return null;
+        }
+        if (!allowDoubleDotsInQueryString && queryContainsDoubleDots(query)) {
             return null;
         }
 
         return new PathAndQuery(encodePathToPercents(path), encodeQueryToPercents(query));
+    }
+
+    /**
+     * Decodes a percent-encoded query string. This method is only used for {@code PathAndQueryTest}.
+     */
+    @Nullable
+    @VisibleForTesting
+    static String decodePercentEncodedQuery(String query) {
+        final Bytes bytes = decodePercentsAndEncodeToUtf8(query, 0, query.length(), false);
+        return encodeQueryToPercents(bytes);
     }
 
     @Nullable

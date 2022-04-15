@@ -48,7 +48,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
     public StaticEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                                Iterable<Endpoint> endpoints) {
         this.endpoints = ImmutableList.copyOf(requireNonNull(endpoints, "endpoints"));
-        initialEndpointsFuture = CompletableFuture.completedFuture(this.endpoints);
+        initialEndpointsFuture = UnmodifiableFuture.completedFuture(this.endpoints);
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         selector = selectionStrategy.newSelector(this);
     }

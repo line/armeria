@@ -102,7 +102,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         // check if CORS preflight must be returned, or if
         // we need to forbid access because origin could not be validated
-        if (isCorsPreflightRequest(req)) {
+        if (isCorsPreflightRequest(req.headers())) {
             return handleCorsPreflight(ctx, req);
         }
         if (config.isShortCircuit() &&

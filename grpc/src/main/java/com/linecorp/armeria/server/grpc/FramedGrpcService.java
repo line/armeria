@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
@@ -35,11 +36,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -84,8 +87,31 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     static final AttributeKey<ServerMethodDefinition<?, ?>> RESOLVED_GRPC_METHOD =
             AttributeKey.valueOf(FramedGrpcService.class, "RESOLVED_GRPC_METHOD");
 
+    private static Map<String, GrpcJsonMarshaller> getJsonMarshallers(
+            HandlerRegistry registry,
+            Set<SerializationFormat> supportedSerializationFormats,
+            Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
+        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
+            return ImmutableMap.of();
+        } else {
+            try {
+                return registry.services().stream()
+                               .map(ServerServiceDefinition::getServiceDescriptor)
+                               .distinct()
+                               .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
+            } catch (Exception e) {
+                logger.warn("Failed to instantiate a JSON marshaller. Consider disabling gRPC-JSON " +
+                            "serialization with {}.supportedSerializationFormats() " +
+                            "or using {}.ofGson() instead.",
+                            GrpcServiceBuilder.class.getName(), GrpcJsonMarshaller.class.getName(), e);
+                return ImmutableMap.of();
+            }
+        }
+    }
+
     private final HandlerRegistry registry;
     private final Set<Route> routes;
+    private final Map<String, ExchangeType> exchangeTypes;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -99,8 +125,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
     private final String advertisedEncodingsHeader;
-
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
+    @Nullable
+    private final GrpcHealthCheckService grpcHealthCheckService;
 
     private int maxRequestMessageLength;
     private boolean lookupMethodFromAttribute;
@@ -117,22 +144,18 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
-                      boolean lookupMethodFromAttribute) {
+                      boolean lookupMethodFromAttribute,
+                      @Nullable GrpcHealthCheckService grpcHealthCheckService) {
         this.registry = requireNonNull(registry, "registry");
         this.routes = requireNonNull(routes, "routes");
+        exchangeTypes = registry.methods().entrySet().stream()
+                                .collect(toImmutableMap(e -> '/' + e.getKey(),
+                                                        e -> toExchangeType(e.getValue())));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.useClientTimeoutHeader = useClientTimeoutHeader;
-        if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
-            jsonMarshallers = ImmutableMap.of();
-        } else {
-            jsonMarshallers =
-                    registry.services().stream()
-                            .map(ServerServiceDefinition::getServiceDescriptor)
-                            .distinct()
-                            .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
-        }
+        jsonMarshallers = getJsonMarshallers(registry, supportedSerializationFormats, jsonMarshallerFactory);
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.statusFunction = statusFunction;
         this.maxRequestMessageLength = maxRequestMessageLength;
@@ -157,6 +180,27 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return new SimpleImmutableEntry<>(format, builder.build());
                 })
                 .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+        this.grpcHealthCheckService = grpcHealthCheckService;
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        // An invalid path will be handled later by 'doPost()'.
+        return firstNonNull(exchangeTypes.get(headers.path()), ExchangeType.BIDI_STREAMING);
+    }
+
+    private static ExchangeType toExchangeType(ServerMethodDefinition<?, ?> methodDefinition) {
+        switch (methodDefinition.getMethodDescriptor().getType()) {
+            case UNARY:
+                return ExchangeType.UNARY;
+            case CLIENT_STREAMING:
+                return ExchangeType.REQUEST_STREAMING;
+            case SERVER_STREAMING:
+                return ExchangeType.RESPONSE_STREAMING;
+            case BIDI_STREAMING:
+            default:
+                return ExchangeType.BIDI_STREAMING;
+        }
     }
 
     @Override
@@ -300,6 +344,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                                Function.identity(),
                                                (a, b) -> a));
             protoReflectionServiceInterceptor.setServer(newDummyServer(grpcServices));
+        }
+
+        if (grpcHealthCheckService != null) {
+            grpcHealthCheckService.serviceAdded(cfg);
         }
     }
 

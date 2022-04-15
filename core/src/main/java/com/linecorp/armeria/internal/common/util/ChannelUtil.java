@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -155,7 +156,7 @@ public final class ChannelUtil {
     public static CompletableFuture<Void> close(Iterable<? extends Channel> channels) {
         final List<Channel> channelsCopy = ImmutableList.copyOf(channels);
         if (channelsCopy.isEmpty()) {
-            return CompletableFuture.completedFuture(null);
+            return UnmodifiableFuture.completedFuture(null);
         }
 
         final AtomicInteger numChannelsToClose = new AtomicInteger(channelsCopy.size());

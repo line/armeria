@@ -25,6 +25,7 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTy
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
@@ -37,6 +38,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -71,6 +73,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -162,8 +165,8 @@ final class AnnotatedValueResolver {
         if (!requestConverterFunctionProviders.isEmpty()) {
             final ImmutableList<RequestConverterFunction> merged =
                     ImmutableList.<RequestConverterFunction>builder().addAll(converters)
-                                                                     .addAll(defaultRequestConverterFunctions)
-                                                                     .build();
+                                 .addAll(defaultRequestConverterFunctions)
+                                 .build();
             final CompositeRequestConverterFunction composed = new CompositeRequestConverterFunction(merged);
             for (Type type : method.getGenericParameterTypes()) {
                 for (RequestConverterFunctionProvider provider : requestConverterFunctionProviders) {
@@ -416,6 +419,9 @@ final class AnnotatedValueResolver {
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(param, typeElement);
+            if (type == File.class || type == Path.class) {
+                return ofFileParam(name, annotatedElement, typeElement, type, description);
+            }
             if (pathParams.contains(name)) {
                 return ofPathVariable(name, annotatedElement, typeElement, type, description);
             } else {
@@ -526,6 +532,21 @@ final class AnnotatedValueResolver {
                 .build();
     }
 
+    private static AnnotatedValueResolver ofFileParam(String name,
+                                                      AnnotatedElement annotatedElement,
+                                                      AnnotatedElement typeElement, Class<?> type,
+                                                      @Nullable String description) {
+        return new Builder(annotatedElement, type)
+                .annotationType(Param.class)
+                .httpElementName(name)
+                .typeElement(typeElement)
+                .supportContainer(true)
+                .description(description)
+                .aggregation(AggregationStrategy.ALWAYS)
+                .resolver(fileResolver())
+                .build();
+    }
+
     private static AnnotatedValueResolver ofHeader(String name,
                                                    AnnotatedElement annotatedElement,
                                                    AnnotatedElement typeElement, Class<?> type,
@@ -612,6 +633,12 @@ final class AnnotatedValueResolver {
             return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.queryParams())
                     .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                    .build();
+        }
+
+        if (actual == Multipart.class) {
+            return new Builder(annotatedElement, type)
+                    .resolver((unused, ctx) -> Multipart.from(ctx.request()))
                     .build();
         }
 
@@ -726,6 +753,48 @@ final class AnnotatedValueResolver {
             }
 
             return value;
+        };
+    }
+
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object> fileResolver() {
+        return (resolver, ctx) -> {
+            final FileAggregatedMultipart fileAggregatedMultipart = ctx.aggregatedMultipart();
+            if (fileAggregatedMultipart == null) {
+                return resolver.defaultOrException();
+            }
+            final Function<? super Path, Object> mapper;
+            if (resolver.elementType() == File.class) {
+                mapper = Path::toFile;
+            } else {
+                mapper = Function.identity();
+            }
+            final String name = resolver.httpElementName();
+            final List<Path> values = fileAggregatedMultipart.files().get(name);
+            if (!resolver.hasContainer()) {
+                if (values != null && !values.isEmpty()) {
+                    return mapper.apply(values.get(0));
+                }
+                return resolver.defaultOrException();
+            }
+
+            try {
+                assert resolver.containerType() != null;
+                @SuppressWarnings("unchecked")
+                final Collection<Object> resolvedValues =
+                        (Collection<Object>) resolver.containerType().getDeclaredConstructor().newInstance();
+
+                if (values != null && !values.isEmpty()) {
+                    values.stream().map(mapper::apply).forEach(resolvedValues::add);
+                } else {
+                    final Object defaultValue = resolver.defaultOrException();
+                    if (defaultValue != null) {
+                        resolvedValues.add(defaultValue);
+                    }
+                }
+                return resolvedValues;
+            } catch (Throwable cause) {
+                throw new IllegalArgumentException("Cannot resolve a file param: " + name, cause);
+            }
         };
     }
 
@@ -1273,22 +1342,43 @@ final class AnnotatedValueResolver {
         return contentType != null && contentType.belongsTo(MediaType.FORM_DATA);
     }
 
+    private static boolean isMultipartFormData(@Nullable MediaType contentType) {
+        return contentType != null && contentType.belongsTo(MediaType.MULTIPART_FORM_DATA);
+    }
+
+    static AggregationType aggregationType(AggregationStrategy strategy, RequestHeaders headers) {
+        requireNonNull(strategy, "strategy");
+        final MediaType mediaType = headers.contentType();
+        if (isMultipartFormData(mediaType)) {
+            if (strategy == AggregationStrategy.NONE) {
+                return AggregationType.NONE;
+            }
+            return AggregationType.MULTIPART;
+        }
+
+        switch (strategy) {
+            case ALWAYS:
+                return AggregationType.ALL;
+            case FOR_FORM_DATA:
+                return isFormData(mediaType) ? AggregationType.ALL : AggregationType.NONE;
+        }
+        return AggregationType.NONE;
+    }
+
+    /**
+     * Decide aggregation in memory, file or not.
+     */
+    enum AggregationType {
+        ALL,
+        MULTIPART,
+        NONE,
+    }
+
+    /**
+     * Each argument use this enum to decide its strategy.
+     */
     enum AggregationStrategy {
         NONE, ALWAYS, FOR_FORM_DATA;
-
-        /**
-         * Returns whether the request should be aggregated.
-         */
-        static boolean aggregationRequired(AggregationStrategy strategy, HttpRequest req) {
-            requireNonNull(strategy, "strategy");
-            switch (strategy) {
-                case ALWAYS:
-                    return true;
-                case FOR_FORM_DATA:
-                    return isFormData(req.contentType());
-            }
-            return false;
-        }
 
         /**
          * Returns {@link AggregationStrategy} which specifies how to aggregate the request
@@ -1309,6 +1399,29 @@ final class AnnotatedValueResolver {
         }
     }
 
+    static class AggregatedResult {
+        static final AggregatedResult EMPTY = new AggregatedResult(null, null);
+
+        @Nullable
+        private final FileAggregatedMultipart aggregatedMultipart;
+        @Nullable
+        private final AggregatedHttpRequest aggregatedHttpRequest;
+
+        private AggregatedResult(@Nullable FileAggregatedMultipart aggregatedMultipart,
+                                 @Nullable AggregatedHttpRequest aggregatedHttpRequest) {
+            this.aggregatedMultipart = aggregatedMultipart;
+            this.aggregatedHttpRequest = aggregatedHttpRequest;
+        }
+
+        AggregatedResult(FileAggregatedMultipart aggregatedMultipart) {
+            this(aggregatedMultipart, null);
+        }
+
+        AggregatedResult(AggregatedHttpRequest aggregatedHttpRequest) {
+            this(null, aggregatedHttpRequest);
+        }
+    }
+
     /**
      * A context which is used while resolving parameter values.
      */
@@ -1317,16 +1430,15 @@ final class AnnotatedValueResolver {
         private final HttpRequest request;
 
         @Nullable
-        private final AggregatedHttpRequest aggregatedRequest;
+        private final AggregatedResult aggregatedResult;
 
-        @Nullable
         private volatile QueryParams queryParams;
 
         ResolverContext(ServiceRequestContext context, HttpRequest request,
-                        @Nullable AggregatedHttpRequest aggregatedRequest) {
+                        AggregatedResult aggregatedResult) {
             this.context = requireNonNull(context, "context");
             this.request = requireNonNull(request, "request");
-            this.aggregatedRequest = aggregatedRequest;
+            this.aggregatedResult = requireNonNull(aggregatedResult, "aggregatedResult");
         }
 
         ServiceRequestContext context() {
@@ -1339,7 +1451,12 @@ final class AnnotatedValueResolver {
 
         @Nullable
         AggregatedHttpRequest aggregatedRequest() {
-            return aggregatedRequest;
+            return aggregatedResult.aggregatedHttpRequest;
+        }
+
+        @Nullable
+        FileAggregatedMultipart aggregatedMultipart() {
+            return aggregatedResult.aggregatedMultipart;
         }
 
         QueryParams queryParams() {
@@ -1350,7 +1467,7 @@ final class AnnotatedValueResolver {
                     if (result == null) {
                         queryParams = result = queryParamsOf(context.query(),
                                                              request.contentType(),
-                                                             aggregatedRequest);
+                                                             aggregatedResult);
                     }
                 }
             }
@@ -1362,7 +1479,7 @@ final class AnnotatedValueResolver {
             return MoreObjects.toStringHelper(this).omitNullValues()
                               .add("context", context)
                               .add("request", request)
-                              .add("aggregatedRequest", aggregatedRequest)
+                              .add("aggregatedResult", aggregatedResult)
                               .add("queryParams", queryParams)
                               .toString();
         }
@@ -1380,15 +1497,23 @@ final class AnnotatedValueResolver {
          */
         private static QueryParams queryParamsOf(@Nullable String query,
                                                  @Nullable MediaType contentType,
-                                                 @Nullable AggregatedHttpRequest message) {
+                                                 AggregatedResult result) {
             try {
                 final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
                 QueryParams params2 = null;
-                if (message != null && isFormData(contentType)) {
-                    // Respect 'charset' attribute of the 'content-type' header if it exists.
-                    final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
-                    if (!body.isEmpty()) {
-                        params2 = QueryParams.fromQueryString(body);
+                if (isFormData(contentType)) {
+                    final AggregatedHttpRequest message = result.aggregatedHttpRequest;
+                    if (message != null) {
+                        // Respect 'charset' attribute of the 'content-type' header if it exists.
+                        final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
+                        if (!body.isEmpty()) {
+                            params2 = QueryParams.fromQueryString(body);
+                        }
+                    }
+                } else if (isMultipartFormData(contentType)) {
+                    final FileAggregatedMultipart multipart = result.aggregatedMultipart;
+                    if (multipart != null) {
+                        params2 = QueryParams.builder().add(multipart.params().entries()).build();
                     }
                 }
 

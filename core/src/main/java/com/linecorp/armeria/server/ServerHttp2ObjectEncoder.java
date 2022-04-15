@@ -19,6 +19,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -128,11 +129,11 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     @Override
     public ChannelFuture writeErrorResponse(int id, int streamId,
                                             ServiceConfig serviceConfig,
-                                            HttpStatus status, @Nullable String message,
-                                            @Nullable Throwable cause) {
+                                            @Nullable RequestHeaders headers, HttpStatus status,
+                                            @Nullable String message, @Nullable Throwable cause) {
 
         ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
-                id, streamId, serviceConfig, status, message, cause);
+                id, streamId, serviceConfig, headers, status, message, cause);
 
         final Http2Stream stream = findStream(streamId);
         if (stream != null) {

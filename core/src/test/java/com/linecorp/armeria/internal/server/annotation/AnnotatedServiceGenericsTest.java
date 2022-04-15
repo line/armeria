@@ -29,7 +29,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -124,9 +124,9 @@ class AnnotatedServiceGenericsTest {
             "/longs, false"
     })
     void testGet(String path, boolean optional) throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         assertThat(client.get(path + "?v=1&v=2&v=3" + (optional ? "&optional=true" : ""))
-                         .aggregate().join().contentUtf8()).isEqualTo("1:2:3");
+                         .contentUtf8()).isEqualTo("1:2:3");
     }
 
     @ParameterizedTest
@@ -137,10 +137,10 @@ class AnnotatedServiceGenericsTest {
             "/longs, false"
     })
     void testPost(String path, boolean optional) throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         assertThat(client.execute(RequestHeaders.of(HttpMethod.POST, path + (optional ? "?optional=true" : ""),
                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8),
                                   HttpData.ofUtf8("[1,2,3]"))
-                         .aggregate().join().contentUtf8()).isEqualTo("1:2:3");
+                         .contentUtf8()).isEqualTo("1:2:3");
     }
 }

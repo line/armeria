@@ -44,6 +44,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.io.Files;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
@@ -164,6 +166,11 @@ public final class ResteasyService<T> implements HttpService {
         } else {
             return HttpResponse.from(serveAsync(ctx, req));
         }
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        return ExchangeType.RESPONSE_STREAMING;
     }
 
     private CompletableFuture<HttpResponse> serveAsync(ServiceRequestContext ctx, AggregatedHttpRequest req) {

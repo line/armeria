@@ -20,6 +20,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -184,6 +185,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     public ChannelFuture writeErrorResponse(int id, int streamId,
                                             ServiceConfig serviceConfig,
+                                            RequestHeaders headers,
                                             HttpStatus status,
                                             @Nullable String message,
                                             @Nullable Throwable cause) {
@@ -193,7 +195,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         keepAliveHandler().destroy();
 
         final ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
-                id, streamId, serviceConfig, status, message, cause);
+                id, streamId, serviceConfig, headers, status, message, cause);
         // Update the closed ID to prevent the HttpResponseSubscriber from
         // writing additional headers or messages.
         updateClosedId(id);

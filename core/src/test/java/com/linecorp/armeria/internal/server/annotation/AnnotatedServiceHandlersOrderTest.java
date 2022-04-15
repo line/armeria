@@ -27,7 +27,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -313,7 +313,7 @@ public class AnnotatedServiceHandlersOrderTest {
     }
 
     private static AggregatedHttpResponse executeRequest(AggregatedHttpRequest req) {
-        final WebClient client = WebClient.of(server.httpUri());
-        return client.execute(req).aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        return client.execute(req);
     }
 }

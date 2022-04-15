@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations
- * under the Licenses
+ * under the License.
  */
 
 package com.linecorp.armeria.server.healthcheck;
@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.Server;
 
 class ScheduledHealthCheckerTest {
@@ -141,7 +142,7 @@ class ScheduledHealthCheckerTest {
         final AtomicBoolean health = new AtomicBoolean(true);
         final ScheduledHealthChecker healthChecker =
                 (ScheduledHealthChecker) HealthChecker.of(
-                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(health.get(), 100)),
+                        () -> UnmodifiableFuture.completedFuture(new HealthCheckStatus(health.get(), 100)),
                         Duration.ofDays(10));
         final Server server =
                 Server.builder()
@@ -153,7 +154,7 @@ class ScheduledHealthCheckerTest {
         assertThat(WebClient.of(uri).get("/hc").aggregate().join().status()).isSameAs(HttpStatus.OK);
 
         health.set(false);
-        await().atMost(Duration.ofSeconds(1))
+        await().atMost(Duration.ofSeconds(5))
                .untilAsserted(
                        () -> assertThat(WebClient.of(uri).get("/hc").aggregate().join().status())
                                .isSameAs(HttpStatus.SERVICE_UNAVAILABLE));

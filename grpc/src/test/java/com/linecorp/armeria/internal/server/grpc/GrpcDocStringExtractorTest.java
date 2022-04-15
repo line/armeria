@@ -43,6 +43,19 @@ class GrpcDocStringExtractorTest {
     }
 
     @Test
+    void methodOption() {
+        // Currently, Armeria docs doesn't support options / extension.
+        // This test verifies that existing comments on options do not break existing logic.
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.TestService/UnaryCall2",
+                " Another method with one request followed by one response.\n");
+
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.options.MyService/MyMethod",
+                " This is my method.\n");
+    }
+
+    @Test
     void message() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest",
