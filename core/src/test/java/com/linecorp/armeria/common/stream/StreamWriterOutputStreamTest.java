@@ -161,6 +161,33 @@ class StreamWriterOutputStreamTest {
                     .verifyComplete();
     }
 
+    @Test
+    void writeWithOffset_exceedMaxBufferSize() throws IOException {
+        final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
+        final OutputStream outputStream = writer.toOutputStream(x -> {
+            final byte[] data = new byte[x.byteBuf().readableBytes()];
+            x.byteBuf().readBytes(data);
+            return new String(data);
+        }, 3);
+        final List<String> strings = ImmutableList.of("3", "456", "789", "ABC", "D");
+        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        byteArrayOutputStream.write(0);
+        byteArrayOutputStream.write(strings.stream()
+                                           .map(String::getBytes)
+                                           .reduce(Bytes::concat).get());
+        byteArrayOutputStream.write(0);
+
+        for (byte b : "12".getBytes()) {
+            outputStream.write(b);
+        }
+        outputStream.write(byteArrayOutputStream.toByteArray(), 1, byteArrayOutputStream.size() - 2);
+        outputStream.close();
+
+        StepVerifier.create(writer)
+                    .expectNext("123", "456", "789", "ABC", "D")
+                    .verifyComplete();
+    }
+
     @ValueSource(ints = { Integer.MIN_VALUE, -1, 0 })
     @ParameterizedTest
     void write_nonPositiveMaxBufferSize(int maxBufferSize) throws IOException {
