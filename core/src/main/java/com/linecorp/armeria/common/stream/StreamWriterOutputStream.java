@@ -50,14 +50,14 @@ final class StreamWriterOutputStream<T> extends OutputStream {
     @Override
     public void write(int b) throws IOException {
         ensureOpen();
-        ensureBufferWritable();
+        maybeDrain();
         buffer.writeByte(b);
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
         ensureOpen();
-        ensureBufferWritable();
+        maybeDrain();
         buffer.writeBytes(b, off, len);
     }
 
@@ -87,7 +87,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         }
     }
 
-    private void ensureBufferWritable() {
+    private void maybeDrain() {
         if (buffer.readableBytes() >= maxBufferSize) {
             drain();
         }
