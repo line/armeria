@@ -47,7 +47,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -169,7 +168,7 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    private final HashMap<String, List<DecoratorAndOrder>> methodDecorators = Maps.newHashMap();
+    private final Map<String, List<DecoratorAndOrder>> methodDecorators = new HashMap<>();
 
     private boolean enableHealthCheckService;
 
