@@ -120,6 +120,37 @@ You might want to use the following build file as a starting point when you set 
     }
     `}</CodeBlock>
   </TabPane>
+  <TabPane tab="Gradle (Kotlin)" key="gradle_kotlin">
+    <CodeBlock language="kotlin" filename="build.gradle.kts">{`
+    apply(plugin = "java")
+    apply(plugin = "idea")
+    apply(plugin = "eclipse")\n
+    repositories {
+        mavenCentral()
+    }\n
+    dependencies {
+        // Adjust the list as you need.
+        listOf(
+            "armeria",
+            "armeria-brave",
+            "armeria-grpc",
+            "armeria-jetty9",
+            "armeria-kafka",
+            "armeria-logback",
+            "armeria-retrofit2",
+            "armeria-rxjava3",
+            "armeria-saml",
+            "armeria-thrift0.13",
+            "armeria-tomcat9",
+            "armeria-zookeeper3").forEach {
+            implementation("com.linecorp.armeria:\${it}:${versions['com.linecorp.armeria:armeria-bom']}")
+        }\n
+        // Logging
+        runtimeOnly("ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}")
+        runtimeOnly("org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}")
+    }
+    `}</CodeBlock>
+  </TabPane>
   <TabPane tab="Maven" key="maven">
     <CodeBlock language="xml" filename="pom.xml">{`
     <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -224,6 +255,13 @@ You can configure your build tool to add `-parameters` javac option as follows.
     <CodeBlock language="groovy" filename="build.gradle">{`
     tasks.withType(JavaCompile) {
         options.compilerArgs += '-parameters'
+    }
+    `}</CodeBlock>
+  </TabPane>
+  <TabPane tab="Gradle (Kotlin)" key="gradle_kotlin">
+    <CodeBlock language="kotlin" filename="build.gradle.kts">{`
+    tasks.withType<JavaCompile> {
+        options.compilerArgs.add("-parameters")
     }
     `}</CodeBlock>
   </TabPane>
