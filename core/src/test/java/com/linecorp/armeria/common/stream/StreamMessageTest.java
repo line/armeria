@@ -313,8 +313,41 @@ class StreamMessageTest {
         final List<Integer> collected = new ArrayList<>();
         final StreamMessage<Integer> peeked = source.peek(collected::add);
         final CompletableFuture<Void> cf = peeked.subscribe();
-        await().untilAsserted(() -> assertThat(collected).isEqualTo(ImmutableList.of(1, 2, 3)));
         await().untilAsserted(() -> assertThat(cf.isDone()).isTrue());
+        assertThat(collected).isEqualTo(ImmutableList.of(1, 2, 3));
+    }
+
+    @Test
+    void noopSubscribe_abort() {
+        final StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+        final List<Integer> collected = new ArrayList<>();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamMessage<Integer> aborted = source
+                .peek(x -> {
+                    if (x == 3) {
+                        source.abort();
+                    } else {
+                        collected.add(x);
+                    }
+                });
+        await().untilAsserted(() -> assertThat(aborted.subscribe().isDone()).isTrue());
+        assertThat(collected).isEqualTo(ImmutableList.of(1, 2));
+    }
+
+    @Test
+    void noopSubscribe_error_thrown() throws Exception {
+        final StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+        final List<Integer> collected = new ArrayList<>();
+        final StreamMessage<Integer> aborted = source
+                .peek(x -> {
+                    if (x == 3) {
+                        throw new RuntimeException();
+                    } else {
+                        collected.add(x);
+                    }
+                });
+        await().untilAsserted(() -> assertThat(aborted.subscribe().isDone()).isTrue());
+        assertThat(collected).isEqualTo(ImmutableList.of(1, 2));
     }
 
     private static class StreamProvider implements ArgumentsProvider {

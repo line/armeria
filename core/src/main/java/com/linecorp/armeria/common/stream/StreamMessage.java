@@ -351,13 +351,17 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Drain all data using {@link NoopSubscriber}.
      *
      * <p>For example:<pre>{@code
-     * CompletableFuture<Void> cf = StreamMessage.aborted(new RuntimeException()).subscribe();
-     * assert cf.isCompletedExceptionally();
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * CompletableFuture<Void> future = source.peek(collected::add).subscribe();
+     * future.join();
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert future.isDone();
      * }</pre>
      */
     default CompletableFuture<Void> subscribe() {
-        subscribe(new NoopSubscriber<>());
-        return whenComplete();
+        subscribe(NoopSubscriber.get());
+        return NoopSubscriber.get().whenSubscribed();
     }
 
     /**

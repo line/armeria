@@ -16,8 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.concurrent.CompletableFuture;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 /**
  * A {@link Subscriber} that discards all elements silently.
@@ -25,6 +31,12 @@ import org.reactivestreams.Subscription;
 public final class NoopSubscriber<T> implements Subscriber<T> {
 
     private static final NoopSubscriber<?> INSTANCE = new NoopSubscriber<>();
+
+    private CompletableFuture<Void> whenSubscribed = new CompletableFuture<>();
+
+    CompletableFuture<Void> whenSubscribed() {
+        return whenSubscribed;
+    }
 
     /**
      * Returns a singleton {@link NoopSubscriber}.
@@ -40,11 +52,21 @@ public final class NoopSubscriber<T> implements Subscriber<T> {
     }
 
     @Override
-    public void onNext(T t) {}
+    public void onNext(T item) {
+        requireNonNull(item, "item");
+        if (whenSubscribed.isDone()) {
+            StreamMessageUtil.closeOrAbort(item);
+            return;
+        }
+    }
 
     @Override
-    public void onError(Throwable t) {}
+    public void onError(Throwable t) {
+        whenSubscribed.completeExceptionally(t);
+    }
 
     @Override
-    public void onComplete() {}
+    public void onComplete() {
+        whenSubscribed.complete(null);
+    }
 }
