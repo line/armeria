@@ -99,6 +99,6 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         }
         final byte[] data = new byte[buffer.readableBytes()];
         buffer.readBytes(data);
-        writer.write(httpDataConverter.apply(HttpData.copyOf(data)));
+        writer.write(httpDataConverter.apply(HttpData.wrap(data)));
     }
 }
