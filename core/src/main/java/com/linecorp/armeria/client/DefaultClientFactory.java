@@ -81,14 +81,16 @@ final class DefaultClientFactory implements ClientFactory {
     static final Map<ClientFactory, Queue<Runnable>> factoriesToCloseOnShutdown = new LinkedHashMap<>();
 
     static void addCloseOnShutdown(ClientFactory clientFactory, Runnable runnable) {
-        final Queue<Runnable> onShutdown;
-        if (factoriesToCloseOnShutdown.containsKey(clientFactory)) {
-            onShutdown = factoriesToCloseOnShutdown.get(clientFactory);
-        } else {
-            onShutdown = new ArrayDeque<Runnable>();
+        synchronized (factoriesToCloseOnShutdown) {
+            final Queue<Runnable> onShutdown;
+            if (factoriesToCloseOnShutdown.containsKey(clientFactory)) {
+                onShutdown = factoriesToCloseOnShutdown.get(clientFactory);
+            } else {
+                onShutdown = new ArrayDeque<Runnable>();
+            }
+            onShutdown.add(runnable);
+            factoriesToCloseOnShutdown.put(clientFactory, onShutdown);
         }
-        onShutdown.add(runnable);
-        factoriesToCloseOnShutdown.put(clientFactory, onShutdown);
     }
 
     static {
@@ -100,12 +102,14 @@ final class DefaultClientFactory implements ClientFactory {
             }));
         }
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            factoriesToCloseOnShutdown.forEach((factory, queue) -> {
-                while (!queue.isEmpty()) {
-                    final Runnable onShutdown = queue.poll();
-                    onShutdown.run();
-                }
-            });
+            synchronized (factoriesToCloseOnShutdown) {
+                factoriesToCloseOnShutdown.forEach((factory, queue) -> {
+                    while (!queue.isEmpty()) {
+                        final Runnable onShutdown = queue.poll();
+                        onShutdown.run();
+                    }
+                });
+            }
         }));
     }
 
