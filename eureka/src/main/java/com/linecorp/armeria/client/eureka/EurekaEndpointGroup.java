@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -44,6 +45,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -181,45 +183,63 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void fetchRegistry() {
+        if (closed) {
+            return;
+        }
         final HttpResponse response;
         final ClientRequestContext ctx;
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            response = webClient.execute(requestHeaders);
-            ctx = captor.get();
-        }
-
-        final EventLoop eventLoop = ctx.eventLoop().withoutContext();
-        response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
-            try (HttpData content = aggregatedRes.content()) {
+        EventLoop eventLoop0 = null;
+        try {
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                response = webClient.execute(requestHeaders);
+                ctx = captor.get();
+            }
+            EventLoop eventLoop = ctx.eventLoop().withoutContext();
+            eventLoop0 = eventLoop;
+            response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
                 if (closed) {
                     return null;
                 }
-                if (cause != null) {
-                    logger.warn("Unexpected exception while fetching the registry from: {}." +
-                                " (requestHeaders: {})", webClient.uri(), requestHeaders, cause);
-                } else {
-                    final HttpStatus status = aggregatedRes.status();
-                    if (!status.isSuccess()) {
-                        logger.warn("Unexpected response from: {}. (status: {}, content: {}, " +
-                                    "requestHeaders: {})", webClient.uri(), status,
-                                    aggregatedRes.contentUtf8(), requestHeaders);
+                if (aggregatedRes == null) {
+                    logger.warn("Got null response while fetching the registry from: {}.", webClient.uri());
+                    scheduleNextFetch(eventLoop);
+                    return null;
+                }
+                try (HttpData content = aggregatedRes.content()) {
+                    if (cause != null) {
+                        logger.warn("Unexpected exception while fetching the registry from: {}." +
+                                    " (requestHeaders: {})", webClient.uri(), requestHeaders, cause);
                     } else {
-                        try {
-                            final List<Endpoint> endpoints = responseConverter.apply(content.array());
-                            setEndpoints(endpoints);
-                        } catch (Exception e) {
-                            logger.warn("Unexpected exception while parsing a response from: {}. " +
-                                        "(content: {}, responseConverter: {}, requestHeaders: {})",
-                                        webClient.uri(), content.toStringUtf8(),
-                                        responseConverter, requestHeaders, e);
+                        final HttpStatus status = aggregatedRes.status();
+                        if (!status.isSuccess()) {
+                            logger.warn("Unexpected response from: {}. (status: {}, content: {}, " +
+                                        "requestHeaders: {})", webClient.uri(), status,
+                                        aggregatedRes.contentUtf8(), requestHeaders);
+                        } else {
+                            try {
+                                final List<Endpoint> endpoints = responseConverter.apply(content.array());
+                                setEndpoints(endpoints);
+                            } catch (Exception e) {
+                                logger.warn("Unexpected exception while parsing a response from: {}. " +
+                                            "(content: {}, responseConverter: {}, requestHeaders: {})",
+                                            webClient.uri(), content.toStringUtf8(),
+                                            responseConverter, requestHeaders, e);
+                            }
                         }
                     }
+                } finally {
+                    scheduleNextFetch(eventLoop);
                 }
-            }
-            scheduledFuture = eventLoop.schedule(this::fetchRegistry,
-                                                 registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
-            return null;
-        });
+                return null;
+            });
+        } catch (Exception e) {
+            logger.error("Unexpected exception while fetching the registry from: {}.", webClient.uri(), e);
+            scheduleNextFetch(eventLoop0 != null ? eventLoop0 : CommonPools.blockingTaskExecutor());
+        }
+    }
+
+    private void scheduleNextFetch(ScheduledExecutorService executorService) {
+        executorService.schedule(this::fetchRegistry, registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
