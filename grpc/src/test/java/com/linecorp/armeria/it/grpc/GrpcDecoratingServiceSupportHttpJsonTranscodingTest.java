@@ -24,7 +24,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -43,7 +43,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
-public class GrpcDecoratingServiceSupportHttpJsonTranscodingTest {
+class GrpcDecoratingServiceSupportHttpJsonTranscodingTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -61,11 +61,11 @@ public class GrpcDecoratingServiceSupportHttpJsonTranscodingTest {
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    private final WebClient webClient = WebClient.builder(server.httpUri()).build();
+    private final BlockingWebClient webClient = server.webClient().blocking();
 
     @Test
     void shouldGetMessageV1ByWebClient() throws Exception {
-        final AggregatedHttpResponse response = webClient.get("/v1/messages/1").aggregate().get();
+        final AggregatedHttpResponse response = webClient.get("/v1/messages/1");
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
         assertThat(FIRST_TEST_RESULT).isEqualTo("FirstDecorator/MethodFirstDecorator");

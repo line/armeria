@@ -24,7 +24,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.Metrics.GaugeRequest;
@@ -49,7 +48,7 @@ import io.grpc.stub.StreamObserver;
 class GrpcDecoratingServiceTest {
 
     @RegisterExtension
-    static ServerExtension server = new ServerExtension(true) {
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.requestTimeoutMillis(5000);
@@ -70,9 +69,8 @@ class GrpcDecoratingServiceTest {
 
     @Test
     void methodDecorators() {
-        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri(
-                                                                  GrpcSerializationFormats.PROTO))
-                                                          .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
         client.unaryCall(SimpleRequest.getDefaultInstance());
         assertThat(FIRST_TEST_RESULT)
                 .isEqualTo("FirstDecorator/SecondDecorator/MethodFirstDecorator/MethodSecondDecorator");
@@ -80,18 +78,16 @@ class GrpcDecoratingServiceTest {
 
     @Test
     void serviceDecorators() {
-        final MetricsServiceBlockingStub client = GrpcClients.builder(server.httpUri(
-                                                                     GrpcSerializationFormats.PROTO))
-                                                             .build(MetricsServiceBlockingStub.class);
+        final MetricsServiceBlockingStub client =
+                GrpcClients.newClient(server.httpUri(), MetricsServiceBlockingStub.class);
         client.getGauge(GaugeRequest.getDefaultInstance());
         assertThat(SECOND_TEST_RESULT).isEqualTo("ThirdDecorator");
     }
 
     @Test
     void nonDecorators() {
-        final ReconnectServiceBlockingStub client = GrpcClients.builder(server.httpUri(
-                                                                       GrpcSerializationFormats.PROTO))
-                                                               .build(ReconnectServiceBlockingStub.class);
+        final ReconnectServiceBlockingStub client =
+                GrpcClients.newClient(server.httpUri(), ReconnectServiceBlockingStub.class);
         client.start(Empty.getDefaultInstance());
         assertThat(THIRD_TEST_RESULT).isEqualTo("");
     }
@@ -99,8 +95,7 @@ class GrpcDecoratingServiceTest {
     @Test
     void prefixService() {
         final TestServiceBlockingStub client = GrpcClients
-                .builder(server.httpUri(
-                        GrpcSerializationFormats.PROTO))
+                .builder(server.httpUri())
                 .decorator((delegate, ctx, req) -> {
                     final String path = req.path();
                     final HttpRequest newReq = req.mapHeaders(
