@@ -42,10 +42,12 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -56,6 +58,7 @@ import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -102,7 +105,7 @@ class HealthCheckedEndpointGroupTest {
                         } catch (InterruptedException e) {
                             // Ignore
                         }
-                        ctx.updateHealth(1);
+                        ctx.updateHealth(1, null, null, null);
                     }).start();
                     return AsyncCloseableSupport.of();
                 };
@@ -121,7 +124,9 @@ class HealthCheckedEndpointGroupTest {
             protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
                 return ctx -> {
                     ctxCapture.set(ctx);
-                    ctx.updateHealth(0);
+                    final ClientRequestContext mockCtx =
+                            ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/health"));
+                    ctx.updateHealth(0, mockCtx, null, new AnticipatedException());
                     return AsyncCloseableSupport.of();
                 };
             }
@@ -142,7 +147,7 @@ class HealthCheckedEndpointGroupTest {
             protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
                 return ctx -> {
                     ctxCapture.set(ctx);
-                    ctx.updateHealth(1);
+                    ctx.updateHealth(1, null, null, null);
                     return AsyncCloseableSupport.of();
                 };
             }
@@ -165,7 +170,7 @@ class HealthCheckedEndpointGroupTest {
             assertThat(group.endpoints()).isEmpty();
 
             // 'foo' should not be healthy even if `ctx.updateHealth()` was called.
-            ctx.updateHealth(1);
+            ctx.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).isEmpty();
             assertThat(group.healthyEndpoints).isEmpty();
 
@@ -192,7 +197,7 @@ class HealthCheckedEndpointGroupTest {
                     ctxCapture.put(ctx.endpoint(), ctx);
                     // Only 'foo' makes healthy immediately.
                     if (ctx.endpoint() == endpoint1) {
-                        ctx.updateHealth(1);
+                        ctx.updateHealth(1, null, null, null);
                     }
                     return AsyncCloseableSupport.of();
                 };
@@ -203,7 +208,7 @@ class HealthCheckedEndpointGroupTest {
             final HealthCheckerContext ctx = ctxCapture.get(endpoint1);
             assertThat(ctx).isNotNull();
             assertThat(ctx.endpoint()).isEqualTo(endpoint1);
-            ctx.updateHealth(1);
+            ctx.updateHealth(1, null, null, null);
 
             // 'foo' did not disappear yet, so the task must be accepted and run.
             final AtomicBoolean taskRun = new AtomicBoolean();
@@ -220,7 +225,7 @@ class HealthCheckedEndpointGroupTest {
             assertThat(group.endpoints()).containsOnly(endpoint1);
 
             // 'foo' should not be healthy after `bar` become healthy.
-            ctx2.updateHealth(1);
+            ctx2.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).containsOnly(endpoint2);
             assertThat(group.healthyEndpoints).containsOnly(endpoint2);
         }
@@ -234,7 +239,7 @@ class HealthCheckedEndpointGroupTest {
                 firstSelectedCandidates.set(ctx);
             }
 
-            ctx.updateHealth(HEALTHY);
+            ctx.updateHealth(HEALTHY, null, null, null);
             return AsyncCloseableSupport.of();
         };
 
@@ -253,7 +258,9 @@ class HealthCheckedEndpointGroupTest {
 
             assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
 
-            firstSelectedCandidates.get().updateHealth(UNHEALTHY);
+            final ClientRequestContext mockCtx =
+                    ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/health"));
+            firstSelectedCandidates.get().updateHealth(UNHEALTHY, mockCtx, null, new AnticipatedException());
             assertThat(group.healthyEndpoints).containsOnly(candidate2);
         }
     }
@@ -261,7 +268,7 @@ class HealthCheckedEndpointGroupTest {
     @Test
     void shouldCallRefreshWhenEndpointWeightIsChanged() throws InterruptedException {
         final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
-            ctx.updateHealth(HEALTHY);
+            ctx.updateHealth(HEALTHY, null, null, null);
             return AsyncCloseableSupport.of();
         };
 
@@ -291,7 +298,7 @@ class HealthCheckedEndpointGroupTest {
         final AtomicInteger counter = new AtomicInteger();
         final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
             counter.incrementAndGet();
-            ctx.updateHealth(HEALTHY);
+            ctx.updateHealth(HEALTHY, null, null, null);
             return AsyncCloseableSupport.of();
         };
 
@@ -321,7 +328,7 @@ class HealthCheckedEndpointGroupTest {
             @Override
             protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
                 return ctx -> {
-                    ctx.updateHealth(1);
+                    ctx.updateHealth(1, null, null, null);
                     newCheckerCount.incrementAndGet();
                     return checkerCloseable;
                 };

@@ -161,12 +161,25 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
             // Remove old contexts when the newly created contexts are fully initialized to smoothly transition
             // to new endpoints.
-            contextGroup.whenInitialized().thenRun(() -> {
+            contextGroup.whenInitialized().handle((unused, cause) -> {
+                if (cause != null && !initialized) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("The first health check failed for all endpoints. " +
+                                    "numCandidates: {} candidates: {}",
+                                    candidates.size(), truncate(candidates, 10), cause);
+                    }
+                }
                 initialized = true;
                 destroyOldContexts(contextGroup);
                 setEndpoints(allHealthyEndpoints());
+                return null;
             });
         }
+    }
+
+    @VisibleForTesting
+    Queue<HealthCheckContextGroup> contextGroupChain() {
+        return contextGroupChain;
     }
 
     private List<Endpoint> allHealthyEndpoints() {
