@@ -66,7 +66,7 @@ public interface HealthCheckerContext {
      *               A positive value indicates the {@link Endpoint} is able to handle requests.
      *               A value greater than {@code 1.0} will be set equal to {@code 1.0}.
      *
-     * @deprecated Use {@link #updateHealth(double, ClientRequestContext, ResponseHeaders, Throwable)} instead.
+     * @deprecated Use {@link #updateHealth(double, ClientRequestContext, ResponseHeaders, Throwable)}.
      */
     @Deprecated
     void updateHealth(double health);
