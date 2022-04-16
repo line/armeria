@@ -64,7 +64,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
         if (method != null && method.getMethodDescriptor() != null) {
             path = '/' + method.getMethodDescriptor().getFullMethodName();
         } else {
-            path = req.path();
+            path = ctx.mappedPath();
         }
         final HttpService methodDecorator = methodDecorators.get(path);
         if (methodDecorator != null) {
