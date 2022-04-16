@@ -65,7 +65,8 @@ import io.netty.resolver.dns.DnsNameResolverTimeoutException;
  * <p>Two {@link FlagsProvider}s are provided by default.
  * <ul>
  *     <li>The system property {@link FlagsProvider} which provides value from JVM option</li>
- *     <li>The default {@link FlagsProvider} which provides the default values when flag isn't provides or fail
+ *     <li>The default {@link FlagsProvider} which provides the default values when flag isn't provides or
+ *         fail</li>
  * </ul>
  *
  */
