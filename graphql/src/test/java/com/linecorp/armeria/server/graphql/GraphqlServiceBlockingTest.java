@@ -33,7 +33,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
-import graphql.schema.DataFetchingEnvironment;
 
 class GraphqlServiceBlockingTest {
 
@@ -58,16 +57,13 @@ class GraphqlServiceBlockingTest {
     };
 
     private static DataFetcher<String> dataFetcher(String value) {
-        return new DataFetcher<String>() {
-            @Override
-            public String get(DataFetchingEnvironment environment) throws Exception {
-                final ServiceRequestContext ctx = environment.getGraphQlContext()
-                                                             .get(GraphqlUtil.graphqlContextKey());
-                assertThat(ctx.eventLoop().inEventLoop()).isFalse();
-                // Make sure that a ServiceRequestContext is available
-                assertThat(ServiceRequestContext.current()).isSameAs(ctx);
-                return value;
-            }
+        return environment -> {
+            final ServiceRequestContext ctx = environment.getGraphQlContext()
+                                                         .get(GraphqlUtil.graphqlContextKey());
+            assertThat(ctx.eventLoop().inEventLoop()).isFalse();
+            // Make sure that a ServiceRequestContext is available
+            assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+            return value;
         };
     }
 
