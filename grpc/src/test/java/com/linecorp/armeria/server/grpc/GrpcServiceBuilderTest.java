@@ -279,20 +279,27 @@ class GrpcServiceBuilderTest {
                                                       .addService(firstTestService)
                                                       .addService("/foo", secondTestService);
 
-        final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
-        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
-        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);
-        assertThat(methodDecorators.containsKey("/foo/EmptyCall")).isTrue();
-        assertThat(values(methodDecorators.get("/foo/EmptyCall")))
+        assertThat(pathToDecorators.containsKey("/foo/EmptyCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/foo/EmptyCall")))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class);
-        assertThat(methodDecorators.containsKey("/foo/UnaryCall")).isTrue();
-        assertThat(values(methodDecorators.get("/foo/UnaryCall")))
+        assertThat(pathToDecorators.containsKey("/foo/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/foo/UnaryCall")))
                 .containsExactly(Decorator1.class,
                                  Decorator3.class);
+
+        final Map<String, List<DecoratorAndOrder>> methodToDecorators = builder.methodToDecorators();
+        assertThat(methodToDecorators.containsKey("armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(methodToDecorators.get("armeria.grpc.testing.TestService/UnaryCall")))
+                .containsExactly(Decorator1.class,
+                                 Decorator2.class,
+                                 LoggingDecoratorFactoryFunction.class);
     }
 
     @Test
@@ -302,13 +309,13 @@ class GrpcServiceBuilderTest {
         final GrpcServiceBuilder builder = GrpcService.builder()
                                                       .addService(thirdTestService);
 
-        final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
-        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
-        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
                 .containsExactly(Decorator1.class, Decorator2.class);
 
-        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/EmptyCall")).isTrue();
-        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/EmptyCall")))
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/EmptyCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/EmptyCall")))
                 .containsExactly(Decorator1.class, Decorator3.class);
     }
 
@@ -320,9 +327,9 @@ class GrpcServiceBuilderTest {
                 .addService(firstTestService,
                             impl -> ServerInterceptors.intercept(impl, new DummyInterceptor()));
 
-        final Map<String, List<DecoratorAndOrder>> methodDecorators = builder.methodDecorators();
-        assertThat(methodDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
-        assertThat(values(methodDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);

@@ -168,7 +168,9 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    private final Map<String, List<DecoratorAndOrder>> methodDecorators = new HashMap<>();
+    private final Map<String, List<DecoratorAndOrder>> pathToDecorators = new HashMap<>();
+
+    private final Map<String, List<DecoratorAndOrder>> methodToDecorators = new HashMap<>();
 
     private boolean enableHealthCheckService;
 
@@ -833,13 +835,23 @@ public final class GrpcServiceBuilder {
                 final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz,
                                                                                                      method);
                 if (!decorators.isEmpty()) {
-                    final String key = serviceName + '/' + targetMethodName;
-                    if (methodDecorators.containsKey(key)) {
-                        if (decorators.size() > methodDecorators.get(key).size()) {
-                            methodDecorators.put(key, decorators);
+                    String key = serviceName + '/' + targetMethodName;
+                    if (pathToDecorators.containsKey(key)) {
+                        if (decorators.size() > pathToDecorators.get(key).size()) {
+                            pathToDecorators.put(key, decorators);
                         }
                     } else {
-                        methodDecorators.put(key, decorators);
+                        pathToDecorators.put(key, decorators);
+                    }
+                    if (path == null) {
+                        key = serverMethodDefinition.getMethodDescriptor().getFullMethodName();
+                        if (methodToDecorators.containsKey(key)) {
+                            if (decorators.size() > methodToDecorators.get(key).size()) {
+                                methodToDecorators.put(key, decorators);
+                            }
+                        } else {
+                            methodToDecorators.put(key, decorators);
+                        }
                     }
                 }
             }
@@ -847,8 +859,13 @@ public final class GrpcServiceBuilder {
     }
 
     @VisibleForTesting
-    Map<String, List<DecoratorAndOrder>> methodDecorators() {
-        return methodDecorators;
+    Map<String, List<DecoratorAndOrder>> pathToDecorators() {
+        return pathToDecorators;
+    }
+
+    @VisibleForTesting
+    Map<String, List<DecoratorAndOrder>> methodToDecorators() {
+        return methodToDecorators;
     }
 
     /**
@@ -927,10 +944,14 @@ public final class GrpcServiceBuilder {
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
         }
-        if (!methodDecorators.isEmpty()) {
-            final Map<String, HttpService> composedMethodDecorators = applyGrpcServiceToDecorators(
-                    methodDecorators, grpcService);
-            grpcService = new GrpcDecoratingService(grpcService, composedMethodDecorators,
+        if (!pathToDecorators.isEmpty()) {
+            final Map<String, HttpService> pathToComposeDecorators = applyGrpcServiceToDecorators(
+                    pathToDecorators, grpcService);
+            final Map<String, HttpService> methodToComposedDecorators = applyGrpcServiceToDecorators(
+                    methodToDecorators, grpcService);
+            grpcService = new GrpcDecoratingService(grpcService,
+                                                    pathToComposeDecorators,
+                                                    methodToComposedDecorators,
                                                     lookupMethodFromAttribute);
         }
         if (enableHttpJsonTranscoding) {
