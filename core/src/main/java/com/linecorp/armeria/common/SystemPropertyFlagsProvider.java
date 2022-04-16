@@ -378,8 +378,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
         return Sets.immutableEnumSet(
                 Streams.stream(CSV_SPLITTER.split(val))
-                       .map(feature -> TransientServiceOption.valueOf(
-                               Ascii.toUpperCase(feature)))
+                       .map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
                        .collect(toImmutableSet()));
     }
 
