@@ -200,16 +200,13 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 if (closed) {
                     return null;
                 }
-                if (aggregatedRes == null) {
+                if (cause != null) {
+                    logger.warn("Unexpected exception while fetching the registry from: {}." +
+                                " (requestHeaders: {})", webClient.uri(), requestHeaders, cause);
+                } else if (aggregatedRes == null) {
                     logger.warn("Got null response while fetching the registry from: {}.", webClient.uri());
-                    scheduleNextFetch(eventLoop);
-                    return null;
-                }
-                try (HttpData content = aggregatedRes.content()) {
-                    if (cause != null) {
-                        logger.warn("Unexpected exception while fetching the registry from: {}." +
-                                    " (requestHeaders: {})", webClient.uri(), requestHeaders, cause);
-                    } else {
+                } else {
+                    try (HttpData content = aggregatedRes.content()) {
                         final HttpStatus status = aggregatedRes.status();
                         if (!status.isSuccess()) {
                             logger.warn("Unexpected response from: {}. (status: {}, content: {}, " +
@@ -227,13 +224,13 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                             }
                         }
                     }
-                } finally {
-                    scheduleNextFetch(eventLoop);
                 }
+                scheduleNextFetch(eventLoop);
                 return null;
             });
         } catch (Exception e) {
-            logger.error("Unexpected exception while fetching the registry from: {}.", webClient.uri(), e);
+            logger.warn("Unexpected exception while fetching the registry from: {}." +
+                        " (requestHeaders: {})", webClient.uri(), requestHeaders, e);
             scheduleNextFetch(eventLoop0 != null ? eventLoop0 : CommonPools.blockingTaskExecutor());
         }
     }
