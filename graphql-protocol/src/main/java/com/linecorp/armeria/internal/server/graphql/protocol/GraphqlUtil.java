@@ -45,13 +45,12 @@ public final class GraphqlUtil {
     @Nullable
     public static MediaType produceType(RequestHeaders headers) {
         final MediaType contentType = headers.contentType();
-        if (HttpMethod.POST == headers.method() &&
-                contentType != null && contentType.is(MediaType.GRAPHQL)) {
-            return MediaType.GRAPHQL_JSON;
-        }
-        if (HttpMethod.POST == headers.method() &&
-                contentType != null && contentType.is(MediaType.MULTIPART_FORM_DATA)) {
-            return MediaType.GRAPHQL_JSON;
+        if (HttpMethod.POST == headers.method() && contentType != null) {
+            if (contentType.is(MediaType.GRAPHQL)) {
+                return MediaType.GRAPHQL_JSON;
+            } else if (contentType.is(MediaType.MULTIPART_FORM_DATA)) {
+                return MediaType.GRAPHQL_JSON;
+            }
         }
 
         final List<MediaType> acceptTypes = headers.accept();

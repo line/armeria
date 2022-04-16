@@ -26,16 +26,16 @@ import graphql.schema.CoercingSerializeException;
 import graphql.schema.GraphQLScalarType;
 
 /**
- * A path scalar that accepts file stings and produces {@link Path} objects at runtime.
+ * A path scalar that converts a file path string into a {@link Path}.
  */
 @UnstableApi
-public final class PathScalar {
+final class PathScalar {
     private static final GraphQLScalarType INSTANCE;
 
     /**
      * Returns the {@link GraphQLScalarType}.
      */
-    public static GraphQLScalarType of() {
+    static GraphQLScalarType of() {
         return INSTANCE;
     }
 

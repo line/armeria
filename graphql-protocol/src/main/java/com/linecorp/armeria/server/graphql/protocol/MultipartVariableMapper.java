@@ -34,21 +34,22 @@ package com.linecorp.armeria.server.graphql.protocol;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
+
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Mapper for handling populating the query variables with the files specified by object paths
  * in the multi-part request.
  */
-@UnstableApi
 final class MultipartVariableMapper {
 
    // Forked form https://github.com/Netflix/dgs-framework/blob/12cc1931e3c410e342134b7c0a8401f2c5a4aca6/graphql-dgs/src/main/kotlin/com/netflix/graphql/dgs/internal/utils/MultipartVariableMapper.kt
 
-   private static final Pattern PERIOD = Pattern.compile("\\.");
+   private static final int INVALID_INT = -1;
+   private static final Splitter SPLITTER = Splitter.on(".");
    private static final Mapper<Map<String, Object>> MAP_MAPPER = new Mapper<Map<String, Object>>() {
       @Override
       public Object set(Map<String, Object> location, String target, Path path) {
@@ -63,8 +64,8 @@ final class MultipartVariableMapper {
    private static final Mapper<List<Object>> LIST_MAPPER = new Mapper<List<Object>>() {
       @Override
       public Object set(List<Object> location, String target, Path path) {
-         final Integer value = parseUnsignedInt(target);
-         if (value == null) {
+         final int value = parseUnsignedInt(target);
+         if (value == INVALID_INT) {
             return location;
          }
          if (value >= location.size()) {
@@ -75,8 +76,8 @@ final class MultipartVariableMapper {
 
       @Override
       public Object recurse(List<Object> location, String target) {
-         final Integer value = parseUnsignedInt(target);
-         if (value == null) {
+         final int value = parseUnsignedInt(target);
+         if (value == INVALID_INT) {
             return null;
          }
          if (value >= location.size()) {
@@ -87,18 +88,18 @@ final class MultipartVariableMapper {
    };
 
    static void mapVariable(String objectPath, Map<String, Object> variables, Path path) {
-      final String[] segments = PERIOD.split(objectPath);
-      if (segments.length < 2) {
+      final List<String> segments = ImmutableList.copyOf(SPLITTER.split(objectPath));
+      if (segments.size() < 2) {
          throw new IllegalArgumentException("object-path in map must have at least two segments");
       }
-      if (!"variables".equals(segments[0])) {
+      if (!"variables".equals(segments.get(0))) {
          throw new IllegalArgumentException("can only map into variables");
       }
 
       Object currentLocation = variables;
-      for (int i = 1; i < segments.length; i++) {
-         final String segmentName = segments[i];
-         if (i == segments.length - 1) {
+      for (int i = 1; i < segments.size(); i++) {
+         final String segmentName = segments.get(i);
+         if (i == segments.size() - 1) {
             if (currentLocation instanceof Map) {
                if (MAP_MAPPER.set((Map<String, Object>) currentLocation, segmentName, path) != null) {
                   throw new IllegalArgumentException("expected null value when mapping " + objectPath);
@@ -130,16 +131,15 @@ final class MultipartVariableMapper {
       Object recurse(T location, String target);
    }
 
-   @Nullable
-   private static Integer parseUnsignedInt(String value) {
+   private static int parseUnsignedInt(String value) {
       try {
          final int parseInt = Integer.parseInt(value);
          if (parseInt < 0) {
-            return null;
+            return INVALID_INT;
          }
          return parseInt;
       } catch (NumberFormatException ignored) {
-         return null;
+         return INVALID_INT;
       }
    }
 

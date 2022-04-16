@@ -36,7 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.google.common.io.Files;
 
-import com.linecorp.armeria.common.scalar.PathScalar;
+import com.linecorp.armeria.common.scalar.MoreScalars;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.graphql.GraphqlService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -57,7 +57,7 @@ class GraphQLTest {
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
-                                      c.scalar(PathScalar.of());
+                                      c.scalar(MoreScalars.path());
                                       final DataFetcher<String> fileUpload = fileUploadFetcher();
                                       c.type("Mutation",
                                              typeWiring -> typeWiring.dataFetcher("fileUpload", fileUpload));
