@@ -88,7 +88,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
         final ExecutionInput executionInput =
                 builder.context(ctx)
-                       .graphQLContext(b -> b.of(GraphqlUtil.graphqlContextKey(), ctx))
+                       .graphQLContext(GraphqlUtil.graphqlContext(ctx))
                        .dataLoaderRegistry(dataLoaderRegistry)
                        .build();
         return execute(ctx, executionInput, produceType);

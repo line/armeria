@@ -16,10 +16,16 @@
 
 package com.linecorp.armeria.common.graphql;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Map;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.GraphQLContext;
+import graphql.com.google.common.collect.ImmutableMap;
+import graphql.schema.DataFetchingEnvironment;
 
 /**
  * Utility for handling the GraphQL.
@@ -30,21 +36,47 @@ public final class GraphqlUtil {
     private static final String GRAPHQL_CONTEXT_KEY = "com.linecorp.armeria.graphql.context.key";
 
     /**
-     * Returns a key to put {@link ServiceRequestContext} in {@link GraphQLContext}.
+     * Returns a {@link Map} containing the {@link ServiceRequestContext}.
+     */
+    public static Map<String, Object> graphqlContext(ServiceRequestContext requestContext) {
+        requireNonNull(requestContext, "requestContext");
+        return ImmutableMap.of(GRAPHQL_CONTEXT_KEY, requestContext);
+    }
+
+    /**
+     * Returns {@link ServiceRequestContext} in {@link GraphQLContext}.
      * For example:
      * <pre>{@code
      * new DataFetcher<>() {
      *     @Override
-     *     public String get(DataFetchingEnvironment environment) throws Exception {
-     *         final ServiceRequestContext ctx = environment.getGraphQlContext()
-     *                                                      .get(GraphqlUtil.graphqlContextKey());
+     *     public String get(DataFetchingEnvironment env) throws Exception {
+     *         final ServiceRequestContext ctx = GraphqlUtil.serviceRequestContext(env.getGraphQlContext());
      *         // ...
      *     }
      * };
      * }</pre>
      */
-    public static String graphqlContextKey() {
-        return GRAPHQL_CONTEXT_KEY;
+    public static ServiceRequestContext serviceRequestContext(GraphQLContext graphQLContext) {
+        requireNonNull(graphQLContext, "graphQLContext");
+        return graphQLContext.get(GRAPHQL_CONTEXT_KEY);
+    }
+
+    /**
+     * Returns {@link ServiceRequestContext} in {@link DataFetchingEnvironment}.
+     * For example:
+     * <pre>{@code
+     * new DataFetcher<>() {
+     *     @Override
+     *     public String get(DataFetchingEnvironment env) throws Exception {
+     *         final ServiceRequestContext ctx = GraphqlUtil.serviceRequestContext(env);
+     *         // ...
+     *     }
+     * };
+     * }</pre>
+     */
+    public static ServiceRequestContext serviceRequestContext(DataFetchingEnvironment environment) {
+        requireNonNull(environment, "environment");
+        return serviceRequestContext(environment.getGraphQlContext());
     }
 
     private GraphqlUtil() {}
