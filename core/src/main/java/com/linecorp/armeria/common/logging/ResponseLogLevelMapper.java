@@ -67,6 +67,26 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
     }
 
     /**
+     * Creates a new {@link ResponseLogLevelMapper} which returns the specified {@link LogLevel} if the given
+     * class of {@link RequestLog#responseCause()} is equal to the specified {@link Throwable} class.
+     */
+    static ResponseLogLevelMapper of(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(logLevel, "logLevel");
+        return log -> {
+            final Throwable t = log.responseCause();
+            if (t == null) {
+                return null;
+            }
+            final Class<? extends Throwable> throwableClass = t.getClass();
+            if (throwableClass == clazz) {
+                return logLevel;
+            }
+            return null;
+        };
+    }
+
+    /**
      * Returns a {@link LogLevel} for the given {@link RequestLog}. Returning {@code null} lets the next handler
      * specified with {@link #orElse(ResponseLogLevelMapper)} map the {@link RequestLog}.
      */

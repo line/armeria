@@ -17,8 +17,6 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -70,7 +68,6 @@ public abstract class LoggingDecoratorBuilder {
             responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
-    private final Map<Class<? extends Throwable>, LogLevel> expectedExceptions = new HashMap<>();
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -210,23 +207,6 @@ public abstract class LoggingDecoratorBuilder {
      * Returns the {@link ResponseLogLevelMapper} to use when logging response logs.
      */
     protected final ResponseLogLevelMapper responseLogLevelMapper() {
-        if (!expectedExceptions.isEmpty()) {
-            final ResponseLogLevelMapper expectedExceptionsResponseLogLevelMapper = log -> {
-                final Throwable t = log.responseCause();
-                if (t == null) {
-                    return null;
-                }
-                final Class<? extends Throwable> clazz = t.getClass();
-                if (expectedExceptions.containsKey(clazz)) {
-                    return expectedExceptions.get(clazz);
-                }
-                return null;
-            };
-            if (responseLogLevelMapper == null) {
-                responseLogLevelMapper = expectedExceptionsResponseLogLevelMapper;
-            }
-            responseLogLevelMapper = expectedExceptionsResponseLogLevelMapper.orElse(responseLogLevelMapper);
-        }
         if (responseLogLevelMapper == null) {
             return ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
         }
@@ -240,7 +220,7 @@ public abstract class LoggingDecoratorBuilder {
             logLevel) {
         requireNonNull(clazz, "clazz");
         requireNonNull(logLevel, "logLevel");
-        expectedExceptions.put(clazz, logLevel);
+        responseLogLevelMapper(ResponseLogLevelMapper.of(clazz, logLevel));
         return this;
     }
 
