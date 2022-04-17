@@ -361,7 +361,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     default CompletableFuture<Void> subscribe() {
         subscribe(NoopSubscriber.get());
-        return NoopSubscriber.get().whenSubscribed();
+        return whenComplete();
     }
 
     /**

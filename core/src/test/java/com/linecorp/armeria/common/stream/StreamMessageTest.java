@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -309,45 +310,78 @@ class StreamMessageTest {
 
     @Test
     void noopSubscribe() {
-        final StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
-        final List<Integer> collected = new ArrayList<>();
-        final StreamMessage<Integer> peeked = source.peek(collected::add);
-        final CompletableFuture<Void> cf = peeked.subscribe();
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final StreamMessage<HttpData> source = StreamMessage.of(httpData);
+        final CompletableFuture<Void> cf = source.subscribe();
+
         await().untilAsserted(() -> assertThat(cf.isDone()).isTrue());
-        assertThat(collected).isEqualTo(ImmutableList.of(1, 2, 3));
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
     }
 
     @Test
-    void noopSubscribe_abort() {
-        final StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
-        final List<Integer> collected = new ArrayList<>();
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
-        final StreamMessage<Integer> aborted = source
-                .peek(x -> {
-                    if (x == 3) {
-                        source.abort();
-                    } else {
-                        collected.add(x);
-                    }
-                });
-        await().untilAsserted(() -> assertThat(aborted.subscribe().isDone()).isTrue());
-        assertThat(collected).isEqualTo(ImmutableList.of(1, 2));
+    void noopSubscribe_aborted() {
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final StreamMessage<HttpData> source = StreamMessage.of(httpData);
+        final List<HttpData> collected = new ArrayList<>();
+        final StreamMessage<HttpData> aborted = source.peek(x -> {
+            if (x.equals(HttpData.wrap(Unpooled.wrappedBuffer("6".getBytes())))) {
+                source.abort();
+            } else {
+                collected.add(x);
+            }
+        });
+        final List<HttpData> expected = ImmutableList.of("1", "2", "3", "4", "5")
+                                                     .stream()
+                                                     .map(String::getBytes)
+                                                     .map(HttpData::wrap)
+                                                     .collect(Collectors.toList());
+        final CompletableFuture<Void> cf = aborted.subscribe();
+
+        await().untilAsserted(() -> assertThat(cf.isDone()).isTrue());
+        assertThat(collected).isEqualTo(expected);
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
     }
 
     @Test
     void noopSubscribe_error_thrown() throws Exception {
-        final StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
-        final List<Integer> collected = new ArrayList<>();
-        final StreamMessage<Integer> aborted = source
-                .peek(x -> {
-                    if (x == 3) {
-                        throw new RuntimeException();
-                    } else {
-                        collected.add(x);
-                    }
-                });
-        await().untilAsserted(() -> assertThat(aborted.subscribe().isDone()).isTrue());
-        assertThat(collected).isEqualTo(ImmutableList.of(1, 2));
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final StreamMessage<HttpData> source = StreamMessage.of(httpData);
+        final List<HttpData> collected = new ArrayList<>();
+        final StreamMessage<HttpData> aborted = source.peek(x -> {
+            if (x.equals(HttpData.wrap(Unpooled.wrappedBuffer("6".getBytes())))) {
+                throw new RuntimeException();
+            } else {
+                collected.add(x);
+            }
+        });
+        final List<HttpData> expected = ImmutableList.of("1", "2", "3", "4", "5")
+                                                     .stream()
+                                                     .map(String::getBytes)
+                                                     .map(HttpData::wrap)
+                                                     .collect(Collectors.toList());
+        final CompletableFuture<Void> cf = aborted.subscribe();
+
+        await().untilAsserted(() -> assertThat(cf.isDone()).isTrue());
+        assertThat(collected).isEqualTo(expected);
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
     }
 
     private static class StreamProvider implements ArgumentsProvider {
