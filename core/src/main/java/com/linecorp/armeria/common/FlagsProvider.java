@@ -87,7 +87,7 @@ public interface FlagsProvider {
      * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
      * trace.
      *
-     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER},
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER_SPEC},
      * which retains the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
      * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
      * the default. See {@link Sampler#of(String)} for the specification string format.</p>
@@ -146,7 +146,7 @@ public interface FlagsProvider {
      * choose the {@link RequestContextStorageProvider}.
      */
     @Nullable
-    default String requestContextStorageProvider() {
+    default RequestContextStorageProvider requestContextStorageProvider() {
         return null;
     }
 

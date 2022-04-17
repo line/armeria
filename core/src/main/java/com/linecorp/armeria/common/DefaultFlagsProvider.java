@@ -37,7 +37,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     static final DefaultFlagsProvider INSTANCE = new DefaultFlagsProvider();
 
-    static final String VERBOSE_EXCEPTION_SAMPLER = "rate-limit=10";
+    static final String VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limit=10";
+    static final Sampler<Class<? extends Throwable>>
+            VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
+
     static final int MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
     static final int NUM_COMMON_BLOCKING_TASK_THREADS = 200; // from Tomcat default maxThreads
     static final long DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MiB
@@ -89,7 +92,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
-        return new ExceptionSampler("rate-limit=10");
+        return VERBOSE_EXCEPTION_SAMPLER;
     }
 
     @Override
@@ -103,8 +106,18 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public String requestContextStorageProvider() {
-        return null;
+    public RequestContextStorageProvider requestContextStorageProvider() {
+        final List<RequestContextStorageProvider> providers = FlagsUtil.getRequestContextStorageProviders();
+        if (providers.isEmpty()) {
+            return RequestContextStorage::threadLocal;
+        }
+        if (providers.size() > 1) {
+            throw new IllegalStateException(
+                    "Found more than one " + RequestContextStorageProvider.class.getSimpleName() +
+                    ". You must specify -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>." +
+                    " providers: " + providers);
+        }
+        return providers.get(0);
     }
 
     @Override

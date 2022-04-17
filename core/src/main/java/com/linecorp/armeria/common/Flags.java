@@ -105,6 +105,32 @@ public final class Flags {
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER =
             getValue(FlagsProvider::verboseExceptionSampler, "verboseExceptionSampler");
 
+    private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
+
+    static {
+        final String strSpec = getNormalized("verboseExceptions",
+                                             DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
+                    if ("true".equals(val) || "false".equals(val)) {
+                        return true;
+                    }
+
+                    try {
+                        Sampler.of(val);
+                        return true;
+                    } catch (Exception e) {
+                        // Invalid sampler specification
+                        return false;
+                    }
+                });
+        if ("true".equals(strSpec)) {
+            VERBOSE_EXCEPTION_SAMPLER_SPEC = "always";
+        } else if ("false".equals(strSpec)) {
+            VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
+        } else {
+            VERBOSE_EXCEPTION_SAMPLER_SPEC = strSpec;
+        }
+    }
+
     @Nullable
     private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES =
             getValue(FlagsProvider::preferredIpV4Addresses, "preferredIpV4Addresses");
@@ -115,8 +141,7 @@ public final class Flags {
     private static final boolean VERBOSE_RESPONSES =
             getValue(FlagsProvider::verboseResponses, "verboseResponses");
 
-    @Nullable
-    private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
+    private static final RequestContextStorageProvider REQUEST_CONTEXT_STORAGE_PROVIDER =
             getValue(FlagsProvider::requestContextStorageProvider, "requestContextStorageProvider");
 
     private static final boolean WARN_NETTY_VERSIONS =
@@ -353,7 +378,7 @@ public final class Flags {
      * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
      * trace.
      *
-     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER},
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#VERBOSE_EXCEPTION_SAMPLER_SPEC},
      * which retains the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
      * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
      * the default. See {@link Sampler#of(String)} for the specification string format.</p>
@@ -374,27 +399,7 @@ public final class Flags {
     @Deprecated
     public static String verboseExceptionSamplerSpec() {
         // XXX(trustin): Is it worth allowing to specify different specs for different exception types?
-        final String strSpec = getNormalized("verboseExceptions",
-                                             DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER, val -> {
-            if ("true".equals(val) || "false".equals(val)) {
-                return true;
-            }
-
-            try {
-                Sampler.of(val);
-                return true;
-            } catch (Exception e) {
-                // Invalid sampler specification
-                return false;
-            }
-        });
-        if ("true".equals(strSpec)) {
-            return "always";
-        }
-        if ("false".equals(strSpec)) {
-            return "never";
-        }
-        return strSpec;
+        return VERBOSE_EXCEPTION_SAMPLER_SPEC;
     }
 
     /**
@@ -435,16 +440,14 @@ public final class Flags {
     }
 
     /**
-     * Returns the fully qualified class name of {@link RequestContextStorageProvider} that is used to choose
-     * when multiple {@link RequestContextStorageProvider}s exist.
+     * Returns the {@link RequestContextStorageProvider} that use for provide {@link RequestContextStorage}.
      *
-     * <p>The default value of this flag is {@code null}, which means only one
-     * {@link RequestContextStorageProvider} must be found via Java SPI. If there are more than one,
-     * you must specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option to
-     * choose the {@link RequestContextStorageProvider}.
+     * <p>By default, this flag will return the {@link RequestContextStorageProvider} found via Java SPI,
+     * failing in case of more than one SPI provider implementation. If there are more than one, you must
+     * specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option
+     * to choose the {@link RequestContextStorageProvider}.</p>
      */
-    @Nullable
-    public static String requestContextStorageProvider() {
+    public static RequestContextStorageProvider requestContextStorageProvider() {
         return REQUEST_CONTEXT_STORAGE_PROVIDER;
     }
 

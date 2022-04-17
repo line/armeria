@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.net.InetAddress;
@@ -93,8 +94,39 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public String requestContextStorageProvider() {
-        return System.getProperty(PREFIX + "requestContextStorageProvider");
+    public RequestContextStorageProvider requestContextStorageProvider() {
+        final List<RequestContextStorageProvider> providers = FlagsUtil.getRequestContextStorageProviders();
+        if (providers.isEmpty()) {
+            return null;
+        }
+        if (providers.size() == 1) {
+            logger.info("Using {} as a {}",
+                        providers.get(0).getClass().getSimpleName(),
+                        RequestContextStorageProvider.class.getSimpleName());
+            return providers.get(0);
+        }
+        final String providerFqcn = System.getProperty(PREFIX + "requestContextStorageProvider");
+        if (providerFqcn == null) {
+            logger.info("Found more than one {}, but no FQCN is specified",
+                        RequestContextStorageProvider.class.getSimpleName());
+            return null;
+        }
+        final List<RequestContextStorageProvider> matchedCandidates =
+                providers.stream()
+                         .filter(provider -> provider.getClass().getName().equals(providerFqcn))
+                         .collect(toImmutableList());
+        if (matchedCandidates.isEmpty()) {
+            logger.warn("{} does not match any {}. providers: {}", providerFqcn,
+                        RequestContextStorageProvider.class.getSimpleName(), providers);
+            return null;
+        }
+        if (matchedCandidates.size() > 1) {
+            throw new IllegalStateException(
+                    providerFqcn + " matches more than one " +
+                    RequestContextStorageProvider.class.getSimpleName() + ". providers: " +
+                    providers);
+        }
+        return matchedCandidates.get(0);
     }
 
     @Override

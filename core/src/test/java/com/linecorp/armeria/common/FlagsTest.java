@@ -111,6 +111,14 @@ class FlagsTest {
     }
 
     @Test
+    void defaultRequestContextStorageProvider() throws Throwable {
+        assumeThat(System.getProperty("com.linecorp.armeria.requestContextStorageProvider")).isNull();
+
+        final RequestContextStorage actual = Flags.requestContextStorageProvider().newStorage();
+        assertThat(actual).isEqualTo(RequestContextStorage.threadLocal());
+    }
+
+    @Test
     @ClearSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses")
     void defaultPreferredIpV4Addresses() throws Throwable {
         assertFlags("preferredIpV4Addresses").isNull();

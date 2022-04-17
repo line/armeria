@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -25,6 +26,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
 
@@ -37,7 +39,9 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 
-public class FlagsProviderTest {
+@SetSystemProperty(key = "com.linecorp.armeria.requestContextStorageProvider",
+        value = "com.linecorp.armeria.common.Custom2RequestContextStorageProvider")
+class FlagsProviderTest {
 
     private Class<?> flags;
 
@@ -99,6 +103,32 @@ public class FlagsProviderTest {
     @Test
     void overrideNullableFlag() throws Throwable {
         assertFlags("headerValueCacheSpec").isEqualTo("maximumSize=4096,expireAfterAccess=600s");
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextStorageProvider",
+            value = "com.linecorp.armeria.common.Custom1RequestContextStorageProvider")
+    void twoRequestContextStorageProvidersAreProvidedAndCorrectFQCNisSpecify() throws Throwable {
+        final Method method = flags.getDeclaredMethod("requestContextStorageProvider");
+        final String actual = method.invoke(flags).getClass().getSimpleName();
+        assertThat(actual).isEqualTo(Custom1RequestContextStorageProvider.class.getSimpleName());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextStorageProvider",
+            value = "com.linecorp.armeria.common.InvalidRequestContextStorageProvider")
+    void twoRequestContextStorageProvidersAreProvidedAndInvalidFQCNisSpecify() throws Throwable {
+        final Method method = flags.getDeclaredMethod("requestContextStorageProvider");
+        assertThatThrownBy(() -> method.invoke(flags))
+                .isInstanceOf(Error.class);
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.requestContextStorageProvider")
+    void twoRequestContextStorageProvidersAreProvidedButNoFQCNisSpecify() throws Throwable {
+        final Method method = flags.getDeclaredMethod("requestContextStorageProvider");
+        assertThatThrownBy(() -> method.invoke(flags))
+                .isInstanceOf(Error.class);
     }
 
     @Test
