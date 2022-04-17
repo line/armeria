@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.ShutdownUtil;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -339,7 +340,7 @@ final class HttpClientFactory implements ClientFactory {
 
     private void closeAsync(CompletableFuture<?> future) {
         final List<CompletableFuture<?>> dependencies = new ArrayList<>(pools.size());
-        for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext();) {
+        for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext(); ) {
             dependencies.add(i.next().closeAsync());
             i.remove();
         }
@@ -389,25 +390,8 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final Runnable task = () -> {
-            if (whenClosing != null) {
-                try {
-                    whenClosing.run();
-                } catch (Exception e) {
-                    logger.warn("whenClosing failed", e);
-                }
-            }
-            closeAsync().handle((unused, cause) -> {
-                if (cause != null) {
-                    logger.warn("Unexpected exception while closing a HttpClientFactory.", cause);
-                    future.completeExceptionally(cause);
-                } else {
-                    logger.debug("HttpClientFactory has been closed.");
-                    future.complete(null);
-                }
-                return null;
-            }).join();
-        };
+        final Runnable task = ShutdownUtil.newClosingTask(
+                whenClosing, this::closeAsync, future, "HttpClientFactory");
         DefaultClientFactory.addCloseOnShutdown(this, task);
         return future;
     }

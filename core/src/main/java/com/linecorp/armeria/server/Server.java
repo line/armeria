@@ -77,6 +77,7 @@ import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.ShutdownUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -493,25 +494,8 @@ public final class Server implements ListenableAsyncCloseable {
      */
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
-            if (whenClosing != null) {
-                try {
-                    whenClosing.run();
-                } catch (Exception e) {
-                    logger.warn("whenClosing failed", e);
-                }
-            }
-            closeAsync().handle((unused, cause) -> {
-                if (cause != null) {
-                    logger.warn("Unexpected exception while stopping a Server.", cause);
-                    future.completeExceptionally(cause);
-                } else {
-                    logger.debug("Server has been stopped.");
-                    future.complete(null);
-                }
-                return null;
-            }).join();
-        }));
+        final Runnable task = ShutdownUtil.newClosingTask(whenClosing, this::closeAsync, future, "Server");
+        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(task));
         return future;
     }
 

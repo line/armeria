@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.internal.common.ShutdownUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -307,25 +308,8 @@ final class DefaultClientFactory implements ClientFactory {
     @Override
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final Runnable task = () -> {
-            if (whenClosing != null) {
-                try {
-                    whenClosing.run();
-                } catch (Exception e) {
-                    logger.warn("whenClosing failed", e);
-                }
-            }
-            closeAsync(false).handle((unused, cause) -> {
-                if (cause != null) {
-                    logger.warn("Unexpected exception while closing a ClientFactory.", cause);
-                    future.completeExceptionally(cause);
-                } else {
-                    logger.debug("ClientFactory has been closed.");
-                    future.complete(null);
-                }
-                return null;
-            }).join();
-        };
+        final Runnable task = ShutdownUtil.newClosingTask(
+                whenClosing, () -> closeAsync(false), future, "ClientFactory");
         addCloseOnShutdown(this, task);
         return future;
     }
