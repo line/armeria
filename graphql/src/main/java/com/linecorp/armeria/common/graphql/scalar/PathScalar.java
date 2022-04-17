@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.scalar;
+package com.linecorp.armeria.common.graphql.scalar;
 
 import java.nio.file.Path;
 
@@ -28,16 +28,9 @@ import graphql.schema.GraphQLScalarType;
 /**
  * A path scalar that converts a file path string into a {@link Path}.
  */
-@UnstableApi
 final class PathScalar {
-    private static final GraphQLScalarType INSTANCE;
 
-    /**
-     * Returns the {@link GraphQLScalarType}.
-     */
-    static GraphQLScalarType of() {
-        return INSTANCE;
-    }
+    static final GraphQLScalarType INSTANCE;
 
     static {
         final Coercing<Path, Void> coercing = new Coercing<Path, Void>() {

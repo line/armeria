@@ -13,12 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/**
- * GraphQL-related extended scalar classes.
- */
-@UnstableApi
-@NonNullByDefault
-package com.linecorp.armeria.common.scalar;
+package com.linecorp.armeria.common.graphql.scalar;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import java.nio.file.Path;
+
+import graphql.schema.GraphQLScalarType;
+
+/**
+ * This contains the implementations of the Scalar types.
+ */
+public final class MoreScalars {
+
+    /**
+     * Returns {@link GraphQLScalarType} defined as a {@link Path} type.
+     */
+    public static GraphQLScalarType path() {
+        return PathScalar.INSTANCE;
+    }
+
+    private MoreScalars() {}
+}
