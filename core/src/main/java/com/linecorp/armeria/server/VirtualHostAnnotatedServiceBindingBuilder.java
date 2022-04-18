@@ -178,7 +178,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * of values of the query parameter is one. For example with the query delimiter {@code ","}:
      * <ul>
      *     <li>{@code ?query=a,b,c} will be resolved to {@code "a"}, {@code "b"} and {@code "c"}</li>
-     *     <li>{@code ?query=a,b,c&query=b,c,d} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
+     *     <li>{@code ?query=a,b,c&query=d,e,f} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
      * </ul>
      */
     public VirtualHostAnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
