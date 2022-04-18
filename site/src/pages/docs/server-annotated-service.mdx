@@ -324,9 +324,9 @@ public class MyAnnotatedService {
 }
 ```
 
-If you specify query delimiter while building an annotated service, or a `Delimiter` annotation with a query
-parameter, a single parameter will be converted into separated values if the parameter is mapped to a `List<?>`
-or `Set<?>`, e.g. `/hello1?number=1,2,3`.
+If you specify query delimiter while building an annotated service, or a <type://@Delimiter> annotation with a
+query parameter, a single parameter will be converted into separated values if the parameter is mapped to a
+`List<?>` or `Set<?>`, e.g. `/hello1?number=1,2,3`.
 
 ```java
 sb.annotatedService()

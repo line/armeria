@@ -143,13 +143,13 @@ class AnnotatedServiceTest {
 
             sb.annotatedService()
               .pathPrefix("/15")
-              .useQueryDelimiter(",")
+              .queryDelimiter(",")
               .decorator(LoggingService.newDecorator())
               .build(new MyAnnotatedService14());
 
             sb.annotatedService()
               .pathPrefix("/16")
-              .useQueryDelimiter(":")
+              .queryDelimiter(":")
               .decorator(LoggingService.newDecorator())
               .build(new MyAnnotatedService14());
         }

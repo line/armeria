@@ -131,8 +131,6 @@ final class AnnotatedValueResolver {
         defaultRequestObjectResolvers = builder.build();
     }
 
-    private static final Splitter commaDelimitedQueryParamSplitter = Splitter.on(',').trimResults();
-
     static final List<RequestConverterFunctionProvider> requestConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(RequestConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));

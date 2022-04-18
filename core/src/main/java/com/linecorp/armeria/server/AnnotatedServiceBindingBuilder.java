@@ -161,12 +161,19 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * Sets the query parameter delimiter. It is disabled by default.
+     * Sets the delimiter for a query parameter value. Multiple values delimited by the specified
+     * {@code delimiter} will be automatically split into a list of values.
+     *
+     * <p>It is disabled by default.
      *
      * <p>Note that this delimiter works only when the resolve target class type is collection and the number
-     * of values of the query parameter is one.</p>
+     * of values of the query parameter is one. For example with the query delimiter {@code ","}:
+     * <ul>
+     *     <li>{@code ?query=a,b,c} will be resolved to {@code "a"}, {@code "b"} and {@code "c"}</li>
+     *     <li>{@code ?query=a,b,c&query=b,c,d} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
+     * </ul>
      */
-    public AnnotatedServiceBindingBuilder useQueryDelimiter(String delimiter) {
+    public AnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
         this.queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
     }
