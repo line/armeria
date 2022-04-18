@@ -43,6 +43,7 @@ To implement a CREATE operation, add a service method `createBlogPost()` on top 
 
   public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 
+    @Override
     public void createBlogPost(CreateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
       final int id = idGenerator.getAndIncrement(); // Generate post ID
       final Instant now = Instant.now();            // Get current time
