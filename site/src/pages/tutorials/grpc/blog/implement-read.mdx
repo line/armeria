@@ -10,7 +10,10 @@ level: basic
 
 # Implementing READ operation
 
-In this section, we'll write two methods for retrieving blog posts; one for a single post and another for multiple posts. Instead of using the client instance we created in the previous step, we'll use another one.
+Previously, we've created a blog post. Now, let's implement and make a call 
+to read blog posts. We'll write two service methods for reading blog posts an
+
+ Instead of using the client instance we created in the previous step, we'll use another one.
 
 <TutorialSteps current={4} />
 
@@ -18,10 +21,13 @@ In this section, we'll write two methods for retrieving blog posts; one for a si
 
 You need to have:
 - [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file) from the [service and messages](/tutorials/grpc/blog/define-service) defined in a proto file.
-- [ServerMain.java](/tutorials/grpc/blog/implement-create#1-implement-service)
-- [BlogClient.java](/tutorials/grpc/blog/implement-create)
+- Main.java
+- BlogClient.java
 
-## 1. Implement service method
+## 1. Implement service
+
+Let's write two methods for retrieving blog posts; one for a single post and
+another for multiple posts.
 
 In the BlogService.java file created earlier, add methods for retrieving blog posts.
 
@@ -38,8 +44,10 @@ public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
   @Override
   public void getBlogPost(GetBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
       final BlogPost blogPost = blogPosts.get(request.getId());
-      if (blogPost == null) {
-          throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+      if (blogPost == null) { // Return error as exception
+        responseObserver.onError(
+          Status.NOT_FOUND.withDescription("The blog post does not exist. ID: " + request.getId())
+                          .asRuntimeException());
       } else {
           responseObserver.onNext(blogPost);
           responseObserver.onCompleted();
@@ -159,7 +167,7 @@ When we created a blog post, we used the basic client creator, <type://Clients#n
 
 ## 3. Test
 
-Let's start off with retreiving all the blog posts there are:
+Let's start off with retrieving all the blog posts there are:
 
 1. Add the `listBlogPosts()` method in the test call.
   ```java filename=BlogClient.java
@@ -255,9 +263,31 @@ Let's retrieve the second blog post.
   modifiedAt: 1645572982899
   }, trailers=[EOS, grpc-status=0]}
   ```
+3. Check what happens if you retrieve a post that does not exist. Change the argument and run the client again.
+  ```java filename=BlogClient.java
+  static void testRun(){
+    createBlogPost("Second blog", "This is my second attempt");
+    getBlogPost(100); // Set the argument to 100
+  }
+  ```
+  We can see that our `getBlogPost()` method returns the not found error as a runtime exception.
+  ```bash
+  DEBUG c.l.a.i.common.Http2GoAwayHandler - [id: 0xcf258efc, L:/127.0.0.1:61768 - 
+  R:127.0.0.1/127.0.0.1:8080] Sent a GOAWAY frame: lastStreamId=0, errorCode=NO_ERROR(0)
+  Exception in thread "main" io.grpc.StatusRuntimeException: NOT_FOUND: The blog post does not exist. ID: 100
+    at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
+    at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)
+    at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:156)
+    at example.armeria.server.blog.grpc.BlogServiceGrpc$BlogServiceBlockingStub.getBlogPost(BlogServiceGrpc.java:376)
+    at example.armeria.client.blog.grpc.BlogClient.getBlogPost(BlogClient.java:101)
+    at example.armeria.client.blog.grpc.BlogClient.testRun(BlogClient.java:52)
+    at example.armeria.client.blog.grpc.BlogClient.main(BlogClient.java:46)
+  ```
 
 ## What's next
 
-Here, we've implemented service methods and client methods to retrieve blog posts. One thing we added in this section is the interceptor. See [Decorating a client](/docs/client-decorator/) for more information. In the [next section](/tutorials/grpc/blog/implement-update), we'll implement methods for updating a blog psot.
+Here, we've implemented service methods and client methods to retrieve blog posts. One thing we added in this 
+section is the interceptor. See [Decorating a client](/docs/client-decorator/) for more information. [Next]
+(/tutorials/grpc/blog/implement-update), we'll implement a method for updating a blog post and add an exception handler.
 
 <TutorialSteps current={4} />
