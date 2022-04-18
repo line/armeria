@@ -822,8 +822,8 @@ public final class GrpcServiceBuilder {
             if (targetMethodName == null) {
                 continue;
             }
-            final String methodName = targetMethodName.substring(0, 1).toLowerCase()
-                                      + targetMethodName.substring(1);
+            final String methodName = targetMethodName.substring(0, 1).toLowerCase() +
+                                      targetMethodName.substring(1);
             final Method method = methods.get(methodName);
             if (method == null) {
                 continue;
