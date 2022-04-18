@@ -20,13 +20,12 @@ import static com.linecorp.armeria.it.grpc.HttpJsonTranscodingTest.findMethod;
 import static com.linecorp.armeria.it.grpc.HttpJsonTranscodingTest.pathMapping;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.stream.StreamSupport;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -65,7 +64,6 @@ class GrpcDocServicePrefixTest {
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
         final JsonNode root = mapper.readTree(res.contentUtf8());
-        System.err.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root));
         final JsonNode methods = methods(root, "armeria.grpc.testing.GrpcDocServicePrefixTestService");
         final JsonNode httpMethods = methods(root, "armeria.grpc.testing.GrpcDocServicePrefixTestService_HTTP");
 
@@ -95,10 +93,10 @@ class GrpcDocServicePrefixTest {
     }
 
     private static JsonNode methods(JsonNode root, String serviceName) {
-        return StreamSupport.stream(root.get("services").spliterator(), false)
-                     .filter(node -> serviceName.equals(node.get("name").asText()))
-                     .findFirst().get()
-                     .get("methods");
+        return Streams.stream(root.get("services"))
+                      .filter(node -> serviceName.equals(node.get("name").asText()))
+                      .findFirst().get()
+                      .get("methods");
     }
 
     private static class PrefixTextService extends GrpcDocServicePrefixTestServiceImplBase {

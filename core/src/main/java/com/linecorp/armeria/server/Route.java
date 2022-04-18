@@ -201,11 +201,11 @@ public interface Route {
      * These are examples of created {@link Route}s when the prefix is {@code foo}:
      *
      * <ul>
-     *   <li>{@code /login} -> {@code /foo/login}</li>
-     *   <li>{@code /users/{userId}} -> {@code /foo/users/{userId}}</li>
-     *   <li>{@code prefix:/files} -> {@code prefix:/foo/files} (prefix match)</li>
+     *   <li>{@code /login} -> {@code /api/v1/login}</li>
+     *   <li>{@code /users/{userId}} -> {@code /api/v1/users/{userId}}</li>
+     *   <li>{@code prefix:/files} -> {@code prefix:/api/v1/files} (prefix match)</li>
      *   <li>{@code regex:^/files/(?<filePath>.*)$} ->
-     *       {@code regex:^/foo/files/(?<filePath>.*)$} (regular expression) </li>
+     *       {@code regex:^/api/v1/files/(?<filePath>.*)$} (regular expression) </li>
      * </ul>
      */
     Route withPrefix(String prefix);
