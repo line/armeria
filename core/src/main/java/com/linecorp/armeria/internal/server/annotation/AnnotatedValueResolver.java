@@ -166,7 +166,8 @@ final class AnnotatedValueResolver {
         converters.stream().map(RequestObjectResolver::of).forEach(builder::add);
         if (!requestConverterFunctionProviders.isEmpty()) {
             final ImmutableList<RequestConverterFunction> merged =
-                    ImmutableList.<RequestConverterFunction>builder().addAll(converters)
+                    ImmutableList.<RequestConverterFunction>builder()
+                                 .addAll(converters)
                                  .addAll(defaultRequestConverterFunctions)
                                  .build();
             final CompositeRequestConverterFunction composed = new CompositeRequestConverterFunction(merged);
@@ -485,8 +486,8 @@ final class AnnotatedValueResolver {
         }
 
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
-        converters.forEach(c -> builder.add(RequestObjectResolver.of(
-                AnnotatedServiceFactory.getInstance(c.value()))));
+        converters.forEach(
+                c -> builder.add(RequestObjectResolver.of(AnnotatedObjectFactory.getInstance(c.value()))));
         builder.addAll(resolvers);
         return builder.build();
     }

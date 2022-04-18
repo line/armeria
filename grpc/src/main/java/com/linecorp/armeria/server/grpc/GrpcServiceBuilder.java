@@ -19,10 +19,15 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
+import static org.reflections.ReflectionUtils.withModifier;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -54,6 +59,8 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
@@ -71,6 +78,7 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
@@ -87,6 +95,15 @@ public final class GrpcServiceBuilder {
     private static final Logger logger = LoggerFactory.getLogger(GrpcServiceBuilder.class);
 
     private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
+
+    private static Map<String, HttpService> applyGrpcServiceToDecorators(
+            Map<String, List<DecoratorAndOrder>> mp, GrpcService grpcService) {
+        return mp.entrySet()
+                 .stream()
+                 .collect(toImmutableMap(Map.Entry::getKey,
+                                         e -> DecoratorAnnotationUtil.applyDecorators(e.getValue(),
+                                                                                      grpcService)));
+    }
 
     static {
         boolean useCoroutineContextInterceptor;
@@ -147,6 +164,10 @@ public final class GrpcServiceBuilder {
     private boolean unsafeWrapRequestBuffers;
 
     private boolean useClientTimeoutHeader = true;
+
+    private final Map<String, List<DecoratorAndOrder>> pathToDecorators = new HashMap<>();
+
+    private final Map<String, List<DecoratorAndOrder>> methodToDecorators = new HashMap<>();
 
     private boolean enableHealthCheckService;
 
@@ -222,6 +243,7 @@ public final class GrpcServiceBuilder {
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
+
         if (bindableService instanceof GrpcHealthCheckService) {
             if (enableHealthCheckService) {
                 throw new IllegalStateException("default gRPC health check service is enabled already.");
@@ -229,7 +251,10 @@ public final class GrpcServiceBuilder {
             grpcHealthCheckService = (GrpcHealthCheckService) bindableService;
             return this;
         }
-        return addService(bindableService.bindService());
+
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        collectDecorators(bindableService.getClass(), null, serverServiceDefinition);
+        return addService(serverServiceDefinition);
     }
 
     /**
@@ -254,8 +279,41 @@ public final class GrpcServiceBuilder {
             return addService(path, ServerInterceptors.intercept(bindableService,
                                                                  newProtoReflectionServiceInterceptor()));
         }
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        collectDecorators(bindableService.getClass(), path, serverServiceDefinition);
+        return addService(path, serverServiceDefinition);
+    }
 
-        return addService(path, bindableService.bindService());
+    /**
+     * Adds an implementation of gRPC service to this {@link GrpcServiceBuilder}.
+     * Most gRPC service implementations are {@link BindableService}s.
+     * This method is useful in cases like the followings.
+     *
+     * <p>Used for ScalaPB gRPC stubs
+     *
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new HelloServiceImpl,
+     *                        HelloServiceGrpc.bindService(_,
+     *                                                     ExecutionContext.global))}
+     * </pre>
+     *
+     * <p>Used for intercepted gRPC-Java stubs
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new TestServiceImpl,
+     *                        impl -> ServerInterceptors.intercept(impl, interceptors));
+     * }</pre>
+     */
+    public <T> GrpcServiceBuilder addService(
+            T implementation,
+            Function<? super T, ServerServiceDefinition> serviceDefinitionFactory) {
+        requireNonNull(implementation, "implementation");
+        requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
+        final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
+        requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
+        collectDecorators(implementation.getClass(), null, serverServiceDefinition);
+        return addService(serverServiceDefinition);
     }
 
     /**
@@ -283,8 +341,9 @@ public final class GrpcServiceBuilder {
                     ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
             return addService(path, interceptor, methodDescriptor);
         }
-
-        return addService(path, bindableService.bindService(), methodDescriptor);
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        collectDecorators(bindableService.getClass(), null, serverServiceDefinition);
+        return addService(path, serverServiceDefinition, methodDescriptor);
     }
 
     /**
@@ -744,6 +803,52 @@ public final class GrpcServiceBuilder {
         return interceptors;
     }
 
+    private void collectDecorators(Class<?> clazz, @Nullable String path,
+                                   ServerServiceDefinition serverServiceDefinition) {
+        final String serviceName =
+                path != null ? path : '/' + serverServiceDefinition.getServiceDescriptor().getName();
+        // In gRPC, A method name is unique.
+        final Map<String, Method> methods = new HashMap<>();
+        for (Method method : InternalReflectionUtils.getAllSortedMethods(clazz,
+                                                                         withModifier(Modifier.PUBLIC))) {
+            final String methodName = method.getName();
+            if (!methods.containsKey(methodName)) {
+                methods.put(methodName, method);
+            }
+        }
+        for (final ServerMethodDefinition<?, ?> serverMethodDefinition : serverServiceDefinition.getMethods()) {
+            final String targetMethodName = serverMethodDefinition.getMethodDescriptor().getBareMethodName();
+            if (targetMethodName == null) {
+                continue;
+            }
+            final String methodName = targetMethodName.substring(0, 1).toLowerCase() +
+                                      targetMethodName.substring(1);
+            final Method method = methods.get(methodName);
+            if (method == null) {
+                continue;
+            }
+            final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
+            if (!decorators.isEmpty()) {
+                String key = serviceName + '/' + targetMethodName;
+                pathToDecorators.put(key, decorators);
+                if (path == null) {
+                    key = serverMethodDefinition.getMethodDescriptor().getFullMethodName();
+                    methodToDecorators.put(key, decorators);
+                }
+            }
+        }
+    }
+
+    @VisibleForTesting
+    Map<String, List<DecoratorAndOrder>> pathToDecorators() {
+        return pathToDecorators;
+    }
+
+    @VisibleForTesting
+    Map<String, List<DecoratorAndOrder>> methodToDecorators() {
+        return methodToDecorators;
+    }
+
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
@@ -794,6 +899,7 @@ public final class GrpcServiceBuilder {
             statusFunction = this.statusFunction;
         }
 
+        final boolean lookupMethodFromAttribute = enableUnframedRequests || enableHttpJsonTranscoding;
         GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
@@ -806,13 +912,23 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                enableUnframedRequests || enableHttpJsonTranscoding,
+                lookupMethodFromAttribute,
                 grpcHealthCheckService);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
+        }
+        if (!pathToDecorators.isEmpty()) {
+            final Map<String, HttpService> pathToComposeDecorators = applyGrpcServiceToDecorators(
+                    pathToDecorators, grpcService);
+            final Map<String, HttpService> methodToComposedDecorators = applyGrpcServiceToDecorators(
+                    methodToDecorators, grpcService);
+            grpcService = new GrpcDecoratingService(grpcService,
+                                                    pathToComposeDecorators,
+                                                    methodToComposedDecorators,
+                                                    lookupMethodFromAttribute);
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
