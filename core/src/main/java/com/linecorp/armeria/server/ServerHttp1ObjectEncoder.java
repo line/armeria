@@ -92,7 +92,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             sentConnectionCloseHeader = true;
         }
-        return writeNonInformationalHeaders(id, converted, endStream);
+        return writeNonInformationalHeaders(id, converted, endStream, channel().newPromise());
     }
 
     private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {

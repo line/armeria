@@ -32,6 +32,7 @@ import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Headers;
@@ -50,12 +51,13 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     }
 
     @Override
-    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
+    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream,
+                                        ChannelPromise promise) {
         final Http2Connection conn = encoder().connection();
         if (isStreamPresentAndWritable(streamId)) {
             keepAliveHandler().onReadOrWrite();
             return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0,
-                                          endStream, ctx().newPromise());
+                                          endStream, promise);
         }
 
         final Endpoint<Http2LocalFlowController> local = conn.local();
@@ -67,8 +69,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
         }
 
         // Client starts a new stream.
-        return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0, endStream,
-                                      ctx().newPromise());
+        return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0, endStream, promise);
     }
 
     private Http2Headers convertHeaders(HttpHeaders inputHeaders) {

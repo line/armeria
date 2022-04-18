@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.server.RouteUtil.GLOB;
+import static com.linecorp.armeria.server.RouteBuilder.globPathMapping;
 
 import java.util.List;
 import java.util.Set;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.internal.common.util.StringUtil;
 final class GlobPathMapping extends AbstractPathMapping {
 
     private final String glob;
+    private final int numGroupsToSkip;
     private final Pattern pattern;
     private final int numParams;
     private final Set<String> paramNames;
@@ -44,6 +46,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         final PatternAndParamCount patternAndParamCount = globToRegex(glob, numGroupsToSkip);
 
         this.glob = glob;
+        this.numGroupsToSkip = numGroupsToSkip;
         pattern = patternAndParamCount.pattern;
         numParams = patternAndParamCount.numParams;
 
@@ -60,6 +63,11 @@ final class GlobPathMapping extends AbstractPathMapping {
         final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
         pathPattern = aGlob;
         paths = ImmutableList.of(pattern.pattern(), aGlob);
+    }
+
+    @Override
+    PathMapping doWithPrefix(String prefix) {
+        return globPathMapping(prefix, glob, numGroupsToSkip);
     }
 
     @Nullable
