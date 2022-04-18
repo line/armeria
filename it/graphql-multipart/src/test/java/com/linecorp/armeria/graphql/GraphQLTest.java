@@ -36,7 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.google.common.io.Files;
 
-import com.linecorp.armeria.common.scalar.MoreScalars;
+import com.linecorp.armeria.common.graphql.scalar.MoreScalars;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.graphql.GraphqlService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;

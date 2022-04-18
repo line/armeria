@@ -17,8 +17,6 @@ package com.linecorp.armeria.common.graphql.scalar;
 
 import java.nio.file.Path;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
-
 import graphql.schema.Coercing;
 import graphql.schema.CoercingParseLiteralException;
 import graphql.schema.CoercingParseValueException;
